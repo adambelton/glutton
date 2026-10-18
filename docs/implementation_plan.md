@@ -41,7 +41,7 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 | --- | --- | --- | --- | --- |
 | 001 | Foundation | Minimal Rails app boots against local PostgreSQL, with setup and smoke checks | None | Ready for review — [spec](specs/001_initial_scaffold.md) |
 
-Cleanup/repository follow-up: **001a — In progress**, Foundation; [spec](specs/001a_scaffold_cleanup.md). Remove unused scaffold examples and publish the initial public GitHub repository, as authorised by the owner.
+Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](specs/001a_scaffold_cleanup.md). Remove unused scaffold examples and publish the initial public GitHub repository, as authorised by the owner.
 
 ## First rating and library slice
 

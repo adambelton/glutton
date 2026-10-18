@@ -1,6 +1,6 @@
 # 001a — Scaffold cleanup and repository setup
 
-Status: In progress  
+Status: Ready for review  
 Owner: Foundation
 
 ## Goal
@@ -31,7 +31,7 @@ Remove unused generated examples and publish the verified initial scaffold to th
   Result: Passed — all relative Markdown links resolve; obsolete document paths and removed-code references are absent. `git diff --cached --check` passed. `git check-ignore` confirms the master key and local notes are excluded; staged-file credential-pattern checks passed.
 - **AC3:** The public owner repository has `main` matching the local commit.  
   Check: Verify repository visibility, upstream and remote commit hash after push.  
-  Result: Not run.
+  Result: Passed — created https://github.com/adambelton/glutton as PUBLIC with default branch `main`; `git push -u origin main` succeeded. `git rev-parse HEAD` and `git ls-remote origin refs/heads/main` both returned initial scaffold commit `4f76879ecaeb08cf3f0f4b92b584b753fb068dc0`. Working tree was clean after the push. This verification note is committed as a documentation follow-up.
 
 ## Implementation notes
 

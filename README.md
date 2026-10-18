@@ -1,5 +1,7 @@
 # Glutton
 
+Source: [adambelton/glutton](https://github.com/adambelton/glutton).
+
 A horror discovery app. This initial scaffold contains a home page and Rails health endpoint, with PostgreSQL and server-rendered Hotwire views. Product features are planned separately.
 
 ## Prerequisites
