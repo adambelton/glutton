@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+require "rubygems"
+require "bundler/setup"
+
+# Use the version pinned in Gemfile.lock; --ensure-latest remains opt-in.
+
+load Gem.bin_path("brakeman", "brakeman")
