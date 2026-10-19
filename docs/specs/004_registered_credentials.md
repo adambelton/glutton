@@ -1,6 +1,6 @@
 # 004 — Registered account credentials
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / credentials
 
 ## Goal
@@ -59,4 +59,4 @@ Updated the original guest test to assert null credential fields instead of abse
 
 No scope deviations. No claim operation, unconfirmed registered account, session change or registration UI is delivered. Confirmation and the in-place transition remain later work. The owner subsequently requested a GitHub PR; commit and branch publication are authorized for review. Owner acceptance and merge remain pending.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #4](https://github.com/adambelton/glutton/pull/4) on 19 October 2026. Squash commit: `678c73cb7f03be4d4fc1df3969636ca9abb1c289`.
