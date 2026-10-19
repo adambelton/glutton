@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
@@ -10,6 +10,8 @@ Each task has **one owning domain, one small outcome, and independent verificati
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
 Use statuses `Draft`, `In progress`, `Ready for review`, `Accepted`, `Merged`; note blockers explicitly. Record actual changes and evidence in the spec. Owner acceptance and merge are separate from checks passing. Spec creation alone does not start implementation, and this plan does not authorise the whole list.
+
+Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a is Ready for review: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f).
 
 ## Domain ownership
 
@@ -47,7 +49,7 @@ CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). 
 
 Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
 
-i18n follow-ups: **001d — Ready for review**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Ready for review**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
+i18n follow-ups: **001d — Merged**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Merged**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
 
 ## First rating and library slice
 
@@ -63,8 +65,9 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 005b | Identity / model organisation | Keep root models at default paths and group only subclasses | 004a, 005 | Merged — [spec](specs/005b_simplify_model_layout.md), [PR #7](https://github.com/adambelton/glutton/pull/7) |
 | 005a | Identity / sign-in flow | Move guest access to shared Session records; sign-in/out UI, protected cookies, rotation, request limits and current identity; no automatic guest merge | 003, 005 | Merged — [spec](specs/005a_sign_in_flow.md), [PR #8](https://github.com/adambelton/glutton/pull/8) |
 | 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Merged — [spec](specs/006_identity_mail_delivery.md), [PR #9](https://github.com/adambelton/glutton/pull/9) |
-| 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005a | Planned |
-| 006b | Identity / verification | Required email confirmation atomically claims an active guest in place; preserve ID, reject expired/duplicate claims; expiring tokens and resend limits; entered email alone never grants access | 006, 006a | Planned |
+| 006a | Identity / registration | Validated pending credentials for direct signup or an active guest, without user creation, account transition or UI | 004, 005 | Ready for review — [spec](specs/006a_pending_registration.md) |
+| 006b | Identity / verification | Confirmation token/delivery and atomic registered creation or in-place guest claim; preserve ID, reject expiry/duplicate claims, define replacement and failure behaviour | 006, 006a | Planned |
+| 006f | Identity / registration UI | Wire registration and confirmation HTTP flow to existing Identity operations, with pending-to-guest continuity, visible verification/expiry, session binding, CSRF, request limits and localized non-enumerating responses | 005a, 006b | Planned |
 | 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005a, 006 | Planned |
 | 006d | Identity / guest retention | Scheduled cleanup of expired guest identities; recheck claim state and specify retry behaviour | 003, 004 | Planned — activity deletion ownership must be resolved before implementation |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |

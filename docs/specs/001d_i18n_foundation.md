@@ -1,6 +1,6 @@
 # 001d — Rails i18n foundation
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation
 
 ## Goal
@@ -33,4 +33,4 @@ User requested i18n setup while reviewing PR #9. Implementation authorized; no m
 
 Agent-rule follow-up: root `AGENTS.md` now requires locale entries for new/changed application copy, runtime translation, interpolation/pluralization and existing escaping. Documentation-only verification: reviewed the rule against this scope and `git diff --check` passed; no runtime changes or additional local tests.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #10](https://github.com/adambelton/glutton/pull/10) on 19 October 2026 after hosted CI passed on the final agent-rule commit. Squash commit: `93e857bdd8aa220b2153ced1b38026e01c582ae9`.

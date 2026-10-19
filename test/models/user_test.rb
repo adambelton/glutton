@@ -20,6 +20,17 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  test "active guest scope evaluates the current time and excludes the expiry boundary" do
+    guest = freeze_time { GuestUser.create! }
+    travel_to guest.created_at + 24.hours - 1.second do
+      assert_includes GuestUser.active, guest
+    end
+    travel_to guest.created_at + 24.hours do
+      assert_not_includes GuestUser.active, guest
+      assert_not guest.active?
+    end
+  end
+
   test "base users are active" do
     assert User.new.active?
   end

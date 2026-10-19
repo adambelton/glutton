@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "pending_registrations", force: :cascade do |t|
+    t.bigint "guest_user_id"
+    t.string "email_address", null: false
+    t.string "password_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["guest_user_id"], name: "index_pending_registrations_on_guest_user_id", unique: true
+    t.check_constraint "email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text", name: "pending_registrations_require_canonical_email"
+    t.check_constraint "password_digest::text ~ '[^[:space:]]'::text", name: "pending_registrations_require_password_digest"
+  end
 
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -33,5 +44,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.check_constraint "type::text = 'RegisteredUser'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
 
+  add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
 end
