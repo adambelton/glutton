@@ -1,0 +1,5 @@
+<main>
+  <h1><%= t("identity.registration.conflict_title") %></h1>
+  <p role="alert"><%= t("identity.recovery.conflict") %></p>
+  <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
+</main>

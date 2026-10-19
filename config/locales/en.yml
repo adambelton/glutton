@@ -8,6 +8,21 @@ en:
     formats:
       registration: "%d %B %Y at %H:%M %Z"
   identity:
+    recovery:
+      forgot: Forgot your password?
+      request_title: Reset your password
+      request_explanation: Enter your account email to request a password reset link.
+      request_submit: Request reset email
+      requested: If that address belongs to an account, check your inbox and spam folder for a password reset email.
+      delivery_failed: We could not confirm the reset email was sent. Check your inbox or try again in a minute.
+      limited: Too many attempts. Please wait before trying again.
+      reset_title: Choose a new password
+      new_password: New password
+      reset_submit: Change password
+      completed: Your password has changed. Sign in with your new password.
+      unavailable_title: Password reset unavailable
+      unavailable: This reset link is invalid or has expired. Request a new link or sign in.
+      conflict: This browser is signed in to a different account. Sign out or open the reset link in another browser before continuing.
     registration:
       title: Create an account
       explanation: Verify your email to complete registration and keep your progress. Your password must be at least 15 characters.

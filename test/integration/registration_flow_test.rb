@@ -21,6 +21,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
       root "home#index"
+      resource :password_reset, only: [ :new, :create, :edit, :update ]
       resource :session, only: [ :new, :create, :destroy ]
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create

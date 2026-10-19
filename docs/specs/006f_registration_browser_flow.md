@@ -1,6 +1,6 @@
 # 006f — Registration and confirmation browser flow
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration UI
 
 ## Goal
@@ -84,7 +84,7 @@ The signup/activity continuity requirement is implemented here within Identity's
 
 The current token/completion APIs remain authoritative. Any necessary guard/helper for browser identity or atomic attachment stays narrowly Identity-owned and must preserve their existing tests/contracts. Do not silently expand to general account management or a new integration framework.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #13](https://github.com/adambelton/glutton/pull/13) on 19 October 2026 after [hosted CI run 39308767748](https://github.com/adambelton/glutton/actions/runs/39308767748) passed. Squash commit: `c115013f0d7fd1029347e50536ef187fb70743c7`.
 
 Implementation verification notes: existing session tests used a reduced route set; their test-only route list now includes registration routes. Initial new CSRF tests requested a page with protection disabled in the test environment; they now obtain tokens from a protected page. Failure injection restores owned class methods after the test. The final full suite passes. Live SMTP origin/click-through remains a separate manual configuration/verification step; existing ignored mail credentials were not modified.
 

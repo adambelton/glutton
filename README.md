@@ -82,7 +82,7 @@ repository secrets and do not deploy the app.
 ## Identity mail
 
 Action Mailer composes confirmation and password-reset messages. Registration and
-confirmation have a browser flow; password recovery remains a separate task.
+confirmation and password recovery have browser flows.
 
 In development, visit `/rails/mailers` and select either Identity account preview.
 Both HTML and plain-text views use synthetic recipients/links and never send mail.
@@ -201,3 +201,27 @@ New pending registrations reject normalized emails already held by a registered 
 and direct the visitor to sign in. No new confirmation is sent; stale requests also
 cannot resend once the email is registered. This form intentionally reveals account
 existence, while final confirmation retains its database uniqueness protection.
+
+## Password recovery
+
+Use “Forgot your password?” on `/session/new` or open `/password_reset/new`.
+Accepted requests give the same neutral response for known and unknown addresses;
+only confirmed registered accounts receive mail. Links use `APP_ORIGIN` under the
+same rules as confirmation. Viewing `/password_reset/edit?token=…` only renders a
+form; a CSRF-protected PATCH changes the password. Rails-native tokens expire after
+15 minutes and become invalid when the password changes.
+
+`Identity::RequestPasswordReset.call(email_address:)` delivers synchronously outside
+database transactions. `Identity::ResetPassword.call(token:, password:,
+password_confirmation:)` locks and revalidates the token, enforces existing password
+policy, and atomically changes the digest and deletes all target sessions. It returns
+the registered user without signing in. Invalid links raise
+`Identity::PasswordResetUnavailable`; invalid passwords raise `ActiveRecord::RecordInvalid`.
+A successful browser reset redirects to sign-in. Other signed-in accounts conflict;
+unrelated guests retain their identity and pending signup without merging activity.
+
+Requests are limited to ten per IP per three minutes and one per normalized-email
+SHA-256 fingerprint per minute, including unknown addresses. Updates have a separate
+ten-attempt IP budget per three minutes. These are per-worker memory limits: restart
+clears them and multiple workers do not share them. Shared release abuse controls
+remain separate work. Tests use local transport; implementation has sent no live mail.

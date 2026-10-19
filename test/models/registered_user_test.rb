@@ -16,7 +16,7 @@ class RegisteredUserTest < ActiveSupport::TestCase
     assert_not_equal "a long password phrase", loaded.password_digest
     assert_not loaded.has_attribute?(:password)
     assert_not loaded.has_attribute?(:password_confirmation)
-    assert_not loaded.respond_to?(:password_reset_token)
+    assert loaded.respond_to?(:password_reset_token)
     travel 48.hours do
       assert loaded.active?
     end

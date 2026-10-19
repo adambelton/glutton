@@ -23,6 +23,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create
       resource :registration_confirmation, only: [ :show, :create ]
+      resource :password_reset, only: [ :new, :create, :edit, :update ]
       resource :session, only: [ :new, :create, :destroy ]
       get "/identity-probe", to: "guest_session_probe#show"
       post "/identity-probe", to: "guest_session_probe#create"

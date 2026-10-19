@@ -45,6 +45,8 @@ Registered accounts use email and password. For an existing guest, registration 
 
 Use one users table with stable internal IDs for guests and registered accounts; film and preference records reference only those IDs. Guests have no fabricated email or password. Use Rails authentication primitives as the starting point, with application-owned guest and registration behaviour. Resend is the delivery provider for verification and password-reset mail, with local previews and no real sending by default; development can explicitly use Resend for end-to-end verification, while automated tests remain local. This replaces the original magic-link decision.
 
+Password recovery uses an emailed link valid for 15 minutes and an explicit new-password submission. Resetting revokes every existing session and requires fresh sign-in; viewing the link alone changes nothing. Ordinary request responses do not reveal whether the email is registered. Recovery does not merge guest activity or switch another signed-in account.
+
 Ratings, expressions and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account deletion anonymises and locks the retained identity and revokes access. The exact activity anonymisation/deletion policy needs specification before launch; abandoned guests and their activity are deleted rather than retained as deleted accounts.
 
 ## 3. Two engagement modes and a personal library
