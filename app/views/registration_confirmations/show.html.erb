@@ -1,0 +1,9 @@
+<% content_for :registration_status, "shown" %>
+<main>
+  <h1><%= t("identity.registration.confirm_title") %></h1>
+  <p><%= t("identity.registration.confirm_explanation") %></p>
+  <%= form_with url: registration_confirmation_path do |form| %>
+    <%= form.hidden_field :token, value: @token %>
+    <%= form.submit t("identity.registration.confirm") %>
+  <% end %>
+</main>

@@ -16,9 +16,32 @@ class PendingRegistration < ApplicationRecord
   validates :password, length: { minimum: 15 }, allow_nil: true
   validates :password_confirmation, presence: true, if: -> { password.present? }
 
+  validates :confirmation_delivery_attempts, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 5 }
+
+  validate :email_is_unregistered, on: :create
+
+  def expires_at
+    deadline = created_at + 24.hours
+    guest_deadline = guest_expires_at
+    guest_deadline.present? ? [ deadline, guest_deadline ].min : deadline
+  end
+
+  def guest_expires_at
+    created = User.where(id: guest_user_id).pick(:created_at) if guest_user_id.present?
+    created + 24.hours if created.present?
+  end
+
   def active?
     return false unless persisted? && created_at + 24.hours > Time.current
 
     guest_user_id.nil? || GuestUser.active.exists?(guest_user_id)
+  end
+
+  private
+
+  def email_is_unregistered
+    return if email_address.blank? || errors[:email_address].any?
+
+    errors.add(:email_address, :registered) if RegisteredUser.exists?(email_address: email_address)
   end
 end

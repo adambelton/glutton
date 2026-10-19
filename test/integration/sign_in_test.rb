@@ -34,6 +34,9 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert_includes header, "httponly"
     assert_includes header, "samesite=lax"
     assert_equal "no-store", response.headers["Cache-Control"]
+    follow_redirect!
+    assert_select "p", text: "Signed in", count: 1
+    assert_not_includes response.body, "Signed in."
     other = open_session
     sign_in(other)
     second = Session.last

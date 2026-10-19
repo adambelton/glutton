@@ -1,12 +1,15 @@
 <main>
   <h1><%= t("app.name") %></h1>
   <p><%= t(".tagline") %></p>
-  <% if notice %>
+  <% if notice.present? %>
     <p role="status"><%= notice %></p>
   <% end %>
-  <% if current_user %>
+  <% if current_user.present? %>
     <p><%= current_user.is_a?(RegisteredUser) ? t("identity.sessions.registered_status") : t("identity.sessions.guest_status") %></p>
     <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
   <% end %>
-  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+  <% unless current_user.is_a?(RegisteredUser) %>
+    <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+    <%= link_to t("identity.registration.title"), new_registration_path %>
+  <% end %>
 </main>

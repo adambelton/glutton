@@ -17,7 +17,7 @@ class SessionsController < ApplicationController
 
     if new_session
       bind_session(new_session)
-      redirect_to root_path, notice: I18n.t("identity.sessions.signed_in"), status: :see_other
+      redirect_to root_path, status: :see_other
     else
       @error = I18n.t("identity.sessions.invalid_credentials")
       render :new, status: :unprocessable_entity

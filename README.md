@@ -81,8 +81,8 @@ repository secrets and do not deploy the app.
 
 ## Identity mail
 
-Action Mailer composes confirmation and password-reset messages. Registration UI,
-the browser confirmation flow and password reset workflows are separate tasks.
+Action Mailer composes confirmation and password-reset messages. Registration and
+confirmation have a browser flow; password recovery remains a separate task.
 
 In development, visit `/rails/mailers` and select either Identity account preview.
 Both HTML and plain-text views use synthetic recipients/links and never send mail.
@@ -124,7 +124,7 @@ verification use an owner-designated recipient and a synthetic HTTPS example lin
 mail composition does not implement token redemption or change any account.
 Callers must supply the authorized recipient/link. Invalid recipients and URLs
 raise `ArgumentError` when the lazy mail object is processed. Links require HTTPS;
-HTTP on localhost is allowed in development when SMTP delivery is disabled. No arbitrary recipient lookup occurs.
+HTTP on localhost is allowed in development, including with Resend. No arbitrary recipient lookup occurs.
 Confirm inbox receipt and inspect message headers for SPF, DKIM and DMARC passing;
 SMTP acceptance alone does not prove receipt. Do not paste credentials or token
 links into logs or committed files.
@@ -151,7 +151,53 @@ revoking old guest sessions and deleting the pending request. Expected invalid,
 expired/replayed or conflicting claims raise `Identity::RegistrationUnavailable`;
 unexpected persistence failures propagate after rollback.
 
-These are internal Identity operations. HTTP initiation, email link delivery,
-explicit confirmation action and browser cookie binding are not implemented yet.
+The registration browser flow consumes these Identity operations for initiation,
+email link delivery, explicit confirmation and browser cookie binding.
 Expired credential cleanup is also separate; expiry prevents access without claiming
 that retained database records have been deleted.
+
+## Registration browser flow
+
+Open `/registration/new` to register, `/registration` to view pending verification
+and resend an email, and the confirmation link to explicitly confirm with a POST.
+Viewing a link does not register or sign in. Signing up as an existing guest keeps
+its ID; beginning guest activity after signup attaches that browser's pending
+request before the guest/session is committed. The current home page does not
+save product activity; later Ratings UI will call the existing Identity entry point.
+
+Set `APP_ORIGIN` in ignored `.env.development` or production process environment to
+the application's trusted public HTTPS origin, e.g. `https://app.example.test`.
+Do not use the incoming Host header. Production requires a usable HTTPS app origin; development also supports HTTP localhost, including with live Resend delivery.
+registering a sending domain alone does not provide HTTPS application hosting.
+Missing/invalid origin fails clearly on send without contacting SMTP. No HTTPS
+hosting or tunnel is provisioned by this task. Development without SMTP can use:
+
+```sh
+MAIL_DELIVERY=test APP_ORIGIN=http://localhost:3000 bin/dev
+```
+
+This keeps messages in process memory; it does not send to an inbox. Automated
+request tests inspect their in-memory messages and complete the browser flow.
+For live development on this Mac, use the existing opt-in Resend variables plus
+`APP_ORIGIN=http://localhost:3000`. Open emailed localhost links on this Mac. Obtain owner-designated recipient authorization before
+manual live sends and report transport acceptance separately from inbox receipt.
+
+Each pending request permits five send attempts, at least 60 seconds apart;
+network failures count. Attempts are reserved in PostgreSQL before sending without
+holding a transaction across SMTP. Exhausted requests can still use previously
+received links or be replaced by a new submission. Rails also limits submission
+and resend together to ten requests per three minutes per IP, and confirmation
+POST separately to ten. These IP budgets are per worker and reset on restart;
+shared/distributed abuse controls are required before multi-worker public release.
+
+The browser remembers only its pending ID in its encrypted Rails session. The
+verification reminder shows fixed expiry and temporary guest status. Registered
+sign-in, successful confirmation and sign-out clear pending browser state. Email
+links work in a different browser; an already signed-in account or unrelated guest
+requires explicit sign-out or a different browser, with no automatic activity merge.
+Registration pages disable caching and referrers. All copy uses locale entries.
+
+New pending registrations reject normalized emails already held by a registered account
+and direct the visitor to sign in. No new confirmation is sent; stale requests also
+cannot resend once the email is registered. This form intentionally reveals account
+existence, while final confirmation retains its database uniqueness protection.

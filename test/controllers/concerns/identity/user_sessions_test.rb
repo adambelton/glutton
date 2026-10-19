@@ -62,12 +62,41 @@ class Identity::UserSessionsTest < ActionController::TestCase
     assert_equal authentication.id, @controller.send(:identity_payload)["id"]
   end
 
+  test "attachment failure rolls back new guest and session without losing pending state" do
+    pending = Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase")
+    session[:pending_registration_id] = pending.id
+    with_failure(Identity::AttachRegistration, :call, Identity::RegistrationConflict.new) do
+      assert_no_difference [ "User.count", "Session.count" ] do
+        assert_raises(Identity::RegistrationConflict) { @controller.send(:ensure_guest_user!) }
+      end
+    end
+    assert_nil pending.reload.guest_user_id
+    assert_equal pending.id, session[:pending_registration_id]
+  end
+
+  test "expired pending state is cleared before first guest action with explicit feedback" do
+    freeze_time
+    pending = Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase")
+    session[:pending_registration_id] = pending.id
+    travel 24.hours
+    guest = @controller.send(:ensure_guest_user!)
+    assert_instance_of GuestUser, guest
+    assert_nil session[:pending_registration_id]
+    assert_nil pending.reload.guest_user_id
+    assert_equal I18n.t("identity.registration.unavailable"), flash[:alert]
+  end
+
   private
 
   def with_failure(model, method_name, error)
+    original = model.method(method_name)
+    owned = model.singleton_class.instance_methods(false).include?(method_name)
     model.define_singleton_method(method_name) { |*| raise error }
     yield
   ensure
     model.singleton_class.remove_method(method_name)
+    model.define_singleton_method(method_name, original) if owned
   end
 end

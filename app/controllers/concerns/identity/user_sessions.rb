@@ -5,10 +5,11 @@ module Identity
     class AccountDeleted < StandardError; end
 
     included do
-      helper_method :current_user
+      helper_method :current_user, :current_pending_registration
       before_action :prevent_identity_caching
 
       rescue_from AccountDeleted do
+        session.delete(:pending_registration_id)
         render "sessions/deleted", status: :gone
       end
     end
@@ -29,13 +30,50 @@ module Identity
 
     def ensure_guest_user!
       user = current_user
-      return user if user
+      if user.present?
+        pending = current_pending_registration
+        if user.is_a?(GuestUser) && pending.present? && pending.guest_user_id.nil?
+          Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: user.id)
+        end
+        return user
+      end
 
+      pending = current_pending_registration
       authentication = Session.transaction do
-        Session.create!(user: GuestUser.create!)
+        guest = GuestUser.create!
+        if pending.present?
+          Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: guest.id)
+        end
+        Session.create!(user: guest)
       end
       bind_session(authentication)
       @current_user
+    rescue Identity::RegistrationUnavailable
+      # A link may expire or be consumed while guest creation waits for locks.
+      pending = PendingRegistration.find_by(id: session[:pending_registration_id])
+      raise if pending.present? && pending.active?
+
+      session.delete(:pending_registration_id)
+      flash.now[:alert] = I18n.t("identity.registration.unavailable")
+      remove_instance_variable(:@current_user) if defined?(@current_user)
+      retry
+    end
+
+    def current_pending_registration
+      id = session[:pending_registration_id]
+      return if id.nil?
+
+      registration = PendingRegistration.find_by(id: id)
+      user = current_user
+      if registration.present? && registration.active? && !user.is_a?(RegisteredUser) &&
+          (registration.guest_user_id.nil? || registration.guest_user_id == user&.id) &&
+          !RegisteredUser.exists?(email_address: registration.email_address)
+        registration
+      else
+        session.delete(:pending_registration_id)
+        flash.now[:alert] = I18n.t("identity.registration.unavailable")
+        nil
+      end
     end
 
     def identity_payload
@@ -53,8 +91,16 @@ module Identity
     end
 
     def bind_session(authentication)
-      reset_session
       user = authentication.user
+      if user.is_a?(GuestUser) && session[:pending_registration_id].present?
+        pending = PendingRegistration.find_by(id: session[:pending_registration_id])
+      end
+      registration_alert = flash[:alert]
+      reset_session
+      flash.now[:alert] = registration_alert if user.is_a?(GuestUser) && registration_alert.present?
+      if user.is_a?(GuestUser) && pending.present? && pending.active? && pending.guest_user_id == user.id
+        session[:pending_registration_id] = pending.id
+      end
       jar = user.is_a?(RegisteredUser) ? cookies.signed.permanent : cookies.signed
       jar[:session_id] = {
         value: { id: authentication.id, user_id: user.id },

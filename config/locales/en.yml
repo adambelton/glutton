@@ -4,11 +4,39 @@ en:
   home:
     index:
       tagline: Discover horror through the things you love about it.
+  time:
+    formats:
+      registration: "%d %B %Y at %H:%M %Z"
   identity:
+    registration:
+      title: Create an account
+      explanation: Verify your email to complete registration and keep your progress. Your password must be at least 15 characters.
+      password_confirmation: Confirm password
+      submit: Send confirmation email
+      pending_title: Verify your email
+      verify_required: Registration is not complete. Verify your email to keep your progress permanently.
+      accepted: Confirmation email accepted for delivery. Check your inbox and spam folder.
+      delivery_failed: We could not confirm the email was sent. Your request is saved; check your inbox or try again in a minute.
+      limited: Too many attempts. Please wait before trying again.
+      delivery_limit_title: Confirmation email limit reached
+      delivery_limit: Use a confirmation email you already received, or start a new registration request.
+      resend: Resend confirmation email
+      restart: Start registration again
+      continue: Continue exploring
+      expires: "This registration request expires on %{deadline}."
+      guest_temporary: "Your guest activity is temporary and expires on %{deadline} unless you complete registration first."
+      unavailable_title: Registration unavailable
+      unavailable: This registration request is no longer available. Start again or sign in if you already verified your email.
+      conflict_title: Sign out before continuing
+      conflict: This browser is using another account or guest session. Sign out or open the email link in another browser to continue. Guest activity will not be merged.
+      guest_signout_warning: Signing out ends access to the guest progress in this browser.
+      confirm_title: Confirm your email
+      confirm_explanation: Confirming completes registration and signs you in to the account requested by this email link.
+      confirm: Confirm and sign in
+      completed: Your email is confirmed. Registration is complete.
     sessions:
       sign_in: Sign in
       sign_out: Sign out
-      signed_in: Signed in.
       signed_out: Signed out.
       registered_status: Signed in
       guest_status: Guest session
@@ -31,6 +59,8 @@ en:
   activerecord:
     attributes:
       pending_registration:
+        confirmation_delivery_attempts: Confirmation delivery attempts
+        confirmation_delivery_attempted_at: Last confirmation delivery attempt
         guest_user: Guest
         email_address: Email
         password: Password
@@ -47,6 +77,10 @@ en:
         user: User
     errors:
       models:
+        pending_registration:
+          attributes:
+            email_address:
+              registered: is already registered. Sign in instead.
         session:
           attributes:
             user:

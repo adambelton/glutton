@@ -20,6 +20,9 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
       root "home#index"
+      resource :registration, only: [ :new, :create, :show ]
+      resource :registration_email, only: :create
+      resource :registration_confirmation, only: [ :show, :create ]
       resource :session, only: [ :new, :create, :destroy ]
       get "/identity-probe", to: "guest_session_probe#show"
       post "/identity-probe", to: "guest_session_probe#create"

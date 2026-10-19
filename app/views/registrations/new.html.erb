@@ -1,0 +1,27 @@
+<main>
+  <h1><%= t("identity.registration.title") %></h1>
+  <p><%= t("identity.registration.explanation") %></p>
+  <% if @registration.errors.any? %>
+    <ul role="alert">
+      <% @registration.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  <% end %>
+  <%= form_with url: registration_path, scope: :registration do |form| %>
+    <div>
+      <%= form.label :email_address, t("identity.sessions.email") %>
+      <%= form.email_field :email_address, value: @registration.email_address, required: true, autocomplete: "email" %>
+    </div>
+    <div>
+      <%= form.label :password, t("identity.sessions.password") %>
+      <%= form.password_field :password, required: true, autocomplete: "new-password" %>
+    </div>
+    <div>
+      <%= form.label :password_confirmation, t("identity.registration.password_confirmation") %>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password" %>
+    </div>
+    <%= form.submit t("identity.registration.submit") %>
+  <% end %>
+  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+</main>

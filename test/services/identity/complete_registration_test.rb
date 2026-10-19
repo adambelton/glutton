@@ -72,10 +72,10 @@ module Identity
     end
 
     test "email conflict never authenticates or changes the existing account" do
+      record = prepare
       existing = RegisteredUser.create!(email_address: "reader@example.test", password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
       existing_attributes = existing.attributes
-      record = prepare
       error = nil
       assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
         error = assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token: token_for(record)) }
