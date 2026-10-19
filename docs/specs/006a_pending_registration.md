@@ -1,6 +1,6 @@
 # 006a — Pending registration
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration
 
 ## Goal
@@ -45,7 +45,7 @@ Read the implementation plan, product brief (Accounts and privacy), architecture
   Result: Passed — raw SQL bypasses model normalization/validation to verify optional FK, null/blank/canonical constraints and unique guest reference. Same-email direct requests coexist. `PARALLEL_WORKERS=1 bin/rails test test/services/identity/prepare_registration_concurrency_test.rb`: 1 test / 5 assertions; separate PostgreSQL connections prove the second request blocks on the guest lock and replaces the first only after commit. Guest deletion cascades only to its pending row. Initial concurrency polling cached lock state; disabling query caching for polling fixed the test.
 - **AC5:** Credentials and addresses stay out of routine logs/inspection; existing checks pass.  
   Check: Synthetic-marker log/inspection assertions, strict locale validation, `bin/rails zeitwerk:check`, `PARALLEL_WORKERS=1 CI=true bin/ci`, `git diff --check`. Record exact results and any environment limitations. No real mail required.  
-  Result: Passed — synthetic email/password/digest markers are absent from SQL logs, filtered parameters and record inspection using existing Rails filtering. `PARALLEL_WORKERS=1 CI=true bin/ci`: 73 tests / 657 assertions, no failures/errors/skips; 55 Ruby files linted cleanly, audits clear, Brakeman zero warnings. `bin/rails zeitwerk:check` passed with the existing non-eager-loaded mail-preview directory warning; `git diff --check` passed. No live mail or hosted CI run for this task.
+  Result: Passed — synthetic email/password/digest markers are absent from SQL logs, filtered parameters and record inspection using existing Rails filtering. `PARALLEL_WORKERS=1 CI=true bin/ci`: 73 tests / 657 assertions, no failures/errors/skips; 55 Ruby files linted cleanly, audits clear, Brakeman zero warnings. `bin/rails zeitwerk:check` passed with the existing non-eager-loaded mail-preview directory warning; `git diff --check` passed. No live mail. [Hosted CI run 39300926802](https://github.com/adambelton/glutton/actions/runs/39300926802) passed before merge.
 
 ## Implementation notes
 
@@ -57,7 +57,7 @@ The prior plan combined a registration form with a confirmation flow that did no
 
 Direct pending retention/expiry, token lifetime, replacement-token invalidation, delivery failure handling, confirmation from another browser, claim conflicts and session rotation must be explicitly specified in task 006b before implementation. The UI task must separately specify binding to current_user, request limits, CSRF, non-enumerating responses and failure presentation.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #11](https://github.com/adambelton/glutton/pull/11) on 19 October 2026 after hosted CI passed. Squash commit: `5c2b88b1d36cd693949ac3cb6c1db8daa23b8aed`.
 
 Registration UI requirement: when direct signup is followed by guest activity in the same browser, retain the pending-request reference in trusted browser/session state and link the newly created guest through an Identity-owned operation. Never infer this relationship from an email match. Until confirmation, show a persistent verification reminder and the actual guest expiry; do not imply progress is permanently saved. Task 006f must specify/test this journey and conflicting pending/guest links before wiring. It must not extend the existing fixed guest expiry. This task supplies persistence only and does not implement that later attachment operation.
 
