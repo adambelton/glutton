@@ -20,21 +20,21 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "base users do not expire" do
-    assert_not User.new.expired?
+  test "base users are active" do
+    assert User.new.active?
   end
 
   test "guest expires exactly at its deadline" do
     user = freeze_time { GuestUser.create! }
 
     travel_to (user.created_at + 24.hours) - 1.second do
-      assert_not user.expired?
+      assert user.active?
     end
     travel_to (user.created_at + 24.hours) do
-      assert user.expired?
+      assert_not user.active?
     end
     travel_to (user.created_at + 24.hours) + 1.second do
-      assert user.expired?
+      assert_not user.active?
     end
   end
 
@@ -43,7 +43,7 @@ class UserTest < ActiveSupport::TestCase
     expiry = user.created_at + 24.hours
 
     travel 12.hours do
-      assert_not user.reload.expired?
+      assert user.reload.active?
       user.touch
       assert_equal expiry, user.reload.created_at + 24.hours
     end
@@ -55,11 +55,20 @@ class UserTest < ActiveSupport::TestCase
       travel_time = user.created_at + 24.hours
       assert_equal 11, travel_time.in_time_zone.hour
       travel_to travel_time - 1.second do
-        assert_not User.find(user.id).expired?
+        assert User.find(user.id).active?
       end
       travel_to travel_time do
-        assert User.find(user.id).expired?
+        assert_not User.find(user.id).active?
       end
+    end
+  end
+
+  test "deleted users are inactive regardless of age" do
+    user = DeletedUser.create!
+    assert_not User.find(user.id).active?
+
+    travel 48.hours do
+      assert_not User.find(user.id).active?
     end
   end
 

@@ -1,7 +1,7 @@
 class User < ApplicationRecord
   validates :type, presence: true
 
-  def expired?
-    false
+  def active?
+    true
   end
 end
