@@ -128,3 +128,13 @@ HTTP on localhost is allowed in development when SMTP delivery is disabled. No a
 Confirm inbox receipt and inspect message headers for SPF, DKIM and DMARC passing;
 SMTP acceptance alone does not prove receipt. Do not paste credentials or token
 links into logs or committed files.
+
+## User-facing copy
+
+Store application copy in `config/locales/en.yml` and use Rails `t` in views or
+`I18n.t` in controllers/mailers. Share mail copy between text and HTML templates.
+Use symbolic custom validation errors with Rails Active Model translations. English
+is the initial locale; missing translations raise in development/test. Translate
+at runtime rather than defining translated constants. Keep values plain text;
+views escape them. Developer diagnostics and static emergency error pages do not
+require application translation loading.

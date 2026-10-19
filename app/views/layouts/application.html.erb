@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="<%= I18n.locale %>">
   <head>
-    <title><%= content_for(:title) || "Glutton" %></title>
+    <title><%= content_for(:title) || t("app.name") %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="application-name" content="Glutton">
+    <meta name="application-name" content="<%= t("app.name") %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 

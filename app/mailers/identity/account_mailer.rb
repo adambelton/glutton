@@ -3,11 +3,11 @@ require "uri"
 module Identity
   class AccountMailer < ApplicationMailer
     def confirmation(recipient:, confirmation_url:)
-      compose(recipient, confirmation_url, "Confirm your Glutton account")
+      compose(recipient, confirmation_url, I18n.t("identity.account_mailer.confirmation.subject"))
     end
 
     def password_reset(recipient:, reset_url:)
-      compose(recipient, reset_url, "Reset your Glutton password")
+      compose(recipient, reset_url, I18n.t("identity.account_mailer.password_reset.subject"))
     end
 
     private
