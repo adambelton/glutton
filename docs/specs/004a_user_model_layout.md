@@ -1,6 +1,6 @@
 # 004a — Group user subclass models
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / model organisation
 
 ## Goal
@@ -35,4 +35,4 @@ Relevant architecture: [system shape and Identity](../architecture_brief.md), se
 
 Moved User, GuestUser, RegisteredUser and DeletedUser files beneath `app/models/user/`, including `app/models/user/user.rb`. Added a narrowly scoped Zeitwerk collapse in `config/initializers/autoloading.rb` and documented the layout convention in the architecture brief. No behaviour changes or scope deviations. Task 005 remains draft; the owner subsequently authorized a GitHub PR; owner acceptance and merge remain pending.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #5](https://github.com/adambelton/glutton/pull/5) on 19 October 2026. Squash commit: `db7722b94fb9c2f31583b141492222e7cbe5f851`.

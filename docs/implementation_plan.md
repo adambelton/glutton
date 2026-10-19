@@ -1,11 +1,11 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002 and 003 merged; task 004 merged; task 004a ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
 
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003 and 004. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 was accepted by the owner and merged via PR #4. Task 004a is implemented and ready for review; owner acceptance and merge remain pending.
+Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003, 004, 004a and 005. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 was accepted by the owner and merged via PR #4. Task 004a was accepted by the owner and merged via PR #5. Task 005 is implemented and ready for review; owner acceptance and merge remain pending.
 
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
@@ -54,20 +54,21 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Merged — [spec](specs/002_identity_accounts.md), [PR #1](https://github.com/adambelton/glutton/pull/1) |
 | 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Merged — [spec](specs/003_guest_sessions.md), [PR #2](https://github.com/adambelton/glutton/pull/2) |
 | 004 | Identity / credentials | Confirmed registered-account credential persistence, normalization and password authentication invariants | 002 | Merged — [spec](specs/004_registered_credentials.md), [PR #4](https://github.com/adambelton/glutton/pull/4) |
-| 004a | Identity / model organisation | Group the User model family without changing STI identity | 004 | Ready for review — [spec](specs/004a_user_model_layout.md) |
-| 005 | Identity / registered sessions | Password sign-in, session rotation, current guest/registered identity and sign-out; no automatic guest merge | 003, 004 | Planned |
+| 004a | Identity / model organisation | Group the User model family without changing STI identity | 004 | Merged — [spec](specs/004a_user_model_layout.md), [PR #5](https://github.com/adambelton/glutton/pull/5) |
+| 005 | Identity / sessions | Shared guest/registered session lifecycle and password-authenticated registered issuance, without HTTP wiring | 004, 004a | Ready for review — [spec](specs/005_registered_sessions.md) |
+| 005a | Identity / sign-in flow | Move guest access to shared Session records; sign-in/out UI, protected cookies, rotation, request limits and current identity; no automatic guest merge | 003, 005 | Planned |
 | 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Planned |
-| 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005 | Planned |
+| 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005a | Planned |
 | 006b | Identity / verification | Required email confirmation atomically claims an active guest in place; preserve ID, reject expired/duplicate claims; expiring tokens and resend limits; entered email alone never grants access | 006, 006a | Planned |
-| 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005, 006 | Planned |
+| 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005a, 006 | Planned |
 | 006d | Identity / guest retention | Scheduled cleanup of expired guest identities; recheck claim state and specify retry behaviour | 003, 004 | Planned — activity deletion ownership must be resolved before implementation |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Planned |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Planned |
-| 010 | Library / viewing | Canonical user–film entry and mark-watched operation/read result | 005, 007 | Planned |
+| 010 | Library / viewing | Canonical user–film entry and mark-watched operation/read result | 005a, 007 | Planned |
 | 011 | Library / intent | Watchlist addition/removal, retaining independent watched facts | 010 | Planned |
 | 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |
-| 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005, 007 | Planned |
+| 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |
 | 014 | Ratings / ratings | Save a four-level rating based on Ratings' seen confirmation; expose current-rating result and establish submission/history invariants without requiring Library state | 013 | Planned |
 | 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
 | 016 | Ratings / Library contract consumer | On completed rating, synchronously invoke Library's existing record-watched operation; test agreed success, rollback and retry behaviour without requeueing | 010, 015 | Planned |
@@ -80,7 +81,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 023 | Ratings / revisions | Re-rate while retaining agreed history and superseding the current submission | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 
-The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered-session duration remains undecided. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 exposes both identity modes. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
+The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered sessions follow Rails authentication conventions with no application-imposed TTL. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 supplies shared guest/registered session lifecycle and registered authentication and task 005a exposes both identity modes through HTTP. Registered sessions end through sign-out/revocation or inactive-account rejection, not a custom age deadline. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
 
 Guest cleanup must eventually remove associated activity as well as the identity. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
 
