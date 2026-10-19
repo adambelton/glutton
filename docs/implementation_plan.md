@@ -1,11 +1,11 @@
 # Glutton — Initial implementation plan
 
-Status: Task 001 ready for review; later tasks remain planned  
-Date: 18 October 2026
+Status: Tasks 001, 001a and 002 ready for review; later tasks planned  
+Date: 19 October 2026
 
 ## Task rules
 
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Only task 001 has a spec today.
+Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a and 002; task 002 uses STI and derived expiry and is ready for review; owner acceptance and merge remain pending.
 
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
@@ -19,7 +19,7 @@ Use statuses `Draft`, `In progress`, `Ready for review`, `Accepted`, `Merged`; n
 | Library | Canonical user–film relationship: watchlist, watched, not interested; library management and views | Does not own rating/recommendation presentation histories, ratings, expressions or inferred taste |
 | Ratings | Rating presentations and all responses, ratings, original expressions; scoring, profiles and reassessment as distinct capabilities | Owns next-film selection from its own presentation state; reports completed ratings through Library operations |
 | Recommendations | Candidate selection, ranking, explanations, recommendation presentations and all responses | Owns recommendation eligibility; consults Library and Ratings, requests Library-owned actions |
-| Identity (supporting) | Users, magic links, sessions and delivery | Supplies authenticated internal identity |
+| Identity (supporting) | Guest/registered users, credentials, sessions, registration and delivery | Supplies session-bound internal identity; owns fixed guest expiry |
 | Foundation (supporting) | Rails/database boot; later shared operational infrastructure | No product rules |
 
 A domain is not a table or screen. Rating/recommendation records describe their purpose-specific activity; Library records canonical state. They need not share persistence. Capability boundaries keep tasks small inside Ratings without inventing a separate Taste domain. Do not generate empty engines, namespaces or speculative interfaces.
@@ -49,11 +49,15 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 
 | Task | Owner / capability | Independently verifiable outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| 002 | Identity / accounts | Minimal identity and account lookup for passwordless sign-in | 001 | Planned |
-| 003 | Identity / links | Expiring single-use token lifecycle, rejecting expiry and replay | 002 | Planned |
-| 004 | Identity / requests | Sign-in request form, local mail preview and request limits | 003 | Planned |
-| 005 | Identity / sessions | Redeem link into secure session; expose identity and sign-out | 004 | Planned |
-| 006 | Identity / delivery | Resend delivery configuration tested without real mail by default | 004 | Planned |
+| 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Ready for review — [spec](specs/002_identity_accounts.md) |
+| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Planned |
+| 004 | Identity / credentials | Registered-account credential invariants and atomic in-place claim of an active guest; preserve ID and reject expired/duplicate claims | 002 | Planned |
+| 005 | Identity / registered sessions | Password sign-in, session rotation, current guest/registered identity and sign-out; no automatic guest merge | 003, 004 | Planned |
+| 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Planned |
+| 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005 | Planned |
+| 006b | Identity / verification | Required email confirmation completes registration; expiring tokens, resend limits and pending/expired claim handling; entered email alone never grants access | 006, 006a | Planned |
+| 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005, 006 | Planned |
+| 006d | Identity / guest retention | Scheduled cleanup of expired guest identities; recheck claim state and specify retry behaviour | 003, 004 | Planned — activity deletion ownership must be resolved before implementation |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Planned |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Planned |
@@ -73,13 +77,17 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 023 | Ratings / revisions | Re-rate while retaining agreed history and superseding the current submission | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 
+The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered-session duration remains undecided. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces credentials and the claim transition; task 005 exposes both identity modes. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
+
+Guest cleanup must eventually remove associated activity as well as the identity. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
+
 Task 010 provides Library's idempotent record-watched contract without calling Ratings. Task 013 provides Ratings' make-available contract, and task 014 provides its current-rating read contract. Agree each contract's inputs, results and failures before implementing it. Tasks 016 and 017 implement the separate consuming sides; they do not modify their providers. Neither task introduces events, background delivery or a generic integration layer.
 
 Tasks 011 and 012 define intent/dismissal transitions without recommendation logic. Task 013 owns selection and presentation history independently of Library. Task 014 owns current-submission invariants before revision UI arrives. A seen response without a saved rating creates no Library classification and therefore does not exclude recommendations. Task 017 checks Ratings' current-rating result so marking an already-rated film watched does not requeue it.
 
 Each consuming task verifies real provider compatibility as well as failure handling. A failed save must not appear rated, and a watched action must not imply a completed rating. Decide the concrete synchronous consistency mechanism in the relevant spec before implementation; retain ownership of writes in the providing domain.
 
-All private operations include checks against accessing another user's records. Early domain operations can be verified with representative records and existing contracts; they need not wait for every user interface.
+All private operations include checks against accessing another user's records, including other guests, and reject expired guest access. Early domain operations can be verified with representative records and existing contracts; they need not wait for every user interface.
 
 ## Later milestones — not implementation tasks
 
