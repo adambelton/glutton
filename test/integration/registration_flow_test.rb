@@ -98,6 +98,26 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_select "aside", count: 0
   end
 
+  test "cleaned guest cookies and pending links cannot restore identities" do
+    freeze_time
+    created = guest
+    signup
+    registration = PendingRegistration.last
+    confirmation_token = email_token
+    old_cookie = cookies[:session_id]
+    travel 24.hours
+    assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Identity::CleanupExpiredAccounts.call)
+    cookies[:session_id] = old_cookie
+    get registration_confirmation_path(token: confirmation_token)
+    assert_response :unprocessable_entity
+    get registration_path
+    assert_response :unprocessable_entity
+    replacement = guest
+    assert_not_equal created.id, replacement.id
+    assert_nil User.find_by(id: created.id)
+    assert_nil PendingRegistration.find_by(id: registration.id)
+  end
+
   test "first activity after signup retains pending reference and issued link claims the same guest" do
     signup
     registration = PendingRegistration.last

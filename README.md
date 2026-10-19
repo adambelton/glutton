@@ -153,8 +153,8 @@ unexpected persistence failures propagate after rollback.
 
 The registration browser flow consumes these Identity operations for initiation,
 email link delivery, explicit confirmation and browser cookie binding.
-Expired credential cleanup is also separate; expiry prevents access without claiming
-that retained database records have been deleted.
+Expired Identity records can be removed with the bounded cleanup command below;
+expiry prevents access independently of eventual physical deletion.
 
 ## Registration browser flow
 
@@ -225,3 +225,37 @@ SHA-256 fingerprint per minute, including unknown addresses. Updates have a sepa
 ten-attempt IP budget per three minutes. These are per-worker memory limits: restart
 clears them and multiple workers do not share them. Shared release abuse controls
 remain separate work. Tests use local transport; implementation has sent no live mail.
+
+## Expired Identity cleanup
+
+Run one bounded cleanup pass with:
+
+```sh
+bin/rails identity:cleanup_expired
+```
+
+This deletes at most 100 expired guest candidates and 100 expired pending-registration
+candidates, oldest first, and prints only `guests_deleted` and
+`pending_registrations_deleted` totals. The latter includes requests deleted with
+guests. Guest sessions and pending registrations are deleted atomically with their
+guest; independently expired pending requests do not delete their account or sessions.
+Registered and deleted accounts are retained. Registered sessions have no age deadline.
+
+`Identity::CleanupExpiredAccounts.call(batch_size: 100)` accepts integer batch sizes
+from 1 to 1,000. It rechecks lifecycle/deadlines under locks and uses the same
+owner-before-pending lock order as registration. Each candidate commits separately.
+A failure exits nonzero with a sanitized diagnostic, rolls back that candidate and
+stops; earlier deletions remain committed. Investigate the cause and rerun safely.
+Repeated/concurrent runs do not double-count deleted records.
+
+The proposed deployment cadence is every 15 minutes. No scheduler is installed by
+this task, and Active Job remains disabled. A backlog may take multiple passes;
+there is no guaranteed deletion delay. Expired access is rejected even when cleanup
+has not run. No cleanup command was run against development/production data during
+verification; tests use isolated test records.
+
+This command currently deletes Identity-owned records only. Before persisting guest
+activity in a product domain, agree its deletion policy and synchronous mechanism
+and extend retention through separately owned tasks. Unknown foreign-key dependents
+fail safely rather than being bypassed or silently orphaned. Scheduler installation
+and monitoring remain deployment work.
