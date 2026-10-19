@@ -1,6 +1,14 @@
 module Identity
-  module GuestSessions
+  module UserSessions
     extend ActiveSupport::Concern
+
+    class AccountDeleted < StandardError; end
+
+    included do
+      rescue_from AccountDeleted do
+        render plain: "This account has been deleted.", status: :gone
+      end
+    end
 
     private
 
@@ -8,6 +16,8 @@ module Identity
       return @current_user if defined?(@current_user)
 
       user = User.find_by(id: session[:user_id]) if session[:user_id].is_a?(Integer)
+      raise AccountDeleted if user.is_a?(DeletedUser)
+
       @current_user = user&.active? ? user : nil
       session.delete(:user_id) unless @current_user
       @current_user

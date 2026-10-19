@@ -20,7 +20,7 @@ class GuestSessionProbeController < ApplicationController
   end
 end
 
-class GuestSessionsTest < ActionDispatch::IntegrationTest
+class UserSessionsTest < ActionDispatch::IntegrationTest
   setup do
     Rails.application.routes.draw do
       root "home#index"
@@ -108,17 +108,34 @@ class GuestSessionsTest < ActionDispatch::IntegrationTest
     assert_equal original_time, user.reload.created_at
   end
 
-  test "deleted and missing identities are discarded" do
+  test "deleted account fails explicitly across browsers without guest replacement" do
     user = User.find(create_guest["id"])
+    other = open_session
+    key = Rails.application.config.session_options.fetch(:key)
+    other.cookies[key] = cookies[key]
+    tokens = [ lookup["token"], lookup(other)["token"] ]
     user.update_column(:type, "DeletedUser")
+
+    assert_no_difference "User.count" do
+      [ self, other ].zip(tokens).each do |client, token|
+        2.times do
+          client.get "/identity-probe"
+          assert_equal 410, client.response.status
+          assert_equal "This account has been deleted.", client.response.body
+          client.post "/identity-probe", params: { authenticity_token: token }
+          assert_equal 410, client.response.status
+          assert_equal "This account has been deleted.", client.response.body
+        end
+      end
+    end
+  end
+
+  test "missing identity is discarded and can be replaced" do
+    user = User.find(create_guest["id"])
+    user.destroy!
     assert_nil lookup["id"]
     assert_nil lookup["stored_id"]
-    replacement = create_guest["id"]
-    assert_not_equal user.id, replacement
-    User.find(replacement).destroy!
-    assert_nil lookup["id"]
-    assert_nil lookup["stored_id"]
-    assert_not_equal replacement, create_guest["id"]
+    assert_not_equal user.id, create_guest["id"]
   end
 
   test "malformed identity is cleared and new binding resets session" do
