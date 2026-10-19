@@ -1,6 +1,6 @@
 # 005a — Session cookies and sign-in/out
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / sign-in flow
 
 ## Goal
@@ -69,4 +69,4 @@ Naming follow-up: controller variables now use `created_session` inside the tran
 
 No scope deviations. Registration/confirmation will later reuse binding after its own atomic claim; this task creates no confirmation shortcut. Guest creation still has no production endpoint until a later personal save invokes the concern. The owner subsequently authorized PR publication and merge, including if hosted CI remains stalled; record the actual hosted result without claiming an unrun check passed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #8](https://github.com/adambelton/glutton/pull/8) on 19 October 2026. Squash commit: `781977179cd1bf039874e39aa80ebddcb660cd7a`. Hosted CI remained queued and was not confirmed passing; the owner explicitly authorized merging while CI was stalled. Local verification evidence is recorded above.

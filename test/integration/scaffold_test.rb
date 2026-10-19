@@ -21,7 +21,7 @@ class ScaffoldTest < ActionDispatch::IntegrationTest
     connection = ActiveRecord::Base.connection
 
     assert_equal "PostgreSQL", connection.adapter_name
-    assert_equal "glutton_test", connection.select_value("SELECT current_database()")
+    assert_match /\Aglutton_test(?:_\d+)?\z/, connection.select_value("SELECT current_database()")
     assert_equal 1, connection.select_value("SELECT 1")
   end
 end
