@@ -1,6 +1,6 @@
 # 006e — Identity user-facing translations
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity
 
 ## Goal
@@ -34,4 +34,4 @@ Move existing Identity interface, mail subjects/bodies and custom validation cop
 
 Requested during review of task 006; this separate Identity task consumes Rails i18n rather than changing another domain's behaviour.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #10](https://github.com/adambelton/glutton/pull/10) on 19 October 2026 after hosted CI passed on the final agent-rule commit. Squash commit: `93e857bdd8aa220b2153ced1b38026e01c582ae9`.
