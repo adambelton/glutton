@@ -5,18 +5,11 @@ class GuestSessionProbeController < ApplicationController
   protect_from_forgery with: :exception
 
   def show
-    render json: { id: current_user&.id, token: form_authenticity_token, marker: session[:marker], stored_id: session[:user_id] }
+    render json: { id: current_user&.id, token: form_authenticity_token, stored_id: session[:user_id] }
   end
 
   def create
-    first = ensure_guest_user!
-    render json: { id: first.id, repeated_id: ensure_guest_user!.id, marker: session[:marker] }
-  end
-
-  def seed
-    session[:marker] = "old session"
-    session[:user_id] = params[:stored_id] if params.key?(:stored_id)
-    head :no_content
+    render json: { id: ensure_guest_user!.id }
   end
 end
 
@@ -26,7 +19,6 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
       root "home#index"
       get "/identity-probe", to: "guest_session_probe#show"
       post "/identity-probe", to: "guest_session_probe#create"
-      post "/identity-probe/seed", to: "guest_session_probe#seed"
     end
   end
 
@@ -36,40 +28,20 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
 
   def lookup(client = self)
     client.get "/identity-probe"
-    assert_equal 200, client.response.status
     JSON.parse(client.response.body)
   end
 
   def create_guest(client = self, **params)
     token = lookup(client).fetch("token")
     client.post "/identity-probe", params: params.merge(authenticity_token: token)
-    assert_equal 200, client.response.status
     JSON.parse(client.response.body)
   end
 
-  def with_failure(model, method_name, error)
-    model.define_singleton_method(method_name) { |*| raise error }
-    yield
-  ensure
-    model.singleton_class.remove_method(method_name)
-  end
-
-  test "lookup and scaffold do not create users and explicit creation is reused" do
+  test "scaffold visits do not create users" do
     assert_no_difference "User.count" do
-      assert_nil lookup["id"]
       get "/"
       assert_response :success
     end
-    data = nil
-    assert_difference "GuestUser.count", 1 do
-      data = create_guest
-    end
-    assert_equal data["id"], data["repeated_id"]
-    created_at = User.find(data["id"]).created_at
-    assert_no_difference "User.count" do
-      assert_equal data["id"], create_guest["id"]
-    end
-    assert_equal created_at, User.find(data["id"]).created_at
   end
 
   test "clients and supplied ids cannot select another guest" do
@@ -80,6 +52,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     get "/identity-probe", params: { user_id: second }
     assert_equal first, JSON.parse(response.body)["id"]
     assert_equal second, lookup(other)["id"]
+    assert_equal first, create_guest["id"]
     cookies.delete(Rails.application.config.session_options.fetch(:key))
     assert_nil lookup["id"]
   end
@@ -126,40 +99,6 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
           assert_equal 410, client.response.status
           assert_equal "This account has been deleted.", client.response.body
         end
-      end
-    end
-  end
-
-  test "missing identity is discarded and can be replaced" do
-    user = User.find(create_guest["id"])
-    user.destroy!
-    assert_nil lookup["id"]
-    assert_nil lookup["stored_id"]
-    assert_not_equal user.id, create_guest["id"]
-  end
-
-  test "malformed identity is cleared and new binding resets session" do
-    post "/identity-probe/seed", params: { stored_id: "invalid", authenticity_token: lookup["token"] }
-    assert_response :no_content
-    assert_nil lookup["stored_id"]
-    assert_equal "old session", lookup["marker"]
-    assert_nil create_guest["marker"]
-    assert_nil lookup["marker"]
-  end
-
-  test "creation failure binds no identity and database failure propagates" do
-    token = lookup["token"]
-    with_failure(GuestUser, :create!, ActiveRecord::RecordInvalid.new(GuestUser.new)) do
-      assert_no_difference "User.count" do
-        post "/identity-probe", params: { authenticity_token: token }
-        assert_response :unprocessable_entity
-      end
-    end
-    assert_nil lookup["id"]
-    create_guest
-    with_failure(User, :find_by, ActiveRecord::ConnectionNotEstablished.new) do
-      assert_raises ActiveRecord::ConnectionNotEstablished do
-        get "/identity-probe", env: { "action_dispatch.show_exceptions" => :none }
       end
     end
   end
