@@ -1,47 +1,31 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
 en:
-  app:
-    name: Glutton
-  home:
-    index:
-      tagline: Discover horror through the things you love about it.
-  identity:
-    sessions:
-      sign_in: Sign in
-      sign_out: Sign out
-      signed_in: Signed in.
-      signed_out: Signed out.
-      registered_status: Signed in
-      guest_status: Guest session
-      invalid_credentials: Email or password is incorrect.
-      rate_limited: Too many sign-in attempts. Please try again later.
-      email: Email
-      password: Password
-      deleted_title: This account has been deleted.
-      deleted_description: Sign out to start again, or sign in to a different account.
-    account_mailer:
-      unexpected_request: If you did not request this, you can ignore this email.
-      confirmation:
-        subject: Confirm your Glutton account
-        introduction: Confirm your email address to complete your Glutton registration.
-        action: Confirm your email address
-      password_reset:
-        subject: Reset your Glutton password
-        introduction: Use the link below to reset your Glutton password.
-        action: Reset your password
-  activerecord:
-    attributes:
-      user:
-        type: Account type
-        email_address: Email
-        password: Password
-        password_confirmation: Password confirmation
-        password_digest: Password digest
-        email_confirmed_at: Email confirmed at
-      session:
-        user: User
-    errors:
-      models:
-        session:
-          attributes:
-            user:
-              inactive: must be active
+  hello: "Hello world"

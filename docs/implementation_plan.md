@@ -47,8 +47,6 @@ CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). 
 
 Foundation follow-up: **001c — Ready for review**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
 
-I18n follow-ups: **001d — Ready for review**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Ready for review**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
-
 ## First rating and library slice
 
 Candidate task boundaries; write each detailed spec just before starting, splitting further if needed. IDs 002 onward replace the earlier unimplemented sequence.

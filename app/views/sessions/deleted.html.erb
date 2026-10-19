@@ -1,6 +1,6 @@
 <main>
-  <h1><%= t("identity.sessions.deleted_title") %></h1>
-  <p><%= t("identity.sessions.deleted_description") %></p>
-  <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
-  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+  <h1>This account has been deleted.</h1>
+  <p>Sign out to start again, or sign in to a different account.</p>
+  <%= button_to "Sign out", session_path, method: :delete %>
+  <%= link_to "Sign in", new_session_path %>
 </main>

@@ -19,6 +19,6 @@ class Session < ApplicationRecord
 
   def owner_can_hold_session
     owner = User.find_by(id: user_id) if user_id
-    errors.add(:user, :inactive) unless owner&.active?
+    errors.add(:user, "must be active") unless owner&.active?
   end
 end
