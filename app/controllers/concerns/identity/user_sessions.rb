@@ -5,8 +5,11 @@ module Identity
     class AccountDeleted < StandardError; end
 
     included do
+      helper_method :current_user
+      before_action :prevent_identity_caching
+
       rescue_from AccountDeleted do
-        render plain: "This account has been deleted.", status: :gone
+        render "sessions/deleted", status: :gone
       end
     end
 
@@ -15,11 +18,12 @@ module Identity
     def current_user
       return @current_user if defined?(@current_user)
 
-      user = User.find_by(id: session[:user_id]) if session[:user_id].is_a?(Integer)
+      payload = identity_payload
+      user = User.find_by(id: payload["user_id"]) if payload
       raise AccountDeleted if user.is_a?(DeletedUser)
 
-      @current_user = user&.active? ? user : nil
-      session.delete(:user_id) unless @current_user
+      @current_user = bound_session&.active? ? user : nil
+      clear_identity_cookie unless @current_user
       @current_user
     end
 
@@ -27,10 +31,47 @@ module Identity
       user = current_user
       return user if user
 
-      user = GuestUser.create!
+      authentication = Session.transaction do
+        Session.create!(user: GuestUser.create!)
+      end
+      bind_session(authentication)
+      @current_user
+    end
+
+    def identity_payload
+      payload = cookies.signed[:session_id]
+      if payload.is_a?(Hash) && payload.values_at("id", "user_id").all? { |id| id.is_a?(Integer) && id.positive? }
+        payload
+      end
+    end
+
+    def bound_session
+      return @bound_session if defined?(@bound_session)
+
+      payload = identity_payload
+      @bound_session = Session.find_by(id: payload["id"], user_id: payload["user_id"]) if payload
+    end
+
+    def bind_session(authentication)
       reset_session
-      session[:user_id] = user.id
+      user = authentication.user
+      jar = user.is_a?(RegisteredUser) ? cookies.signed.permanent : cookies.signed
+      jar[:session_id] = {
+        value: { id: authentication.id, user_id: user.id },
+        httponly: true, same_site: :lax, secure: Rails.env.production?
+      }
+      @bound_session = authentication
       @current_user = user
+    end
+
+    def clear_identity_cookie
+      cookies.delete(:session_id)
+      @bound_session = nil
+      @current_user = nil
+    end
+
+    def prevent_identity_caching
+      response.headers["Cache-Control"] = "no-store"
     end
   end
 end

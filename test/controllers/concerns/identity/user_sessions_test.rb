@@ -7,67 +7,59 @@ end
 class Identity::UserSessionsTest < ActionController::TestCase
   tests UserSessionsHostController
 
-  test "lookup without identity does not create a user" do
-    assert_no_difference "User.count" do
+  def bind(user)
+    authentication = Session.create!(user: user)
+    @controller.send(:bind_session, authentication)
+    authentication
+  end
+
+  test "lookup without identity and legacy user id create no account or session" do
+    session[:user_id] = RegisteredUser.create!(email_address: "old@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase", email_confirmed_at: Time.current).id
+    assert_no_difference [ "User.count", "Session.count" ] do
       assert_nil @controller.send(:current_user)
     end
   end
 
-  test "creation resets the session and reuses the guest within the request" do
+  test "guest creation resets browser session and is reused within request" do
     session[:marker] = "old session"
     user = nil
-    assert_difference "GuestUser.count", 1 do
+    assert_difference [ "GuestUser.count", "Session.count" ], 1 do
       user = @controller.send(:ensure_guest_user!)
       assert_same user, @controller.send(:ensure_guest_user!)
     end
-    assert_equal user.id, session[:user_id]
+    assert_equal user.id, @controller.send(:bound_session).user_id
     assert_nil session[:marker]
-  end
-
-  test "existing guest is reused without renewing creation time" do
-    user = GuestUser.create!
-    session[:user_id] = user.id
-    assert_no_difference "User.count" do
-      assert_equal user, @controller.send(:ensure_guest_user!)
-    end
-    assert_equal user.created_at, user.reload.created_at
-  end
-
-  test "malformed identity is cleared" do
-    session[:user_id] = "invalid"
-    assert_nil @controller.send(:current_user)
     assert_nil session[:user_id]
   end
 
-  test "removed identity can be replaced" do
-    user = GuestUser.create!
-    session[:user_id] = user.id
-    user.destroy!
-    assert_nil @controller.send(:current_user)
-    assert_nil session[:user_id]
-    assert_not_equal user.id, @controller.send(:ensure_guest_user!).id
-  end
-
-  test "failed creation binds no identity" do
-    with_failure(GuestUser, :create!, ActiveRecord::RecordInvalid.new(GuestUser.new)) do
-      assert_no_difference "User.count" do
-        assert_raises ActiveRecord::RecordInvalid do
+  test "failed session creation rolls back the new guest and binds nothing" do
+    with_failure(Session, :create!, ActiveRecord::ConnectionNotEstablished.new) do
+      assert_no_difference [ "User.count", "Session.count" ] do
+        assert_raises ActiveRecord::ConnectionNotEstablished do
           @controller.send(:ensure_guest_user!)
         end
       end
     end
-    assert_nil session[:user_id]
+    assert_nil @controller.send(:identity_payload)
   end
 
-  test "database failures propagate without creating a replacement" do
-    user = GuestUser.create!
-    session[:user_id] = user.id
+  test "malformed signed cookie and mismatched references do not grant access" do
+    guest = GuestUser.create!
+    authentication = Session.create!(user: guest)
+    cookies.signed[:session_id] = { id: authentication.id, user_id: guest.id + 1 }
+    assert_nil @controller.send(:current_user)
+  end
+
+  test "database lookup errors propagate rather than replacing an identity" do
+    authentication = bind(GuestUser.create!)
+    @controller.remove_instance_variable(:@current_user)
     with_failure(User, :find_by, ActiveRecord::ConnectionNotEstablished.new) do
       assert_raises ActiveRecord::ConnectionNotEstablished do
         @controller.send(:ensure_guest_user!)
       end
     end
-    assert_equal user.id, session[:user_id]
+    assert_equal authentication.id, @controller.send(:identity_payload)["id"]
   end
 
   private
