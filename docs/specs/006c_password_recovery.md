@@ -1,6 +1,6 @@
 # 006c — Password recovery
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / recovery
 
 ## Goal
@@ -60,7 +60,7 @@ Read the implementation plan, product brief (Accounts and privacy), architecture
   Result: Passed — integration tests cover normalized unknown-address cooldown and reopening at 60 seconds, separate request/update IP budgets and reopening at 180 seconds, trusted origin despite hostile Host/redirect parameters, sanitized retryable SMTP failure, no-store/no-referrer, empty password fields, filtered token GET URLs/forms/email logs and no token in browser cookies. Existing registration, session, origin and mail tests pass in the full suite. Limits remain per-worker and reset on restart.
 - **AC5:** Existing application checks and documentation remain accurate.  
   Check: `bin/rails zeitwerk:check`, focused recovery tests, `PARALLEL_WORKERS=1 CI=true bin/ci`, `git diff --check`; update README/plan and record actual commands/results. Distinguish local transport simulation from any optional authorized inbox/browser verification. No deployment required.  
-  Result: Passed — PARALLEL_WORKERS=1 CI=true bin/ci: 145 tests, 1,418 assertions, zero failures/errors/skips; RuboCop 82 files clean; gem/importmap audits clear; Brakeman zero warnings. bin/rails zeitwerk:check passed application eager loading (existing development mail-preview directory is outside eager-load paths). git diff --check passed. README, product/architecture briefs and plan updated. Automated verification used local transport. Owner subsequently confirmed password reset in the browser on 19 October 2026; inbox receipt was not separately reported. No deployment or hosted CI was performed for this task.
+  Result: Passed — PARALLEL_WORKERS=1 CI=true bin/ci: 145 tests, 1,418 assertions, zero failures/errors/skips; RuboCop 82 files clean; gem/importmap audits clear; Brakeman zero warnings. bin/rails zeitwerk:check passed application eager loading (existing development mail-preview directory is outside eager-load paths). git diff --check passed. README, product/architecture briefs and plan updated. Automated verification used local transport. Owner subsequently confirmed password reset in the browser on 19 October 2026; inbox receipt was not separately reported. Hosted GitHub CI subsequently passed: [run 39311608925](https://github.com/adambelton/glutton/actions/runs/39311608925). No deployment was performed.
 
 ## Implementation notes
 
@@ -81,4 +81,4 @@ Manual verification — 19 October 2026: owner reported “Password reset confir
 
 Release prerequisites from prior tasks still apply: shared abuse controls for multi-worker operation and pending/guest/activity retention cleanup are separate work. This task does not claim those are complete.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Owner authorized PR and merge after CI. [PR #14](https://github.com/adambelton/glutton/pull/14) merged after hosted CI passed on 19 October 2026; squash commit `6abef84f09d8f03f877256667a939c86286e0f93`.
