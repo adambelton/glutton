@@ -10,7 +10,7 @@ A horror discovery app. This initial scaffold contains a home page and Rails hea
 - PostgreSQL **17** running locally (verified with **17.9**).
 - The local PostgreSQL role matching your OS username must have permission to create databases. For another local connection, use standard `PGHOST`, `PGPORT`, `PGUSER` and `PGPASSWORD` environment variables; do not commit credentials.
 
-Rails **8.1.4** and all gem versions are locked in `Gemfile.lock`. The frontend uses importmap, so Node.js is not required. No external API keys are needed.
+Rails **8.1.4** and all gem versions are locked in `Gemfile.lock`. The frontend uses importmap, so Node.js is not required. No external API keys are needed for default local operation.
 
 ## Setup
 
@@ -70,7 +70,7 @@ curl --fail http://localhost:3000/up
 - [Initial scaffold spec and verification evidence](docs/specs/001_initial_scaffold.md)
 - [Task spec template](docs/task_template.md)
 
-Read root `AGENTS.md` before implementation. Each subsequent task needs its own scoped spec. Authentication, provider integrations, domain models, background processing and deployment remain future work.
+Read root `AGENTS.md` before implementation. Each subsequent task needs its own scoped spec. See the implementation plan for completed Identity work and remaining product workflows.
 
 ## GitHub CI
 
@@ -78,3 +78,53 @@ Pull requests and pushes to `main` run `bin/ci` through GitHub Actions, using
 `.ruby-version` and a disposable PostgreSQL 17 service. The same checks run locally
 with `bin/ci`; PostgreSQL must already be available locally. Hosted runs need no
 repository secrets and do not deploy the app.
+
+## Identity mail
+
+Action Mailer composes confirmation and password-reset messages. Registration,
+confirmation redemption and password reset workflows are separate tasks.
+
+In development, visit `/rails/mailers` and select either Identity account preview.
+Both HTML and plain-text views use synthetic recipients/links and never send mail.
+Previews are disabled in test and production.
+
+Default delivery uses Rails' in-memory test transport. To enable actual Resend
+SMTP delivery in development, add these to the ignored `.env.development` file
+(dotenv-rails loads it on boot), then restart Rails:
+
+```dotenv
+MAIL_DELIVERY=resend
+MAIL_FROM=noreply@your-verified-domain.example
+RESEND_API_KEY=your-api-key
+```
+
+Production uses process environment variables with the same names. Test always
+uses local delivery, even if live variables are supplied. Set `MAIL_DELIVERY=test`
+to explicitly disable network delivery. Missing live settings or unknown modes
+fail at boot. SMTP uses port 587 with required STARTTLS and certificate verification;
+credentials, recipients and message bodies are excluded from Action Mailer logs.
+No queue, automatic retry or delivery tracking is configured; delivery errors
+propagate to the caller.
+
+Provider contract (synchronous sending is explicit):
+
+```ruby
+Identity::AccountMailer.confirmation(
+  recipient: "reader@example.test",
+  confirmation_url: "https://example.test/confirmation?token=example"
+).deliver_now
+Identity::AccountMailer.password_reset(
+  recipient: "reader@example.test",
+  reset_url: "https://example.test/password/reset?token=example"
+).deliver_now
+```
+
+These example recipients/links are for local previews/tests only. For live
+verification use an owner-designated recipient and a synthetic HTTPS example link;
+mail composition does not implement token redemption or change any account.
+Callers must supply the authorized recipient/link. Invalid recipients and URLs
+raise `ArgumentError` when the lazy mail object is processed. Links require HTTPS;
+HTTP on localhost is allowed in development when SMTP delivery is disabled. No arbitrary recipient lookup occurs.
+Confirm inbox receipt and inspect message headers for SPF, DKIM and DMARC passing;
+SMTP acceptance alone does not prove receipt. Do not paste credentials or token
+links into logs or committed files.
