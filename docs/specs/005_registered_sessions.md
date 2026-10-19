@@ -1,6 +1,6 @@
 # 005 — Shared user sessions
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / sessions
 
 ## Goal
@@ -61,4 +61,4 @@ The initial focused run found a nested time-helper block in a test; removed the 
 
 Scope refinement: task 005 supplies shared guest/registered session lifecycle and registered authentication; task 005a will adapt task 003’s guest creation/current-user concern to the shared server-side Session model and implement HTTP sign-in/out, protected cookie binding, session rotation, request limits and explicit deleted-account failures. Both identity modes must resolve through Session records rather than trusting a bare user-ID cookie. Guest cookies retain browser-session lifetime; registered cookies follow Rails’ persistent signed-cookie convention. Before implementing 005a, specify cookie contents following Rails’ persistent signed-cookie convention, behavior for revoked sessions whose account was deleted, fresh credential entry from an old deleted session, and sign-out semantics. Password reset session invalidation remains task 006c.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #6](https://github.com/adambelton/glutton/pull/6) on 19 October 2026. Squash commit: `04700f151b4a1b46df7da61f0c94d6bc522a3ddd`. The owner explicitly authorized merging without waiting after hosted CI remained queued. Hosted checks were not confirmed passing; local CI evidence above remains valid.
