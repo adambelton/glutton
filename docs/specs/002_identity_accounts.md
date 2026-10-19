@@ -11,10 +11,10 @@ Relevant decisions: [product brief, Accounts and privacy](../product_brief.md) a
 
 ## Scope
 
-- Add a minimal Rails `User` model and PostgreSQL `users` table with an internal primary key, timestamps and a required guest expiry timestamp. All users created in this task are guests; credentials and registered state arrive in a separate task.
-- Explicit guest creation sets expiry to 24 hours after creation, using application time. Reads and activity never extend this deadline. Do not accept a caller-supplied user ID or expiry through a public interface.
-- Expose a small Identity-local predicate for guest expiry: active before the deadline, expired at or after it. Use Rails time helpers for deterministic tests.
-- Require the expiry in model validation and PostgreSQL. Keep a stable internal ID across reloads; never synthesize an email address or password.
+- Use Rails single-table inheritance: concrete `User` base and `GuestUser` subclass sharing `users`, with internal ID, required `type` and timestamps. Only the guest subtype is implemented now.
+- Create guests explicitly with `GuestUser.create!`. Derive expiry from `created_at + 24.hours`; remove the stored guest expiry column. Reads and activity never renew the deadline. Policy changes therefore affect existing guests.
+- `User#expired?` returns false; `GuestUser#expired?` overrides it and returns true at or after the deadline. Test through the base lookup to verify subtype dispatch.
+- Preserve existing guest IDs and creation timestamps during migration; backfill their STI type. Require type in model validation and PostgreSQL; never synthesize credentials.
 - Record the later registration requirement: successful registration requires email confirmation and upgrades the same guest identity, preserving its activity; expired guests cannot be claimed. This task does not implement that operation.
 
 ## Scope restrictions
@@ -22,31 +22,31 @@ Relevant decisions: [product brief, Accounts and privacy](../product_brief.md) a
 - Change only Identity-owned guest persistence, time rules and tests, plus task documentation. Do not add Library, Ratings, Recommendations or Film knowledge code, associations, foreign keys or placeholder interfaces.
 - No cookies, sessions, current-user helpers, controllers, routes, forms, registration, passwords, email fields, verification tokens, mailers or external calls. Do not generate the complete authentication scaffold in this task.
 - No cleanup job or deletion of user/activity records. Expiry marks an identity as unusable; deletion is separate. Later session handling must enforce expiry server-side even before cleanup runs.
-- Do not add speculative registered-account columns or a generic identity service. Introduce credentials and conditional account invariants in their own task.
+- Do not add speculative registered-account columns or a generic identity service. Introduce credentials and conditional account invariants in their own task. Registered/deleted subclasses, transition operations and domain capability modules arrive only with their owning tasks.
 - No anonymous-account recovery by entered email, account merging, cross-browser guest recovery or lifetime refresh on activity.
 - No production deployment, real user data, external communication or paid services are authorized by this spec. The owner subsequently authorized committing this task, pushing its branch and opening a GitHub PR for review; no merge is authorized.
 
 ## Acceptance criteria
 
-- **AC1:** Explicit guest creation persists an internal ID, timestamps and expiry, with no email or password. Reloading retains the same identity and expiry.  
-  Check: Inspect migration/schema and run `bin/rails test test/models/user_test.rb` with creation/reload assertions.  
-  Result: Passed — `bin/rails test test/models/user_test.rb`: 5 tests, 18 assertions, zero failures/errors. Creation/reload assertions verify ID, timestamps, 24-hour expiry and absence of credentials; migration/schema inspected.
-- **AC2:** Expiry is fixed at creation plus 24 hours. The guest is active just before the deadline and expired exactly at and after it; reading or updating unrelated timestamps does not renew it.  
-  Check: Run `bin/rails test test/models/user_test.rb` with frozen/travelled time and explicit boundary and non-renewal assertions.  
-  Result: Passed — `bin/rails test test/models/user_test.rb`: 5 tests, 18 assertions, zero failures/errors. Frozen-time boundary checks cover immediately before, exactly at and after expiry; reload/touch checks preserve the deadline.
-- **AC3:** Model validation and PostgreSQL reject missing guest expiry independently. Separate guest creations produce separate IDs.  
-  Check: Run `bin/rails test test/models/user_test.rb`, including a write bypassing validations in an isolated transaction and distinct-identity assertions.  
-  Result: Passed — `bin/rails test test/models/user_test.rb`: missing expiry fails model validation and a validation-bypassing insert raises `ActiveRecord::NotNullViolation` inside a savepoint. A subsequent valid insert succeeds; distinct creations have different IDs.
-- **AC4:** The change works with the scaffold and stays within Identity persistence scope.  
-  Check: Run `bin/rails db:prepare`, `RAILS_ENV=test bin/rails db:prepare`, `bin/ci` and `git diff --check`; inspect the diff for excluded features and unrelated edits. Record actual commands and outcomes here after implementation.  
-  Result: Passed — `bin/rails db:prepare` and `RAILS_ENV=test bin/rails db:prepare` applied the migration successfully. `bin/ci` passed: 25 Ruby files linted, gem/importmap audits clear, Brakeman zero warnings/errors, 8 tests/30 assertions with zero failures/errors. `git diff --check` passed; implementation diff contains only Identity model, migration, generated schema and tests. Existing document edits and untracked `.idea/` were preserved.
+- **AC1:** `GuestUser.create!` persists an email-free identity; `User.find` returns a `GuestUser` with the same ID and creation timestamp. Separate guests have separate IDs. No expiry column remains.  
+  Check: Inspect schema and run `bin/rails test test/models/user_test.rb`.  
+  Result: Passed — `bin/rails test test/models/user_test.rb`: 7 tests, 23 assertions, zero failures/errors. Base lookup instantiates `GuestUser`; schema has required `type`, timestamps and no expiry/credential fields.
+- **AC2:** Base `User#expired?` returns false; guests expire exactly 24 hours after creation, including across a daylight-saving change. Reads and timestamp touches do not renew expiry.  
+  Check: Run frozen-time boundary, base lookup, non-renewal and DST tests with `bin/rails test test/models/user_test.rb`.  
+  Result: Passed — same focused command: base false, guest deadline boundaries, reload/touch non-renewal and Europe/London 2026-10-25 DST checks all passed.
+- **AC3:** Model validation and PostgreSQL reject missing type. Migration preserves an existing guest's ID and creation time while assigning `GuestUser`.  
+  Check: Model tests bypass validations inside a savepoint; migrate a representative pre-STI guest in the test database and inspect it after migration. Record commands and outcomes.  
+  Result: Passed — focused model/database checks reject missing type. Before migration, inserted a test guest with creation time `2026-10-18 12:00:00`; after migration, `User.find(id)` returned `GuestUser` with the same ID and creation time. Temporary test row removed. Reproduction steps below.
+- **AC4:** Scaffold checks pass within Identity scope.  
+  Check: Run `bin/rails db:prepare`, `RAILS_ENV=test bin/rails db:prepare`, `bin/ci` and `git diff --check`.  
+  Result: Passed — `bin/rails db:prepare` and `RAILS_ENV=test bin/rails db:prepare` applied the STI migration. `bin/ci` passed: 27 files linted, gem/importmap audits clear, Brakeman zero warnings/errors, 10 tests/35 assertions with no failures/errors. `git diff --check` passed.
 
 ## Implementation notes
 
-Implemented `User.create_guest!` with one captured creation time and expiry exactly 24 hours later, plus `guest_expired?`, presence validation and a PostgreSQL NOT NULL constraint. No automatic renewal or credential fields.
+Implemented `GuestUser < User`, required STI type, base `expired?` returning false and a guest override deriving expiry from creation time. Added a follow-up migration so already-migrated databases retain their guest IDs and timestamps. No domain capability modules or future subclasses were added.
 
-The initial focused run and CI failed the deadline test because the time helper rounded fractional seconds; corrected the test to create its guest under frozen time. The focused tests and full CI then passed as recorded above. Initial sandboxed database setup could not connect to local PostgreSQL; database checks succeeded with approved execution outside the sandbox.
+Migration preservation reproduction (test database only, before applying `20261019140000`): in `RAILS_ENV=test bin/rails console`, insert a row with `connection = ActiveRecord::Base.connection; id = connection.select_value("INSERT INTO users (created_at, updated_at, guest_expires_at) VALUES ('2026-10-18 12:00:00', '2026-10-18 12:00:00', '2026-10-19 12:00:00') RETURNING id")` and retain the ID. Run `RAILS_ENV=test bin/rails db:prepare`, reopen the console and check `user = User.find(id); user.class == GuestUser && user.created_at == Time.utc(2026, 10, 18, 12)`, then `user.destroy!`. Actual verification used Rails runner scripts for these same insert/check/delete steps.
 
-No scope deviations. Session ownership, server-side rejection of expired identities, registration/claiming and eventual deletion remain required follow-up work; this task supplies persistence and the expiry predicate only. The owner subsequently requested a GitHub PR for review. Commit and branch publication are authorized for that purpose; owner acceptance and merge remain pending.
+Revision authorized by the owner: STI and polymorphic expiry replace the stored deadline. Previous verification (5 focused tests/18 assertions; full CI 8 tests/30 assertions) covered the earlier design and is superseded by the checks above. Session enforcement, registration/confirmation, domain capabilities and cleanup remain separate tasks. The owner authorized committing and pushing updates to PR #1; no merge is authorized.
 
 Owner acceptance / merge: Pending.

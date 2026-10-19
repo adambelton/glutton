@@ -3,7 +3,7 @@ require "test_helper"
 class UserTest < ActiveSupport::TestCase
   test "guest persists an identity and fixed expiry without credentials" do
     freeze_time do
-      user = User.create_guest!
+      user = GuestUser.create!
       id = user.id
 
       user.reload
@@ -11,52 +11,71 @@ class UserTest < ActiveSupport::TestCase
       assert_equal id, user.id
       assert_equal Time.current, user.created_at
       assert_equal Time.current, user.updated_at
-      assert_equal user.created_at + 24.hours, user.guest_expires_at
+      assert_instance_of GuestUser, User.find(id)
+      assert_not user.has_attribute?(:guest_expires_at)
       assert_not user.has_attribute?(:email)
       assert_not user.has_attribute?(:email_address)
       assert_not user.has_attribute?(:password_digest)
-      assert_not_equal id, User.create_guest!.id
+      assert_not_equal id, GuestUser.create!.id
     end
   end
 
-  test "guest expires exactly at its deadline" do
-    user = freeze_time { User.create_guest! }
+  test "base users do not expire" do
+    assert_not User.new.expired?
+  end
 
-    travel_to user.guest_expires_at - 1.second do
-      assert_not user.guest_expired?
+  test "guest expires exactly at its deadline" do
+    user = freeze_time { GuestUser.create! }
+
+    travel_to (user.created_at + 24.hours) - 1.second do
+      assert_not user.expired?
     end
-    travel_to user.guest_expires_at do
-      assert user.guest_expired?
+    travel_to (user.created_at + 24.hours) do
+      assert user.expired?
     end
-    travel_to user.guest_expires_at + 1.second do
-      assert user.guest_expired?
+    travel_to (user.created_at + 24.hours) + 1.second do
+      assert user.expired?
     end
   end
 
   test "reads and timestamp updates do not renew expiry" do
-    user = User.create_guest!
-    expiry = user.guest_expires_at
+    user = GuestUser.create!
+    expiry = user.created_at + 24.hours
 
     travel 12.hours do
-      assert_not user.reload.guest_expired?
+      assert_not user.reload.expired?
       user.touch
-      assert_equal expiry, user.reload.guest_expires_at
+      assert_equal expiry, user.reload.created_at + 24.hours
     end
   end
 
-  test "expiry is required by the model" do
+  test "guest lifetime is 24 elapsed hours across daylight saving" do
+    Time.use_zone("Europe/London") do
+      user = travel_to(Time.zone.local(2026, 10, 24, 12)) { GuestUser.create! }
+      travel_time = user.created_at + 24.hours
+      assert_equal 11, travel_time.in_time_zone.hour
+      travel_to travel_time - 1.second do
+        assert_not User.find(user.id).expired?
+      end
+      travel_to travel_time do
+        assert User.find(user.id).expired?
+      end
+    end
+  end
+
+  test "type is required by the model" do
     user = User.new
 
     assert_not user.valid?
-    assert_includes user.errors[:guest_expires_at], "can't be blank"
+    assert_includes user.errors[:type], "can't be blank"
   end
 
-  test "database rejects missing expiry without model validation" do
+  test "database rejects missing type without model validation" do
     assert_raises ActiveRecord::NotNullViolation do
       User.transaction(requires_new: true) do
         User.new.save!(validate: false)
       end
     end
-    assert User.create_guest!.persisted?
+    assert GuestUser.create!.persisted?
   end
 end

@@ -45,7 +45,7 @@ Registered accounts use email and password. Registration upgrades the active gue
 
 Use one users table with stable internal IDs for guests and registered accounts; film and preference records reference only those IDs. Guests have no fabricated email or password. Use Rails authentication primitives as the starting point, with application-owned guest and registration behaviour. Resend remains the intended delivery provider for verification and password-reset mail, with local previews and no real sending by default. This replaces the original magic-link decision.
 
-Ratings, expressions and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account deletion needs specification before launch.
+Ratings, expressions and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account deletion anonymises and locks the retained identity and revokes access. The exact activity anonymisation/deletion policy needs specification before launch; abandoned guests and their activity are deleted rather than retained as deleted accounts.
 
 ## 3. Two engagement modes and a personal library
 
