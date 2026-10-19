@@ -1,6 +1,6 @@
 # 002 — Temporary guest identity
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / accounts
 
 ## Goal
@@ -47,4 +47,4 @@ Implemented `GuestUser < User`, required STI type, base `active?` returning true
 
 No domain capability modules or registered subclass were added. The deleted subtype only supplies the inactive predicate; it does not implement anonymisation, session revocation or a deletion transition. Session enforcement, registration/confirmation, domain capabilities and cleanup remain separate tasks. The owner authorized committing and pushing updates to PR #1; no merge is authorized.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #1](https://github.com/adambelton/glutton/pull/1) on 19 October 2026. Squash commit: `08899ba1d99fccc7d1be7f7134565b4a8b9df4c1`.

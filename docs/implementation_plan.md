@@ -1,11 +1,11 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001, 001a and 002 ready for review; later tasks planned  
+Status: Task 002 merged; task 003 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
 
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a and 002; task 002 uses STI and derived expiry and is ready for review; owner acceptance and merge remain pending.
+Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 002 and 003. Task 002 was accepted by the owner and merged via PR #1; task 003 is implemented and ready for review; owner acceptance and merge remain pending.
 
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
@@ -51,8 +51,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 
 | Task | Owner / capability | Independently verifiable outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
-| 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Ready for review — [spec](specs/002_identity_accounts.md) |
-| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Planned |
+| 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Merged — [spec](specs/002_identity_accounts.md), [PR #1](https://github.com/adambelton/glutton/pull/1) |
+| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Ready for review — [spec](specs/003_guest_sessions.md) |
 | 004 | Identity / credentials | Registered-account credential invariants and atomic in-place claim of an active guest; preserve ID and reject expired/duplicate claims | 002 | Planned |
 | 005 | Identity / registered sessions | Password sign-in, session rotation, current guest/registered identity and sign-out; no automatic guest merge | 003, 004 | Planned |
 | 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Planned |
