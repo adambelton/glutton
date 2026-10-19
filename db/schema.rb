@@ -10,9 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_sessions_on_user_id"
+  end
 
   create_table "users", force: :cascade do |t|
     t.string "type", null: false
@@ -25,4 +32,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_150000) do
     t.check_constraint "type::text <> 'RegisteredUser'::text OR email_address IS NOT NULL AND email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text AND password_digest IS NOT NULL AND password_digest::text ~ '[^[:space:]]'::text AND email_confirmed_at IS NOT NULL", name: "registered_users_require_credentials"
     t.check_constraint "type::text = 'RegisteredUser'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
+
+  add_foreign_key "sessions", "users"
 end
