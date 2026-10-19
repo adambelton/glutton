@@ -29,3 +29,6 @@
 
 # Local notes workspace state.
 /.obsidian/
+
+# RubyMine
+/.idea/

@@ -1,6 +1,6 @@
 # 003 — Session-bound guest access
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / guest sessions
 
 ## Goal
@@ -61,4 +61,4 @@ Focused `Identity::UserSessionsTest` tests use a minimal `ActionController::Base
 
 No scope deviations. No production probe endpoint, product consumer, schema change, credential flow or cleanup job was added. Registered sessions and registration remain separate tasks. Cookie possession supplies temporary guest access, not verified email identity. The owner subsequently requested a GitHub PR; commit and branch publication are authorized for that purpose. Owner acceptance and merge remain pending.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #2](https://github.com/adambelton/glutton/pull/2) on 19 October 2026. Squash commit: `6d2caa8771be21e12ac718a31cc5dd398a0552a9`.

@@ -1,11 +1,11 @@
 # Glutton — Initial implementation plan
 
-Status: Task 002 merged; task 003 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002 and 003 merged; task 004 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
 
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 002 and 003. Task 002 was accepted by the owner and merged via PR #1; task 003 is implemented and ready for review; owner acceptance and merge remain pending.
+Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003 and 004. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 is implemented and ready for review; owner acceptance and merge remain pending.
 
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
@@ -43,7 +43,7 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 
 Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](specs/001a_scaffold_cleanup.md). Remove unused scaffold examples and publish the initial public GitHub repository, as authorised by the owner.
 
-CI follow-up: **001b — Ready for review**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
+CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
 
 ## First rating and library slice
 
@@ -52,12 +52,12 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | Task | Owner / capability | Independently verifiable outcome | Depends on | Status |
 | --- | --- | --- | --- | --- |
 | 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Merged — [spec](specs/002_identity_accounts.md), [PR #1](https://github.com/adambelton/glutton/pull/1) |
-| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Ready for review — [spec](specs/003_guest_sessions.md) |
-| 004 | Identity / credentials | Registered-account credential invariants and atomic in-place claim of an active guest; preserve ID and reject expired/duplicate claims | 002 | Planned |
+| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Merged — [spec](specs/003_guest_sessions.md), [PR #2](https://github.com/adambelton/glutton/pull/2) |
+| 004 | Identity / credentials | Confirmed registered-account credential persistence, normalization and password authentication invariants | 002 | Ready for review — [spec](specs/004_registered_credentials.md) |
 | 005 | Identity / registered sessions | Password sign-in, session rotation, current guest/registered identity and sign-out; no automatic guest merge | 003, 004 | Planned |
 | 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Planned |
 | 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005 | Planned |
-| 006b | Identity / verification | Required email confirmation completes registration; expiring tokens, resend limits and pending/expired claim handling; entered email alone never grants access | 006, 006a | Planned |
+| 006b | Identity / verification | Required email confirmation atomically claims an active guest in place; preserve ID, reject expired/duplicate claims; expiring tokens and resend limits; entered email alone never grants access | 006, 006a | Planned |
 | 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005, 006 | Planned |
 | 006d | Identity / guest retention | Scheduled cleanup of expired guest identities; recheck claim state and specify retry behaviour | 003, 004 | Planned — activity deletion ownership must be resolved before implementation |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |
@@ -79,7 +79,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 023 | Ratings / revisions | Re-rate while retaining agreed history and superseding the current submission | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 
-The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered-session duration remains undecided. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces credentials and the claim transition; task 005 exposes both identity modes. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
+The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered-session duration remains undecided. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 exposes both identity modes. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
 
 Guest cleanup must eventually remove associated activity as well as the identity. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
 

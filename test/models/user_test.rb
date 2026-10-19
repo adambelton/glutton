@@ -14,8 +14,8 @@ class UserTest < ActiveSupport::TestCase
       assert_instance_of GuestUser, User.find(id)
       assert_not user.has_attribute?(:guest_expires_at)
       assert_not user.has_attribute?(:email)
-      assert_not user.has_attribute?(:email_address)
-      assert_not user.has_attribute?(:password_digest)
+      assert_nil user.email_address
+      assert_nil user.password_digest
       assert_not_equal id, GuestUser.create!.id
     end
   end
