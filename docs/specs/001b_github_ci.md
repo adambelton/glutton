@@ -13,6 +13,7 @@ Relevant architecture: [Rails and PostgreSQL setup](../architecture_brief.md), s
 
 - Add one GitHub Actions workflow invoking `bin/ci` on pull requests and main pushes, with read-only repository permission and a bounded runtime.
 - Install Ruby from `.ruby-version` and cache Bundler dependencies. Supply PostgreSQL 17 on localhost with health checks and disposable service-only credentials, compatible with existing database configuration.
+- Add Linux platform resolution to the lockfile without upgrading existing dependency versions, as required by the hosted runner.
 - Document local/hosted entry points. Publish a separate review PR and inspect its actual hosted check result.
 
 ## Scope restrictions
@@ -26,10 +27,10 @@ Relevant architecture: [Rails and PostgreSQL setup](../architecture_brief.md), s
 
 - **AC1:** Workflow runs on pull requests and main pushes with Ruby from the repository, PostgreSQL 17 and `bin/ci`.  
   Check: Parse YAML and review triggers, service, runtime, permissions and command against official action/service documentation.  
-  Result: Not run.
+  Result: Passed — `ruby -r yaml -e 'w = YAML.load_file(".github/workflows/ci.yml"); abort unless w.fetch("jobs").fetch("checks").fetch("steps").last.fetch("run") == "bin/ci"'` parses the workflow and verifies its entry point. Reviewed triggers, health checks, `.ruby-version` lookup, read-only permissions and timeout against official ruby/setup-ruby and GitHub service documentation.
 - **AC2:** Existing checks pass with no changes to their semantics.  
   Check: Run `bin/ci` locally and `git diff --check` for scoped files.  
-  Result: Not run.
+  Result: Passed — local `bin/ci`: 27 Ruby files linted, audits clear, Brakeman zero warnings/errors, 11 tests/37 assertions with no failures/errors. `git diff --check -- .github docs README.md` passed; unrelated local `.gitignore` edit excluded.
 - **AC3:** The CI PR has a successful hosted check.  
   Check: Push the branch, create a PR and inspect `gh run view` plus logs for failures; record the run URL and actual result.  
   Result: Not run.
