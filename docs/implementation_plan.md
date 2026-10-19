@@ -43,7 +43,7 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 
 Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](specs/001a_scaffold_cleanup.md). Remove unused scaffold examples and publish the initial public GitHub repository, as authorised by the owner.
 
-CI follow-up: **001b — In progress**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
+CI follow-up: **001b — Ready for review**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
 
 ## First rating and library slice
 

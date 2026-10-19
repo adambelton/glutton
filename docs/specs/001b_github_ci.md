@@ -1,6 +1,6 @@
 # 001b — GitHub continuous integration
 
-Status: In progress  
+Status: Ready for review  
 Owner: Foundation
 
 ## Goal
@@ -33,10 +33,14 @@ Relevant architecture: [Rails and PostgreSQL setup](../architecture_brief.md), s
   Result: Passed — local `bin/ci`: 27 Ruby files linted, audits clear, Brakeman zero warnings/errors, 11 tests/37 assertions with no failures/errors. `git diff --check -- .github docs README.md` passed; unrelated local `.gitignore` edit excluded.
 - **AC3:** The CI PR has a successful hosted check.  
   Check: Push the branch, create a PR and inspect `gh run view` plus logs for failures; record the run URL and actual result.  
-  Result: Not run.
+  Result: Passed — [hosted run 39268328567](https://github.com/adambelton/glutton/actions/runs/39268328567) succeeded on commit `92de5e2` in 1m12s, including dependency installation and `bin/ci`. Verified with `gh run watch 39268328567 --repo adambelton/glutton --exit-status --interval 10`.
 
 ## Implementation notes
 
-Not implemented.
+Implemented `.github/workflows/ci.yml` with one Ubuntu 24.04 job, Ruby from `.ruby-version`, Bundler cache, PostgreSQL 17 health checks, read-only repository permissions and a 15-minute timeout. Uses existing `bin/ci` unchanged. README documents the hosted/local entry point.
+
+The first hosted run failed because the lockfile supported only arm64-darwin. Ran `bundle lock --add-platform x86_64-linux`; the diff adds Linux variants of the existing nokogiri/pg versions and the Linux platform, without version upgrades. Re-ran local CI successfully and verified the successful hosted run above. Scope was updated before the lockfile change. No domain code, deployment or branch protection changed.
+
+Review PR: [#3](https://github.com/adambelton/glutton/pull/3). Hosted evidence is for the implementation commit; subsequent documentation-only evidence updates may trigger another run.
 
 Owner acceptance / merge: Pending.
