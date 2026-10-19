@@ -71,3 +71,10 @@ curl --fail http://localhost:3000/up
 - [Task spec template](docs/task_template.md)
 
 Read root `AGENTS.md` before implementation. Each subsequent task needs its own scoped spec. Authentication, provider integrations, domain models, background processing and deployment remain future work.
+
+## GitHub CI
+
+Pull requests and pushes to `main` run `bin/ci` through GitHub Actions, using
+`.ruby-version` and a disposable PostgreSQL 17 service. The same checks run locally
+with `bin/ci`; PostgreSQL must already be available locally. Hosted runs need no
+repository secrets and do not deploy the app.
