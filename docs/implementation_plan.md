@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
@@ -11,7 +11,7 @@ If work appears to require changes in multiple domains, **review the boundary fi
 
 Use statuses `Draft`, `In progress`, `Ready for review`, `Accepted`, `Merged`; note blockers explicitly. Record actual changes and evidence in the spec. Owner acceptance and merge are separate from checks passing. Spec creation alone does not start implementation, and this plan does not authorise the whole list.
 
-Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a was accepted and merged via PR #11 after hosted CI passed; task 006b is Ready for review: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f).
+Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a was accepted and merged via PR #11 after hosted CI passed; task 006b was accepted and merged via PR #12 after hosted CI passed: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f). Task 006f is implemented and Ready for review; local checks passed.
 
 ## Domain ownership
 
@@ -66,8 +66,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 005a | Identity / sign-in flow | Move guest access to shared Session records; sign-in/out UI, protected cookies, rotation, request limits and current identity; no automatic guest merge | 003, 005 | Merged — [spec](specs/005a_sign_in_flow.md), [PR #8](https://github.com/adambelton/glutton/pull/8) |
 | 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Merged — [spec](specs/006_identity_mail_delivery.md), [PR #9](https://github.com/adambelton/glutton/pull/9) |
 | 006a | Identity / registration | Validated pending credentials for direct signup or an active guest, without user creation, account transition or UI | 004, 005 | Merged — [spec](specs/006a_pending_registration.md), [PR #11](https://github.com/adambelton/glutton/pull/11) |
-| 006b | Identity / verification | Confirmation tokens and atomic registered creation or in-place guest claim with fresh session; expiry, replay/conflict rejection and rollback | 004, 005, 006a | Ready for review — [spec](specs/006b_registration_confirmation.md) |
-| 006f | Identity / registration UI | Wire registration/confirmation HTTP flow, mail delivery/resend, pending-to-guest continuity, visible verification/expiry, session binding, CSRF, limits and localized non-enumerating responses | 005a, 006, 006b | Planned |
+| 006b | Identity / verification | Confirmation tokens and atomic registered creation or in-place guest claim with fresh session; expiry, replay/conflict rejection and rollback | 004, 005, 006a | Merged — [spec](specs/006b_registration_confirmation.md), [PR #12](https://github.com/adambelton/glutton/pull/12) |
+| 006f | Identity / registration UI | Wire registration/confirmation HTTP flow, mail delivery/resend, pending-to-guest continuity, visible verification/expiry, session binding, CSRF, limits, duplicate-email rejection and localized responses | 005a, 006, 006a, 006b | Ready for review — [spec](specs/006f_registration_browser_flow.md) |
 | 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005a, 006 | Planned |
 | 006d | Identity / guest retention | Scheduled cleanup of expired guests and pending credentials; recheck claim state and specify retry behaviour | 003, 004 | Planned — activity deletion ownership must be resolved before implementation |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |

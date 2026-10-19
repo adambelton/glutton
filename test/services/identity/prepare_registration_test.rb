@@ -91,12 +91,14 @@ module Identity
       registered = RegisteredUser.create!(email_address: "reader@example.test", password: "registered password",
         password_confirmation: "registered password", email_confirmed_at: Time.current)
       guest = GuestUser.create!
-      pending = prepare(guest_user_id: guest.id)
-      direct = prepare
-      assert_equal guest.id, pending.guest_user_id
-      assert_nil direct.guest_user_id
-      assert_equal registered, RegisteredUser.find_by_email(pending.email_address)
-      assert_nil Authenticate.call(email_address: pending.email_address, password: "a long password phrase")
+      [ {}, { guest_user_id: guest.id } ].each do |attributes|
+        assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+          error = assert_raises(ActiveRecord::RecordInvalid) { prepare(email_address: " READER@Example.TEST ", **attributes) }
+          assert_includes error.record.errors.details[:email_address], { error: :registered }
+        end
+      end
+      assert_equal registered, RegisteredUser.find_by_email("reader@example.test")
+      assert_nil Authenticate.call(email_address: "reader@example.test", password: "a long password phrase")
       assert_nil guest.reload.email_address
     end
   end

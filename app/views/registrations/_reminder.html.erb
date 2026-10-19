@@ -1,0 +1,7 @@
+<% registration = current_pending_registration %>
+<% if registration.present? %>
+  <aside role="status">
+    <%= render "registrations/pending_details", registration: registration %>
+    <%= link_to t("identity.registration.pending_title"), registration_path %>
+  </aside>
+<% end %>

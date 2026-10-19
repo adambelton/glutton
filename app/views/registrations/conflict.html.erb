@@ -1,0 +1,8 @@
+<main>
+  <h1><%= t("identity.registration.conflict_title") %></h1>
+  <p role="alert"><%= t("identity.registration.conflict") %></p>
+  <% if current_user.is_a?(GuestUser) %>
+    <p><%= t("identity.registration.guest_signout_warning") %></p>
+  <% end %>
+  <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
+</main>

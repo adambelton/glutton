@@ -1,6 +1,6 @@
 # 006b — Confirm and complete registration
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / verification
 
 ## Goal
@@ -47,7 +47,7 @@ Read the implementation plan, product brief (Accounts and privacy), architecture
   Result: Passed — separate-connection tests cover duplicate direct redemption, guest replacement winning over confirmation, confirmation winning over waiting guest preparation, expiry while blocked on a guest lock, and concurrent same-email direct requests. PostgreSQL unique-index conflict is exercised after both requests pass model uniqueness checks; the losing pending row survives and the error has no sensitive database cause. All concurrency checks pass in the full run.
 - **AC5:** Privacy, localized content, autoloading and existing checks remain intact.  
   Check: Synthetic-marker logger/error/inspection tests; `bin/rails zeitwerk:check`, focused tests, `PARALLEL_WORKERS=1 CI=true bin/ci`, `git diff --check`. Record actual evidence; no external mail delivery needed.  
-  Result: Passed — `PARALLEL_WORKERS=1 CI=true bin/ci`: 89 tests / 815 assertions, no failures/errors/skips; 60 Ruby files linted cleanly, gem/importmap audits clear, Brakeman zero warnings. Logger/error/inspection marker checks pass. `bin/rails zeitwerk:check` passed with the existing non-eager-loaded preview-directory warning. `git diff --check` passed. No provider calls, live email, hosted CI or default macOS parallel run performed for this task.
+  Result: Passed — `PARALLEL_WORKERS=1 CI=true bin/ci`: 89 tests / 815 assertions, no failures/errors/skips; 60 Ruby files linted cleanly, gem/importmap audits clear, Brakeman zero warnings. Logger/error/inspection marker checks pass. `bin/rails zeitwerk:check` passed with the existing non-eager-loaded preview-directory warning. `git diff --check` passed. No provider calls or live email. [Hosted CI run 39303170550](https://github.com/adambelton/glutton/actions/runs/39303170550) passed before merge; default local macOS parallel execution was not run.
 
 ## Implementation notes
 
@@ -59,6 +59,6 @@ The plan previously grouped delivery with completion. This task provides the tok
 
 Pending physical retention and guest/activity cleanup remain task 006d and release requirements. Invalidating access does not delete retained credentials. Review direct pending retention cleanup there before public registration is enabled.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #12](https://github.com/adambelton/glutton/pull/12) on 19 October 2026 after hosted CI passed. Squash commit: `4dc645033e54aebe33050ba22fdbc0daf1b77cb8`.
 
 Review follow-up: confirmation services use explicit `.nil?`/`.present?` checks for object/ID existence, keeping active predicates boolean. `PARALLEL_WORKERS=1 bin/rails test test/services/identity/registration_confirmation_test.rb test/services/identity/complete_registration_test.rb test/services/identity/complete_registration_concurrency_test.rb` passed: 16 tests / 158 assertions. `git diff --check` passed.

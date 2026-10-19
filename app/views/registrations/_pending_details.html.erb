@@ -1,0 +1,9 @@
+<p><%= t("identity.registration.verify_required") %></p>
+<% deadline = registration.expires_at %>
+<% guest_deadline = registration.guest_expires_at %>
+<% if guest_deadline.nil? || deadline != guest_deadline %>
+  <p><%= t("identity.registration.expires", deadline: l(deadline, format: :registration)) %></p>
+<% end %>
+<% if guest_deadline.present? %>
+  <p><%= t("identity.registration.guest_temporary", deadline: l(guest_deadline, format: :registration)) %></p>
+<% end %>
