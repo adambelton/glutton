@@ -9,6 +9,8 @@ Rails.application.routes.draw do
   resource :registration_email, only: :create
   resource :registration_confirmation, only: [ :show, :create ]
 
+  resource :password_reset, only: [ :new, :create, :edit, :update ]
+
   resource :session, only: [ :new, :create, :destroy ]
 
   # Defines the root path route ("/")

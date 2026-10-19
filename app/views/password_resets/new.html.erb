@@ -1,0 +1,13 @@
+<main>
+  <h1><%= t("identity.recovery.request_title") %></h1>
+  <p><%= t("identity.recovery.request_explanation") %></p>
+  <% if @delivery_error.present? %>
+    <p role="alert"><%= @delivery_error %></p>
+  <% end %>
+  <%= form_with url: password_reset_path do |form| %>
+    <%= form.label :email_address, t("identity.sessions.email") %>
+    <%= form.email_field :email_address, required: true, autocomplete: "email" %>
+    <%= form.submit t("identity.recovery.request_submit") %>
+  <% end %>
+  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+</main>

@@ -1,0 +1,22 @@
+<main>
+  <h1><%= t("identity.recovery.reset_title") %></h1>
+  <% if @reset_user.errors.any? %>
+    <ul role="alert">
+      <% @reset_user.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  <% end %>
+  <%= form_with url: password_reset_path, method: :patch do |form| %>
+    <%= form.hidden_field :token, value: @token %>
+    <div>
+      <%= form.label :password, t("identity.recovery.new_password") %>
+      <%= form.password_field :password, required: true, autocomplete: "new-password" %>
+    </div>
+    <div>
+      <%= form.label :password_confirmation, t("identity.registration.password_confirmation") %>
+      <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password" %>
+    </div>
+    <%= form.submit t("identity.recovery.reset_submit") %>
+  <% end %>
+</main>
