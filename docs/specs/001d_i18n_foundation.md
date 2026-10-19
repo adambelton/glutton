@@ -11,7 +11,7 @@ Use Rails' existing I18n support for application copy, with English as the initi
 
 - English locale configuration, translated layout metadata and scaffold heading/tagline.
 - Established consumer contract: standard Rails `t` / `I18n.t`, named keys, interpolation, plain-text values escaped by views; Active Model error symbols use Rails' normal translation lookup. Missing keys raise in development/test.
-- Document the convention for new user-facing text. Identity migrates its own copy separately in task 006e.
+- Document the convention for new user-facing text in README and enforce it as an agent instruction in root `AGENTS.md`. Identity migrates its own copy separately in task 006e.
 
 ## Scope restrictions
 
@@ -30,5 +30,7 @@ Use Rails' existing I18n support for application copy, with English as the initi
 ## Implementation notes
 
 User requested i18n setup while reviewing PR #9. Implementation authorized; no merge authorized.
+
+Agent-rule follow-up: root `AGENTS.md` now requires locale entries for new/changed application copy, runtime translation, interpolation/pluralization and existing escaping. Documentation-only verification: reviewed the rule against this scope and `git diff --check` passed; no runtime changes or additional local tests.
 
 Owner acceptance / merge: Pending.
