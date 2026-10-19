@@ -1,12 +1,12 @@
 <main>
-  <h1>Glutton</h1>
-  <p>Discover horror through the things you love about it.</p>
+  <h1><%= t("app.name") %></h1>
+  <p><%= t(".tagline") %></p>
   <% if notice %>
     <p role="status"><%= notice %></p>
   <% end %>
   <% if current_user %>
-    <p><%= current_user.is_a?(RegisteredUser) ? "Signed in" : "Guest session" %></p>
-    <%= button_to "Sign out", session_path, method: :delete %>
+    <p><%= current_user.is_a?(RegisteredUser) ? t("identity.sessions.registered_status") : t("identity.sessions.guest_status") %></p>
+    <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
   <% end %>
-  <%= link_to "Sign in", new_session_path %>
+  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
 </main>

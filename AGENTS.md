@@ -9,3 +9,9 @@ Read `docs/implementation_plan.md`, the current task spec and relevant brief sec
 - Mark completed work `Ready for review` and update the plan. Owner acceptance and actual merge are separate; do not self-approve or merge automatically.
 - Writing a spec alone does not start implementation or authorise external communication, paid services or deployment.
 - Prefer simple Rails designs justified by current behaviour. Preserve unrelated files, including `.obsidian/`, and do not overwrite project documents during generation.
+
+## User-facing content
+
+- Put all new or changed application-authored user-facing text in Rails locale files (`config/locales/`), starting with English. This includes page titles, headings, labels, buttons, placeholders, accessibility text, notices, errors, validation messages, and email subjects/bodies. Use Rails `t`/`I18n.t` at runtime and symbolic Active Model validation errors; do not hard-code copy or cache translated strings in constants.
+- Use named interpolation and locale pluralization rather than concatenating sentences. Share identical copy where appropriate, preserve HTML escaping, and check rendered content with missing-translation errors enabled in development/tests.
+- Do not translate user-entered content. Developer-only logs/configuration diagnostics and static emergency pages that must work without Rails are exceptions; any text surfaced to users through the application must use locale entries.
