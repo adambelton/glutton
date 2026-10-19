@@ -45,6 +45,8 @@ Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](
 
 CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
 
+Foundation follow-up: **001c — In progress**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
+
 ## First rating and library slice
 
 Candidate task boundaries; write each detailed spec just before starting, splitting further if needed. IDs 002 onward replace the earlier unimplemented sequence.
