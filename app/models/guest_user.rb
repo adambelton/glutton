@@ -1,5 +1,5 @@
 class GuestUser < User
-  include Identity::WithoutCredentials
+  validates :email_address, :password_digest, :email_confirmed_at, inclusion: { in: [ nil ] }
 
   def active?
     created_at + 24.hours > Time.current

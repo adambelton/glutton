@@ -1,5 +1,5 @@
 class DeletedUser < User
-  include Identity::WithoutCredentials
+  validates :email_address, :password_digest, :email_confirmed_at, inclusion: { in: [ nil ] }
 
   def active?
     false
