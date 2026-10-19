@@ -1,17 +1,17 @@
 <main>
-  <h1>Sign in</h1>
+  <h1><%= t("identity.sessions.sign_in") %></h1>
   <% if @error %>
     <p role="alert"><%= @error %></p>
   <% end %>
   <%= form_with url: session_path do |form| %>
     <div>
-      <%= form.label :email_address, "Email" %>
+      <%= form.label :email_address, t("identity.sessions.email") %>
       <%= form.email_field :email_address, required: true, autocomplete: "email", autofocus: true %>
     </div>
     <div>
-      <%= form.label :password %>
+      <%= form.label :password, t("identity.sessions.password") %>
       <%= form.password_field :password, required: true, autocomplete: "current-password" %>
     </div>
-    <%= form.submit "Sign in" %>
+    <%= form.submit t("identity.sessions.sign_in") %>
   <% end %>
 </main>

@@ -74,6 +74,13 @@ class SessionTest < ActiveSupport::TestCase
     assert_equal user, second.user
   end
 
+  test "inactive owner errors retain a symbol and translated message" do
+    session = Session.new(user: DeletedUser.create!)
+    assert_not session.valid?
+    assert_includes session.errors.details[:user], { error: :inactive }
+    assert_includes session.errors[:user], "must be active"
+  end
+
   test "database requires a valid nonnull owner independently of validation" do
     assert_raises ActiveRecord::NotNullViolation do
       Session.transaction(requires_new: true) { Session.new.save!(validate: false) }
