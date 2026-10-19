@@ -1,4 +1,12 @@
 <main>
   <h1>Glutton</h1>
   <p>Discover horror through the things you love about it.</p>
+  <% if notice %>
+    <p role="status"><%= notice %></p>
+  <% end %>
+  <% if current_user %>
+    <p><%= current_user.is_a?(RegisteredUser) ? "Signed in" : "Guest session" %></p>
+    <%= button_to "Sign out", session_path, method: :delete %>
+  <% end %>
+  <%= link_to "Sign in", new_session_path %>
 </main>

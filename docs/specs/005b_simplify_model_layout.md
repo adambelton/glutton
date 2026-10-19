@@ -1,6 +1,6 @@
 # 005b — Simplify model file layout
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / model organisation
 
 ## Goal
@@ -34,4 +34,4 @@ Relevant architecture: [system shape](../architecture_brief.md), section 3. This
 
 Moved User and Session to `app/models/`, removed the empty session directory and its collapse rule, and updated the architecture convention. Existing model/session behaviour is unchanged. No scope deviations; task 005a remains draft. The owner subsequently authorized PR publication and merge; task 005a remains unimplemented.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Owner authorized PR publication and merge before task 005a. Merged via [PR #7](https://github.com/adambelton/glutton/pull/7) on 19 October 2026; squash commit `9699e3c48d1cfe197f6502a81388f30458ae6587`. Local Zeitwerk/eager-loaded CI passed; hosted CI remained queued and was not confirmed passing at merge.

@@ -5,7 +5,7 @@ class GuestSessionProbeController < ApplicationController
   protect_from_forgery with: :exception
 
   def show
-    render json: { id: current_user&.id, token: form_authenticity_token, stored_id: session[:user_id] }
+    render json: { id: current_user&.id, token: form_authenticity_token, stored_id: identity_payload&.fetch("id", nil) }
   end
 
   def create
@@ -15,14 +15,20 @@ end
 
 class UserSessionsTest < ActionDispatch::IntegrationTest
   setup do
+    @forgery_protection = SessionsController.allow_forgery_protection
+    SessionsController.allow_forgery_protection = true
+    SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
       root "home#index"
+      resource :session, only: [ :new, :create, :destroy ]
       get "/identity-probe", to: "guest_session_probe#show"
       post "/identity-probe", to: "guest_session_probe#create"
     end
   end
 
   teardown do
+    SessionsController.allow_forgery_protection = @forgery_protection
+    SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.reload_routes!
   end
 
@@ -38,7 +44,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "scaffold visits do not create users" do
-    assert_no_difference "User.count" do
+    assert_no_difference [ "User.count", "Session.count" ] do
       get "/"
       assert_response :success
     end
@@ -53,13 +59,13 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     assert_equal first, JSON.parse(response.body)["id"]
     assert_equal second, lookup(other)["id"]
     assert_equal first, create_guest["id"]
-    cookies.delete(Rails.application.config.session_options.fetch(:key))
+    cookies.delete("session_id")
     assert_nil lookup["id"]
   end
 
   test "tampered cookie cannot recover a guest" do
     create_guest
-    key = Rails.application.config.session_options.fetch(:key)
+    key = :session_id
     cookies[key] = "tampered"
     assert_nil lookup["id"]
   end
@@ -84,23 +90,41 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   test "deleted account fails explicitly across browsers without guest replacement" do
     user = User.find(create_guest["id"])
     other = open_session
-    key = Rails.application.config.session_options.fetch(:key)
+    key = :session_id
     other.cookies[key] = cookies[key]
     tokens = [ lookup["token"], lookup(other)["token"] ]
     user.update_column(:type, "DeletedUser")
+    Session.where(user_id: user.id).delete_all
 
     assert_no_difference "User.count" do
       [ self, other ].zip(tokens).each do |client, token|
         2.times do
           client.get "/identity-probe"
           assert_equal 410, client.response.status
-          assert_equal "This account has been deleted.", client.response.body
+          assert_includes client.response.body, "This account has been deleted."
           client.post "/identity-probe", params: { authenticity_token: token }
           assert_equal 410, client.response.status
-          assert_equal "This account has been deleted.", client.response.body
+          assert_includes client.response.body, "This account has been deleted."
         end
       end
     end
+  end
+
+  test "registered sign in replaces guest binding without moving guest activity" do
+    guest = User.find(create_guest["id"])
+    attributes = guest.attributes
+    old_session = Session.find_by!(user: guest)
+    user = RegisteredUser.create!(email_address: "switch@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
+    post session_path, params: { email_address: user.email_address, password: "incorrect", authenticity_token: lookup["token"] }
+    assert_response :unprocessable_entity
+    assert_equal guest.id, lookup["id"]
+    assert old_session.active?
+    post session_path, params: { email_address: user.email_address, password: "a long password phrase", authenticity_token: lookup["token"] }
+    assert_response :see_other
+    assert_equal user.id, lookup["id"]
+    assert_not old_session.active?
+    assert_equal attributes, guest.reload.attributes
   end
 
   test "cookie has browser session protections" do
