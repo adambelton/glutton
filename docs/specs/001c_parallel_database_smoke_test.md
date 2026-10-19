@@ -1,6 +1,6 @@
 # 001c — Parallel test database smoke check
 
-Status: In progress  
+Status: Ready for review  
 Owner: Foundation
 
 ## Goal
@@ -20,10 +20,10 @@ Keep the PostgreSQL isolation smoke test valid when Rails creates numbered worke
 
 - **AC1:** The smoke check accepts the serial and worker database names while retaining PostgreSQL/connectivity checks.  
   Check: `PARALLEL_WORKERS=1 bin/rails test test/integration/scaffold_test.rb` and GitHub CI with its normal parallel Rails test execution.  
-  Result: Not run.
+  Result: Passed — serial focused run: 3 tests / 13 assertions. [Hosted CI run 39293312855](https://github.com/adambelton/glutton/actions/runs/39293312855) passed with four workers: 59 tests / 498 assertions, no failures/errors/skips.
 - **AC2:** Scope stays limited to the Foundation test and its documentation.  
   Check: Inspect diff and run `git diff --check`.  
-  Result: Not run.
+  Result: Passed — diff contains only the Foundation smoke-test assertion, this spec and plan entry; `git diff --check` passed.
 
 ## Implementation notes
 
