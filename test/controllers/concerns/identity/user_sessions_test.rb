@@ -1,7 +1,11 @@
 require "test_helper"
 
-class UserSessionsControllerTest < ActionController::TestCase
-  tests ApplicationController
+class UserSessionsHostController < ActionController::Base
+  include Identity::UserSessions
+end
+
+class Identity::UserSessionsTest < ActionController::TestCase
+  tests UserSessionsHostController
 
   test "lookup without identity does not create a user" do
     assert_no_difference "User.count" do
