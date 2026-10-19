@@ -1,6 +1,6 @@
 # 001b — GitHub continuous integration
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation
 
 ## Goal
@@ -43,4 +43,4 @@ The first hosted run failed because the lockfile supported only arm64-darwin. Ra
 
 Review PR: [#3](https://github.com/adambelton/glutton/pull/3). Hosted evidence is for the implementation commit; subsequent documentation-only evidence updates may trigger another run.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged via [PR #3](https://github.com/adambelton/glutton/pull/3) on 19 October 2026. Squash commit: `093e6954a5a99c19bdcedd4d13c0074fe06a59df`.
