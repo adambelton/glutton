@@ -299,4 +299,4 @@ Implementation tasks belong to one domain/supporting area and one focused capabi
 
 ### User-facing copy
 
-Use standard Rails I18n locale entries for application UI, flash/error text, mail subjects/bodies and custom validation messages. Start with English only; use semantic keys, interpolation and standard Active Model error symbols. Translate at rendering/action time, not in constants evaluated at boot. Keep locale values plain text and let views escape them. Missing translations raise in development/test. Developer diagnostics and static emergency error pages remain independent of translated application rendering.
+Use standard Rails i18n locale entries for application UI, flash/error text, mail subjects/bodies and custom validation messages. Start with English only; use semantic keys, interpolation and standard Active Model error symbols. Translate at rendering/action time, not in constants evaluated at boot. Keep locale values plain text and let views escape them. Missing translations raise in development/test. Developer diagnostics and static emergency error pages remain independent of translated application rendering.

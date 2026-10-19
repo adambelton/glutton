@@ -1,6 +1,6 @@
 # 006 — Identity mail previews and delivery configuration
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / delivery
 
 ## Goal
@@ -67,4 +67,4 @@ bin/rails runner 'raise unless Identity::AccountMailer.delivery_method == :smtp;
 
 The synthetic links are intentionally nonfunctional. Inbox receipt of both Rails messages is confirmed by the owner. Authentication-header inspection (SPF/DKIM/DMARC results) has not been reported; SMTP acceptance and inbox receipt do not by themselves verify those header results.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #9](https://github.com/adambelton/glutton/pull/9) on 19 October 2026, after hosted CI passed. Squash commit: `f725824`.

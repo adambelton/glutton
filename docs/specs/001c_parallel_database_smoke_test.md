@@ -1,6 +1,6 @@
 # 001c — Parallel test database smoke check
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation
 
 ## Goal
@@ -29,4 +29,4 @@ Keep the PostgreSQL isolation smoke test valid when Rails creates numbered worke
 
 Initial hosted run 39292996704 failed only because actual `glutton_test_1` did not equal the hard-coded `glutton_test`. All style/security checks passed in that run. This follow-up belongs to Foundation and is recorded separately from Identity task 006.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #9](https://github.com/adambelton/glutton/pull/9) on 19 October 2026, after hosted CI passed. Squash commit: `f725824`.

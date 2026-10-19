@@ -1,11 +1,11 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 19 October 2026
 
 ## Task rules
 
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003, 004, 004a, 005, 005a, 005b and 006. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 was accepted by the owner and merged via PR #4. Task 004a was accepted by the owner and merged via PR #5. Task 005 was accepted by the owner and merged via PR #6 without waiting for queued hosted CI, as explicitly authorized. Tasks 005a and 005b were accepted by the owner and merged via PRs #8 and #7. Task 006 is implemented and Ready for review; local checks passed and Rails SMTP accepted both live test messages.
+Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003, 004, 004a, 005, 005a, 005b and 006. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 was accepted by the owner and merged via PR #4. Task 004a was accepted by the owner and merged via PR #5. Task 005 was accepted by the owner and merged via PR #6 without waiting for queued hosted CI, as explicitly authorized. Tasks 005a and 005b were accepted by the owner and merged via PRs #8 and #7. Task 006 and Foundation follow-up 001c were accepted and merged via PR #9 after hosted CI passed; both live mail templates were received.
 
 If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Calling another domain is allowed; changing its implementation is not. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
 
@@ -45,9 +45,9 @@ Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](
 
 CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
 
-Foundation follow-up: **001c — Ready for review**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
+Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
 
-I18n follow-ups: **001d — Ready for review**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Ready for review**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
+i18n follow-ups: **001d — Ready for review**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Ready for review**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
 
 ## First rating and library slice
 
@@ -62,7 +62,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 005 | Identity / sessions | Shared guest/registered session lifecycle and password-authenticated registered issuance, without HTTP wiring | 004, 004a | Merged — [spec](specs/005_registered_sessions.md), [PR #6](https://github.com/adambelton/glutton/pull/6) |
 | 005b | Identity / model organisation | Keep root models at default paths and group only subclasses | 004a, 005 | Merged — [spec](specs/005b_simplify_model_layout.md), [PR #7](https://github.com/adambelton/glutton/pull/7) |
 | 005a | Identity / sign-in flow | Move guest access to shared Session records; sign-in/out UI, protected cookies, rotation, request limits and current identity; no automatic guest merge | 003, 005 | Merged — [spec](specs/005a_sign_in_flow.md), [PR #8](https://github.com/adambelton/glutton/pull/8) |
-| 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Ready for review — [spec](specs/006_identity_mail_delivery.md) |
+| 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Merged — [spec](specs/006_identity_mail_delivery.md), [PR #9](https://github.com/adambelton/glutton/pull/9) |
 | 006a | Identity / registration | Registration form starts guest claim with email/password; preserves ID/activity, handles errors and limits requests; completion requires 006b | 005a | Planned |
 | 006b | Identity / verification | Required email confirmation atomically claims an active guest in place; preserve ID, reject expired/duplicate claims; expiring tokens and resend limits; entered email alone never grants access | 006, 006a | Planned |
 | 006c | Identity / recovery | Expiring password-reset flow with request limits and agreed session invalidation | 005a, 006 | Planned |

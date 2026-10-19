@@ -1,4 +1,4 @@
-# 001d — Rails I18n foundation
+# 001d — Rails i18n foundation
 
 Status: Ready for review  
 Owner: Foundation
@@ -29,6 +29,6 @@ Use Rails' existing I18n support for application copy, with English as the initi
 
 ## Implementation notes
 
-User requested I18n setup while reviewing PR #9. Implementation authorized; no merge authorized.
+User requested i18n setup while reviewing PR #9. Implementation authorized; no merge authorized.
 
 Owner acceptance / merge: Pending.

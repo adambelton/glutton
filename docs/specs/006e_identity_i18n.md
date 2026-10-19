@@ -5,7 +5,7 @@ Owner: Identity
 
 ## Goal
 
-Move existing Identity interface, mail subjects/bodies and custom validation copy into English locale entries using task 001d's standard Rails I18n contract.
+Move existing Identity interface, mail subjects/bodies and custom validation copy into English locale entries using task 001d's standard Rails i18n contract.
 
 ## Scope
 
@@ -16,7 +16,7 @@ Move existing Identity interface, mail subjects/bodies and custom validation cop
 ## Scope restrictions
 
 - No authentication, delivery, rate-limit, token or account-rule changes; no new messages, languages or translation abstraction. Developer ArgumentError/configuration diagnostics remain literal strings.
-- Do not change Foundation configuration; consume its standard Rails I18n support. No live emails needed for copy extraction; SMTP configuration is unchanged.
+- Do not change Foundation configuration; consume its standard Rails i18n support. No live emails needed for copy extraction; SMTP configuration is unchanged.
 
 ## Acceptance criteria
 
@@ -32,6 +32,6 @@ Move existing Identity interface, mail subjects/bodies and custom validation cop
 
 ## Implementation notes
 
-Requested during review of task 006; this separate Identity task consumes Rails I18n rather than changing another domain's behaviour.
+Requested during review of task 006; this separate Identity task consumes Rails i18n rather than changing another domain's behaviour.
 
 Owner acceptance / merge: Pending.
