@@ -272,3 +272,25 @@ bin/rails film_knowledge:load_sample
 The command creates Alien, The Thing and Get Out only when their TMDB IDs are absent. Re-running preserves internal IDs, existing metadata and unrelated films. It reports `sample_films=3`; this is the sample size, not a count of new inserts. The command rejects environments other than development before writing. It runs no API requests and is not called by application boot or `db:seed`. Failure rolls back the sample transaction; fix the cause and rerun.
 
 Sample identity sources and verification limits are recorded in [task 007](docs/specs/007_film_catalogue.md). The films table stores one nullable release date, with year queries derived from date ranges; original titles and other descriptive values live in JSONB metadata. Sample release dates remain unknown until primary release dates are verified. The full 50-film catalogue, analyses, qualities and TMDB API import are separate work.
+
+## Import a selected TMDB film
+
+Configure the application read-access token in your ignored local `.env` file (development), or process environment elsewhere:
+
+```dotenv
+TMDB_API_READ_ACCESS_TOKEN=your_read_access_token
+```
+
+The separate TMDB API key is not used. Restart Rails/console after changing development configuration. Do not commit tokens or print them in console output.
+
+After applying migrations, explicitly import one already-selected movie ID from `bin/rails console`:
+
+```ruby
+film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348)
+```
+
+Use a positive Integer, not a title, string ID or URL. An existing TMDB identity returns its current Film without a request or credential lookup, preserving local metadata and unknown dates. New identities use one HTTPS movie-details request in en-US; no search, refresh, media or analysis is fetched. The operation stores title, source primary release date (nullable), TMDB ID and metadata containing optional original_title and tmdb provenance (fetched_at/language). Year filtering uses the release date; no separate year is stored.
+
+The client uses 5-second connect and 10-second read/write timeouts, with no automatic retries or redirects. Expected errors are `FilmKnowledge::InvalidTmdbId`, `TmdbConfigurationError`, `TmdbNotFound`, `InvalidTmdbResponse`, or `TmdbUnavailable` (all under FilmKnowledge). The latter exposes `reason`, including `authentication`, `rate_limited`, `timeout`, `transport` or `http_error`. Errors omit credentials and provider response bodies. Fix the cause before explicitly retrying; 429 is surfaced without a retry loop. Unexpected validation/database failures propagate. Concurrent imports reuse the same Film; failed inserts leave no partial record.
+
+This operation is not called during boot or seeding. Automated tests use fake HTTP and isolated test records; no live request or development import was performed for task 008 verification. Live end-to-end verification remains outstanding. Search belongs to task 009.

@@ -1,6 +1,6 @@
 # 007 — Minimal film catalogue
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge / catalogue
 
 ## Goal
@@ -66,4 +66,4 @@ The initial focused run exposed Rails blank-ID casting and a create-or-find inte
 
 Owner authorization: Task spec approved on 20 October 2026. Implementation authorized and started.
 
-Owner acceptance / merge: Pending review and merge.
+Owner acceptance / merge: Owner approved publication and merge after hosted CI passes. Merged via [PR #17](https://github.com/adambelton/glutton/pull/17) on 20 October 2026 at 09:59:30 UTC after Repository checks passed for commit `478f69e228db39a2227331b59764bd51d46aa170`; squash merge `e149a6c5f82804262318813081d82ee28b6a30c1`.
