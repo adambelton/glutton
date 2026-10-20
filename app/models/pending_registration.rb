@@ -1,12 +1,14 @@
 require "digest"
 
 class PendingRegistration < ApplicationRecord
+  EXPIRY_DURATION = 1.hour.freeze
+
   belongs_to :guest_user, class_name: "User", optional: true
 
-  scope :expired, -> { where(arel_table[:created_at].lteq(24.hours.ago)) }
+  scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
 
-  generates_token_for :email_confirmation, expires_in: 1.hour do
-    Digest::SHA256.hexdigest([ email_address, password_digest ].to_json)
+  generates_token_for :email_confirmation do
+    Digest::SHA256.hexdigest([ email_address, password_digest, expires_at, active? ].to_json)
   end
 
   has_secure_password reset_token: false
@@ -23,7 +25,7 @@ class PendingRegistration < ApplicationRecord
   validate :email_is_unregistered, on: :create
 
   def expires_at
-    created_at + 24.hours
+    created_at + EXPIRY_DURATION
   end
 
   def active?

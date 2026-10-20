@@ -38,10 +38,10 @@ module Identity
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
     end
 
-    test "pending deadlines preserve active guests and ignore one hour token expiry" do
+    test "pending deadlines preserve active guests and linked pending requests" do
       freeze_time
       direct = pending
-      travel 1.hour
+      travel PendingRegistration::EXPIRY_DURATION / 2
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
       travel_to direct.expires_at - 1.second
       guest = UserGuest.create!
@@ -61,7 +61,7 @@ module Identity
       guest = UserGuest.create!
       travel UserGuest::EXPIRY_DURATION - 1.second
       linked = pending(guest:)
-      assert_equal Time.current + 24.hours, linked.expires_at
+      assert_equal Time.current + PendingRegistration::EXPIRY_DURATION, linked.expires_at
       travel 1.second
       assert_not linked.active?
       assert linked.expires_at > Time.current
@@ -71,7 +71,7 @@ module Identity
     test "expired pending alone preserves an active linked guest and session" do
       guest = UserGuest.create!
       session = Session.create!(user: guest)
-      record = pending(guest:, created_at: 25.hours.ago)
+      record = pending(guest:, created_at: (PendingRegistration::EXPIRY_DURATION + 1.second).ago)
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 1 }, cleanup)
       assert session.active?
       assert User.exists?(guest.id)
@@ -82,8 +82,8 @@ module Identity
       freeze_time
       guests = 3.times.map { UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION + 1.hour).ago) }
       older = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION + 2.hours).ago)
-      requests = 3.times.map { pending(created_at: 25.hours.ago) }
-      older_request = pending(created_at: 26.hours.ago)
+      requests = 3.times.map { pending(created_at: (PendingRegistration::EXPIRY_DURATION + 1.second).ago) }
+      older_request = pending(created_at: (PendingRegistration::EXPIRY_DURATION + 2.seconds).ago)
       assert_equal({ guests_deleted: 2, pending_registrations_deleted: 2 }, cleanup(batch_size: 2))
       [ older, guests.first ].each { |record| assert_not User.exists?(record.id) }
       [ older_request, requests.first ].each { |record| assert_not PendingRegistration.exists?(record.id) }

@@ -80,7 +80,7 @@ class Identity::UserSessionsTest < ActionController::TestCase
     pending = Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase")
     session[:pending_registration_id] = pending.id
-    travel 24.hours
+    travel PendingRegistration::EXPIRY_DURATION
     guest = @controller.send(:ensure_guest_user!)
     assert_not (guest).can_reset_password?
     assert_nil session[:pending_registration_id]

@@ -124,7 +124,7 @@ module Identity
       owner = guest
       request = pending(guest: owner)
       # The pending row may expire independently of its still-active guest.
-      request.update_columns(created_at: 25.hours.ago)
+      request.update_columns(created_at: (PendingRegistration::EXPIRY_DURATION + 1.second).ago)
       contender = nil
       User.transaction do
         owner.lock!

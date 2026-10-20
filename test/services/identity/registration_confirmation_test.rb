@@ -22,29 +22,37 @@ module Identity
       end
     end
 
-    test "token expires exactly one hour after issuance" do
+    test "initial and reissued links expire at the original registration deadline" do
       freeze_time
       record = prepare
-      issued_at = Time.current
-      token = token_for(record)
-      travel_to issued_at + 1.hour - 1.second
-      assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
-      travel_to issued_at + 1.hour
-      assert_nil PendingRegistration.find_by_token_for(:email_confirmation, token)
-      assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
+      first = token_for(record)
+      deadline = record.expires_at
+      travel_to deadline - 1.second
+      reissued = token_for(record)
+      assert_equal deadline, record.reload.expires_at
+      [ first, reissued ].each do |token|
+        assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
+      end
+      travel_to deadline
+      assert_not record.active?
+      assert_raises(RegistrationUnavailable) { token_for(record) }
+      [ first, reissued ].each do |token|
+        assert_nil PendingRegistration.find_by_token_for(:email_confirmation, token)
+        assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
+      end
     end
 
     test "pending and guest deadlines cap issuance and completion" do
       freeze_time
       direct = prepare
-      travel_to direct.expires_at - 30.minutes
+      travel_to direct.expires_at - 1.second
       token = token_for(direct)
       travel_to direct.expires_at
       assert_not direct.active?
       assert_raises(RegistrationUnavailable) { token_for(direct) }
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       guest = UserGuest.create!
-      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 30.minutes
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second
       linked = prepare(guest_user_id: guest.id)
       token = token_for(linked)
       travel_to guest.created_at + UserGuest::EXPIRY_DURATION

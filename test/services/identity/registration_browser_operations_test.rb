@@ -34,7 +34,7 @@ module Identity
         assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: id) }
       end
       fresh_guest = UserGuest.create!
-      travel 24.hours
+      travel PendingRegistration::EXPIRY_DURATION
       assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: fresh_guest.id) }
       assert_nil record.reload.guest_user_id
     end

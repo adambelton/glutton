@@ -141,9 +141,10 @@ require application translation loading.
 
 ## Registration confirmation provider
 
-Pending registrations expire 24 hours after creation, capped by a linked guest's
-original deadline. `Identity::RegistrationConfirmation.token_for(pending_registration_id:)`
-issues a purpose-bound one-hour token; it does not send email. Tokens contain no
+Pending registrations expire one hour after creation (`PendingRegistration::EXPIRY_DURATION`).
+A linked guest must also remain active. `Identity::RegistrationConfirmation.token_for(pending_registration_id:)`
+issues a purpose-bound token valid only while that registration remains active;
+resending does not extend the original deadline. It does not send email. Tokens contain no
 email/password/digest, and credential changes or request replacement invalidate them.
 `Identity::CompleteRegistration.call(token:)` returns a fresh Session after atomically
 creating a confirmed registered account or upgrading the linked active guest,

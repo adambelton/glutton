@@ -242,7 +242,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     signup
     registration = PendingRegistration.last
     token = email_token
-    travel 24.hours
+    travel PendingRegistration::EXPIRY_DURATION
     get root_path
     assert_select '[role="alert"]', text: I18n.t("identity.registration.unavailable")
     assert_select "aside", count: 0
