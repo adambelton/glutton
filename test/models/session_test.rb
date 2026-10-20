@@ -21,7 +21,7 @@ class SessionTest < ActiveSupport::TestCase
     freeze_time
     user = UserGuest.create!
     authentication = Session.create!(user:)
-    travel 24.hours do
+    travel UserGuest::EXPIRY_DURATION do
       assert_nil user.resume_session(session: authentication)
     end
     assert_raises(Identity::AccountDeleted) { UserDeleted.create!.resume_session(session: nil) }
@@ -38,19 +38,19 @@ class SessionTest < ActiveSupport::TestCase
 
   test "guest activity follows the account deadline rather than session age" do
     guest = freeze_time { UserGuest.create! }
-    travel_to guest.created_at + 23.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION / 2 do
       session = Session.create!(user: guest)
       assert session.active?
     end
     session = Session.find_by!(user: guest)
-    travel_to guest.created_at + 24.hours - 1.second do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second do
       assert session.active?
     end
-    travel_to guest.created_at + 24.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION do
       assert_not session.active?
       assert_not Session.new(user: guest).valid?
     end
-    travel_to guest.created_at + 25.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION + 1.hour do
       assert_not session.active?
     end
   end

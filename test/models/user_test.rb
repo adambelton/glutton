@@ -22,10 +22,10 @@ class UserTest < ActiveSupport::TestCase
 
   test "active guest scope evaluates the current time and excludes the expiry boundary" do
     guest = freeze_time { UserGuest.create! }
-    travel_to guest.created_at + 24.hours - 1.second do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second do
       assert_includes UserGuest.active, guest
     end
-    travel_to guest.created_at + 24.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION do
       assert_not_includes UserGuest.active, guest
       assert_not guest.active?
     end
@@ -42,37 +42,37 @@ class UserTest < ActiveSupport::TestCase
   test "guest expires exactly at its deadline" do
     user = freeze_time { UserGuest.create! }
 
-    travel_to (user.created_at + 24.hours) - 1.second do
+    travel_to (user.created_at + UserGuest::EXPIRY_DURATION) - 1.second do
       assert user.active?
     end
-    travel_to (user.created_at + 24.hours) do
+    travel_to (user.created_at + UserGuest::EXPIRY_DURATION) do
       assert_not user.active?
     end
-    travel_to (user.created_at + 24.hours) + 1.second do
+    travel_to (user.created_at + UserGuest::EXPIRY_DURATION) + 1.second do
       assert_not user.active?
     end
   end
 
   test "reads and timestamp updates do not renew expiry" do
     user = UserGuest.create!
-    expiry = user.created_at + 24.hours
+    expiry = user.created_at + UserGuest::EXPIRY_DURATION
 
-    travel 12.hours do
+    travel UserGuest::EXPIRY_DURATION / 2 do
       assert user.reload.active?
       user.touch
-      assert_equal expiry, user.reload.created_at + 24.hours
+      assert_equal expiry, user.reload.created_at + UserGuest::EXPIRY_DURATION
     end
   end
 
-  test "guest lifetime is 24 elapsed hours across daylight saving" do
+  test "configured guest lifetime uses elapsed time across daylight saving" do
     Time.use_zone("Europe/London") do
-      user = travel_to(Time.zone.local(2026, 10, 24, 12)) { UserGuest.create! }
-      travel_time = user.created_at + 24.hours
-      assert_equal 11, travel_time.in_time_zone.hour
-      travel_to travel_time - 1.second do
+      deadline = Time.zone.local(2026, 10, 25, 12)
+      created_at = Time.at(deadline.to_i - UserGuest::EXPIRY_DURATION.to_i).in_time_zone
+      user = travel_to(created_at) { UserGuest.create! }
+      travel_to deadline - 1.second do
         assert User.find(user.id).active?
       end
-      travel_to travel_time do
+      travel_to deadline do
         assert_not User.find(user.id).active?
       end
     end
@@ -82,7 +82,7 @@ class UserTest < ActiveSupport::TestCase
     guest = freeze_time { UserGuest.create! }
     assert guest.can_register?
     assert_not UserDeleted.create!.can_register?
-    travel_to guest.created_at + 24.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION do
       assert_not guest.can_register?
     end
   end

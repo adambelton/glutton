@@ -37,21 +37,17 @@ module Identity
     test "pending and guest deadlines cap issuance and completion" do
       freeze_time
       direct = prepare
+      travel_to direct.expires_at - 30.minutes
+      token = token_for(direct)
+      travel_to direct.expires_at
+      assert_not direct.active?
+      assert_raises(RegistrationUnavailable) { token_for(direct) }
+      assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       guest = UserGuest.create!
-      linked = prepare(guest_user_id: guest.id)
-      travel_to direct.created_at + 23.hours + 30.minutes
-      tokens = [ direct, linked ].map { |record| token_for(record) }
-      travel_to direct.created_at + 24.hours
-      [ direct, linked ].zip(tokens).each do |record, token|
-        assert_not record.active?
-        assert_raises(RegistrationUnavailable) { token_for(record) }
-        assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
-      end
-      guest = UserGuest.create!
-      travel_to guest.created_at + 23.hours + 30.minutes
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 30.minutes
       linked = prepare(guest_user_id: guest.id)
       token = token_for(linked)
-      travel_to guest.created_at + 24.hours
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       assert_raises(RegistrationUnavailable) { token_for(linked) }
     end

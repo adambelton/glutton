@@ -77,14 +77,14 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   test "deadline is enforced between requests and replacement does not renew old guest" do
     user = freeze_time { User.find(create_guest["id"]) }
     original_time = user.created_at
-    travel_to user.created_at + 24.hours - 1.second do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION - 1.second do
       assert_equal user.id, lookup["id"]
     end
-    travel_to user.created_at + 24.hours do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION do
       assert_nil lookup["id"]
       assert_nil lookup["stored_id"]
     end
-    travel_to user.created_at + 24.hours + 1.second do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION + 1.second do
       assert_nil lookup["id"]
       assert_not_equal user.id, create_guest["id"]
     end

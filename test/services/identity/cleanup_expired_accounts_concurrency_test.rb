@@ -57,7 +57,7 @@ module Identity
         owner.lock!
         completed = CompleteRegistration.call(token:)
         # Cleanup sees the still-uncommitted guest version after its deadline.
-        travel 24.hours
+        travel UserGuest::EXPIRY_DURATION
         contender = blocked_operation { CleanupExpiredAccounts.call }
         completed
       end
@@ -73,7 +73,7 @@ module Identity
       request = pending(guest: owner)
       Session.create!(user: owner)
       token = RegistrationConfirmation.token_for(pending_registration_id: request.id)
-      travel 24.hours
+      travel UserGuest::EXPIRY_DURATION
       contender = nil
       result = User.transaction do
         owner.lock!
@@ -91,7 +91,7 @@ module Identity
     test "overlapping direct pending cleanup counts once" do
       freeze_time
       request = pending
-      travel 24.hours
+      travel_to request.expires_at
       contender = nil
       result = PendingRegistration.transaction do
         request.lock!
@@ -105,13 +105,13 @@ module Identity
     test "attachment before deadline and cleanup after deadline use compatible lock order" do
       freeze_time
       owner = guest
-      travel 23.hours
+      travel UserGuest::EXPIRY_DURATION - 1.second
       request = pending
       contender = nil
       User.transaction do
         owner.lock!
         AttachRegistration.call(pending_registration_id: request.id, guest_user_id: owner.id)
-        travel 1.hour
+        travel 1.second
         contender = blocked_operation { CleanupExpiredAccounts.call }
       end
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Timeout.timeout(5) { contender.value })
@@ -144,7 +144,7 @@ module Identity
       travel 1.second
       blocked = guest
       Session.create!(user: blocked)
-      travel 24.hours
+      travel UserGuest::EXPIRY_DURATION
       original = UserGuest.instance_method(:destroy!)
       blocked_id = blocked.id
       UserGuest.define_method(:destroy!) do

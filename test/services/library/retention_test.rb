@@ -9,14 +9,14 @@ class Library::RetentionTest < ActiveSupport::TestCase
   end
 
   test "cleanup deletes only expired guest relationships and preserves shared films and other owners" do
-    guest = UserGuest.create!(created_at: 23.hours.ago)
+    guest = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION / 2).ago)
     active = UserGuest.create!
     registered = UserRegistered.create!(email_address: "library-keep@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     film = Film.create!(title: "Shared Library film")
     [ guest, active, registered ].each { |user| Library::RecordWatched.call(user_id: user.id, film_id: film.id) }
     session = Session.create!(user: guest)
-    travel 2.hours do
+    travel UserGuest::EXPIRY_DURATION / 2 + 1.second do
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::CleanupExpiredAccounts.call)
       assert_not User.exists?(guest.id)
       assert_not Session.exists?(session.id)
@@ -39,14 +39,14 @@ class Library::RetentionTest < ActiveSupport::TestCase
   end
 
   test "a restrictive dependent still rolls back cleanup and restores Library and Identity rows" do
-    guest = UserGuest.create!(created_at: 23.hours.ago)
+    guest = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION / 2).ago)
     film = Film.create!(title: "Rollback retention film")
     Library::RecordWatched.call(user_id: guest.id, film_id: film.id)
     session = Session.create!(user: guest)
     connection = User.connection
     connection.execute("CREATE TABLE library_cleanup_blocker (user_id bigint REFERENCES users(id))")
     connection.execute("INSERT INTO library_cleanup_blocker VALUES (#{guest.id})")
-    travel 2.hours do
+    travel UserGuest::EXPIRY_DURATION / 2 + 1.second do
       assert_raises(ActiveRecord::InvalidForeignKey) { Identity::CleanupExpiredAccounts.call }
     end
     assert User.exists?(guest.id)

@@ -17,7 +17,7 @@ class IdentityCleanupTest < ActiveSupport::TestCase
   end
 
   test "real command deletes test records reports aggregate counts and safely repeats" do
-    guest = UserGuest.create!(created_at: 25.hours.ago)
+    guest = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION + 1.hour).ago)
     stdout, stderr, status = command("identity:cleanup_expired")
     assert status.success?, stderr
     assert_equal "guests_deleted=1 pending_registrations_deleted=0\n", stdout

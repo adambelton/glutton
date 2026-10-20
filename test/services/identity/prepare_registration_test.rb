@@ -70,10 +70,10 @@ module Identity
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
       deleted = UserDeleted.create!
       guest = freeze_time { UserGuest.create! }
-      travel_to guest.created_at + 24.hours - 1.second do
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second do
         assert prepare(guest_user_id: guest.id).persisted?
       end
-      travel_to guest.created_at + 24.hours do
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION do
         assert_no_difference [ "PendingRegistration.count", "User.count", "Session.count" ] do
           [ -1, registered.id, deleted.id, guest.id ].each do |id|
             assert_raises(RegistrationUnavailable) { prepare(guest_user_id: id) }

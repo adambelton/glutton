@@ -105,7 +105,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     registration = PendingRegistration.last
     confirmation_token = email_token
     old_cookie = cookies[:session_id]
-    travel 24.hours
+    travel UserGuest::EXPIRY_DURATION
     assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Identity::CleanupExpiredAccounts.call)
     cookies[:session_id] = old_cookie
     get registration_confirmation_path(token: confirmation_token)

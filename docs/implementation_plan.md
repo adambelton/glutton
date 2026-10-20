@@ -143,3 +143,5 @@ Post-merge Identity role/transition fixes are implemented for review in tasks 00
 | 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Ready for review — [spec](specs/009a_film_outcome_tests.md) |
 
 Owner requested fixes rather than an audit deliverable. No separate results document is maintained. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Acceptance and merge remain pending.
+
+Guest-duration follow-ups authorized during PR #21 review: **006l — Ready for review**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Ready for review**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.

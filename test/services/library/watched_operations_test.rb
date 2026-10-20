@@ -71,7 +71,7 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
 
   test "guest access ends at the exact fixed deadline for writes" do
     [ -1.second, 0.seconds, 1.second ].each do |offset|
-      travel_to @user.created_at + 24.hours + offset do
+      travel_to @user.created_at + UserGuest::EXPIRY_DURATION + offset do
         if offset.negative?
           assert record.persisted?
         else
@@ -86,7 +86,7 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
   test "registered users have no guest deadline and stale actors are re-read" do
     registered = UserRegistered.create!(email_address: "library@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-    travel 48.hours do
+    travel UserGuest::EXPIRY_DURATION * 2 do
       assert record(user_id: registered.id).persisted?
     end
     @user.update_columns(type: "UserDeleted")

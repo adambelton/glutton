@@ -110,9 +110,9 @@ module Identity
       freeze_time
       guest = UserGuest.create!
       @user_ids << guest.id
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second
       record = prepare(email: "waiting-expiry@example.test", guest:)
       @pending_ids << record.id
-      travel_to guest.created_at + 24.hours - 1.second
       token = token_for(record)
       contender = nil
       PendingRegistration.transaction do
