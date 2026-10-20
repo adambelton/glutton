@@ -1,6 +1,6 @@
 module Identity
   class CompleteRegistration
-    def self.call(token:, current_user_id: nil, pending_registration_id: nil)
+    def self.call(token:, current_user_id: nil)
       candidate = PendingRegistration.resolve_confirmation!(token:)
 
       PendingRegistration.transaction(requires_new: true) do
@@ -10,7 +10,7 @@ module Identity
           raise RegistrationConflict unless current_user
 
           registration = lock_registration(token:, candidate:)
-          registration.authorize_confirmation!(user: current_user, pending_registration_id:)
+          registration.authorize_confirmation!(user: current_user)
           registration.attach_to!(user: current_user) if registration.unattached?
           source_user = current_user
         else

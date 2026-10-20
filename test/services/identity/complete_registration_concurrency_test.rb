@@ -75,7 +75,7 @@ module Identity
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
-      operation = -> { CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id) }
+      operation = -> { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
       winner = User.transaction do
         guest.lock!
         contender = blocked_operation(operation)
@@ -86,6 +86,28 @@ module Identity
       assert_equal guest.id, winner.user_id
       assert winner.active?
       assert_equal [ winner.id ], Session.where(user_id: guest.id).pluck(:id)
+      assert_not PendingRegistration.exists?(record.id)
+    end
+
+    test "different guests cannot both claim an unattached registration" do
+      first_guest = UserGuest.create!
+      second_guest = UserGuest.create!
+      @user_ids.concat [ first_guest.id, second_guest.id ]
+      record = prepare(email: "different-guests-confirmation@example.test")
+      @pending_ids << record.id
+      token = token_for(record)
+      contender = nil
+      winner = User.transaction do
+        completed = CompleteBrowserRegistration.call(token:, current_user_id: first_guest.id)
+        contender = blocked_operation(-> { CompleteBrowserRegistration.call(token:, current_user_id: second_guest.id) })
+        completed
+      end
+
+      assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
+      assert_equal first_guest.id, winner.user_id
+      assert winner.active?
+      assert_not User.find(second_guest.id).can_reset_password?
+      assert_not Session.exists?(user_id: second_guest.id)
       assert_not PendingRegistration.exists?(record.id)
     end
 

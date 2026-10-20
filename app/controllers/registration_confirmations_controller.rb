@@ -8,12 +8,11 @@ class RegistrationConfirmationsController < ApplicationController
     user = current_user
     @token = params[:token]
     registration = PendingRegistration.resolve_confirmation!(token: @token)
-    registration.authorize_confirmation!(user:, pending_registration_id: session[:pending_registration_id]) if user
+    registration.authorize_confirmation!(user:) if user
   end
 
   def create
-    new_session = Identity::CompleteBrowserRegistration.call(token: params[:token], current_user_id: current_user&.id,
-      pending_registration_id: session[:pending_registration_id])
+    new_session = Identity::CompleteBrowserRegistration.call(token: params[:token], current_user_id: current_user&.id)
     bind_session(new_session)
     redirect_to root_path, notice: I18n.t("identity.registration.completed"), status: :see_other
   end

@@ -39,15 +39,40 @@ module Identity
       assert_nil record.reload.guest_user_id
     end
 
-    test "browser completion only attaches a direct request the browser owns" do
+    test "browser completion attaches an unattached token request to the current guest" do
       record = prepare
       guest = UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
-      assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
-      assert_nil record.reload.guest_user_id
-      session = CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+      session = CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       assert_equal guest.id, session.user_id
       assert (session.user).can_reset_password?
+    end
+
+    test "unattached confirmation rejects registered and expired current identities" do
+      record = prepare
+      token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
+      registered = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
+        password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
+      expired = UserGuest.create!(created_at: UserGuest::EXPIRY_DURATION.ago)
+      [ registered, expired ].each do |user|
+        assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+          assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: user.id) }
+        end
+        assert_nil record.reload.guest_user_id
+      end
+    end
+
+    test "confirmation does not replace another pending registration linked to the guest" do
+      guest = UserGuest.create!
+      linked = prepare(guest_user_id: guest.id)
+      direct = prepare(email_address: "other@example.test")
+      token = RegistrationConfirmation.token_for(pending_registration_id: direct.id)
+      assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+        assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
+      end
+      assert_nil direct.reload.guest_user_id
+      assert_equal guest.id, linked.reload.guest_user_id
+      assert_not User.find(guest.id).can_reset_password?
     end
 
     test "failed browser confirmation rolls back attachment" do
@@ -57,7 +82,7 @@ module Identity
       guest = UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       assert_raises(RegistrationUnavailable) do
-        CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+        CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       end
       assert_nil record.reload.guest_user_id
       assert_not (User.find(guest.id)).can_reset_password?
@@ -71,7 +96,7 @@ module Identity
       failure = ->(event) { raise IOError, "simulated session failure" if event.payload[:sql].match?(/INSERT INTO "sessions"/) }
       assert_raises(IOError) do
         ActiveSupport::Notifications.subscribed(failure, "sql.active_record") do
-          CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+          CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
         end
       end
       assert_nil record.reload.guest_user_id
@@ -79,7 +104,7 @@ module Identity
       assert_not User.find(guest.id).can_reset_password?
       assert_equal record, PendingRegistration.resolve_confirmation!(token:)
 
-      completed = CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+      completed = CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       assert completed.active?
       assert_equal guest.id, completed.user_id
       assert_not previous_session.active?

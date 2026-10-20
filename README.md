@@ -194,8 +194,11 @@ shared/distributed abuse controls are required before multi-worker public releas
 The browser remembers only its pending ID in its encrypted Rails session. The
 verification reminder shows fixed expiry and temporary guest status. Registered
 sign-in, successful confirmation and sign-out clear pending browser state. Email
-links work in a different browser; an already signed-in account or unrelated guest
-requires explicit sign-out or a different browser, with no automatic activity merge.
+links work in a different browser. An unattached registration can upgrade the active
+guest in the confirmation browser without that browser having started signup. A
+registration already linked to a different guest, an already registered current user,
+or a current guest with another linked pending request conflicts; no activity is merged.
+The browser-held pending ID is used for signup/resend and guest creation, not confirmation.
 Registration pages disable caching and referrers. All copy uses locale entries.
 
 New pending registrations reject normalized emails already held by a registered account

@@ -33,9 +33,8 @@ class PendingRegistration < ApplicationRecord
     registration
   end
 
-  def authorize_confirmation!(user:, pending_registration_id:)
-    unless user.can_register? &&
-        (guest_user_id == user.id || (unattached? && id == pending_registration_id))
+  def authorize_confirmation!(user:)
+    unless user.can_register? && (unattached? || guest_user_id == user.id)
       raise Identity::RegistrationConflict
     end
   end

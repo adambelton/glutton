@@ -153,24 +153,24 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert (User.find(created.id)).can_reset_password?
   end
 
-  test "viewing a browser-owned direct confirmation never attaches before POST" do
+  test "signup in another browser confirms with the current guest only on POST" do
     signup
     registration = PendingRegistration.last
     token = email_token
     other = open_session
     created = guest(other)
-    # An existing guest binding and this browser's pending request are independent.
-    cookies[:session_id] = other.cookies[:session_id]
+    previous_session = Session.find_by!(user_id: created.id)
 
     assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
-      get registration_confirmation_path, params: { token: }
-      assert_response :success
+      other.get registration_confirmation_path, params: { token: }
+      assert_equal 200, other.response.status
     end
     assert_nil registration.reload.guest_user_id
     assert_not User.find(created.id).can_reset_password?
 
-    confirm(token:)
-    assert_response :see_other
+    confirm(other, token:)
+    assert_equal 303, other.response.status
+    assert_not previous_session.active?
     assert_equal created.id, Session.last.user_id
     assert User.find(created.id).can_reset_password?
     assert_not PendingRegistration.exists?(registration.id)
@@ -240,8 +240,11 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "unrelated guest and registered identity cannot silently switch by confirmation" do
+  test "a different linked guest and registered identity cannot switch by confirmation" do
+    linked_guest = guest
     signup
+    registration = PendingRegistration.last
+    assert_equal linked_guest.id, registration.guest_user_id
     token = email_token
     other = open_session
     unrelated = guest(other)
@@ -250,6 +253,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_not (User.find(unrelated.id)).can_reset_password?
+    assert_equal linked_guest.id, registration.reload.guest_user_id
     assert_equal 1, PendingRegistration.count
     user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
