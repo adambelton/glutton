@@ -8,17 +8,7 @@ module FilmKnowledge
     end
 
     def self.search(query:, page: 1, primary_release_year: nil)
-      query = validate_search!(query:, page:, primary_release_year:)
       new(token: ENV["TMDB_API_READ_ACCESS_TOKEN"]).search(query:, page:, primary_release_year:)
-    end
-
-    def self.validate_search!(query:, page:, primary_release_year:)
-      unless query.is_a?(String) && query.valid_encoding? && query.strip.present? && query.strip.length <= 200 &&
-          page.is_a?(Integer) && (1..500).cover?(page) &&
-          (primary_release_year.nil? || (primary_release_year.is_a?(Integer) && (1000..9999).cover?(primary_release_year)))
-        raise InvalidTmdbSearch, "Invalid TMDB search parameters"
-      end
-      query.strip
     end
 
     def initialize(token:, http_class: Net::HTTP)
@@ -32,9 +22,8 @@ module FilmKnowledge
     end
 
     def search(query:, page: 1, primary_release_year: nil)
-      query = self.class.validate_search!(query:, page:, primary_release_year:)
-      parameters = { query:, page:, language: "en-US", include_adult: false }
-      parameters[:primary_release_year] = primary_release_year unless primary_release_year.nil?
+      parameters = TmdbSearchParameters.normalize(query:, page:, primary_release_year:).compact
+      parameters.merge!(language: "en-US", include_adult: false)
       request_json(path: "/3/search/movie", parameters:)
     end
 

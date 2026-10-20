@@ -153,6 +153,29 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert (User.find(created.id)).can_reset_password?
   end
 
+  test "signup in another browser confirms with the current guest only on POST" do
+    signup
+    registration = PendingRegistration.last
+    token = email_token
+    other = open_session
+    created = guest(other)
+    previous_session = Session.find_by!(user_id: created.id)
+
+    assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+      other.get registration_confirmation_path, params: { token: }
+      assert_equal 200, other.response.status
+    end
+    assert_nil registration.reload.guest_user_id
+    assert_not User.find(created.id).can_reset_password?
+
+    confirm(other, token:)
+    assert_equal 303, other.response.status
+    assert_not previous_session.active?
+    assert_equal created.id, Session.last.user_id
+    assert User.find(created.id).can_reset_password?
+    assert_not PendingRegistration.exists?(registration.id)
+  end
+
   test "invalid submission keeps previous credentials and never echoes password fields" do
     signup
     previous = PendingRegistration.last
@@ -217,18 +240,26 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "unrelated guest and registered identity cannot silently switch by confirmation" do
+  test "a different linked guest and registered identity cannot switch by confirmation" do
+    linked_guest = guest
     signup
+    registration = PendingRegistration.last
+    assert_equal linked_guest.id, registration.guest_user_id
     token = email_token
     other = open_session
     unrelated = guest(other)
+    other.get registration_confirmation_path, params: { token: }
+    assert_equal 409, other.response.status
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_not (User.find(unrelated.id)).can_reset_password?
+    assert_equal linked_guest.id, registration.reload.guest_user_id
     assert_equal 1, PendingRegistration.count
     user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     other.post session_path, params: { email_address: user.email_address, password: "a long password phrase", authenticity_token: csrf(other) }
+    other.get registration_confirmation_path, params: { token: }
+    assert_equal 409, other.response.status
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_equal user.id, Session.last.user_id

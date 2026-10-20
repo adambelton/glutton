@@ -24,6 +24,21 @@ class PendingRegistration < ApplicationRecord
 
   validate :email_is_unregistered, on: :create
 
+  def self.resolve_confirmation!(token:)
+    raise Identity::RegistrationUnavailable unless token.is_a?(String) && token.present?
+
+    registration = find_by_token_for(:email_confirmation, token)
+    raise Identity::RegistrationUnavailable unless registration&.active?
+
+    registration
+  end
+
+  def authorize_confirmation!(user:)
+    unless user.can_register? && (unattached? || guest_user_id == user.id)
+      raise Identity::RegistrationConflict
+    end
+  end
+
   def expires_at
     created_at + EXPIRY_DURATION
   end

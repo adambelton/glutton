@@ -1,18 +1,22 @@
 module Identity
   class CompleteRegistration
-    def self.call(token:)
-      raise RegistrationUnavailable unless token.is_a?(String) && token.present?
-
-      candidate = PendingRegistration.find_by_token_for(:email_confirmation, token)
-      raise RegistrationUnavailable if candidate.nil?
+    def self.call(token:, current_user_id: nil)
+      candidate = PendingRegistration.resolve_confirmation!(token:)
 
       PendingRegistration.transaction(requires_new: true) do
-        # Preparation locks the source_user first too. Never reverse this order.
-        source_user = User.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id.present?
-        registration = PendingRegistration.lock.find_by_token_for(:email_confirmation, token)
-        unless registration.present? && registration.active? && registration.guest_user_id == candidate.guest_user_id &&
-            (registration.guest_user_id.nil? || (source_user.present? && source_user.can_register?))
-          raise RegistrationUnavailable
+        # Preparation and cleanup also lock the user before the pending request.
+        if current_user_id
+          current_user = User.lock.find_by(id: current_user_id)
+          raise RegistrationConflict unless current_user
+
+          registration = lock_registration(token:, candidate:)
+          registration.authorize_confirmation!(user: current_user)
+          registration.attach_to!(user: current_user) if registration.unattached?
+          source_user = current_user
+        else
+          source_user = User.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id
+          registration = lock_registration(token:, candidate:)
+          raise RegistrationUnavailable if registration.guest_user_id && !source_user&.can_register?
         end
 
         user = source_user.present? ? source_user.becomes!(UserRegistered) : UserRegistered.new
@@ -41,5 +45,13 @@ module Identity
 
       raise
     end
+
+    def self.lock_registration(token:, candidate:)
+      registration = PendingRegistration.lock.resolve_confirmation!(token:)
+      raise RegistrationUnavailable unless registration.guest_user_id == candidate.guest_user_id
+
+      registration
+    end
+    private_class_method :lock_registration
   end
 end
