@@ -10,9 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "films", force: :cascade do |t|
+    t.string "title", null: false
+    t.date "release_date"
+    t.jsonb "metadata", default: {}, null: false
+    t.bigint "tmdb_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tmdb_id"], name: "index_films_on_tmdb_id", unique: true
+    t.check_constraint "jsonb_typeof(metadata) = 'object'::text", name: "films_metadata_is_object"
+  end
 
   create_table "pending_registrations", force: :cascade do |t|
     t.bigint "guest_user_id"

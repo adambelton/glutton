@@ -1,6 +1,6 @@
 # 006g — Explicit User lifecycle names
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / model organisation
 
 ## Goal
@@ -50,4 +50,4 @@ git diff --check
 
 Local development migration was also applied with `bin/rails db:migrate`; no production changes, publication or merge occurred. An earlier CI invocation used its default development setup and applied the intermediate namespace migration despite the initial test-only verification restriction. That uncommitted migration was reversed without deleting rows before replacing it with the final naming migration; subsequent CI explicitly used RAILS_ENV=test. Final development aggregate counts remain one registered user and one associated session. Password reset links generated with the old class name may require requesting a new link. Application code and migration must transition together; mixed-version deployment is unsupported. Task 007 remains unimplemented.
 
-Owner acceptance / merge: Pending. Owner selected User as the base and UserRegistered, UserGuest and UserDeleted as top-level subclasses on 20 October 2026, superseding the intermediate namespace proposal.
+Owner acceptance / merge: Owner approved PR #16 and authorized merge on 20 October 2026. Merged via [PR #16](https://github.com/adambelton/glutton/pull/16) after hosted Repository checks passed, at 09:33:13 UTC; squash commit `09fe138c023d8aa891825fffa44843c47b4bf77b`. Owner selected User as the base and UserRegistered, UserGuest and UserDeleted as top-level subclasses, superseding the intermediate namespace proposal.

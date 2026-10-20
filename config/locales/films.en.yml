@@ -1,0 +1,8 @@
+en:
+  activerecord:
+    attributes:
+      film:
+        title: Title
+        release_date: Release date
+        metadata: Metadata
+        tmdb_id: TMDB ID
