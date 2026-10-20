@@ -6,18 +6,9 @@ class RegistrationConfirmationsController < ApplicationController
 
   def show
     user = current_user
-    raise Identity::RegistrationConflict if user && !user.can_register?
-
     @token = params[:token]
-    raise Identity::RegistrationUnavailable unless @token.is_a?(String) && @token.present?
-
-    registration = PendingRegistration.find_by_token_for(:email_confirmation, @token)
-    raise Identity::RegistrationUnavailable unless registration.present? && registration.active?
-
-    if user.present? && registration.guest_user_id != user.id &&
-        !(registration.guest_user_id.nil? && registration.id == session[:pending_registration_id])
-      raise Identity::RegistrationConflict
-    end
+    registration = PendingRegistration.resolve_confirmation!(token: @token)
+    registration.authorize_confirmation!(user:, pending_registration_id: session[:pending_registration_id]) if user
   end
 
   def create

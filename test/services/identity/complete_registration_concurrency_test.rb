@@ -68,6 +68,27 @@ module Identity
       assert_not PendingRegistration.exists?(record.id)
     end
 
+    test "concurrent browser completion attaches once and issues one surviving session" do
+      guest = UserGuest.create!
+      @user_ids << guest.id
+      record = prepare(email: "browser-confirmation-race@example.test")
+      @pending_ids << record.id
+      token = token_for(record)
+      contender = nil
+      operation = -> { CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id) }
+      winner = User.transaction do
+        guest.lock!
+        contender = blocked_operation(operation)
+        operation.call
+      end
+
+      assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
+      assert_equal guest.id, winner.user_id
+      assert winner.active?
+      assert_equal [ winner.id ], Session.where(user_id: guest.id).pluck(:id)
+      assert_not PendingRegistration.exists?(record.id)
+    end
+
     test "committed guest replacement wins over waiting confirmation" do
       guest = UserGuest.create!
       @user_ids << guest.id

@@ -153,6 +153,29 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert (User.find(created.id)).can_reset_password?
   end
 
+  test "viewing a browser-owned direct confirmation never attaches before POST" do
+    signup
+    registration = PendingRegistration.last
+    token = email_token
+    other = open_session
+    created = guest(other)
+    # An existing guest binding and this browser's pending request are independent.
+    cookies[:session_id] = other.cookies[:session_id]
+
+    assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+      get registration_confirmation_path, params: { token: }
+      assert_response :success
+    end
+    assert_nil registration.reload.guest_user_id
+    assert_not User.find(created.id).can_reset_password?
+
+    confirm(token:)
+    assert_response :see_other
+    assert_equal created.id, Session.last.user_id
+    assert User.find(created.id).can_reset_password?
+    assert_not PendingRegistration.exists?(registration.id)
+  end
+
   test "invalid submission keeps previous credentials and never echoes password fields" do
     signup
     previous = PendingRegistration.last
@@ -222,6 +245,8 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     token = email_token
     other = open_session
     unrelated = guest(other)
+    other.get registration_confirmation_path, params: { token: }
+    assert_equal 409, other.response.status
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_not (User.find(unrelated.id)).can_reset_password?
@@ -229,6 +254,8 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     other.post session_path, params: { email_address: user.email_address, password: "a long password phrase", authenticity_token: csrf(other) }
+    other.get registration_confirmation_path, params: { token: }
+    assert_equal 409, other.response.status
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_equal user.id, Session.last.user_id

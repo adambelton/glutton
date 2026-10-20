@@ -63,6 +63,28 @@ module Identity
       assert_not (User.find(guest.id)).can_reset_password?
     end
 
+    test "failure after browser attachment preserves the guest sessions and permits retry" do
+      record = prepare
+      guest = UserGuest.create!
+      previous_session = Session.create!(user: guest)
+      token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
+      failure = ->(event) { raise IOError, "simulated session failure" if event.payload[:sql].match?(/INSERT INTO "sessions"/) }
+      assert_raises(IOError) do
+        ActiveSupport::Notifications.subscribed(failure, "sql.active_record") do
+          CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+        end
+      end
+      assert_nil record.reload.guest_user_id
+      assert previous_session.active?
+      assert_not User.find(guest.id).can_reset_password?
+      assert_equal record, PendingRegistration.resolve_confirmation!(token:)
+
+      completed = CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
+      assert completed.active?
+      assert_equal guest.id, completed.user_id
+      assert_not previous_session.active?
+    end
+
     test "invalid replacement retains prior direct record while valid replacement deletes it" do
       record = prepare
       assert_raises(ActiveRecord::RecordInvalid) do
