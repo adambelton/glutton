@@ -2,7 +2,7 @@
 
 Source: [adambelton/glutton](https://github.com/adambelton/glutton).
 
-A horror discovery app. This initial scaffold contains a home page and Rails health endpoint, with PostgreSQL and server-rendered Hotwire views. Product features are planned separately.
+A horror discovery app built with Rails, PostgreSQL and server-rendered Hotwire views. Implemented capabilities include guest and registered identity, registration and password recovery, TMDB film search/import, and the Library watched operation. Film and Library operations currently have programmatic interfaces; rating, recommendation and Library browsing flows remain planned. See the [current implementation status](docs/implementation_plan.md#current-implementation-status) for merged work and changes awaiting review.
 
 ## Prerequisites
 

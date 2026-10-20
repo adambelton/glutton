@@ -1,7 +1,19 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 merged; tasks 001e and 010 merged; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: See current implementation status below for merged work, changes awaiting review and planned capabilities.  
 Date: 20 October 2026
+
+## Current implementation status
+
+This section summarizes current delivery status; task tables and linked specs retain detailed outcomes and historical verification.
+
+| Area | Current status |
+| --- | --- |
+| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f is Ready for review. Documentation follow-up 001g is Ready for review. |
+| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o and confirmation simplification 006p are Ready for review. |
+| Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b is Ready for review. |
+| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist/dismissal management and product UI remain planned. |
+| Ratings and Recommendations | Planned; no implementation delivered. |
 
 ## Task rules
 
@@ -129,7 +141,7 @@ Plan deletion/retention, security/accessibility, seed/media validation, operatin
 
 Film knowledge sequencing clarification, 20 October 2026: task 007 starts with minimal catalogue persistence and a small local sample. JEV work remains deferred. The initial quality vocabulary is provisional and expected to evolve; validating that starting set is not a prerequisite for catalogue implementation. This does not make draft film analyses fact-checked or authorize publishing unverified claims.
 
-Post-merge Identity role/transition fixes are implemented for review in tasks 006h–006k under the owner's subsequent authorization. They are separate from task 010.
+Post-merge Identity role/transition fixes in tasks 006h–006k were subsequently accepted and merged with the other convention fixes recorded below. They are separate from task 010.
 
 
 ## Conventions fixes authorized after task 010
@@ -142,10 +154,29 @@ Post-merge Identity role/transition fixes are implemented for review in tasks 00
 | 006k | Identity / model construction | Prevent direct User construction without subtype enumeration; preserve legacy-row loading | Merged — [spec](specs/006k_user_construction.md) |
 | 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Merged — [spec](specs/009a_film_outcome_tests.md) |
 
-Owner requested fixes rather than an audit deliverable. No separate results document is maintained. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Owner accepted and authorized merge; PR #21 merged on 20 October 2026 at `0fa54269df0140451ab19ac5b665fb64d6cc3c50` after GitHub Repository checks passed.
+For the earlier convention-fix work, the owner requested fixes rather than an audit deliverable; that work has no separate results document. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Owner accepted and authorized merge; PR #21 merged on 20 October 2026 at `0fa54269df0140451ab19ac5b665fb64d6cc3c50` after GitHub Repository checks passed.
 
 Guest-duration follow-ups authorized during PR #21 review: **006l — Merged**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Merged**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
 
 Pending-registration duration follow-up: **006m — Merged**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
 
 Explicit anonymous registration access: **006n — Merged**, Identity [spec](specs/006n_registration_availability.md).
+
+## Repository audit — 20 October 2026
+
+**001f — Ready for review**, Foundation / repository review; [spec](specs/001f_codebase_audit.md), [audit report](audits/2026-10-20_codebase_audit.md). Audited freshly pulled main at `3cd3034e0e48fe04648c8a36c4e1d0028a622270`. The audit recorded one reproduced Identity sign-in/password-reset race and three maintainability/documentation observations; task 001f itself made no application changes. Existing tests, style, application eager loading and Brakeman passed. The separately scoped remediation tasks below are now Ready for review; owner acceptance and merge remain pending.
+
+## Audit remediation and confirmation simplification — 20 October 2026
+
+The owner authorized implementation after reviewing audit 001f and discussing Identity complexity. Each task has one owner; no cross-domain contract changes are needed.
+
+| Task | Owner | Outcome | Status |
+| --- | --- | --- | --- |
+| [006o](specs/006o_authentication_reset_serialization.md) | Identity / sessions | Serialize sign-in with password recovery (A1) | Ready for review |
+| [006p](specs/006p_confirmation_orchestration.md) | Identity / registration | One confirmation coordinator and shared access rule (A2) | Ready for review |
+| [009b](specs/009b_tmdb_boundary_consistency.md) | Film knowledge / provider boundary | Shared date parsing and search parameter rules (A3) | Ready for review |
+| [001g](specs/001g_current_documentation.md) | Foundation / documentation | Consistent current summaries and open decisions (A4) | Ready for review |
+
+Submission/delivery orchestration, broad Identity rewrites and release infrastructure remain outside this change. Owner acceptance and merge are pending.
+
+Verification for 006o/006p/009b/001g: full local CI passed 232 tests / 2,633 assertions, zero failures/errors/skips; RuboCop 127 files clean; dependency audits clean; Brakeman zero warnings/errors. Application eager loading and whitespace checks passed. Individual specs record commands, initial regression failure and limitations. No hosted CI or merge performed.
