@@ -259,3 +259,16 @@ activity in a product domain, agree its deletion policy and synchronous mechanis
 and extend retention through separately owned tasks. Unknown foreign-key dependents
 fail safely rather than being bypassed or silently orphaned. Scheduler installation
 and monitoring remain deployment work.
+
+## Development film sample
+
+Task 007 provides minimal film identities, not analyses or a validated production seed. After applying migrations, explicitly load the three-film sample in development:
+
+```sh
+bin/rails db:migrate
+bin/rails film_knowledge:load_sample
+```
+
+The command creates Alien, The Thing and Get Out only when their TMDB IDs are absent. Re-running preserves internal IDs, existing metadata and unrelated films. It reports `sample_films=3`; this is the sample size, not a count of new inserts. The command rejects environments other than development before writing. It runs no API requests and is not called by application boot or `db:seed`. Failure rolls back the sample transaction; fix the cause and rerun.
+
+Sample identity sources and verification limits are recorded in [task 007](docs/specs/007_film_catalogue.md). The films table stores one nullable release date, with year queries derived from date ranges; original titles and other descriptive values live in JSONB metadata. Sample release dates remain unknown until primary release dates are verified. The full 50-film catalogue, analyses, qualities and TMDB API import are separate work.

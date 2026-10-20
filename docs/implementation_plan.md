@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 20 October 2026
 
 ## Task rules
@@ -70,8 +70,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 006f | Identity / registration UI | Wire registration/confirmation HTTP flow, mail delivery/resend, pending-to-guest continuity, visible verification/expiry, session binding, CSRF, limits, duplicate-email rejection and localized responses | 005a, 006, 006a, 006b | Merged — [spec](specs/006f_registration_browser_flow.md), [PR #13](https://github.com/adambelton/glutton/pull/13) |
 | 006c | Identity / recovery | Expiring password-reset browser flow; request limits, atomic credential change/all-session revocation and fresh sign-in | 004, 005a, 006, 006f | Merged — [spec](specs/006c_password_recovery.md), [PR #14](https://github.com/adambelton/glutton/pull/14) |
 | 006d | Identity / retention | Bounded expired guest/session/pending cleanup command, claim-race protection and documented cadence; scheduler deployment and future domain activity excluded | 002, 005, 006a, 006b, 006f | Merged — [spec](specs/006d_guest_retention.md), [PR #15](https://github.com/adambelton/glutton/pull/15); future activity deletion policy must be agreed before guest activity persistence |
-| 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Ready for review — [spec](specs/006g_user_type_names.md) |
-| 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |
+| 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Merged — [spec](specs/006g_user_type_names.md), [PR #16](https://github.com/adambelton/glutton/pull/16) |
+| 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Ready for review — [spec](specs/007_film_catalogue.md) |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Planned |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Planned |
 | 010 | Library / viewing | Canonical user–film entry and mark-watched operation/read result | 005a, 007 | Planned |
@@ -124,3 +124,5 @@ The first complete loop still requires rating-only usefulness, explicit evidence
 ## Before public release
 
 Plan deletion/retention, security/accessibility, seed/media validation, operating-cost controls, deployment/backups and attribution. Review ownership for account deletion before slicing it; do not mechanically invent distributed coordination. Paid data/media licences remain excluded. Provider follow-up adds no gate beyond the agreed TMDB direction.
+
+Film knowledge sequencing clarification, 20 October 2026: task 007 starts with minimal catalogue persistence and a small local sample. JEV work remains deferred. The initial quality vocabulary is provisional and expected to evolve; validating that starting set is not a prerequisite for catalogue implementation. This does not make draft film analyses fact-checked or authorize publishing unverified claims.
