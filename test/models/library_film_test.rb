@@ -21,13 +21,12 @@ class LibraryFilmTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { insert(attributes.merge(type: "LibraryFilmWatched")) }
   end
 
-  test "base and unsupported rows are rejected" do
-    base = LibraryFilm.new(attributes)
-    assert_not base.valid?
-    assert base.errors.of_kind?(:type, :inclusion)
-    [ nil, "LibraryFilm", "LibraryFilmToWatch" ].each do |type|
-      assert_raises(ActiveRecord::StatementInvalid) { insert(attributes.merge(type:)) }
-    end
+  test "root construction is prohibited while subtype construction and loading work" do
+    assert_raises(NotImplementedError) { LibraryFilm.new(attributes) }
+    assert_raises(NotImplementedError) { LibraryFilm.create!(attributes) }
+    row = LibraryFilmWatched.create!(attributes)
+    assert_equal row, LibraryFilm.find(row.id)
+    assert_raises(ActiveRecord::NotNullViolation) { insert(attributes.merge(type: nil)) }
   end
 
   test "foreign keys require real owners and films and preserve referenced films" do
@@ -47,9 +46,6 @@ class LibraryFilmTest < ActiveSupport::TestCase
       row.valid?
       assert_includes row.errors.full_messages, "User must exist"
       assert_includes row.errors.full_messages, "Film must exist"
-      base = LibraryFilm.new(attributes)
-      base.valid?
-      assert_includes base.errors.full_messages, "Library classification is not included in the list"
     end
   end
 

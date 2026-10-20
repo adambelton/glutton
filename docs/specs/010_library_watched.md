@@ -15,9 +15,10 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 
 - Keep LibraryFilm as the STI root and LibraryFilmWatched as the only implemented subtype, with unique user/film identity, required references and existing scoped deletion policy.
 - Store id, type, user_id, film_id and standard Rails timestamps. Remove watched_at through a follow-up migration: no current feature needs a separate confirmation/viewing timestamp.
-- Library::RecordWatched.call(user:, film:) accepts persisted internal User/Film roles and returns the persisted LibraryFilm entry. Repeated/concurrent calls return the same relationship without changing its timestamps. No classification hash or library_state method.
+- Library::RecordWatched.call(user_id:, film_id:) accepts internal user/film IDs and resolves both records inside its transaction, returning the persisted LibraryFilm entry. Repeated/concurrent calls return the same relationship without changing its timestamps. An existing entry receives record_watched; LibraryFilmWatched returns itself for this idempotent action. The operation must not treat an arbitrary Library entry as watched. Future subtypes must implement their own permitted transition before use. No classification hash or library_state method.
 - Remove FilmState: no application consumer establishes a read contract. Do not add a replacement read API for tests.
-- Inline the transaction and user-before-library lock order in RecordWatched; remove FilmAccess. Refresh the locked user and check active? to coordinate with cleanup/claiming. Nil/unpersisted/missing/inactive users raise IdentityUnavailable. Nil/unpersisted/missing films raise FilmUnavailable; retain the existence check and foreign key for stale/racing deletion. Persistence errors propagate and caller rollback remains effective.
+- Inline the transaction and user-before-library lock order in RecordWatched; remove FilmAccess. Refresh the locked user and check active? to coordinate with cleanup/claiming. Missing/inactive users raise IdentityUnavailable. Missing films raise FilmUnavailable. Use a normal Film lookup without a row lock: there is no film-deletion workflow; the foreign key protects integrity in a racing deletion. No model persisted? checks or separate Film.exists? query. The user ID must come from trusted Identity resolution when HTTP wiring is added. Persistence errors propagate and caller rollback remains effective.
+- Prevent direct LibraryFilm construction in its initializer without enumerating subclasses. Remove model/database subtype allowlists; keep required type, references and uniqueness. User construction/validation changes remain outside this Library task.
 - Trust declared roles without class guards. Keep storage invariants and concrete initial watched construction; no future transitions, placeholder types, Ratings calls or changes to Identity/Film implementations.
 - Tests verify operation outcomes, identity/isolation, failures, idempotency, transaction/retention contracts and database invariants. Do not assert classification projections, whole attribute snapshots, collaborator classes or incidental query structure. Targeted persistence constraints may be tested directly because they are explicit contracts.
 
@@ -36,20 +37,20 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 - Do not add a cross-type transition API or instantiate future types in this task. Once those types are introduced, permitted transitions must be explicit and transactional, preserving the same relationship ID and uniqueness invariant. They must not be implemented through unrestricted caller-supplied type assignment or an automatic destroy/recreate convention.
 - No Ratings selection, rating submission/current-rating lookup, make-available calls or queuing. Saving watched does not imply a completed rating. Library subtype behaviour must not be used as a new prerequisite imposed on Ratings: the agreed Ratings operation accepts a rating without a watched Library record and records watched only on completion. Future Library UI may expose actions appropriate to its type; that does not relocate rating persistence or change the Ratings contract. This primitive must not trigger Ratings; task 017 owns that consuming workflow and task 016 records watched after rating without requeueing.
 - Review existing application class checks read-only for comparable internal argument guards; retain external HTTP/JSON/configuration validation, schema-shape checks and targeted exception recovery. Do not change other domains or replace Identity lifecycle-policy branches under this Library task. Record findings rather than broadening implementation scope.
-- No TMDB calls/import, AI/JEV, jobs/events, generic integration/retention framework, scheduler, paid service, deployment, publication or merge. No development/production data writes during verification; use isolated test records/databases.
+- No TMDB calls/import, AI/JEV, jobs/events, generic integration/retention framework, scheduler, paid service, deployment or merge. Updating the existing PR is owner-authorized. No development/production data writes during verification; use isolated test records/databases.
 - Use Rails locale entries and symbolic model validation errors for new application-authored validation text. Developer-only exceptions remain static diagnostics; there is no new application UI copy.
 
 ## Acceptance criteria
 
 - **AC1:** Recording watched returns a durable relationship for the requested user/film; repeated and concurrent calls preserve identity and standard timestamps without duplicates.
   Check: focused model/operation/concurrency tests; no watched_at, FilmState, FilmAccess or library_state remains in runtime code/schema.
-  Result: Passed — focused Library/model suite: 18 tests, 92 assertions, zero failures/errors/skips. Runtime code and schema contain none of the removed field/services/projection.
+  Result: Passed — focused Library/model suite: 17 tests, 82 assertions, zero failures/errors/skips. Runtime code and schema contain none of the removed field/services/projection.
 - **AC2:** Fresh active-user and film-existence contracts reject unavailable collaborators without writes; user isolation and guest deadline remain enforced.
-  Check: boundary, stale-record and role-delegation tests.
-  Result: Passed — focused tests cover exact guest expiry, registered longevity, stale/deleted/missing users, unavailable films, role delegation and user isolation without classification reads.
+  Check: missing-ID, lifecycle-change, expiry and isolation tests.
+  Result: Passed — focused tests cover exact guest expiry, registered longevity, stale/deleted/missing users, unavailable films, ID resolution and user isolation without classification reads.
 - **AC3:** Existing cleanup/claim compatibility, restrictive film references, rollback and explicit retry work without changing other domains.
   Check: Library retention/concurrency tests with real Identity operations; full CI, eager loading and whitespace checks.
-  Result: Passed — real cleanup/claim and separate-connection concurrency tests pass, including outer rollback, injected persistence failure and explicit retry. Full CI: 216 tests, 2,523 assertions, zero failures/errors/skips; RuboCop 120 files clean; gem/importmap audits clean; Brakeman zero errors/warnings. Zeitwerk application eager loading passes with the existing mail-preview exclusion. Whitespace checks pass.
+  Result: Passed — real cleanup/claim and separate-connection concurrency tests pass, including outer rollback, injected persistence failure and explicit retry. Full CI: 215 tests, 2,513 assertions, zero failures/errors/skips; RuboCop 121 files clean; gem/importmap audits clean; Brakeman zero errors/warnings. Zeitwerk application eager loading passes with the existing mail-preview exclusion. Whitespace checks pass.
 
 ## Implementation notes
 
@@ -70,3 +71,11 @@ git diff --check
 ```
 
 Implementation: removed FilmState, FilmAccess, library_state and the watched_at locale/validation; RecordWatched returns the entry with transaction/locking inline. Added a follow-up migration rather than rewriting the already-applied creation migration. Applied only to the test database; development/production migration remains for normal setup. Dropping watched_at discards that redundant timestamp. Tests retain explicit persistence-contract checks but remove classification projections, whole-row snapshots, collaborator-class checks and index introspection. README and plan reflect the smaller contract. No publication or merge performed.
+
+Owner-approved follow-up: switch to ID inputs and transactional record resolution; retain unlocked Film lookup; replace subtype enumeration with a LibraryFilm root-construction guard. Acceptance evidence above is updated for this follow-up. Publication of these changes to the existing PR is authorized; merge is not.
+
+Final follow-up verification: test-only migration passed; focused tests passed 17 tests/82 assertions; full CI passed 215 tests/2,513 assertions, style/security clean; Zeitwerk passed with the existing preview exclusion; git diff --check passed. Root new/create rejection, subtype construction/root querying, uniqueness and required type are covered. Removed the obsolete role-wrapper test because the operation now accepts IDs. User model changes remain deferred.
+
+Review correction before publication: the root lookup preserves cross-type uniqueness but must not imply watched behaviour. Existing entries now receive record_watched; the implemented watched subtype returns itself. No class predicates or future transition implementations were added. Final verification below supersedes the earlier follow-up counts.
+
+After the delegation correction, full CI passed again: 215 tests/2,513 assertions, zero failures/errors/skips; style and all security checks passed. Existing repeat/concurrency tests verify idempotent outcomes through the operation. No future subtype was added for testing.

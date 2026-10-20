@@ -40,7 +40,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   end
 
   def record
-    Library::RecordWatched.call(user: @guest, film: @film)
+    Library::RecordWatched.call(user_id: @guest.id, film_id: @film.id)
   end
 
   def claim

@@ -14,7 +14,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
     registered = UserRegistered.create!(email_address: "library-keep@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     film = Film.create!(title: "Shared Library film")
-    [ guest, active, registered ].each { |user| Library::RecordWatched.call(user:, film:) }
+    [ guest, active, registered ].each { |user| Library::RecordWatched.call(user_id: user.id, film_id: film.id) }
     session = Session.create!(user: guest)
     travel 2.hours do
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::CleanupExpiredAccounts.call)
@@ -29,7 +29,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "in-place registration preserves relationship identity and watched confirmation" do
     guest = UserGuest.create!
     film = Film.create!(title: "Claim retained film")
-    Library::RecordWatched.call(user: guest, film:)
+    Library::RecordWatched.call(user_id: guest.id, film_id: film.id)
     row = LibraryFilm.find_by!(user_id: guest.id)
     before = [ row.id, row.created_at, row.updated_at ]
     session = claim(guest)
@@ -41,7 +41,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "a restrictive dependent still rolls back cleanup and restores Library and Identity rows" do
     guest = UserGuest.create!(created_at: 23.hours.ago)
     film = Film.create!(title: "Rollback retention film")
-    Library::RecordWatched.call(user: guest, film:)
+    Library::RecordWatched.call(user_id: guest.id, film_id: film.id)
     session = Session.create!(user: guest)
     connection = User.connection
     connection.execute("CREATE TABLE library_cleanup_blocker (user_id bigint REFERENCES users(id))")

@@ -1,15 +1,19 @@
 module Library
   class RecordWatched
-    def self.call(user:, film:)
-      raise IdentityUnavailable, "An active identity is required" unless user&.persisted?
-
+    def self.call(user_id:, film_id:)
       LibraryFilm.transaction do
-        fresh_user = User.lock.find_by(id: user.id)
-        raise IdentityUnavailable, "An active identity is required" unless fresh_user&.active?
-        raise FilmUnavailable, "Film is unavailable" unless film&.persisted? && Film.exists?(film.id)
+        user = User.lock.find_by(id: user_id)
+        raise IdentityUnavailable, "An active identity is required" unless user&.active?
 
-        LibraryFilm.lock.find_by(user_id: fresh_user.id, film_id: film.id) ||
-          LibraryFilmWatched.create!(user: fresh_user, film_id: film.id)
+        film = Film.find_by(id: film_id)
+        raise FilmUnavailable, "Film is unavailable" unless film
+
+        library_film = LibraryFilm.lock.find_by(user_id: user.id, film_id: film.id)
+        if library_film
+          library_film.record_watched
+        else
+          LibraryFilmWatched.create!(user:, film:)
+        end
       end
     end
   end

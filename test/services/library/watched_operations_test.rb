@@ -1,5 +1,4 @@
 require "test_helper"
-require "delegate"
 
 class Library::WatchedOperationsTest < ActiveSupport::TestCase
   setup do
@@ -8,8 +7,8 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
     @film = Film.create!(title: "Watched operations film")
   end
 
-  def record(user: @user, film: @film)
-    Library::RecordWatched.call(user:, film:)
+  def record(user_id: @user.id, film_id: @film.id)
+    Library::RecordWatched.call(user_id:, film_id:)
   end
 
   test "recording watched returns the relationship and is stable on repeats" do
@@ -30,7 +29,7 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
   test "users and guests see and change only their own film relationship" do
     record
     other = UserGuest.create!
-    assert_difference("LibraryFilm.count", 1) { record(user: other) }
+    assert_difference("LibraryFilm.count", 1) { record(user_id: other.id) }
     assert_equal 1, LibraryFilm.where(user: @user).count
     assert_equal 1, LibraryFilm.where(user: other).count
   end
@@ -53,7 +52,7 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
     registered = UserRegistered.create!(email_address: "library@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     travel 48.hours do
-      assert record(user: registered).persisted?
+      assert record(user_id: registered.id).persisted?
     end
     @user.update_columns(type: "UserDeleted")
     assert_raises(Library::IdentityUnavailable) { record }
@@ -62,25 +61,17 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
   test "invalid identities and absent films fail without saving activity" do
     missing = UserGuest.create!
     User.where(id: missing.id).delete_all
-    [ nil, UserGuest.new, UserDeleted.create!, missing ].each do |actor|
+    [ nil, UserDeleted.create!.id, missing.id ].each do |user_id|
       assert_no_difference "LibraryFilm.count" do
-        assert_raises(Library::IdentityUnavailable) { record(user: actor, film: nil) }
+        assert_raises(Library::IdentityUnavailable) { record(user_id:, film_id: nil) }
       end
     end
-    stale_film = Film.create!(title: "Removed film")
-    Film.where(id: stale_film.id).delete_all
-    [ nil, Film.new, Film.new(id: @film.id), stale_film ].each do |film|
-      assert_raises(Library::FilmUnavailable) { record(film:) }
+    removed_film = Film.create!(title: "Removed film")
+    Film.where(id: removed_film.id).delete_all
+    [ nil, removed_film.id ].each do |film_id|
+      assert_raises(Library::FilmUnavailable) { record(film_id:) }
     end
     assert_equal 0, LibraryFilm.count
-  end
-
-  test "internal model collaborators are accepted through behaviour rather than concrete class" do
-    user = SimpleDelegator.new(@user)
-    film = SimpleDelegator.new(@film)
-    result = record(user:, film:)
-    assert_equal @film.id, result.film_id
-    assert result.persisted?
   end
 
   test "outer rollback and persistence failure leave no partial watched record" do

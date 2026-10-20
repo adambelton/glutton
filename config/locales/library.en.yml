@@ -5,7 +5,6 @@ en:
       library_film_watched: Watched library film
     attributes:
       library_film:
-        type: Library classification
         user: User
         film: Film
         film_id: Film
