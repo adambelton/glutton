@@ -35,8 +35,8 @@ class UserRegistered < User
     user if user&.active? && user.email_confirmed_at.present?
   end
 
-  def remember_session_until
-    20.years.from_now
+  def session_duration
+    20.years
   end
 
   def self.find_by_email(email)

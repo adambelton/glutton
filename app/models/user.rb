@@ -5,11 +5,11 @@ class User < ApplicationRecord
     super
   end
 
-  def resume_session(session:)
-    self if session&.active? && session.user_id == id
+  def inactive_error
+    nil
   end
 
-  def remember_session_until
+  def session_duration
     nil
   end
 

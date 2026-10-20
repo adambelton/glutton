@@ -18,8 +18,7 @@ module Identity
       return @current_user if defined?(@current_user)
 
       payload = identity_payload
-      user = User.find_by(id: payload["user_id"]) if payload
-      @current_user = user&.resume_session(session: bound_session)
+      @current_user = Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
       clear_identity_cookie unless @current_user
       @current_user
     end
@@ -97,7 +96,7 @@ module Identity
       end
       cookies.signed[:session_id] = {
         value: { id: authentication.id, user_id: user.id },
-        httponly: true, same_site: :lax, secure: Rails.env.production?, expires: user.remember_session_until
+        httponly: true, same_site: :lax, secure: Rails.env.production?, expires: user.session_duration&.from_now
       }
       @bound_session = authentication
       @current_user = user

@@ -28,6 +28,6 @@ The guest lifetime can change in one model constant without rewriting guest-boun
 
 ## Implementation notes
 
-Added the frozen model-owned duration constant and updated expiry-sensitive tests. Near-deadline registration setup now creates fresh pending requests near guest expiry so tests work for shorter and longer guest lifetimes; independent pending/token deadlines retain their own values. Library changes are tests only. Daylight-saving verification uses elapsed seconds and the configured duration rather than a fixed local-hour expectation. Default lifetime is unchanged, no expiry timestamp accessor or runtime consumer coupling was added, and no non-test data changed. The separate discussion about User#resume_session ownership remains unresolved by this duration-only change.
+Added the frozen model-owned duration constant and updated expiry-sensitive tests. Near-deadline registration setup now creates fresh pending requests near guest expiry so tests work for shorter and longer guest lifetimes; independent pending/token deadlines retain their own values. Library changes are tests only. Daylight-saving verification uses elapsed seconds and the configured duration rather than a fixed local-hour expectation. Default lifetime is unchanged, no expiry timestamp accessor or runtime consumer coupling was added, and no non-test data changed. Session resumption ownership is handled separately by task 006i.
 
 Owner acceptance / merge: Pending.

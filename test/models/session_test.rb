@@ -10,11 +10,11 @@ class SessionTest < ActiveSupport::TestCase
     user = UserGuest.create!
     authentication = Session.create!(user:)
     other = UserGuest.create!
-    assert_same user, user.resume_session(session: authentication)
-    assert_nil other.resume_session(session: authentication)
-    assert_nil user.resume_session(session: nil)
+    assert_equal user, Session.resume(id: authentication.id, user_id: user.id)
+    assert_nil Session.resume(id: authentication.id, user_id: other.id)
+    assert_nil Session.resume(id: nil, user_id: user.id)
     Session.revoke(id: authentication.id)
-    assert_nil user.resume_session(session: authentication)
+    assert_nil Session.resume(id: authentication.id, user_id: user.id)
   end
 
   test "expired guests cannot resume and deleted accounts reject even a missing session" do
@@ -22,9 +22,10 @@ class SessionTest < ActiveSupport::TestCase
     user = UserGuest.create!
     authentication = Session.create!(user:)
     travel UserGuest::EXPIRY_DURATION do
-      assert_nil user.resume_session(session: authentication)
+      assert_nil Session.resume(id: authentication.id, user_id: user.id)
     end
-    assert_raises(Identity::AccountDeleted) { UserDeleted.create!.resume_session(session: nil) }
+    deleted = UserDeleted.create!
+    assert_raises(Identity::AccountDeleted) { Session.resume(id: nil, user_id: deleted.id) }
   end
 
   test "guest issuance preserves account identity and deadline" do
