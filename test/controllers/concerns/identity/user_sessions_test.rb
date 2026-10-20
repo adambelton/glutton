@@ -88,6 +88,18 @@ class Identity::UserSessionsTest < ActionController::TestCase
     assert_equal I18n.t("identity.registration.unavailable"), flash[:alert]
   end
 
+  test "anonymous browser sees unattached registration but cannot access a linked request" do
+    pending = Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase")
+    session[:pending_registration_id] = pending.id
+    assert_equal pending, @controller.send(:current_pending_registration)
+
+    pending.attach_to!(user: UserGuest.create!)
+    assert_nil @controller.send(:current_pending_registration)
+    assert_nil session[:pending_registration_id]
+    assert_equal I18n.t("identity.registration.unavailable"), flash[:alert]
+  end
+
   private
 
   def with_failure(model, method_name, error)

@@ -80,6 +80,25 @@ class PendingRegistrationTest < ActiveSupport::TestCase
     assert User.exists?(other_guest.id)
   end
 
+  test "availability trusts user permissions and restricts attached ownership" do
+    freeze_time
+    record = registration.tap(&:save!)
+    guest = UserGuest.create!
+    other = UserGuest.create!
+    assert record.unattached?
+    assert record.available_to?(user: guest)
+    record.attach_to!(user: guest)
+    assert_not record.unattached?
+    assert record.available_to?(user: guest)
+    assert_not record.available_to?(user: other)
+    registered = UserRegistered.create!(email_address: "member@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
+    assert_not record.available_to?(user: registered)
+    travel_to record.expires_at do
+      assert_not record.available_to?(user: guest)
+    end
+  end
+
   test "routine logs parameter filtering and inspection omit credential markers" do
     output = StringIO.new
     original_logger = ActiveRecord::Base.logger

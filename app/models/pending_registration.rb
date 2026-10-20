@@ -34,10 +34,12 @@ class PendingRegistration < ApplicationRecord
     guest_user_id.nil? || User.find_by(id: guest_user_id)&.active?
   end
 
+  def unattached?
+    guest_user_id.nil?
+  end
+
   def available_to?(user:)
-    active? && (user.nil? || user.can_register?) &&
-      (guest_user_id.nil? || guest_user_id == user&.id) &&
-      !UserRegistered.exists?(email_address:)
+    active? && user.can_register? && (unattached? || guest_user_id == user.id)
   end
 
   def attach_to!(user:)

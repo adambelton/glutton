@@ -60,7 +60,7 @@ module Identity
 
       registration = PendingRegistration.find_by(id: id)
       user = current_user
-      if registration&.available_to?(user:)
+      if registration&.active? && (user ? registration.available_to?(user:) : registration.unattached?)
         registration
       else
         session.delete(:pending_registration_id)

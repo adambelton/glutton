@@ -147,3 +147,5 @@ Owner requested fixes rather than an audit deliverable. No separate results docu
 Guest-duration follow-ups authorized during PR #21 review: **006l — Ready for review**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Ready for review**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
 
 Pending-registration duration follow-up: **006m — Ready for review**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
+
+Explicit anonymous registration access: **006n — Ready for review**, Identity [spec](specs/006n_registration_availability.md).
