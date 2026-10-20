@@ -33,3 +33,5 @@ Registered credential authentication and password-reset mutation/session revocat
 All verification used isolated test data. Owner authorized creating a PR for online review after local verification; acceptance and merge remain pending. The owner requested fixes directly; there is no separate audit-results document.
 
 Owner acceptance / merge: Pending.
+
+PR review correction: use UserRegistered.transaction explicitly in the registered model action rather than reflecting through self.class. No behaviour or transaction boundary change intended. Verification: focused recovery tests passed 18 tests/243 assertions; full `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed 220 tests/2,560 assertions, zero failures/errors/skips, style/security clean. `git diff --check` passed.

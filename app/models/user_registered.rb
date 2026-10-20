@@ -20,7 +20,7 @@ class UserRegistered < User
   def reset_password!(password:, password_confirmation:)
     raise Identity::PasswordResetUnavailable unless can_reset_password?
 
-    self.class.transaction do
+    UserRegistered.transaction do
       assign_attributes(password:, password_confirmation:)
       save!(context: :password_reset)
       Session.where(user_id: id).delete_all
