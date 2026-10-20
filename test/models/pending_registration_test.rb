@@ -46,7 +46,7 @@ class PendingRegistrationTest < ActiveSupport::TestCase
   end
 
   test "database independently enforces canonical credentials optional foreign key and unique guest" do
-    guest = GuestUser.create!
+    guest = UserGuest.create!
     registration(guest_user: guest).save!
     invalid_rows = [
       { email_address: nil }, { email_address: "" }, { email_address: "Reader@example.test" },
@@ -69,8 +69,8 @@ class PendingRegistrationTest < ActiveSupport::TestCase
   end
 
   test "guest deletion removes only linked pending credentials" do
-    guest = GuestUser.create!
-    other_guest = GuestUser.create!
+    guest = UserGuest.create!
+    other_guest = UserGuest.create!
     linked = registration(guest_user: guest).tap(&:save!)
     other = registration(guest_user: other_guest).tap(&:save!)
     direct = registration.tap(&:save!)

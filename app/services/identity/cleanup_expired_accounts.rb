@@ -6,7 +6,7 @@ module Identity
       end
 
       counts = { guests_deleted: 0, pending_registrations_deleted: 0 }
-      GuestUser.where(created_at: ..24.hours.ago).order(:created_at, :id).limit(batch_size).pluck(:id).each do |id|
+      UserGuest.where(created_at: ..24.hours.ago).order(:created_at, :id).limit(batch_size).pluck(:id).each do |id|
         deleted = delete_guest(id)
         next if deleted.nil?
 
@@ -21,8 +21,8 @@ module Identity
     end
 
     def self.delete_guest(id)
-      GuestUser.transaction(requires_new: true) do
-        guest = GuestUser.lock.find_by(id:)
+      UserGuest.transaction(requires_new: true) do
+        guest = UserGuest.lock.find_by(id:)
         next if guest.nil? || guest.active?
 
         Session.where(user_id: id).delete_all

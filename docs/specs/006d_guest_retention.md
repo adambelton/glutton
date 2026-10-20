@@ -1,6 +1,6 @@
 # 006d — Expired Identity retention cleanup
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / retention
 
 ## Goal
@@ -77,4 +77,4 @@ git diff --check
 
 The focused run passed 36 tests/359 assertions before the final three boundary assertions were added; the final full CI results under AC5 include them. Tests execute cleanup only against isolated test data. No command was run against development/production data, no real email was sent, and no scheduler was installed. Local CI uses one worker to avoid the previously observed macOS native parallel-fork crash. The existing development mail-preview directory remains outside eager-load paths; Zeitwerk reports application eager loading is good.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via [PR #15](https://github.com/adambelton/glutton/pull/15) on 19 October 2026 at 19:44:13 UTC. GitHub merge state verified on 20 October 2026; merge commit `74d0cfbc859d7cf6d7b05c5cf61ef776df32d7d6` is present in this checkout. No separate owner-acceptance event was verified.

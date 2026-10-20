@@ -1,7 +1,7 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
-Date: 19 October 2026
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Date: 20 October 2026
 
 ## Task rules
 
@@ -11,7 +11,7 @@ If work appears to require changes in multiple domains, **review the boundary fi
 
 Use statuses `Draft`, `In progress`, `Ready for review`, `Accepted`, `Merged`; note blockers explicitly. Record actual changes and evidence in the spec. Owner acceptance and merge are separate from checks passing. Spec creation alone does not start implementation, and this plan does not authorise the whole list.
 
-Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a was accepted and merged via PR #11 after hosted CI passed; task 006b was accepted and merged via PR #12 after hosted CI passed: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f). Task 006f was accepted and merged via PR #13 after hosted CI passed. Task 006c password recovery was accepted and merged via PR #14 after hosted CI passed; owner confirmed browser completion. Task 006d bounded Identity retention cleanup is implemented and Ready for review; local CI passed.
+Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a was accepted and merged via PR #11 after hosted CI passed; task 006b was accepted and merged via PR #12 after hosted CI passed: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f). Task 006f was accepted and merged via PR #13 after hosted CI passed. Task 006c password recovery was accepted and merged via PR #14 after hosted CI passed; owner confirmed browser completion. Task 006d bounded Identity retention cleanup was merged via [PR #15](https://github.com/adambelton/glutton/pull/15) on 19 October 2026; merge commit `74d0cfbc859d7cf6d7b05c5cf61ef776df32d7d6` was verified against GitHub on 20 October 2026. Local verification evidence remains in its spec.
 
 ## Domain ownership
 
@@ -69,7 +69,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 006b | Identity / verification | Confirmation tokens and atomic registered creation or in-place guest claim with fresh session; expiry, replay/conflict rejection and rollback | 004, 005, 006a | Merged — [spec](specs/006b_registration_confirmation.md), [PR #12](https://github.com/adambelton/glutton/pull/12) |
 | 006f | Identity / registration UI | Wire registration/confirmation HTTP flow, mail delivery/resend, pending-to-guest continuity, visible verification/expiry, session binding, CSRF, limits, duplicate-email rejection and localized responses | 005a, 006, 006a, 006b | Merged — [spec](specs/006f_registration_browser_flow.md), [PR #13](https://github.com/adambelton/glutton/pull/13) |
 | 006c | Identity / recovery | Expiring password-reset browser flow; request limits, atomic credential change/all-session revocation and fresh sign-in | 004, 005a, 006, 006f | Merged — [spec](specs/006c_password_recovery.md), [PR #14](https://github.com/adambelton/glutton/pull/14) |
-| 006d | Identity / retention | Bounded expired guest/session/pending cleanup command, claim-race protection and documented cadence; scheduler deployment and future domain activity excluded | 002, 005, 006a, 006b, 006f | Ready for review — [spec](specs/006d_guest_retention.md); future activity deletion policy must be agreed before guest activity persistence |
+| 006d | Identity / retention | Bounded expired guest/session/pending cleanup command, claim-race protection and documented cadence; scheduler deployment and future domain activity excluded | 002, 005, 006a, 006b, 006f | Merged — [spec](specs/006d_guest_retention.md), [PR #15](https://github.com/adambelton/glutton/pull/15); future activity deletion policy must be agreed before guest activity persistence |
+| 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Ready for review — [spec](specs/006g_user_type_names.md) |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Planned |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Planned |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Planned |

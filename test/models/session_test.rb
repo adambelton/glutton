@@ -2,12 +2,12 @@ require "test_helper"
 
 class SessionTest < ActiveSupport::TestCase
   def registered_user
-    RegisteredUser.create!(email_address: "session@example.test", password: "a long password phrase",
+    UserRegistered.create!(email_address: "session@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
   end
 
   test "guest issuance preserves account identity and deadline" do
-    guest = GuestUser.create!
+    guest = UserGuest.create!
     attributes = guest.attributes
     session = Session.create!(user: guest)
     assert session.active?
@@ -16,7 +16,7 @@ class SessionTest < ActiveSupport::TestCase
   end
 
   test "guest activity follows the account deadline rather than session age" do
-    guest = freeze_time { GuestUser.create! }
+    guest = freeze_time { UserGuest.create! }
     travel_to guest.created_at + 23.hours do
       session = Session.create!(user: guest)
       assert session.active?
@@ -48,22 +48,22 @@ class SessionTest < ActiveSupport::TestCase
   test "deleted owner is detected despite cached associations" do
     user = registered_user
     session = Session.create!(user: user)
-    assert_instance_of RegisteredUser, session.user
-    user.update_columns(type: "DeletedUser", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+    assert_instance_of UserRegistered, session.user
+    user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
     assert_not session.active?
-    assert_instance_of DeletedUser, Session.find(session.id).user
+    assert_instance_of UserDeleted, Session.find(session.id).user
     assert_not Session.new(user: user).valid?
   end
 
   test "only persisted active owners can hold sessions" do
-    [ nil, GuestUser.new, DeletedUser.create! ].each do |owner|
+    [ nil, UserGuest.new, UserDeleted.create! ].each do |owner|
       assert_not Session.new(user: owner).valid?
     end
     assert_not Session.new.active?
   end
 
   test "guest sessions can be revoked independently and repeatedly" do
-    user = GuestUser.create!
+    user = UserGuest.create!
     first = Session.create!(user: user)
     second = Session.create!(user: user)
     assert Session.revoke(id: first.id)
@@ -75,7 +75,7 @@ class SessionTest < ActiveSupport::TestCase
   end
 
   test "inactive owner errors retain a symbol and translated message" do
-    session = Session.new(user: DeletedUser.create!)
+    session = Session.new(user: UserDeleted.create!)
     assert_not session.valid?
     assert_includes session.errors.details[:user], { error: :inactive }
     assert_includes session.errors[:user], "must be active"
@@ -88,6 +88,6 @@ class SessionTest < ActiveSupport::TestCase
     assert_raises ActiveRecord::InvalidForeignKey do
       Session.transaction(requires_new: true) { Session.new(user_id: -1).save!(validate: false) }
     end
-    assert Session.create!(user: GuestUser.create!).persisted?
+    assert Session.create!(user: UserGuest.create!).persisted?
   end
 end

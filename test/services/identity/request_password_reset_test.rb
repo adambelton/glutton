@@ -5,7 +5,7 @@ module Identity
     setup do
       @origin = ENV["APP_ORIGIN"]
       ENV["APP_ORIGIN"] = "https://glutton.example.test"
-      @user = RegisteredUser.create!(email_address: "mail-reset@example.test", password: "original password phrase",
+      @user = UserRegistered.create!(email_address: "mail-reset@example.test", password: "original password phrase",
         password_confirmation: "original password phrase", email_confirmed_at: Time.current)
       ActionMailer::Base.deliveries.clear
     end
@@ -24,14 +24,14 @@ module Identity
       assert_equal "glutton.example.test", uri.host
       assert_equal "/password_reset/edit", uri.path
       token = URI.decode_www_form(uri.query).to_h.fetch("token")
-      assert_equal @user, RegisteredUser.find_by_password_reset_token(token)
+      assert_equal @user, UserRegistered.find_by_password_reset_token(token)
       assert_equal digest, @user.reload.password_digest
     end
 
     test "unknown pending malformed and deleted identities send nothing" do
       PrepareRegistration.call(email_address: "pending@example.test", password: "original password phrase",
         password_confirmation: "original password phrase")
-      @user.update_columns(type: "DeletedUser", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+      @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
       assert_no_difference [ "User.count", "Session.count", "ActionMailer::Base.deliveries.count" ] do
         [ "unknown@example.test", "pending@example.test", "mail-reset@example.test", nil, [], "invalid" ].each do |email|
           assert_nil RequestPasswordReset.call(email_address: email)

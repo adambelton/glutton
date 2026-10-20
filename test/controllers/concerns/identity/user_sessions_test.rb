@@ -14,7 +14,7 @@ class Identity::UserSessionsTest < ActionController::TestCase
   end
 
   test "lookup without identity and legacy user id create no account or session" do
-    session[:user_id] = RegisteredUser.create!(email_address: "old@example.test", password: "a long password phrase",
+    session[:user_id] = UserRegistered.create!(email_address: "old@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current).id
     assert_no_difference [ "User.count", "Session.count" ] do
       assert_nil @controller.send(:current_user)
@@ -24,7 +24,7 @@ class Identity::UserSessionsTest < ActionController::TestCase
   test "guest creation resets browser session and is reused within request" do
     session[:marker] = "old session"
     user = nil
-    assert_difference [ "GuestUser.count", "Session.count" ], 1 do
+    assert_difference [ "UserGuest.count", "Session.count" ], 1 do
       user = @controller.send(:ensure_guest_user!)
       assert_same user, @controller.send(:ensure_guest_user!)
     end
@@ -45,14 +45,14 @@ class Identity::UserSessionsTest < ActionController::TestCase
   end
 
   test "malformed signed cookie and mismatched references do not grant access" do
-    guest = GuestUser.create!
+    guest = UserGuest.create!
     authentication = Session.create!(user: guest)
     cookies.signed[:session_id] = { id: authentication.id, user_id: guest.id + 1 }
     assert_nil @controller.send(:current_user)
   end
 
   test "database lookup errors propagate rather than replacing an identity" do
-    authentication = bind(GuestUser.create!)
+    authentication = bind(UserGuest.create!)
     @controller.remove_instance_variable(:@current_user)
     with_failure(User, :find_by, ActiveRecord::ConnectionNotEstablished.new) do
       assert_raises ActiveRecord::ConnectionNotEstablished do
@@ -82,7 +82,7 @@ class Identity::UserSessionsTest < ActionController::TestCase
     session[:pending_registration_id] = pending.id
     travel 24.hours
     guest = @controller.send(:ensure_guest_user!)
-    assert_instance_of GuestUser, guest
+    assert_instance_of UserGuest, guest
     assert_nil session[:pending_registration_id]
     assert_nil pending.reload.guest_user_id
     assert_equal I18n.t("identity.registration.unavailable"), flash[:alert]

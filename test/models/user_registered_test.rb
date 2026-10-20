@@ -1,8 +1,8 @@
 require "test_helper"
 
-class RegisteredUserTest < ActiveSupport::TestCase
+class UserRegisteredTest < ActiveSupport::TestCase
   def account(**attributes)
-    RegisteredUser.new(email_address: "viewer@example.test", password: "a long password phrase",
+    UserRegistered.new(email_address: "viewer@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current, **attributes)
   end
 
@@ -10,7 +10,7 @@ class RegisteredUserTest < ActiveSupport::TestCase
     user = account
     user.save!
     loaded = User.find(user.id)
-    assert_instance_of RegisteredUser, loaded
+    assert_instance_of UserRegistered, loaded
     assert_equal loaded, loaded.authenticate("a long password phrase")
     assert_not loaded.authenticate("incorrect password")
     assert_not_equal "a long password phrase", loaded.password_digest
@@ -54,22 +54,22 @@ class RegisteredUserTest < ActiveSupport::TestCase
     user.save!
     assert_equal "viewer@example.test", user.reload.email_address
     assert_no_difference "User.count" do
-      assert_equal user, RegisteredUser.find_by_email(" VIEWER@example.TEST ")
+      assert_equal user, UserRegistered.find_by_email(" VIEWER@example.TEST ")
       [ nil, "", "bad-address", "unknown@example.test", 42 ].each do |input|
-        assert_nil RegisteredUser.find_by_email(input)
+        assert_nil UserRegistered.find_by_email(input)
       end
     end
     assert_not account(email_address: "VIEWER@example.test").valid?
     assert account(email_address: "viewer+extra@example.test").save!
-    assert_not_equal user, RegisteredUser.find_by_email("viewer+extra@example.test")
-    assert_nil RegisteredUser.find_by_email(nil)
-    GuestUser.create!
-    DeletedUser.create!
-    assert RegisteredUser.all.all? { |record| record.instance_of?(RegisteredUser) }
+    assert_not_equal user, UserRegistered.find_by_email("viewer+extra@example.test")
+    assert_nil UserRegistered.find_by_email(nil)
+    UserGuest.create!
+    UserDeleted.create!
+    assert UserRegistered.all.all? { |record| record.instance_of?(UserRegistered) }
   end
 
   test "guests and deleted users reject any credential field" do
-    [ GuestUser, DeletedUser ].each do |model|
+    [ UserGuest, UserDeleted ].each do |model|
       { email_address: "viewer@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
         assert_not model.new(field => value).valid?
         assert model.new.valid?
@@ -78,7 +78,7 @@ class RegisteredUserTest < ActiveSupport::TestCase
   end
 
   test "database enforces registered credentials independently of validations" do
-    row = { type: "RegisteredUser", email_address: "database@example.test", password_digest: "digest",
+    row = { type: "UserRegistered", email_address: "database@example.test", password_digest: "digest",
       email_confirmed_at: Time.current, created_at: Time.current, updated_at: Time.current }
     [ { email_address: nil }, { email_address: "" }, { email_address: "UPPER@example.test" },
       { email_address: " viewer@example.test" }, { password_digest: nil }, { password_digest: "" },
@@ -92,7 +92,7 @@ class RegisteredUserTest < ActiveSupport::TestCase
   end
 
   test "database keeps guest and deleted credentials null" do
-    [ "GuestUser", "DeletedUser" ].each do |type|
+    [ "UserGuest", "UserDeleted" ].each do |type|
       row = { type: type, created_at: Time.current, updated_at: Time.current }
       { email_address: "db@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
         assert_constraint_rejects(row.merge(field => value), "other_users_have_no_credentials")

@@ -13,15 +13,15 @@ module Identity
 
     test "guest expiry is exact and deletes dependent identities without touching other subtypes" do
       freeze_time
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       2.times { Session.create!(user: guest) }
       linked = pending(guest:)
-      registered = RegisteredUser.create!(email_address: "retained@example.test", password: "private password phrase",
+      registered = UserRegistered.create!(email_address: "retained@example.test", password: "private password phrase",
         password_confirmation: "private password phrase", email_confirmed_at: Time.current)
       registered_session = Session.create!(user: registered)
-      deleted = GuestUser.create!
+      deleted = UserGuest.create!
       deleted_session = Session.create!(user: deleted)
-      deleted.update_columns(type: "DeletedUser")
+      deleted.update_columns(type: "UserDeleted")
       base = User.create!(type: "User")
       base_session = Session.create!(user: base)
       travel 24.hours - 1.second
@@ -43,7 +43,7 @@ module Identity
       direct = pending
       travel 1.hour
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       session = Session.create!(user: guest)
       linked = pending(guest:)
       travel 23.hours
@@ -57,7 +57,7 @@ module Identity
 
     test "linked pending is capped by the older guest deadline" do
       freeze_time
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       travel 23.hours
       linked = pending(guest:)
       assert_equal Time.current + 1.hour, linked.expires_at
@@ -66,7 +66,7 @@ module Identity
     end
 
     test "expired pending alone preserves an active linked guest and session" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       session = Session.create!(user: guest)
       record = pending(guest:, created_at: 25.hours.ago)
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 1 }, cleanup)
@@ -77,21 +77,21 @@ module Identity
 
     test "candidate limits use oldest then id for each category" do
       freeze_time
-      guests = 3.times.map { GuestUser.create!(created_at: 25.hours.ago) }
-      older = GuestUser.create!(created_at: 26.hours.ago)
+      guests = 3.times.map { UserGuest.create!(created_at: 25.hours.ago) }
+      older = UserGuest.create!(created_at: 26.hours.ago)
       requests = 3.times.map { pending(created_at: 25.hours.ago) }
       older_request = pending(created_at: 26.hours.ago)
       assert_equal({ guests_deleted: 2, pending_registrations_deleted: 2 }, cleanup(batch_size: 2))
       [ older, guests.first ].each { |record| assert_not User.exists?(record.id) }
       [ older_request, requests.first ].each { |record| assert_not PendingRegistration.exists?(record.id) }
-      assert_equal 2, GuestUser.count
+      assert_equal 2, UserGuest.count
       assert_equal 2, PendingRegistration.count
       assert_equal({ guests_deleted: 2, pending_registrations_deleted: 2 }, cleanup(batch_size: 2))
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
     end
 
     test "invalid batch sizes fail before writes" do
-      guest = GuestUser.create!(created_at: 25.hours.ago)
+      guest = UserGuest.create!(created_at: 25.hours.ago)
       [ nil, "1", 1.0, 0, -1, 1_001, true ].each do |batch_size|
         assert_raises(ArgumentError) { cleanup(batch_size:) }
         assert User.exists?(guest.id)
@@ -101,7 +101,7 @@ module Identity
 
     test "dependent deletion failure restores sessions and pending rows" do
       freeze_time
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       session = Session.create!(user: guest)
       record = pending(guest:)
       travel 24.hours
@@ -120,8 +120,8 @@ module Identity
 
     test "foreign key rejection restores candidate dependents but preserves earlier deletion" do
       freeze_time
-      first = GuestUser.create!(created_at: 2.seconds.ago)
-      blocked = GuestUser.create!
+      first = UserGuest.create!(created_at: 2.seconds.ago)
+      blocked = UserGuest.create!
       session = Session.create!(user: blocked)
       record = pending(guest: blocked)
       connection = ActiveRecord::Base.connection

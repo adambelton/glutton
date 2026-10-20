@@ -3,7 +3,7 @@ module Identity
     def self.call(previous_id: nil, guest_user_id: nil, **credentials)
       PendingRegistration.transaction(requires_new: true) do
         if guest_user_id.present?
-          guest = GuestUser.active.lock.find_by(id: guest_user_id)
+          guest = UserGuest.active.lock.find_by(id: guest_user_id)
           raise RegistrationUnavailable unless guest.present? && guest.active?
         end
         previous = PendingRegistration.lock.find_by(id: previous_id) if previous_id.present?

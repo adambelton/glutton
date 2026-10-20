@@ -1,4 +1,4 @@
-class RegisteredUser < User
+class UserRegistered < User
   has_secure_password reset_token: { expires_in: 15.minutes }
 
   normalizes :email_address, with: ->(email) { email.strip.downcase }

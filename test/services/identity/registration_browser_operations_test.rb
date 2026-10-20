@@ -10,12 +10,12 @@ module Identity
     test "attachment is idempotent preserves token and rejects either conflicting link" do
       record = prepare
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       before = record.attributes.except("guest_user_id", "updated_at")
       2.times { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: guest.id) }
       assert_equal before, record.reload.attributes.except("guest_user_id", "updated_at")
       assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
-      other_guest = GuestUser.create!
+      other_guest = UserGuest.create!
       assert_raises(RegistrationConflict) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: other_guest.id) }
       direct = prepare
       assert_raises(RegistrationConflict) { AttachRegistration.call(pending_registration_id: direct.id, guest_user_id: guest.id) }
@@ -26,14 +26,14 @@ module Identity
     test "attachment rejects expired missing deleted and registered owners without mutation" do
       freeze_time
       record = prepare
-      guest = GuestUser.create!
-      guest.update_columns(type: "DeletedUser")
-      registered = RegisteredUser.create!(email_address: "registered@example.test", password: "a long password phrase",
+      guest = UserGuest.create!
+      guest.update_columns(type: "UserDeleted")
+      registered = UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
       [ -1, guest.id, registered.id ].each do |id|
         assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: id) }
       end
-      fresh_guest = GuestUser.create!
+      fresh_guest = UserGuest.create!
       travel 24.hours
       assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: fresh_guest.id) }
       assert_nil record.reload.guest_user_id
@@ -41,26 +41,26 @@ module Identity
 
     test "browser completion only attaches a direct request the browser owns" do
       record = prepare
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
       assert_nil record.reload.guest_user_id
       session = CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
       assert_equal guest.id, session.user_id
-      assert_instance_of RegisteredUser, session.user
+      assert_instance_of UserRegistered, session.user
     end
 
     test "failed browser confirmation rolls back attachment" do
       record = prepare
-      RegisteredUser.create!(email_address: "reader@example.test", password: "existing password phrase",
+      UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       assert_raises(RegistrationUnavailable) do
         CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
       end
       assert_nil record.reload.guest_user_id
-      assert_instance_of GuestUser, User.find(guest.id)
+      assert_instance_of UserGuest, User.find(guest.id)
     end
 
     test "invalid replacement retains prior direct record while valid replacement deletes it" do
@@ -111,7 +111,7 @@ module Identity
 
     test "resend stops when another request already registered the email" do
       record = prepare
-      RegisteredUser.create!(email_address: record.email_address, password: "existing password phrase",
+      UserRegistered.create!(email_address: record.email_address, password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
       original_origin = ENV["APP_ORIGIN"]
       ENV["APP_ORIGIN"] = "https://glutton.example.test"

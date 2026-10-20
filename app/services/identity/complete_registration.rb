@@ -8,14 +8,14 @@ module Identity
 
       PendingRegistration.transaction(requires_new: true) do
         # Preparation locks the guest first too. Never reverse this order.
-        guest = GuestUser.active.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id.present?
+        guest = UserGuest.active.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id.present?
         registration = PendingRegistration.lock.find_by_token_for(:email_confirmation, token)
         unless registration.present? && registration.active? && registration.guest_user_id == candidate.guest_user_id &&
             (registration.guest_user_id.nil? || (guest.present? && guest.active?))
           raise RegistrationUnavailable
         end
 
-        user = guest.present? ? guest.becomes!(RegisteredUser) : RegisteredUser.new
+        user = guest.present? ? guest.becomes!(UserRegistered) : UserRegistered.new
         user.assign_attributes(email_address: registration.email_address, password_digest: registration.password_digest,
           email_confirmed_at: Time.current)
         # The confirmed pending request supplies the validated digest. Ordinary
@@ -28,7 +28,7 @@ module Identity
         session
       end
     rescue ActiveRecord::RecordInvalid => error
-      if error.record.is_a?(RegisteredUser) && error.record.errors.any? &&
+      if error.record.is_a?(UserRegistered) && error.record.errors.any? &&
           error.record.errors.all? { |entry| entry.attribute == :email_address && entry.type == :taken }
         raise RegistrationUnavailable, cause: nil
       end
