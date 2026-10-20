@@ -46,6 +46,39 @@ module Identity
       assert_not @user.authenticate("losing password phrase")
     end
 
+    test "reset committed before waiting sign-in rejects the old password" do
+      token = @user.password_reset_token
+      contender = nil
+      UserRegistered.transaction do
+        @user.lock!
+        contender = blocked_operation do
+          Authenticate.call(email_address: @user.email_address, password: "original password phrase")
+        end
+        ResetPassword.call(token:, password: "replacement password phrase", password_confirmation: "replacement password phrase")
+      end
+
+      assert_nil Timeout.timeout(5) { contender.value }
+      assert_not Session.exists?(user_id: @user.id)
+      assert Authenticate.call(email_address: @user.email_address, password: "replacement password phrase").active?
+    end
+
+    test "reset waiting for a successful sign-in revokes the issued session" do
+      token = @user.password_reset_token
+      contender = nil
+      authentication = UserRegistered.transaction do
+        session = Authenticate.call(email_address: @user.email_address, password: "original password phrase")
+        contender = blocked_operation do
+          ResetPassword.call(token:, password: "replacement password phrase", password_confirmation: "replacement password phrase")
+        end
+        session
+      end
+
+      Timeout.timeout(5) { contender.value }
+      assert_not authentication.active?
+      assert_not Session.exists?(user_id: @user.id)
+      assert_nil Authenticate.call(email_address: @user.email_address, password: "original password phrase")
+    end
+
     test "mail transport runs with no open transaction or account row lock" do
       origin = ENV["APP_ORIGIN"]
       ENV["APP_ORIGIN"] = "https://glutton.example.test"
@@ -70,6 +103,26 @@ module Identity
     ensure
       ENV["APP_ORIGIN"] = origin
       AccountMailer.define_singleton_method(:password_reset, original) if original
+    end
+
+    private
+
+    def blocked_operation(&operation)
+      ready = Queue.new
+      @thread = Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do |connection|
+          ready << connection.select_value("SELECT pg_backend_pid()")
+          operation.call
+        end
+      end
+      pid = Timeout.timeout(5) { ready.pop }
+      connection = ActiveRecord::Base.connection
+      Timeout.timeout(5) do
+        until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{Integer(pid)}))") }.positive?
+          sleep 0.01
+        end
+      end
+      @thread
     end
   end
 end
