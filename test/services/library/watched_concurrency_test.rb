@@ -55,18 +55,18 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     first = attributes = nil
     User.transaction do
       first = record
-      attributes = LibraryFilm.find_by!(user_id: @guest.id).attributes
+      attributes = [ first.id, first.created_at, first.updated_at ]
       contender = blocked { record }
     end
     assert_equal first, Timeout.timeout(5) { contender.value }
     assert_equal 1, LibraryFilm.where(user_id: @guest.id, film: @film).count
-    assert_equal attributes, LibraryFilm.find_by!(user_id: @guest.id).attributes
+    row = LibraryFilm.find_by!(user_id: @guest.id)
+    assert_equal attributes, [ row.id, row.created_at, row.updated_at ]
   end
 
   test "claim wins before waiting cleanup and preserves the registered library" do
     freeze_time
-    record
-    attributes = LibraryFilm.find_by!(user_id: @guest.id).attributes
+    original = record
     contender = nil
     User.transaction do
       @guest.lock!
@@ -75,9 +75,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
-    assert_instance_of UserRegistered, User.find(@guest.id)
-    assert_equal attributes, LibraryFilm.find_by!(user_id: @guest.id).attributes
-    assert_equal :watched, Library::FilmState.call(user: @guest, film: @film)[:classification]
+    assert_equal original.id, record.id
   end
 
   test "cleanup wins before waiting write and cannot leave orphaned library activity" do
@@ -111,8 +109,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       travel 24.hours
       contender = blocked { record }
     end
-    assert_equal :watched, Timeout.timeout(5) { contender.value }[:classification]
-    assert_instance_of UserRegistered, User.find(@guest.id)
+    assert Timeout.timeout(5) { contender.value }.persisted?
     assert_equal 1, LibraryFilm.where(user_id: @guest.id).count
   end
 end

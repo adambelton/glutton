@@ -10,6 +10,19 @@ Read `docs/implementation_plan.md`, the current task spec and relevant brief sec
 - Writing a spec alone does not start implementation or authorise external communication, paid services or deployment.
 - Prefer simple Rails designs justified by current behaviour. Preserve unrelated files, including `.obsidian/`, and do not overwrite project documents during generation.
 
+## Object roles and behaviour
+
+- Treat every object as a role. Name variables and arguments for the role the operation actually requires, at the appropriate specificity: a concrete class, a superclass, or behaviour shared through a module. Use `library_film` for film-specific work; use `library_content` when an implemented role spans library films and television shows. Do not invent broader roles or modules before concrete behaviour requires them.
+- Always trust a declared role unless there is a specific, documented reason not to. An internal argument named `user` is assumed to fulfil that role; do not redundantly guard it with `is_a?`, `instance_of?`, `kind_of?` or `respond_to?`. If an input is genuinely uncertain, express that uncertainty in its name and prefer validation of the behaviour actually required.
+- Be skeptical of class awareness, including class/type switches and disguised equivalents such as `registered?` when callers use them to select behaviour. Merely hiding a class test behind a predicate or capability flag does not fix misplaced behaviour.
+- Methods should describe and perform behaviour, not identify a classification from which callers infer behaviour. Rules about what an object can or cannot do belong inside that object. Callers delegate operations; workflow orchestration coordinates collaborators without rediscovering their class-specific rules. Meaningful domain-state predicates such as `active?` remain appropriate; do not replace a type switch with a differently named type switch.
+- Validate genuinely untrusted input at its boundary. Concrete-class or capability checks need an explicit reason, such as a real risk that external input does not fulfil the expected role; the burden of justification is on the check. Retain schema constraints and targeted failure handling that enforce actual invariants, rather than mechanically removing all references to types.
+- Freshness is independent of class or role. Refresh/re-read objects when stale state could affect correctness, and lock where concurrent changes require it. An in-memory `persisted?` value does not prove that a row still exists. Use nil-safe behaviour checks where absence is expected; do not add redundant `presence` wrappers or treat freshness checks as permission to add class guards.
+
+## Testing conventions
+
+- Test observable outcomes and agreed contracts, including meaningful failures and persistence invariants, rather than internal state details, whole attribute snapshots, incidental query structure or implementation-specific collaborator types. Apply the same role trust and behaviour ownership rules in tests as in application code. Do not invent a production API solely to make tests assert internal classifications. Direct schema tests are appropriate when verifying an explicit storage contract.
+
 ## User-facing content
 
 - Put all new or changed application-authored user-facing text in Rails locale files (`config/locales/`), starting with English. This includes page titles, headings, labels, buttons, placeholders, accessibility text, notices, errors, validation messages, and email subjects/bodies. Use Rails `t`/`I18n.t` at runtime and symbolic Active Model validation errors; do not hard-code copy or cache translated strings in constants.

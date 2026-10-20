@@ -31,12 +31,11 @@ class Library::RetentionTest < ActiveSupport::TestCase
     film = Film.create!(title: "Claim retained film")
     Library::RecordWatched.call(user: guest, film:)
     row = LibraryFilm.find_by!(user_id: guest.id)
-    before = row.attributes
+    before = [ row.id, row.created_at, row.updated_at ]
     session = claim(guest)
-    assert_instance_of UserRegistered, session.user
     assert_equal guest.id, session.user_id
-    assert_equal before, row.reload.attributes
-    assert_equal :watched, Library::FilmState.call(user: guest, film:)[:classification]
+    row.reload
+    assert_equal before, [ row.id, row.created_at, row.updated_at ]
   end
 
   test "a restrictive dependent still rolls back cleanup and restores Library and Identity rows" do

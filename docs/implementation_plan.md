@@ -51,6 +51,8 @@ Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](s
 
 i18n follow-ups: **001d — Merged**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Merged**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
 
+Foundation follow-up: **001e — Ready for review**, [object-role conventions spec](specs/001e_object_role_conventions.md); record agreed role trust, behaviour ownership/naming and independent freshness rules and outcome/contract-focused testing in repository instructions. Documentation only.
+
 ## First rating and library slice
 
 Candidate task boundaries; write each detailed spec just before starting, splitting further if needed. IDs 002 onward replace the earlier unimplemented sequence.
@@ -74,7 +76,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Merged — [spec](specs/007_film_catalogue.md), [PR #17](https://github.com/adambelton/glutton/pull/17) |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
-| 010 | Library / viewing | LibraryFilm STI relationship with watched subtype and mark-watched operation/read result | 005a, 007 | Ready for review — [spec](specs/010_library_watched.md); scoped dependent cascade approved and verified |
+| 010 | Library / viewing | LibraryFilm STI relationship with watched subtype and mark-watched operation returning the entry | 005a, 007 | Ready for review — [spec](specs/010_library_watched.md); scoped dependent cascade approved and verified |
 | 011 | Library / intent | Watchlist addition/removal, retaining independent watched facts | 010 | Planned |
 | 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |
 | 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |

@@ -1,11 +1,15 @@
 module Library
   class RecordWatched
     def self.call(user:, film:)
-      FilmAccess.call(user:, film:) do |owner|
-        film_id = film.id
-        relationship = LibraryFilm.lock.find_by(user_id: owner.id, film_id:)
-        relationship ||= LibraryFilmWatched.create!(user: owner, film_id:, watched_at: Time.current)
-        relationship.library_state
+      raise IdentityUnavailable, "An active identity is required" unless user&.persisted?
+
+      LibraryFilm.transaction do
+        fresh_user = User.lock.find_by(id: user.id)
+        raise IdentityUnavailable, "An active identity is required" unless fresh_user&.active?
+        raise FilmUnavailable, "Film is unavailable" unless film&.persisted? && Film.exists?(film.id)
+
+        LibraryFilm.lock.find_by(user_id: fresh_user.id, film_id: film.id) ||
+          LibraryFilmWatched.create!(user: fresh_user, film_id: film.id)
       end
     end
   end
