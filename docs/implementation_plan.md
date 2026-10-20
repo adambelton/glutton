@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 20 October 2026
 
 ## Task rules
@@ -72,8 +72,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 006d | Identity / retention | Bounded expired guest/session/pending cleanup command, claim-race protection and documented cadence; scheduler deployment and future domain activity excluded | 002, 005, 006a, 006b, 006f | Merged — [spec](specs/006d_guest_retention.md), [PR #15](https://github.com/adambelton/glutton/pull/15); future activity deletion policy must be agreed before guest activity persistence |
 | 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Merged — [spec](specs/006g_user_type_names.md), [PR #16](https://github.com/adambelton/glutton/pull/16) |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Merged — [spec](specs/007_film_catalogue.md), [PR #17](https://github.com/adambelton/glutton/pull/17) |
-| 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Ready for review — [spec](specs/008_tmdb_film_import.md) |
-| 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Planned |
+| 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
+| 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Ready for review — [spec](specs/009_tmdb_film_search.md) |
 | 010 | Library / viewing | Canonical user–film entry and mark-watched operation/read result | 005a, 007 | Planned |
 | 011 | Library / intent | Watchlist addition/removal, retaining independent watched facts | 010 | Planned |
 | 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |

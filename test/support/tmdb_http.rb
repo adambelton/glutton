@@ -1,3 +1,5 @@
+require "net/http"
+
 module TmdbHttp
   class Connection
     attr_accessor :use_ssl, :open_timeout, :read_timeout, :write_timeout, :max_retries
