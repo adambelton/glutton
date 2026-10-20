@@ -11,6 +11,7 @@ Record the owner's agreed role/behaviour conventions in repository instructions 
 
 - Add concise implementation/review rules to AGENTS.md covering role trust, behaviour ownership/naming, class-awareness smells, role-specific collaborator names and separate freshness handling.
 - Replace the architecture brief's narrower argument-guard guidance with the same conventions and link to AGENTS.md as the maintained instruction source.
+- Record the transition exception: models own ordinary actions and permissions; transition services own coordination and changes between types, without source-model sibling knowledge.
 - Record outcome/contract-focused testing conventions, applying the same role rules to tests and avoiding APIs invented only for test assertions.
 - Record this supporting documentation task in the implementation plan.
 

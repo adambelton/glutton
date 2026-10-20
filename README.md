@@ -322,7 +322,7 @@ Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup
 
 ## Library watched state
 
-Task 010 provides `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` as its only implemented STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Future watchlist/dismissal subtypes and transitions remain separate tasks.
+Task 010 provides `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` and a minimal `LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist management, dismissal and other transitions remain separate tasks.
 
 After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing film ID:
 
@@ -331,7 +331,7 @@ library_film = Library::RecordWatched.call(user_id: current_user.id, film_id: fi
 # => persisted library entry
 ```
 
-Repeated calls preserve relationship IDs and timestamps. The operation re-reads the user under its user-row lock and rejects inactive, missing or expired identities (`Library::IdentityUnavailable`); a missing film ID raises `Library::FilmUnavailable`. Both records are resolved inside the transaction; Film is read without a row lock. The STI root rejects direct construction without enumerating allowed subclasses. It scopes access to that user, performs no imports or Ratings calls, and composes with an outer caller transaction. Persistence failures roll back and propagate; an explicit retry may succeed once the cause is fixed.
+Recording a to-watch entry as watched preserves its ID, ownership, film and creation time, returning the watched object. The source model declares `can_watch?`; the service executes the transition. Repeated already-watched calls preserve IDs and timestamps. The operation re-reads the user under its user-row lock and rejects inactive, missing or expired identities (`Library::IdentityUnavailable`); a missing film ID raises `Library::FilmUnavailable`. Both records are resolved inside the transaction; Film is read without a row lock. The STI root rejects direct construction without enumerating allowed subclasses. It scopes access to that user, performs no imports or Ratings calls, and composes with an outer caller transaction. Persistence failures roll back and propagate; an explicit retry may succeed once the cause is fixed.
 
 Deleting a user physically removes only their dependent Library rows through the Library-owned foreign key; shared films are not cascaded. Existing guest cleanup and in-place registration are unchanged. A restrictive dependent preventing deletion still rolls back Identity/Library changes for that guest. Registered-account deletion and retention for future activity remain separate decisions.
 

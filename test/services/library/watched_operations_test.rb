@@ -26,6 +26,42 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
     end
   end
 
+  test "recording a to-watch film transitions the same relationship and returns watched behaviour" do
+    original = LibraryFilmToWatch.create!(user: @user, film: @film)
+    travel 1.hour do
+      assert_no_difference "LibraryFilm.count" do
+        watched = record
+        assert_equal original.id, watched.id
+        assert_equal @user.id, watched.user_id
+        assert_equal @film.id, watched.film_id
+        assert_equal original.created_at, watched.created_at
+        assert_not watched.can_watch?
+        assert_equal watched, watched.record_watched
+        assert_equal watched, LibraryFilm.find(original.id).record_watched
+        assert_equal watched.updated_at, record.updated_at
+      end
+    end
+  end
+
+  test "watched transition rolls back with caller transaction and destination save failure" do
+    original = LibraryFilmToWatch.create!(user: @user, film: @film)
+    LibraryFilm.transaction(requires_new: true) do
+      record
+      raise ActiveRecord::Rollback
+    end
+    assert LibraryFilm.find(original.id).can_watch?
+
+    callback = -> { raise ActiveRecord::StatementInvalid, "injected transition failure" }
+    LibraryFilmWatched.set_callback(:update, :after, callback)
+    assert_raises(ActiveRecord::StatementInvalid) { record }
+    assert LibraryFilm.find(original.id).can_watch?
+    LibraryFilmWatched.skip_callback(:update, :after, callback)
+    assert_equal original.id, record.id
+    assert_not LibraryFilm.find(original.id).can_watch?
+  ensure
+    LibraryFilmWatched.skip_callback(:update, :after, callback, raise: false) if callback
+  end
+
   test "users and guests see and change only their own film relationship" do
     record
     other = UserGuest.create!

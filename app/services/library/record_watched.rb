@@ -9,10 +9,14 @@ module Library
         raise FilmUnavailable, "Film is unavailable" unless film
 
         library_film = LibraryFilm.lock.find_by(user_id: user.id, film_id: film.id)
-        if library_film
-          library_film.record_watched
-        else
+        if library_film.nil?
           LibraryFilmWatched.create!(user:, film:)
+        elsif library_film.can_watch?
+          watched = library_film.becomes!(LibraryFilmWatched)
+          watched.save!
+          watched
+        else
+          library_film.record_watched
         end
       end
     end

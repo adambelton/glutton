@@ -21,6 +21,19 @@ class LibraryFilmTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { insert(attributes.merge(type: "LibraryFilmWatched")) }
   end
 
+  test "watch permission defaults to denied and to-watch entries permit it" do
+    assert_not LibraryFilmWatched.new.can_watch?
+    assert LibraryFilmToWatch.new.can_watch?
+  end
+
+  test "subtypes share one user-film relationship" do
+    LibraryFilmToWatch.create!(attributes)
+    duplicate = LibraryFilmWatched.new(attributes)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:film_id, :taken)
+    assert_raises(ActiveRecord::RecordNotUnique) { insert(attributes.merge(type: "LibraryFilmWatched")) }
+  end
+
   test "root construction is prohibited while subtype construction and loading work" do
     assert_raises(NotImplementedError) { LibraryFilm.new(attributes) }
     assert_raises(NotImplementedError) { LibraryFilm.create!(attributes) }

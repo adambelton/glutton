@@ -53,6 +53,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "concurrent repeated watched operations serialize and preserve first ID and timestamps" do
     contender = nil
     first = attributes = nil
+    LibraryFilmToWatch.create!(user: @guest, film: @film)
     User.transaction do
       first = record
       attributes = [ first.id, first.created_at, first.updated_at ]
