@@ -8,10 +8,6 @@ class LibraryFilm < ApplicationRecord
     false
   end
 
-  def record_watched
-    raise Library::WatchUnavailable, "Recording watched is not supported"
-  end
-
   def initialize(...)
     raise NotImplementedError, "Construct a LibraryFilm subtype" if self.class == LibraryFilm
 

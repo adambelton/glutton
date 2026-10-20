@@ -20,6 +20,10 @@ Read `docs/implementation_plan.md`, the current task spec and relevant brief sec
 - Validate genuinely untrusted input at its boundary. Concrete-class or capability checks need an explicit reason, such as a real risk that external input does not fulfil the expected role; the burden of justification is on the check. Retain schema constraints and targeted failure handling that enforce actual invariants, rather than mechanically removing all references to types.
 - Freshness is independent of class or role. Refresh/re-read objects when stale state could affect correctness, and lock where concurrent changes require it. An in-memory `persisted?` value does not prove that a row still exists. Use nil-safe behaviour checks where absence is expected; do not add redundant `presence` wrappers or treat freshness checks as permission to add class guards.
 
+## Action outcomes and idempotency
+
+- Do not assume user actions should be idempotent successes. Report when a requested transition did not occur, using the agreed domain failure. System workflows may explicitly provide idempotency at their own boundary when safe retry semantics require it; define which duplicate outcomes are handled and let unrelated failures propagate. Do not add silent success fallbacks to domain transitions merely to simplify future consumers.
+
 ## Testing conventions
 
 - Test observable outcomes and agreed contracts, including meaningful failures and persistence invariants, rather than internal state details, whole attribute snapshots, incidental query structure or implementation-specific collaborator types. Apply the same role trust and behaviour ownership rules in tests as in application code. Do not invent a production API solely to make tests assert internal classifications. Direct schema tests are appropriate when verifying an explicit storage contract.

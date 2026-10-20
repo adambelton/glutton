@@ -5,7 +5,7 @@ Owner: Library / viewing
 
 ## Goal
 
-Record one canonical watched relationship for an active user's existing film and expose an idempotent operation returning the relationship. Depends on task 005a's session-bound current identity and task 007's Film persistence. No Ratings or Recommendations contract is consumed. This is Library's provider capability; future consuming workflows remain tasks 016/017.
+Record one canonical watched relationship for an active user's existing film and expose a transition operation returning the relationship. Depends on task 005a's session-bound current identity and task 007's Film persistence. No Ratings or Recommendations contract is consumed. This is Library's provider capability; future consuming workflows remain tasks 016/017.
 
 Read the implementation plan, product brief sections 2 (Accounts and privacy), 3.3 and Ownership of viewer activity, architecture brief sections 4/11, and task 006d's retention restrictions before implementation. The owner approved the retention boundary below with this spec before implementation.
 
@@ -15,12 +15,12 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 
 - Keep LibraryFilm as the STI root and LibraryFilmWatched and the narrowly scoped LibraryFilmToWatch subtype, with unique user/film identity, required references and existing scoped deletion policy.
 - Store id, type, user_id, film_id and standard Rails timestamps. Remove watched_at through a follow-up migration: no current feature needs a separate confirmation/viewing timestamp.
-- Library::RecordWatched.call(user_id:, film_id:) accepts internal user/film IDs and resolves both records inside its transaction, returning the persisted LibraryFilm entry. Repeated/concurrent calls after recording watched return the same relationship without changing its timestamps. LibraryFilm#can_watch? returns false; LibraryFilmToWatch overrides it to true. RecordWatched owns the permitted ToWatch-to-Watched STI transition using becomes! and save!, preserving relationship identity and returning the destination object. Source subtypes know supported actions, not sibling classes. An entry that cannot transition receives record_watched: LibraryFilmWatched returns itself idempotently; the root rejects unsupported actions with Library::WatchUnavailable. No classification hash or library_state method.
+- Library::RecordWatched.call(user_id:, film_id:) accepts internal user/film IDs and resolves both records inside its transaction, returning the persisted LibraryFilm entry. An existing entry with can_watch? false raises Library::AlreadyWatched without changing its row. Concurrent requests serialize; after one succeeds, the next fails with AlreadyWatched. LibraryFilm#can_watch? returns false; LibraryFilmToWatch overrides it to true. RecordWatched owns the permitted ToWatch-to-Watched STI transition using becomes! and save!, preserving relationship identity and returning the destination object. Source subtypes know supported actions, not sibling classes. Models expose permission only; remove model record_watched methods and WatchUnavailable. The service owns success and rejection. No classification hash or library_state method.
 - Remove FilmState: no application consumer establishes a read contract. Do not add a replacement read API for tests.
 - Inline the transaction and user-before-library lock order in RecordWatched; remove FilmAccess. Refresh the locked user and check active? to coordinate with cleanup/claiming. Missing/inactive users raise IdentityUnavailable. Missing films raise FilmUnavailable. Use a normal Film lookup without a row lock: there is no film-deletion workflow; the foreign key protects integrity in a racing deletion. No model persisted? checks or separate Film.exists? query. The user ID must come from trusted Identity resolution when HTTP wiring is added. Persistence errors propagate and caller rollback remains effective.
 - Prevent direct LibraryFilm construction in its initializer without enumerating subclasses. Remove model/database subtype allowlists; keep required type, references and uniqueness. User construction/validation changes remain outside this Library task.
 - Trust declared roles without class guards. Keep storage invariants and concrete initial watched construction; no additional transitions, placeholder types, Ratings calls or changes to Identity/Film implementations.
-- Tests verify operation outcomes, identity/isolation, failures, idempotency, transaction/retention contracts and database invariants. Do not assert classification projections, whole attribute snapshots, collaborator classes or incidental query structure. Targeted persistence constraints may be tested directly because they are explicit contracts.
+- Tests verify operation outcomes, identity/isolation, failures, repeat rejection, transaction/retention contracts and database invariants. Do not assert classification projections, whole attribute snapshots, collaborator classes or incidental query structure. Targeted persistence constraints may be tested directly because they are explicit contracts.
 
 ### Guest retention: approved boundary decision
 
@@ -42,7 +42,7 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 
 ## Acceptance criteria
 
-- **AC1:** Recording watched returns a durable relationship for the requested user/film; repeated and concurrent calls preserve identity and standard timestamps without duplicates.
+- **AC1:** Recording watched returns a durable relationship for the requested user/film; repeated calls fail with AlreadyWatched and preserve the existing row; concurrent calls produce one success and one AlreadyWatched without duplicates.
   Check: focused model/operation/concurrency tests; no watched_at, FilmState, FilmAccess or library_state remains in runtime code/schema.
   Result: Passed — focused Library/model suite: 21 tests, 102 assertions, zero failures/errors/skips. Runtime code and schema contain none of the removed field/services/projection.
 - **AC2:** Fresh active-user and film-existence contracts reject unavailable collaborators without writes; user isolation and guest deadline remain enforced.
@@ -54,13 +54,15 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 
 ## Implementation notes
 
-Owner approved simplifying this interface on 20 October 2026: remove speculative state projection/read service and redundant watched_at, inline transaction orchestration, and test observable contracts. Earlier verification (216 tests/2,558 assertions) predates this revision and does not verify the revised implementation.
+LibraryFilm and LibraryFilmToWatch expose can_watch? (false by default, true for ToWatch). Models contain no sibling-class references or record_watched methods. RecordWatched resolves IDs inside the transaction, locks the user and existing entry, creates an initial watched entry or executes the permitted STI transition using becomes! and save!. False permission raises Library::AlreadyWatched. The returned object represents the resulting subtype; identity, ownership, film and creation time survive a transition.
 
-Retention boundary remains the previously approved scoped user foreign-key cascade. No Identity implementation or User validation changes are included. The broader Identity audit remains deferred.
+Owner explicitly replaced the earlier idempotent-success contract: repeated and concurrent requests after success must raise AlreadyWatched without modifying the row. System consumers must specify their own justified duplicate handling; they must not mask unrelated failures. A retry following rolled-back persistence remains possible. No model-level fallback action or WatchUnavailable remains.
 
-Owner acceptance / merge: Pending. PR #20 was opened without approval; the owner subsequently authorized pushing the revised branch for online review on 20 October 2026. Acceptance and merge remain pending; no merge is authorized.
+Removed FilmState, FilmAccess, library_state, subtype allowlists and redundant watched_at. Follow-up migrations preserve already-applied migration history and were applied only to the test database. Root construction is rejected without subclass enumeration. Destination-save failure and caller rollback preserve the original ToWatch row; retry succeeds. Separate-connection tests cover serialized transition rejection and existing Identity claim/cleanup compatibility. No Identity or Film implementation changes, network requests or non-test data writes.
 
-Reproduce revised verification:
+User transition refactoring remains deferred to the Identity-owned follow-up. The minimal ToWatch subtype and its watched transition are explicitly owner-approved; watchlist management/UI, dismissal and reverse transitions remain deferred.
+
+Reproduce verification:
 
 ```sh
 RAILS_ENV=test bin/rails db:migrate
@@ -70,24 +72,6 @@ RAILS_ENV=test bin/rails zeitwerk:check
 git diff --check
 ```
 
-Implementation: removed FilmState, FilmAccess, library_state and the watched_at locale/validation; RecordWatched returns the entry with transaction/locking inline. Added a follow-up migration rather than rewriting the already-applied creation migration. Applied only to the test database; development/production migration remains for normal setup. Dropping watched_at discards that redundant timestamp. Tests retain explicit persistence-contract checks but remove classification projections, whole-row snapshots, collaborator-class checks and index introspection. README and plan reflect the smaller contract. No publication or merge performed.
+Final already-watched rejection verification: Passed — focused suite 21 tests/102 assertions; full CI 219 tests/2,533 assertions, zero failures/errors/skips; RuboCop 123 files clean; dependency audits clean; Brakeman zero warnings/errors; Zeitwerk application eager loading passed with the existing preview exclusion; git diff --check passed. No migration was needed for this revision.
 
-Owner-approved follow-up: switch to ID inputs and transactional record resolution; retain unlocked Film lookup; replace subtype enumeration with a LibraryFilm root-construction guard. Acceptance evidence above is updated for this follow-up. Publication of these changes to the existing PR is authorized; merge is not.
-
-Final follow-up verification: test-only migration passed; focused tests passed 17 tests/82 assertions; full CI passed 215 tests/2,513 assertions, style/security clean; Zeitwerk passed with the existing preview exclusion; git diff --check passed. Root new/create rejection, subtype construction/root querying, uniqueness and required type are covered. Removed the obsolete role-wrapper test because the operation now accepts IDs. User model changes remain deferred.
-
-Review correction before publication: the root lookup preserves cross-type uniqueness but must not imply watched behaviour. Existing entries now receive record_watched; the implemented watched subtype returns itself. No class predicates or future transition implementations were added. Final verification below supersedes the earlier follow-up counts.
-
-After the delegation correction, full CI passed again: 215 tests/2,513 assertions, zero failures/errors/skips; style and all security checks passed. Existing repeat/concurrency tests verify idempotent outcomes through the operation. No future subtype was added for testing.
-
-## Action-permission follow-up (20 October 2026)
-
-Owner explicitly approved introducing LibraryFilmToWatch now, with can_watch? true and the superclass default false, preserving already-watched idempotency. Transition rules remain on the source model; sibling/destination knowledge and STI mutation belong in the transition service. User transition refactoring remains deferred to the Identity-owned follow-up audit. No watchlist management/UI, dismissal subtype or reverse transition is included.
-
-Acceptance additions:
-- Verify default-denied and ToWatch-allowed watch permissions, service-owned transition preserving ID/user/film/created_at, returned destination behaviour, repeat idempotency, cross-type uniqueness, outer rollback and failed destination save/retry. Tests assert outcomes/contracts rather than sibling dispatch or internal attribute snapshots.
-- Re-run focused Library tests and full CI, eager loading and whitespace checks; record results below. Earlier results do not verify this follow-up.
-
-Follow-up verification evidence: Passed — `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/models/library_film_test.rb test/services/library`: 21 tests, 102 assertions; `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`: 219 tests, 2,533 assertions, zero failures/errors/skips, RuboCop 123 files clean, dependency audits clean and Brakeman zero warnings/errors. `RAILS_ENV=test bin/rails zeitwerk:check` passed application eager loading with the existing mail-preview exclusion. `git diff --check` passed. No schema migration or non-test data writes were needed for this follow-up.
-
-Implementation: added can_watch? permissions and minimal ToWatch subtype; RecordWatched performs the transition under existing locks and transaction, using the returned watched object. Existing watched behaviour is idempotent; unsupported root action raises WatchUnavailable rather than reporting a false success. Models contain no sibling references. Destination save failure and caller rollback restore the persisted ToWatch state; retry succeeds. Concurrent recording now exercises an initial ToWatch transition. Recorded the model-action/transition-service convention and deferred User transition refactoring. Ready for owner review; merge remains unauthorized.
+Owner authorization: Spec, scoped cascade, minimal ToWatch transition, ID inputs and explicit AlreadyWatched failure approved on 20 October 2026. Updating PR #20 is authorized. PR #20 was originally opened without approval; the owner subsequently authorized updates for review. Acceptance and merge remain pending; no merge is authorized.

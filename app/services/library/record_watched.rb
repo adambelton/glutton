@@ -16,7 +16,7 @@ module Library
           watched.save!
           watched
         else
-          library_film.record_watched
+          raise AlreadyWatched, "Film is already watched"
         end
       end
     end

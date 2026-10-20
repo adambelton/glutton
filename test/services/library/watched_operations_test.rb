@@ -11,17 +11,17 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
     Library::RecordWatched.call(user_id:, film_id:)
   end
 
-  test "recording watched returns the relationship and is stable on repeats" do
+  test "recording watched returns the relationship and rejects repeats without changes" do
     result = record
     assert result.persisted?
     assert_equal @user.id, result.user_id
     assert_equal @film.id, result.film_id
     travel 1.hour do
       assert_no_difference "LibraryFilm.count" do
-        repeated = record
-        assert_equal result.id, repeated.id
-        assert_equal result.created_at, repeated.created_at
-        assert_equal result.updated_at, repeated.updated_at
+        assert_raises(Library::AlreadyWatched) { record }
+        unchanged = LibraryFilm.find(result.id)
+        assert_equal result.created_at, unchanged.created_at
+        assert_equal result.updated_at, unchanged.updated_at
       end
     end
   end
@@ -36,9 +36,8 @@ class Library::WatchedOperationsTest < ActiveSupport::TestCase
         assert_equal @film.id, watched.film_id
         assert_equal original.created_at, watched.created_at
         assert_not watched.can_watch?
-        assert_equal watched, watched.record_watched
-        assert_equal watched, LibraryFilm.find(original.id).record_watched
-        assert_equal watched.updated_at, record.updated_at
+        assert_not LibraryFilm.find(original.id).can_watch?
+        assert_raises(Library::AlreadyWatched) { record }
       end
     end
   end

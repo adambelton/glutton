@@ -50,16 +50,22 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     Identity::CompleteRegistration.call(token:)
   end
 
-  test "concurrent repeated watched operations serialize and preserve first ID and timestamps" do
+  test "concurrent watched transitions serialize and reject the second request without changes" do
     contender = nil
     first = attributes = nil
     LibraryFilmToWatch.create!(user: @guest, film: @film)
     User.transaction do
       first = record
       attributes = [ first.id, first.created_at, first.updated_at ]
-      contender = blocked { record }
+      contender = blocked do
+        begin
+          record
+        rescue Library::AlreadyWatched
+          :already_watched
+        end
+      end
     end
-    assert_equal first, Timeout.timeout(5) { contender.value }
+    assert_equal :already_watched, Timeout.timeout(5) { contender.value }
     assert_equal 1, LibraryFilm.where(user_id: @guest.id, film: @film).count
     row = LibraryFilm.find_by!(user_id: @guest.id)
     assert_equal attributes, [ row.id, row.created_at, row.updated_at ]
@@ -76,7 +82,8 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
-    assert_equal original.id, record.id
+    assert_equal original.id, LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
+    assert_raises(Library::AlreadyWatched) { record }
   end
 
   test "cleanup wins before waiting write and cannot leave orphaned library activity" do
