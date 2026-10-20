@@ -1,7 +1,7 @@
 class Session < ApplicationRecord
   belongs_to :user
 
-  validate :owner_can_hold_session
+  validate :user_can_hold_session
 
   def active?
     return false unless persisted?
@@ -17,8 +17,8 @@ class Session < ApplicationRecord
 
   private
 
-  def owner_can_hold_session
-    owner = User.find_by(id: user_id) if user_id
-    errors.add(:user, :inactive) unless owner&.active?
+  def user_can_hold_session
+    user = User.find_by(id: user_id) if user_id
+    errors.add(:user, :inactive) unless user&.active?
   end
 end

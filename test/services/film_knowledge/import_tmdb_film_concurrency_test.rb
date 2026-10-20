@@ -55,7 +55,10 @@ class FilmKnowledge::ImportTmdbFilmConcurrencyTest < ActiveSupport::TestCase
     release << true
     returned = Timeout.timeout(5) { @threads.first.value }
     assert_equal winner.id, returned.id
-    assert_equal winner.attributes, returned.attributes
+    assert_equal "Keep local winner", returned.title
+    assert_equal({ "local" => true }, returned.metadata)
+    assert_equal winner.created_at, returned.created_at
+    assert_equal winner.updated_at, returned.updated_at
     assert_equal 1, Film.where(tmdb_id: 80000001).count
   end
 end

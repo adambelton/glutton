@@ -1,7 +1,7 @@
 require "digest"
 
 class PendingRegistration < ApplicationRecord
-  belongs_to :guest_user, class_name: "UserGuest", optional: true
+  belongs_to :guest_user, class_name: "User", optional: true
 
   generates_token_for :email_confirmation, expires_in: 1.hour do
     Digest::SHA256.hexdigest([ email_address, password_digest ].to_json)
@@ -27,14 +27,30 @@ class PendingRegistration < ApplicationRecord
   end
 
   def guest_expires_at
-    created = User.where(id: guest_user_id).pick(:created_at) if guest_user_id.present?
-    created + 24.hours if created.present?
+    User.find_by(id: guest_user_id)&.registration_expires_at if guest_user_id.present?
   end
 
   def active?
     return false unless persisted? && created_at + 24.hours > Time.current
 
-    guest_user_id.nil? || UserGuest.active.exists?(guest_user_id)
+    guest_user_id.nil? || User.find_by(id: guest_user_id)&.can_register?
+  end
+
+  def available_to?(user:)
+    active? && (user.nil? || user.can_register?) &&
+      (guest_user_id.nil? || guest_user_id == user&.id) &&
+      !UserRegistered.exists?(email_address:)
+  end
+
+  def attach_to!(user:)
+    raise Identity::RegistrationUnavailable unless user.can_register? && active?
+    if (guest_user_id.present? && guest_user_id != user.id) ||
+        self.class.where(guest_user_id: user.id).where.not(id:).exists?
+      raise Identity::RegistrationConflict
+    end
+
+    update!(guest_user_id: user.id) if guest_user_id.nil?
+    self
   end
 
   private

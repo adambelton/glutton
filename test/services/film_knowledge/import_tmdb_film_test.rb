@@ -50,12 +50,16 @@ class FilmKnowledge::ImportTmdbFilmTest < ActiveSupport::TestCase
 
   test "existing films bypass client and configuration and retain all local metadata" do
     existing = Film.create!(tmdb_id: 348, title: "Edited", release_date: Date.new(1979, 5, 24), metadata: { note: "Keep" })
-    attributes = existing.attributes
+    updated_at = existing.updated_at
     assert_no_difference "Film.count" do
       assert_equal existing, FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348, client: Object.new)
       assert_equal existing, FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348)
     end
-    assert_equal attributes, existing.reload.attributes
+    existing.reload
+    assert_equal "Edited", existing.title
+    assert_equal Date.new(1979, 5, 24), existing.release_date
+    assert_equal({ "note" => "Keep" }, existing.metadata)
+    assert_equal updated_at, existing.updated_at
   end
 
   test "invalid IDs and provider failures leave no records and emit no private logs" do

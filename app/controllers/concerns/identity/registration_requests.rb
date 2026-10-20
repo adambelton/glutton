@@ -36,7 +36,7 @@ module Identity
     end
 
     def reject_registered_registration
-      raise Identity::RegistrationConflict if current_user.is_a?(UserRegistered)
+      raise Identity::RegistrationConflict if current_user && !current_user.can_register?
     end
   end
 end

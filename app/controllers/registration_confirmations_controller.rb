@@ -6,7 +6,7 @@ class RegistrationConfirmationsController < ApplicationController
 
   def show
     user = current_user
-    raise Identity::RegistrationConflict if user.is_a?(UserRegistered)
+    raise Identity::RegistrationConflict if user && !user.can_register?
 
     @token = params[:token]
     raise Identity::RegistrationUnavailable unless @token.is_a?(String) && @token.present?

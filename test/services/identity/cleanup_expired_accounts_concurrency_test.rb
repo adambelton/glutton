@@ -62,7 +62,7 @@ module Identity
         completed
       end
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
-      assert_instance_of UserRegistered, User.find(owner.id)
+      assert (User.find(owner.id)).can_reset_password?
       assert session.active?
       assert_not PendingRegistration.exists?(request.id)
     end

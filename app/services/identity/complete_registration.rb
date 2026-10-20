@@ -7,22 +7,22 @@ module Identity
       raise RegistrationUnavailable if candidate.nil?
 
       PendingRegistration.transaction(requires_new: true) do
-        # Preparation locks the guest first too. Never reverse this order.
-        guest = UserGuest.active.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id.present?
+        # Preparation locks the source_user first too. Never reverse this order.
+        source_user = User.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id.present?
         registration = PendingRegistration.lock.find_by_token_for(:email_confirmation, token)
         unless registration.present? && registration.active? && registration.guest_user_id == candidate.guest_user_id &&
-            (registration.guest_user_id.nil? || (guest.present? && guest.active?))
+            (registration.guest_user_id.nil? || (source_user.present? && source_user.can_register?))
           raise RegistrationUnavailable
         end
 
-        user = guest.present? ? guest.becomes!(UserRegistered) : UserRegistered.new
+        user = source_user.present? ? source_user.becomes!(UserRegistered) : UserRegistered.new
         user.assign_attributes(email_address: registration.email_address, password_digest: registration.password_digest,
           email_confirmed_at: Time.current)
         # The confirmed pending request supplies the validated digest. Ordinary
         # creation still requires plaintext password/confirmation; all common
         # validations and database constraints run in this explicit context.
         user.save!(context: :confirmed_registration)
-        Session.where(user_id: user.id).delete_all if guest.present?
+        Session.where(user_id: user.id).delete_all if source_user.present?
         session = Session.create!(user: user)
         registration.destroy!
         session

@@ -6,7 +6,7 @@ module Identity
 
     def self.call(email_address:)
       user = UserRegistered.find_by_email(email_address)
-      return unless user.present? && user.active? && user.email_confirmed_at.present?
+      return unless user&.can_reset_password?
 
       url = MailOrigin.call + Rails.application.routes.url_helpers.edit_password_reset_path(token: user.password_reset_token)
       begin

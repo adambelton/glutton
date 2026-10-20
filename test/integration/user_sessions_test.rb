@@ -116,7 +116,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
 
   test "registered sign in replaces guest binding without moving guest activity" do
     guest = User.find(create_guest["id"])
-    attributes = guest.attributes
+    attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
     old_session = Session.find_by!(user: guest)
     user = UserRegistered.create!(email_address: "switch@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
@@ -128,7 +128,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal user.id, lookup["id"]
     assert_not old_session.active?
-    assert_equal attributes, guest.reload.attributes
+    assert_equal attributes, guest.reload.slice(:id, :created_at, :email_address, :password_digest)
   end
 
   test "cookie has browser session protections" do

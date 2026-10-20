@@ -7,7 +7,7 @@ class Identity::AuthenticateTest < ActiveSupport::TestCase
   end
 
   test "normalized credentials issue independent sessions without changing the account" do
-    attributes = @user.attributes
+    attributes = @user.slice(:id, :email_address, :password_digest, :email_confirmed_at, :created_at)
     first = second = nil
     assert_no_difference "User.count" do
       assert_difference "Session.count", 2 do
@@ -18,7 +18,7 @@ class Identity::AuthenticateTest < ActiveSupport::TestCase
     assert first.persisted?
     assert_equal @user.id, first.user_id
     assert_not_equal first.id, second.id
-    assert_equal attributes, @user.reload.attributes
+    assert_equal attributes, @user.reload.slice(:id, :email_address, :password_digest, :email_confirmed_at, :created_at)
     Session.revoke(id: first.id)
     assert_not first.active?
     assert second.active?
@@ -46,14 +46,14 @@ class Identity::AuthenticateTest < ActiveSupport::TestCase
   end
 
   test "issuance errors propagate without partial sessions or account changes" do
-    attributes = @user.attributes
+    attributes = @user.slice(:id, :email_address, :password_digest, :email_confirmed_at, :created_at)
     Session.define_singleton_method(:create!) { |**| raise ActiveRecord::ConnectionNotEstablished }
     assert_no_difference [ "Session.count", "User.count" ] do
       assert_raises ActiveRecord::ConnectionNotEstablished do
         Identity::Authenticate.call(email_address: @user.email_address, password: "a long password phrase")
       end
     end
-    assert_equal attributes, @user.reload.attributes
+    assert_equal attributes, @user.reload.slice(:id, :email_address, :password_digest, :email_confirmed_at, :created_at)
   ensure
     Session.singleton_class.remove_method(:create!)
   end

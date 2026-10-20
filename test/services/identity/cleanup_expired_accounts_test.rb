@@ -22,7 +22,7 @@ module Identity
       deleted = UserGuest.create!
       deleted_session = Session.create!(user: deleted)
       deleted.update_columns(type: "UserDeleted")
-      base = User.create!(type: "User")
+      base = User.find(User.insert_all!([ { type: "User" } ]).rows.first.first)
       base_session = Session.create!(user: base)
       travel 24.hours - 1.second
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)

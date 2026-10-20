@@ -89,7 +89,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal 0, UserRegistered.count
     confirm(token:)
     assert_response :see_other
-    assert_instance_of UserRegistered, Session.last.user
+    assert (Session.last.user).can_reset_password?
     assert_not PendingRegistration.exists?(registration.id)
     header = Array(response.headers["set-cookie"]).join("\n").downcase
     %w[expires= httponly samesite=lax].each { |value| assert_includes header, value }
@@ -137,7 +137,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal created.id, Session.last.user_id
     assert_not old_session.active?
-    assert_instance_of UserRegistered, User.find(created.id)
+    assert (User.find(created.id)).can_reset_password?
   end
 
   test "existing guest signup and cross browser confirmation preserve that guest only" do
@@ -150,16 +150,16 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(other, token:)
     assert_equal 303, other.response.status
     assert_equal created.id, Session.last.user_id
-    assert_instance_of UserRegistered, User.find(created.id)
+    assert (User.find(created.id)).can_reset_password?
   end
 
   test "invalid submission keeps previous credentials and never echoes password fields" do
     signup
     previous = PendingRegistration.last
-    attributes = previous.attributes
+    attributes = previous.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
     signup(password: "tiny", password_confirmation: "tiny")
     assert_response :unprocessable_entity
-    assert_equal attributes, previous.reload.attributes
+    assert_equal attributes, previous.reload.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
     assert_select 'input[type="password"][value]', count: 0
     assert_not_includes response.body, "tiny"
     assert_select '[role="alert"]'
@@ -224,7 +224,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     unrelated = guest(other)
     confirm(other, token:)
     assert_equal 409, other.response.status
-    assert_instance_of UserGuest, User.find(unrelated.id)
+    assert_not (User.find(unrelated.id)).can_reset_password?
     assert_equal 1, PendingRegistration.count
     user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)

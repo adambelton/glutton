@@ -27,7 +27,14 @@ module Identity
       [ nil, "", "tampered", @user.signed_id(purpose: :other) ].each do |token|
         assert_raises(PasswordResetUnavailable) { reset(token:) }
       end
-      [ UserGuest, UserDeleted, PendingRegistration ].each { |model| refute model.method_defined?(:password_reset_token) }
+      [ UserGuest.create!, UserDeleted.create! ].each do |user|
+        assert_not user.can_reset_password?
+        assert_no_difference "Session.count" do
+          assert_raises(PasswordResetUnavailable) do
+            user.reset_password!(password: "replacement password phrase", password_confirmation: "replacement password phrase")
+          end
+        end
+      end
     end
 
     test "validation preserves digest sessions and token at all policy boundaries" do

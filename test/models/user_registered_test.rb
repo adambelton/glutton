@@ -16,7 +16,7 @@ class UserRegisteredTest < ActiveSupport::TestCase
     assert_not_equal "a long password phrase", loaded.password_digest
     assert_not loaded.has_attribute?(:password)
     assert_not loaded.has_attribute?(:password_confirmation)
-    assert loaded.respond_to?(:password_reset_token)
+    assert_equal loaded, UserRegistered.find_by_password_reset_token(loaded.password_reset_token)
     travel 48.hours do
       assert loaded.active?
     end
@@ -65,7 +65,7 @@ class UserRegisteredTest < ActiveSupport::TestCase
     assert_nil UserRegistered.find_by_email(nil)
     UserGuest.create!
     UserDeleted.create!
-    assert UserRegistered.all.all? { |record| record.instance_of?(UserRegistered) }
+    assert_equal user, UserRegistered.find_by_email(user.email_address)
   end
 
   test "guests and deleted users reject any credential field" do

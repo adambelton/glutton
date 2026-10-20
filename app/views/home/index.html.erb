@@ -5,10 +5,8 @@
     <p role="status"><%= notice %></p>
   <% end %>
   <% if current_user.present? %>
-    <p><%= current_user.is_a?(UserRegistered) ? t("identity.sessions.registered_status") : t("identity.sessions.guest_status") %></p>
-    <%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
-  <% end %>
-  <% unless current_user.is_a?(UserRegistered) %>
+    <%= render current_user %>
+  <% else %>
     <%= link_to t("identity.sessions.sign_in"), new_session_path %>
     <%= link_to t("identity.registration.title"), new_registration_path %>
   <% end %>

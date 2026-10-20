@@ -33,7 +33,7 @@ class PasswordResetsController < ApplicationController
   def update
     credentials = { password: nil, password_confirmation: nil }.merge(params.permit(:password, :password_confirmation).to_h.symbolize_keys)
     user = Identity::ResetPassword.call(token: @token, **credentials)
-    if current_user.is_a?(UserRegistered) && current_user.id == user.id
+    if current_user&.id == user.id
       clear_identity_cookie
       reset_session
     end
@@ -65,10 +65,10 @@ class PasswordResetsController < ApplicationController
     raise Identity::PasswordResetUnavailable unless @token.is_a?(String) && @token.present?
 
     @reset_user = UserRegistered.find_by_password_reset_token(@token)
-    unless @reset_user.present? && @reset_user.active? && @reset_user.email_confirmed_at.present?
+    unless @reset_user&.can_reset_password?
       raise Identity::PasswordResetUnavailable
     end
-    if current_user.is_a?(UserRegistered) && current_user.id != @reset_user.id
+    if current_user && !current_user.can_reset_password_for?(user: @reset_user)
       render :conflict, status: :conflict
     end
   end

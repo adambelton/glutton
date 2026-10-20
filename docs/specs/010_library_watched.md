@@ -1,6 +1,6 @@
 # 010 — Canonical Library watched state
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / viewing
 
 ## Goal
@@ -74,6 +74,8 @@ git diff --check
 
 Final already-watched rejection verification: Passed — focused suite 21 tests/102 assertions; full CI 219 tests/2,533 assertions, zero failures/errors/skips; RuboCop 121 files clean; dependency audits clean; Brakeman zero warnings/errors; Zeitwerk application eager loading passed with the existing preview exclusion; git diff --check passed. No migration was needed for this revision.
 
-Owner authorization: Spec, scoped cascade, minimal ToWatch transition, ID inputs and explicit AlreadyWatched failure approved on 20 October 2026. Updating PR #20 is authorized. PR #20 was originally opened without approval; the owner subsequently authorized updates for review. Acceptance and merge remain pending; no merge is authorized.
+Owner authorization: Spec, scoped cascade, minimal ToWatch transition, ID inputs and explicit AlreadyWatched failure approved on 20 October 2026. Updating PR #20 is authorized. PR #20 was originally opened without approval; the owner subsequently authorized updates for review. Owner subsequently approved merge after review; actual merge evidence follows below.
 
 Migration consolidation verification: Passed — rolled back versions 20261020170000, 20261020160000 and 20261020140000 in the isolated test database using RAILS_ENV=test bin/rails db:migrate:down VERSION=<version>; edited the initial migration and removed both follow-ups; RAILS_ENV=test bin/rails db:migrate recreated the final table successfully. Full CI passed: 219 tests/2,533 assertions, style (121 files) and all security checks clean. git diff --check passed. No development/production data changed.
+
+Owner acceptance / merge: Approved and merged via PR #20 on 20 October 2026 at 13:50:24 UTC, commit 82d9b83fd385e646d500248e7dc359f7a0c82099. Hosted Repository checks passed for the approved head ff34123c0ae1fe2b2c522b6d1a89f9315d4add41 before merge. Owner requested direct convention fixes after merge; the plan tracks the scoped Identity/Film knowledge tasks.

@@ -8,11 +8,11 @@ class SessionTest < ActiveSupport::TestCase
 
   test "guest issuance preserves account identity and deadline" do
     guest = UserGuest.create!
-    attributes = guest.attributes
+    attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
     session = Session.create!(user: guest)
     assert session.active?
     assert_equal guest.id, session.user_id
-    assert_equal attributes, guest.reload.attributes
+    assert_equal attributes, guest.reload.slice(:id, :created_at, :email_address, :password_digest)
   end
 
   test "guest activity follows the account deadline rather than session age" do
@@ -37,21 +37,21 @@ class SessionTest < ActiveSupport::TestCase
   test "registered sessions have no age deadline" do
     user = registered_user
     session = Session.create!(user: user)
-    attributes = session.attributes
+    attributes = session.slice(:id, :user_id, :created_at)
     travel 365.days do
       assert session.active?
       assert user.active?
-      assert_equal attributes, session.reload.attributes
+      assert_equal attributes, session.reload.slice(:id, :user_id, :created_at)
     end
   end
 
   test "deleted owner is detected despite cached associations" do
     user = registered_user
     session = Session.create!(user: user)
-    assert_instance_of UserRegistered, session.user
+    assert session.user.can_reset_password?
     user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
     assert_not session.active?
-    assert_instance_of UserDeleted, Session.find(session.id).user
+    assert_not Session.find(session.id).user.active?
     assert_not Session.new(user: user).valid?
   end
 

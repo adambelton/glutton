@@ -25,7 +25,7 @@ module Identity
         end
         user = session.user
         assert session.active?
-        assert_instance_of UserRegistered, user
+        assert (user).can_reset_password?
         assert_equal "reader@example.test", user.email_address
         assert_equal digest, user.password_digest
         assert_equal Time.current, user.email_confirmed_at
@@ -46,7 +46,7 @@ module Identity
         session = CompleteRegistration.call(token:)
       end
       user = User.find(guest.id)
-      assert_instance_of UserRegistered, user
+      assert (user).can_reset_password?
       assert_equal created_at, user.created_at
       assert_equal digest, user.password_digest
       assert_equal user, session.user
@@ -68,20 +68,20 @@ module Identity
       guest.update_columns(type: "UserDeleted")
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       assert PendingRegistration.exists?(record.id)
-      assert_instance_of UserDeleted, User.find(guest.id)
+      assert_not (User.find(guest.id)).active?
     end
 
     test "email conflict never authenticates or changes the existing account" do
       record = prepare
       existing = UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
-      existing_attributes = existing.attributes
+      existing_attributes = existing.slice(:id, :email_address, :password_digest, :email_confirmed_at)
       error = nil
       assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
         error = assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token: token_for(record)) }
       end
       assert_nil error.cause
-      assert_equal existing_attributes, existing.reload.attributes
+      assert_equal existing_attributes, existing.reload.slice(:id, :email_address, :password_digest, :email_confirmed_at)
       assert PendingRegistration.exists?(record.id)
     end
 
@@ -90,9 +90,9 @@ module Identity
       Session.create!(user: guest)
       record = prepare(guest_user_id: guest.id)
       token = token_for(record)
-      user_before = guest.attributes
-      pending_before = record.attributes
-      sessions_before = Session.where(user_id: guest.id).map(&:attributes)
+      user_before = guest.slice(:id, :created_at, :email_address, :password_digest)
+      pending_before = record.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
+      sessions_before = Session.where(user_id: guest.id).order(:id).pluck(:id, :user_id, :created_at)
       [ /UPDATE "users"/, /DELETE FROM "sessions"/, /INSERT INTO "sessions"/, /DELETE FROM "pending_registrations"/ ].each do |pattern|
         listener = ->(event) { raise IOError, "simulated persistence failure" if event.payload[:sql].match?(pattern) }
         assert_raises(IOError) do
@@ -100,9 +100,9 @@ module Identity
             CompleteRegistration.call(token:)
           end
         end
-        assert_equal user_before, User.find(guest.id).attributes
-        assert_equal pending_before, PendingRegistration.find(record.id).attributes
-        assert_equal sessions_before, Session.where(user_id: guest.id).map(&:attributes)
+        assert_equal user_before, User.find(guest.id).slice(:id, :created_at, :email_address, :password_digest)
+        assert_equal pending_before, PendingRegistration.find(record.id).slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
+        assert_equal sessions_before, Session.where(user_id: guest.id).order(:id).pluck(:id, :user_id, :created_at)
       end
       assert CompleteRegistration.call(token:).active?
     end

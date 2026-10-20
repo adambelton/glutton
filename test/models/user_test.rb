@@ -31,8 +31,12 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "base users are active" do
-    assert User.new.active?
+  test "root construction fails while existing base rows can still be loaded" do
+    assert_raises(NotImplementedError) { User.new }
+    assert_raises(NotImplementedError) { User.create! }
+    id = User.insert_all!([ { type: "User" } ]).rows.first.first
+    assert User.find(id).active?
+    assert_not User.find(id).can_register?
   end
 
   test "guest expires exactly at its deadline" do
@@ -74,6 +78,16 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  test "registration permission follows the guest deadline and is denied by default" do
+    guest = freeze_time { UserGuest.create! }
+    assert guest.can_register?
+    assert_equal guest.created_at + 24.hours, guest.registration_expires_at
+    assert_not UserDeleted.create!.can_register?
+    travel_to guest.registration_expires_at do
+      assert_not guest.can_register?
+    end
+  end
+
   test "deleted users are inactive regardless of age" do
     user = UserDeleted.create!
     assert_not User.find(user.id).active?
@@ -83,17 +97,10 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "type is required by the model" do
-    user = User.new
-
-    assert_not user.valid?
-    assert_includes user.errors[:type], "can't be blank"
-  end
-
   test "database rejects missing type without model validation" do
     assert_raises ActiveRecord::NotNullViolation do
       User.transaction(requires_new: true) do
-        User.new.save!(validate: false)
+        User.insert_all!([ { type: nil } ])
       end
     end
     assert UserGuest.create!.persisted?

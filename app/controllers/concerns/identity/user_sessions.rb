@@ -2,13 +2,11 @@ module Identity
   module UserSessions
     extend ActiveSupport::Concern
 
-    class AccountDeleted < StandardError; end
-
     included do
       helper_method :current_user, :current_pending_registration
       before_action :prevent_identity_caching
 
-      rescue_from AccountDeleted do
+      rescue_from Identity::AccountDeleted do
         session.delete(:pending_registration_id)
         render "sessions/deleted", status: :gone
       end
@@ -21,7 +19,7 @@ module Identity
 
       payload = identity_payload
       user = User.find_by(id: payload["user_id"]) if payload
-      raise AccountDeleted if user.is_a?(UserDeleted)
+      user&.check_access!
 
       @current_user = bound_session&.active? ? user : nil
       clear_identity_cookie unless @current_user
@@ -32,7 +30,7 @@ module Identity
       user = current_user
       if user.present?
         pending = current_pending_registration
-        if user.is_a?(UserGuest) && pending.present? && pending.guest_user_id.nil?
+        if user.can_register? && pending.present? && pending.guest_user_id.nil?
           Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: user.id)
         end
         return user
@@ -65,9 +63,7 @@ module Identity
 
       registration = PendingRegistration.find_by(id: id)
       user = current_user
-      if registration.present? && registration.active? && !user.is_a?(UserRegistered) &&
-          (registration.guest_user_id.nil? || registration.guest_user_id == user&.id) &&
-          !UserRegistered.exists?(email_address: registration.email_address)
+      if registration&.available_to?(user:)
         registration
       else
         session.delete(:pending_registration_id)
@@ -92,19 +88,18 @@ module Identity
 
     def bind_session(authentication)
       user = authentication.user
-      if user.is_a?(UserGuest) && session[:pending_registration_id].present?
+      if user.can_register? && session[:pending_registration_id].present?
         pending = PendingRegistration.find_by(id: session[:pending_registration_id])
       end
       registration_alert = flash[:alert]
       reset_session
-      flash.now[:alert] = registration_alert if user.is_a?(UserGuest) && registration_alert.present?
-      if user.is_a?(UserGuest) && pending.present? && pending.active? && pending.guest_user_id == user.id
+      flash.now[:alert] = registration_alert if user.can_register? && registration_alert.present?
+      if user.can_register? && pending.present? && pending.active? && pending.guest_user_id == user.id
         session[:pending_registration_id] = pending.id
       end
-      jar = user.is_a?(UserRegistered) ? cookies.signed.permanent : cookies.signed
-      jar[:session_id] = {
+      cookies.signed[:session_id] = {
         value: { id: authentication.id, user_id: user.id },
-        httponly: true, same_site: :lax, secure: Rails.env.production?
+        httponly: true, same_site: :lax, secure: Rails.env.production?, expires: user.remember_session_until
       }
       @bound_session = authentication
       @current_user = user

@@ -1,0 +1,4 @@
+<p><%= t("identity.sessions.guest_status") %></p>
+<%= button_to t("identity.sessions.sign_out"), session_path, method: :delete %>
+<%= link_to t("identity.sessions.sign_in"), new_session_path %>
+<%= link_to t("identity.registration.title"), new_registration_path %>

@@ -1,6 +1,6 @@
 # 001e — Record object-role design conventions
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation / development conventions
 
 ## Goal
@@ -36,4 +36,4 @@ Added the object-role conventions to AGENTS.md, replaced the architecture brief'
 
 Owner authorization: Owner requested recording the conventions on 20 October 2026.
 
-Owner acceptance / merge: Pending review and merge.
+Owner acceptance / merge: Approved with task 010 and merged via PR #20 on 20 October 2026, commit 82d9b83fd385e646d500248e7dc359f7a0c82099.

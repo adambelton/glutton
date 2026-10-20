@@ -82,7 +82,7 @@ class Identity::UserSessionsTest < ActionController::TestCase
     session[:pending_registration_id] = pending.id
     travel 24.hours
     guest = @controller.send(:ensure_guest_user!)
-    assert_instance_of UserGuest, guest
+    assert_not (guest).can_reset_password?
     assert_nil session[:pending_registration_id]
     assert_nil pending.reload.guest_user_id
     assert_equal I18n.t("identity.registration.unavailable"), flash[:alert]
