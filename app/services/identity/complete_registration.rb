@@ -21,18 +21,20 @@ module Identity
         # The confirmed pending request supplies the validated digest. Ordinary
         # creation still requires plaintext password/confirmation; all common
         # validations and database constraints run in this explicit context.
-        user.save!(context: :confirmed_registration)
+        begin
+          user.save!(context: :confirmed_registration)
+        rescue ActiveRecord::RecordInvalid => error
+          if error.record.equal?(user) && error.record.errors.any? &&
+              error.record.errors.all? { |entry| entry.attribute == :email_address && entry.type == :taken }
+            raise RegistrationUnavailable, cause: nil
+          end
+          raise
+        end
         Session.where(user_id: user.id).delete_all if source_user.present?
         session = Session.create!(user: user)
         registration.destroy!
         session
       end
-    rescue ActiveRecord::RecordInvalid => error
-      if error.record.is_a?(UserRegistered) && error.record.errors.any? &&
-          error.record.errors.all? { |entry| entry.attribute == :email_address && entry.type == :taken }
-        raise RegistrationUnavailable, cause: nil
-      end
-      raise
     rescue ActiveRecord::RecordNotUnique => error
       constraint = error.cause&.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME)
       raise RegistrationUnavailable, cause: nil if constraint == "index_users_on_email_address"

@@ -33,3 +33,5 @@ User defaults deny registration; UserGuest supplies active persisted permission 
 All verification used isolated test data. Owner authorized creating a PR for online review after local verification; acceptance and merge remain pending. The owner requested fixes directly; there is no separate audit-results document.
 
 Owner acceptance / merge: Pending.
+
+PR review correction: remove the remaining UserRegistered class guard from duplicate-email validation recovery. Scope recovery to the target user save, check failed-object identity rather than its class, and preserve propagation of unrelated validation failures (including nested callback failures). Verify existing conflict/rollback/concurrency outcomes and add a focused foreign-record failure regression. Verification: `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/services/identity/complete_registration_test.rb test/services/identity/complete_registration_concurrency_test.rb` passed 12 tests/134 assertions; full `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed 220 tests/2,559 assertions, zero failures/errors/skips, style/security checks clean. `git diff --check` passed.

@@ -85,6 +85,22 @@ module Identity
       assert PendingRegistration.exists?(record.id)
     end
 
+    test "a nested validation failure is not mistaken for target email conflict" do
+      record = prepare
+      token = token_for(record)
+      other_record = PendingRegistration.new
+      other_record.errors.add(:email_address, :taken)
+      failure = ActiveRecord::RecordInvalid.new(other_record)
+      callback = -> { raise failure }
+      UserRegistered.set_callback(:validation, :before, callback)
+      assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+        assert_same failure, assert_raises(ActiveRecord::RecordInvalid) { CompleteRegistration.call(token:) }
+      end
+      assert PendingRegistration.exists?(record.id)
+    ensure
+      UserRegistered.skip_callback(:validation, :before, callback, raise: false) if callback
+    end
+
     test "failure at each mutation stage rolls back the entire guest completion" do
       guest = UserGuest.create!
       Session.create!(user: guest)
