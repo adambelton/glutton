@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 merged; task 010 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 20 October 2026
 
 ## Task rules
@@ -51,6 +51,8 @@ Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](s
 
 i18n follow-ups: **001d — Merged**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Merged**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
 
+Foundation follow-up: **001e — Ready for review**, [object-role conventions spec](specs/001e_object_role_conventions.md); record agreed role trust, behaviour ownership/naming and independent freshness rules and outcome/contract-focused testing in repository instructions. Documentation only.
+
 ## First rating and library slice
 
 Candidate task boundaries; write each detailed spec just before starting, splitting further if needed. IDs 002 onward replace the earlier unimplemented sequence.
@@ -73,8 +75,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Merged — [spec](specs/006g_user_type_names.md), [PR #16](https://github.com/adambelton/glutton/pull/16) |
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Merged — [spec](specs/007_film_catalogue.md), [PR #17](https://github.com/adambelton/glutton/pull/17) |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
-| 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Ready for review — [spec](specs/009_tmdb_film_search.md) |
-| 010 | Library / viewing | Canonical user–film entry and mark-watched operation/read result | 005a, 007 | Planned |
+| 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
+| 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Ready for review — [spec](specs/010_library_watched.md); scoped dependent cascade approved and verified |
 | 011 | Library / intent | Watchlist addition/removal, retaining independent watched facts | 010 | Planned |
 | 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |
 | 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |
@@ -92,11 +94,11 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 
 The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered sessions follow Rails authentication conventions with no application-imposed TTL. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 supplies shared guest/registered session lifecycle and registered authentication and task 005a exposes both identity modes through HTTP. Registered sessions end through sign-out/revocation or inactive-account rejection, not a custom age deadline. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
 
-Guest cleanup must eventually remove associated activity as well as the identity. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
+Guest cleanup must remove associated activity as well as the identity. Task 010 covers Library activity through its approved scoped user foreign-key cascade, with existing Identity cleanup/claim compatibility verified; other domains require their own retention decisions before persistence. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
 
-Task 010 provides Library's idempotent record-watched contract without calling Ratings. Task 013 provides Ratings' make-available contract, and task 014 provides its current-rating read contract. Agree each contract's inputs, results and failures before implementing it. Tasks 016 and 017 implement the separate consuming sides; they do not modify their providers. Neither task introduces events, background delivery or a generic integration layer.
+Task 010 provides Library's record-watched contract (already-watched entries raise Library::AlreadyWatched) without calling Ratings. Task 013 provides Ratings' make-available contract, and task 014 provides its current-rating read contract. Agree each contract's inputs, results and failures before implementing it. Tasks 016 and 017 implement the separate consuming sides; they do not modify their providers. Neither task introduces events, background delivery or a generic integration layer. Their specs must define handling of AlreadyWatched explicitly; repeated transition calls are not successful no-ops.
 
-Tasks 011 and 012 define intent/dismissal transitions without recommendation logic. Task 013 owns selection and presentation history independently of Library. Task 014 owns current-submission invariants before revision UI arrives. A seen response without a saved rating creates no Library classification and therefore does not exclude recommendations. Task 017 checks Ratings' current-rating result so marking an already-rated film watched does not requeue it.
+Task 010 includes the minimal ToWatch subtype and watched transition; tasks 011 and 012 define the remaining intent/dismissal transitions without recommendation logic. Task 013 owns selection and presentation history independently of Library. Task 014 owns current-submission invariants before revision UI arrives. A seen response without a saved rating creates no Library classification and therefore does not exclude recommendations. Task 017 checks Ratings' current-rating result so marking an already-rated film watched does not requeue it.
 
 Each consuming task verifies real provider compatibility as well as failure handling. A failed save must not appear rated, and a watched action must not imply a completed rating. Decide the concrete synchronous consistency mechanism in the relevant spec before implementation; retain ownership of writes in the providing domain.
 
@@ -126,3 +128,5 @@ The first complete loop still requires rating-only usefulness, explicit evidence
 Plan deletion/retention, security/accessibility, seed/media validation, operating-cost controls, deployment/backups and attribution. Review ownership for account deletion before slicing it; do not mechanically invent distributed coordination. Paid data/media licences remain excluded. Provider follow-up adds no gate beyond the agreed TMDB direction.
 
 Film knowledge sequencing clarification, 20 October 2026: task 007 starts with minimal catalogue persistence and a small local sample. JEV work remains deferred. The initial quality vocabulary is provisional and expected to evolve; validating that starting set is not a prerequisite for catalogue implementation. This does not make draft film analyses fact-checked or authorize publishing unverified claims.
+
+Deferred Identity-owned refactor: review user transitions against the action-permission convention (models own permission; transition services own source/destination coordination). No Identity implementation changes are authorized by task 010.

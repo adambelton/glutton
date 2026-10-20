@@ -1,0 +1,2 @@
+class LibraryFilmWatched < LibraryFilm
+end

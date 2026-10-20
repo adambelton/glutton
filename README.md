@@ -254,11 +254,14 @@ there is no guaranteed deletion delay. Expired access is rejected even when clea
 has not run. No cleanup command was run against development/production data during
 verification; tests use isolated test records.
 
-This command currently deletes Identity-owned records only. Before persisting guest
-activity in a product domain, agree its deletion policy and synchronous mechanism
-and extend retention through separately owned tasks. Unknown foreign-key dependents
-fail safely rather than being bypassed or silently orphaned. Scheduler installation
-and monitoring remain deployment work.
+The command deletes Identity-owned records and, through Library's scoped user
+foreign-key cascade, that expired guest's LibraryFilm rows in the same transaction.
+Shared Film records survive; claiming a guest in place preserves its Library rows.
+Other product domains must agree their own deletion policy before persisting guest
+activity. Unknown restrictive foreign-key dependents still fail safely and roll
+back the current guest. The candidate batch limit does not bound the number of
+Library rows deleted for one guest. Scheduler installation and monitoring remain
+deployment work.
 
 ## Development film sample
 
@@ -316,3 +319,20 @@ film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: selected_candidate.fetch(:tmd
 ```
 
 Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Provider/configuration failures use task 008's sanitized errors and timeout/retry policy; search 404 is `TmdbUnavailable` with reason `http_error`, while movie-details 404 remains `TmdbNotFound`. Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Task 009 verification used fake HTTP only; live search compatibility remains unverified.
+
+## Library watched state
+
+Task 010 provides `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` and a minimal `LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist management, dismissal and other transitions remain separate tasks.
+
+After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing film ID:
+
+```ruby
+library_film = Library::RecordWatched.call(user_id: current_user.id, film_id: film.id)
+# => persisted library entry
+```
+
+Recording a to-watch entry as watched preserves its ID, ownership, film and creation time, returning the watched object. The source model declares `can_watch?`; the service executes the transition. A request for an entry with `can_watch? == false` raises `Library::AlreadyWatched` without changes, including repeated or concurrent requests after a successful transition. The operation re-reads the user under its user-row lock and rejects inactive, missing or expired identities (`Library::IdentityUnavailable`); a missing film ID raises `Library::FilmUnavailable`. Both records are resolved inside the transaction; Film is read without a row lock. The STI root rejects direct construction without enumerating allowed subclasses. It scopes access to that user, performs no imports or Ratings calls, and composes with an outer caller transaction. Persistence failures roll back and propagate; an explicit retry may succeed once the cause is fixed.
+
+Deleting a user physically removes only their dependent Library rows through the Library-owned foreign key; shared films are not cascaded. Existing guest cleanup and in-place registration are unchanged. A restrictive dependent preventing deletion still rolls back Identity/Library changes for that guest. Registered-account deletion and retention for future activity remain separate decisions.
+
+Task 010 verification uses isolated test data only; development/production migrations and watched writes were not performed. Apply `bin/rails db:migrate` before local use. There is no new UI, watchlist/dismissal flow or automatic guest creation in this task.

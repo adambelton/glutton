@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,6 +23,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_130000) do
     t.datetime "updated_at", null: false
     t.index ["tmdb_id"], name: "index_films_on_tmdb_id", unique: true
     t.check_constraint "jsonb_typeof(metadata) = 'object'::text", name: "films_metadata_is_object"
+  end
+
+  create_table "library_films", force: :cascade do |t|
+    t.string "type", null: false
+    t.bigint "user_id", null: false
+    t.bigint "film_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_library_films_on_film_id"
+    t.index ["user_id", "film_id"], name: "index_library_films_on_user_id_and_film_id", unique: true
   end
 
   create_table "pending_registrations", force: :cascade do |t|
@@ -58,6 +68,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_130000) do
     t.check_constraint "type::text = 'UserRegistered'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
 
+  add_foreign_key "library_films", "films"
+  add_foreign_key "library_films", "users", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
 end
