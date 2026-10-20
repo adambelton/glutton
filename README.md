@@ -294,3 +294,25 @@ Use a positive Integer, not a title, string ID or URL. An existing TMDB identity
 The client uses 5-second connect and 10-second read/write timeouts, with no automatic retries or redirects. Expected errors are `FilmKnowledge::InvalidTmdbId`, `TmdbConfigurationError`, `TmdbNotFound`, `InvalidTmdbResponse`, or `TmdbUnavailable` (all under FilmKnowledge). The latter exposes `reason`, including `authentication`, `rate_limited`, `timeout`, `transport` or `http_error`. Errors omit credentials and provider response bodies. Fix the cause before explicitly retrying; 429 is surfaced without a retry loop. Unexpected validation/database failures propagate. Concurrent imports reuse the same Film; failed inserts leave no partial record.
 
 This operation is not called during boot or seeding. Automated tests use fake HTTP and isolated test records; no live request or development import was performed for task 008 verification. Live end-to-end verification remains outstanding. Search belongs to task 009.
+
+## Search TMDB for a film
+
+From Rails console, using the same ignored `TMDB_API_READ_ACCESS_TOKEN` configuration:
+
+```ruby
+page = FilmKnowledge::SearchTmdbFilms.call(query: "The Thing")
+page = FilmKnowledge::SearchTmdbFilms.call(query: "The Thing", page: 2, primary_release_year: 1982)
+page[:candidates]
+```
+
+Search returns `{ page:, total_pages:, total_results:, candidates: }`. Each candidate contains only `tmdb_id`, `title`, optional `original_title`, nullable `release_date` (a Date), and optional `original_language`. Provider order and distinct identities are preserved. An empty candidate list is a successful zero-result page. Malformed provider data rejects the whole page instead of returning partial selection data.
+
+Queries must be nonblank Strings of at most 200 characters after outer whitespace is stripped; internal spacing and Unicode remain intact. Page must be an Integer from 1 through 500. Optional primary_release_year must be an Integer from 1000 through 9999: it filters upstream primary release year, rather than introducing another date/year value in our catalogue. Search requests one page in en-US with adult results excluded; it does not automatically fetch further pages or details, rank/select a film, or write any catalogue records.
+
+After explicitly choosing a candidate, pass its integer TMDB ID to the existing import operation; import still retrieves and validates details independently:
+
+```ruby
+film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
+```
+
+Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Provider/configuration failures use task 008's sanitized errors and timeout/retry policy; search 404 is `TmdbUnavailable` with reason `http_error`, while movie-details 404 remains `TmdbNotFound`. Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Task 009 verification used fake HTTP only; live search compatibility remains unverified.

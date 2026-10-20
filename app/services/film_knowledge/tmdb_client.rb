@@ -7,6 +7,20 @@ module FilmKnowledge
       new(token: ENV["TMDB_API_READ_ACCESS_TOKEN"]).movie(tmdb_id:)
     end
 
+    def self.search(query:, page: 1, primary_release_year: nil)
+      query = validate_search!(query:, page:, primary_release_year:)
+      new(token: ENV["TMDB_API_READ_ACCESS_TOKEN"]).search(query:, page:, primary_release_year:)
+    end
+
+    def self.validate_search!(query:, page:, primary_release_year:)
+      unless query.is_a?(String) && query.valid_encoding? && query.strip.present? && query.strip.length <= 200 &&
+          page.is_a?(Integer) && (1..500).cover?(page) &&
+          (primary_release_year.nil? || (primary_release_year.is_a?(Integer) && (1000..9999).cover?(primary_release_year)))
+        raise InvalidTmdbSearch, "Invalid TMDB search parameters"
+      end
+      query.strip
+    end
+
     def initialize(token:, http_class: Net::HTTP)
       @token = token
       @http_class = http_class
@@ -14,11 +28,24 @@ module FilmKnowledge
 
     def movie(tmdb_id:)
       raise InvalidTmdbId, "TMDB ID must be a positive Integer" unless tmdb_id.is_a?(Integer) && tmdb_id.positive?
+      request_json(path: "/3/movie/#{tmdb_id}", parameters: { language: "en-US" }, movie_not_found: true)
+    end
+
+    def search(query:, page: 1, primary_release_year: nil)
+      query = self.class.validate_search!(query:, page:, primary_release_year:)
+      parameters = { query:, page:, language: "en-US", include_adult: false }
+      parameters[:primary_release_year] = primary_release_year unless primary_release_year.nil?
+      request_json(path: "/3/search/movie", parameters:)
+    end
+
+    private
+
+    def request_json(path:, parameters:, movie_not_found: false)
       unless @token.is_a?(String) && @token.present? && !@token.match?(/[\r\n]/)
         raise TmdbConfigurationError, "Configure TMDB_API_READ_ACCESS_TOKEN"
       end
 
-      uri = URI("https://api.themoviedb.org/3/movie/#{tmdb_id}?language=en-US")
+      uri = URI::HTTPS.build(host: "api.themoviedb.org", path:, query: URI.encode_www_form(parameters))
       http = @http_class.new(uri.host, uri.port)
       http.use_ssl = true
       http.open_timeout = 5
@@ -36,7 +63,8 @@ module FilmKnowledge
         raise InvalidTmdbResponse, "TMDB returned invalid movie data" unless payload.is_a?(Hash)
         payload
       when 404
-        raise TmdbNotFound, "TMDB movie was not found"
+        raise TmdbNotFound, "TMDB movie was not found" if movie_not_found
+        raise TmdbUnavailable.new(reason: :http_error)
       when 401, 403
         raise TmdbUnavailable.new(reason: :authentication)
       when 429

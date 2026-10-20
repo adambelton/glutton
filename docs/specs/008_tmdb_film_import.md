@@ -1,6 +1,6 @@
 # 008 — Import one selected TMDB film
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge / import
 
 ## Goal
@@ -70,4 +70,4 @@ Provider references checked 20 October 2026: [movie details](https://developer.t
 
 Owner authorization: Spec approved on 20 October 2026.
 
-Owner acceptance / merge: Pending review and merge.
+Owner acceptance / merge: Owner approved publication and merge after hosted CI passes. Merged via [PR #18](https://github.com/adambelton/glutton/pull/18) on 20 October 2026 at 10:16:48 UTC after Repository checks passed for commit `96339987e5a9738b293ba242e1cd8458ae79d3fc`; squash merge `b367a1b629c3d450e3e2707176c9d5ae993b394e`.
