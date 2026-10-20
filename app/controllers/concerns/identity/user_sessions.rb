@@ -19,9 +19,7 @@ module Identity
 
       payload = identity_payload
       user = User.find_by(id: payload["user_id"]) if payload
-      user&.check_access!
-
-      @current_user = bound_session&.active? ? user : nil
+      @current_user = user&.resume_session(session: bound_session)
       clear_identity_cookie unless @current_user
       @current_user
     end

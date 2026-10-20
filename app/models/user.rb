@@ -5,8 +5,8 @@ class User < ApplicationRecord
     super
   end
 
-  def check_access!
-    self
+  def resume_session(session:)
+    self if session&.active? && session.user_id == id
   end
 
   def remember_session_until
@@ -18,10 +18,6 @@ class User < ApplicationRecord
   end
 
   def can_reset_password?
-    false
-  end
-
-  def can_reset_password_for?(user:)
     false
   end
 

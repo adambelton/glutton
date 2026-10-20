@@ -13,10 +13,6 @@ class UserRegistered < User
     active? && email_confirmed_at.present?
   end
 
-  def can_reset_password_for?(user:)
-    active? && id == user.id
-  end
-
   def reset_password!(password:, password_confirmation:)
     raise Identity::PasswordResetUnavailable unless can_reset_password?
 

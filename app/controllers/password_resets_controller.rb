@@ -14,6 +14,9 @@ class PasswordResetsController < ApplicationController
   rescue_from Identity::PasswordResetUnavailable do
     render :unavailable, status: :unprocessable_entity
   end
+  rescue_from Identity::PasswordResetConflict do
+    render :conflict, status: :conflict
+  end
   rescue_from Identity::RequestPasswordReset::Failed do
     @delivery_error = I18n.t("identity.recovery.delivery_failed")
     render :new, status: :service_unavailable
@@ -62,14 +65,6 @@ class PasswordResetsController < ApplicationController
 
   def load_reset_user
     @token = params[:token]
-    raise Identity::PasswordResetUnavailable unless @token.is_a?(String) && @token.present?
-
-    @reset_user = UserRegistered.find_by_password_reset_token(@token)
-    unless @reset_user&.can_reset_password?
-      raise Identity::PasswordResetUnavailable
-    end
-    if current_user && !current_user.can_reset_password_for?(user: @reset_user)
-      render :conflict, status: :conflict
-    end
+    @reset_user = Identity::ResolvePasswordReset.call(token: @token, current_user_id: current_user&.id)
   end
 end

@@ -8,10 +8,6 @@ class UserGuest < User
     I18n.t("identity.registration.guest_signout_warning")
   end
 
-  def can_reset_password_for?(user:)
-    active?
-  end
-
   def can_register?
     persisted? && active?
   end

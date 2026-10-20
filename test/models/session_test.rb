@@ -6,6 +6,27 @@ class SessionTest < ActiveSupport::TestCase
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
   end
 
+  test "resuming a session returns only its active owning identity" do
+    user = UserGuest.create!
+    authentication = Session.create!(user:)
+    other = UserGuest.create!
+    assert_same user, user.resume_session(session: authentication)
+    assert_nil other.resume_session(session: authentication)
+    assert_nil user.resume_session(session: nil)
+    Session.revoke(id: authentication.id)
+    assert_nil user.resume_session(session: authentication)
+  end
+
+  test "expired guests cannot resume and deleted accounts reject even a missing session" do
+    freeze_time
+    user = UserGuest.create!
+    authentication = Session.create!(user:)
+    travel 24.hours do
+      assert_nil user.resume_session(session: authentication)
+    end
+    assert_raises(Identity::AccountDeleted) { UserDeleted.create!.resume_session(session: nil) }
+  end
+
   test "guest issuance preserves account identity and deadline" do
     guest = UserGuest.create!
     attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
