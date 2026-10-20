@@ -1,10 +1,14 @@
 require "digest"
 
 class PendingRegistration < ApplicationRecord
-  belongs_to :guest_user, class_name: "UserGuest", optional: true
+  EXPIRY_DURATION = 1.hour.freeze
 
-  generates_token_for :email_confirmation, expires_in: 1.hour do
-    Digest::SHA256.hexdigest([ email_address, password_digest ].to_json)
+  belongs_to :guest_user, class_name: "User", optional: true
+
+  scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
+
+  generates_token_for :email_confirmation do
+    Digest::SHA256.hexdigest([ email_address, password_digest, expires_at, active? ].to_json)
   end
 
   has_secure_password reset_token: false
@@ -21,20 +25,32 @@ class PendingRegistration < ApplicationRecord
   validate :email_is_unregistered, on: :create
 
   def expires_at
-    deadline = created_at + 24.hours
-    guest_deadline = guest_expires_at
-    guest_deadline.present? ? [ deadline, guest_deadline ].min : deadline
-  end
-
-  def guest_expires_at
-    created = User.where(id: guest_user_id).pick(:created_at) if guest_user_id.present?
-    created + 24.hours if created.present?
+    created_at + EXPIRY_DURATION
   end
 
   def active?
-    return false unless persisted? && created_at + 24.hours > Time.current
+    return false unless persisted? && expires_at > Time.current
 
-    guest_user_id.nil? || UserGuest.active.exists?(guest_user_id)
+    guest_user_id.nil? || User.find_by(id: guest_user_id)&.active?
+  end
+
+  def unattached?
+    guest_user_id.nil?
+  end
+
+  def available_to?(user:)
+    active? && user.can_register? && (unattached? || guest_user_id == user.id)
+  end
+
+  def attach_to!(user:)
+    raise Identity::RegistrationUnavailable unless user.can_register? && active?
+    if (guest_user_id.present? && guest_user_id != user.id) ||
+        self.class.where(guest_user_id: user.id).where.not(id:).exists?
+      raise Identity::RegistrationConflict
+    end
+
+    update!(guest_user_id: user.id) if guest_user_id.nil?
+    self
   end
 
   private

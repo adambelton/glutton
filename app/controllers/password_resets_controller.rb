@@ -14,6 +14,9 @@ class PasswordResetsController < ApplicationController
   rescue_from Identity::PasswordResetUnavailable do
     render :unavailable, status: :unprocessable_entity
   end
+  rescue_from Identity::PasswordResetConflict do
+    render :conflict, status: :conflict
+  end
   rescue_from Identity::RequestPasswordReset::Failed do
     @delivery_error = I18n.t("identity.recovery.delivery_failed")
     render :new, status: :service_unavailable
@@ -33,7 +36,7 @@ class PasswordResetsController < ApplicationController
   def update
     credentials = { password: nil, password_confirmation: nil }.merge(params.permit(:password, :password_confirmation).to_h.symbolize_keys)
     user = Identity::ResetPassword.call(token: @token, **credentials)
-    if current_user.is_a?(UserRegistered) && current_user.id == user.id
+    if current_user&.id == user.id
       clear_identity_cookie
       reset_session
     end
@@ -62,14 +65,6 @@ class PasswordResetsController < ApplicationController
 
   def load_reset_user
     @token = params[:token]
-    raise Identity::PasswordResetUnavailable unless @token.is_a?(String) && @token.present?
-
-    @reset_user = UserRegistered.find_by_password_reset_token(@token)
-    unless @reset_user.present? && @reset_user.active? && @reset_user.email_confirmed_at.present?
-      raise Identity::PasswordResetUnavailable
-    end
-    if current_user.is_a?(UserRegistered) && current_user.id != @reset_user.id
-      render :conflict, status: :conflict
-    end
+    @reset_user = Identity::ResolvePasswordReset.call(token: @token, current_user_id: current_user&.id)
   end
 end

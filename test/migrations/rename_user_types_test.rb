@@ -5,7 +5,7 @@ class RenameUserTypesTest < ActiveSupport::TestCase
   test "migration preserves identities credentials and sessions in both directions" do
     registered = UserRegistered.create!(email_address: "migration@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-    users = [ registered, UserGuest.create!, UserDeleted.create!, User.create!(type: "User") ]
+    users = [ registered, UserGuest.create!, UserDeleted.create!, User.find(User.insert_all!([ { type: "User" } ]).rows.first.first) ]
     session = Session.create!(user: registered)
     connection = User.connection
     snapshot = connection.select_all("SELECT * FROM users ORDER BY id").to_a

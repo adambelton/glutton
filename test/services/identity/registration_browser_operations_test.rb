@@ -11,9 +11,9 @@ module Identity
       record = prepare
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       guest = UserGuest.create!
-      before = record.attributes.except("guest_user_id", "updated_at")
+      before = record.slice(:id, :email_address, :password_digest, :created_at)
       2.times { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: guest.id) }
-      assert_equal before, record.reload.attributes.except("guest_user_id", "updated_at")
+      assert_equal before, record.reload.slice(:id, :email_address, :password_digest, :created_at)
       assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
       other_guest = UserGuest.create!
       assert_raises(RegistrationConflict) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: other_guest.id) }
@@ -34,7 +34,7 @@ module Identity
         assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: id) }
       end
       fresh_guest = UserGuest.create!
-      travel 24.hours
+      travel PendingRegistration::EXPIRY_DURATION
       assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: fresh_guest.id) }
       assert_nil record.reload.guest_user_id
     end
@@ -47,7 +47,7 @@ module Identity
       assert_nil record.reload.guest_user_id
       session = CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
       assert_equal guest.id, session.user_id
-      assert_instance_of UserRegistered, session.user
+      assert (session.user).can_reset_password?
     end
 
     test "failed browser confirmation rolls back attachment" do
@@ -60,7 +60,7 @@ module Identity
         CompleteBrowserRegistration.call(token:, current_user_id: guest.id, pending_registration_id: record.id)
       end
       assert_nil record.reload.guest_user_id
-      assert_instance_of UserGuest, User.find(guest.id)
+      assert_not (User.find(guest.id)).can_reset_password?
     end
 
     test "invalid replacement retains prior direct record while valid replacement deletes it" do

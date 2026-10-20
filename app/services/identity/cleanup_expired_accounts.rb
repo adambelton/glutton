@@ -6,7 +6,7 @@ module Identity
       end
 
       counts = { guests_deleted: 0, pending_registrations_deleted: 0 }
-      UserGuest.where(created_at: ..24.hours.ago).order(:created_at, :id).limit(batch_size).pluck(:id).each do |id|
+      UserGuest.expired.order(:created_at, :id).limit(batch_size).pluck(:id).each do |id|
         deleted = delete_guest(id)
         next if deleted.nil?
 
@@ -34,9 +34,7 @@ module Identity
     private_class_method :delete_guest
 
     def self.pending_candidates(batch_size)
-      PendingRegistration.joins("LEFT JOIN users AS lifetime_owners ON lifetime_owners.id = pending_registrations.guest_user_id")
-        .where("pending_registrations.created_at <= :cutoff OR lifetime_owners.created_at <= :cutoff", cutoff: 24.hours.ago)
-        .order(:created_at, :id).limit(batch_size).pluck(:id, :guest_user_id)
+      PendingRegistration.expired.order(:created_at, :id).limit(batch_size).pluck(:id, :guest_user_id)
     end
     private_class_method :pending_candidates
 
@@ -45,7 +43,7 @@ module Identity
         # Match preparation, attachment and confirmation: owner before pending row.
         User.lock.find_by(id: guest_user_id) if guest_user_id.present?
         registration = PendingRegistration.lock.find_by(id:)
-        next 0 if registration.nil? || registration.guest_user_id != guest_user_id || registration.expires_at > Time.current
+        next 0 if registration.nil? || registration.guest_user_id != guest_user_id || registration.active?
 
         registration.destroy!
         1

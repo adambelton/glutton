@@ -39,7 +39,7 @@ en:
       restart: Start registration again
       continue: Continue exploring
       expires: "This registration request expires on %{deadline}."
-      guest_temporary: "Your guest activity is temporary and expires on %{deadline} unless you complete registration first."
+      guest_temporary: "Your guest activity is temporary. Complete registration while your guest account is active to keep your progress."
       unavailable_title: Registration unavailable
       unavailable: This registration request is no longer available. Start again or sign in if you already verified your email.
       conflict_title: Sign out before continuing

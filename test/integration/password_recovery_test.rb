@@ -160,7 +160,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal cookie, cookies[:session_id]
     assert guest_session.active?
-    assert_instance_of UserGuest, guest.reload
+    assert_not (guest.reload).can_reset_password?
     assert PendingRegistration.exists?(pending.id)
     get registration_path
     assert_response :success

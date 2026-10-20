@@ -9,13 +9,13 @@ module Identity
       return registration.tap(&:save!) if guest_user_id.nil?
 
       PendingRegistration.transaction do
-        guest = UserGuest.active.lock.find_by(id: guest_user_id)
-        # Lock contention can carry a guest past the deadline used by the scope.
-        raise RegistrationUnavailable unless guest&.active?
+        user = User.lock.find_by(id: guest_user_id)
+        # Check current permission after acquiring the user lock.
+        raise RegistrationUnavailable unless user&.can_register?
 
-        registration.guest_user = guest
+        registration.guest_user = user
         registration.validate!
-        PendingRegistration.where(guest_user_id: guest.id).delete_all
+        PendingRegistration.where(guest_user_id: user.id).delete_all
         registration.save!
         registration
       end

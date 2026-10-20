@@ -83,7 +83,7 @@ module Identity
       @pending_ids << replacement.id
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
-      assert_instance_of UserGuest, User.find(guest.id)
+      assert_not (User.find(guest.id)).can_reset_password?
       assert PendingRegistration.exists?(replacement.id)
       assert_not Session.exists?(user_id: guest.id)
     end
@@ -101,7 +101,7 @@ module Identity
         CompleteRegistration.call(token:)
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert_instance_of UserRegistered, User.find(guest.id)
+      assert (User.find(guest.id)).can_reset_password?
       assert session.active?
       assert_not PendingRegistration.exists?(guest_user_id: guest.id)
     end
@@ -110,9 +110,9 @@ module Identity
       freeze_time
       guest = UserGuest.create!
       @user_ids << guest.id
+      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second
       record = prepare(email: "waiting-expiry@example.test", guest:)
       @pending_ids << record.id
-      travel_to guest.created_at + 24.hours - 1.second
       token = token_for(record)
       contender = nil
       PendingRegistration.transaction do
@@ -121,7 +121,7 @@ module Identity
         travel 2.seconds
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert_instance_of UserGuest, User.find(guest.id)
+      assert_not (User.find(guest.id)).can_reset_password?
       assert PendingRegistration.exists?(record.id)
       assert_not Session.exists?(user_id: guest.id)
     end

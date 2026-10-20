@@ -10,7 +10,7 @@ class FilmTest < ActiveSupport::TestCase
 
     attributes = { title: "A film", metadata: { "original_title" => "Original title" }, release_date: Date.new(1982, 6, 25), tmdb_id: 1091 }
     complete = Film.create!(attributes)
-    assert_equal attributes.stringify_keys, complete.reload.attributes.slice(*attributes.keys.map(&:to_s))
+    assert_equal attributes.stringify_keys, complete.reload.slice(*attributes.keys.map(&:to_s))
     assert_not_equal minimal.id, complete.id
     another = Film.create!(attributes.merge(tmdb_id: 999))
     assert_not_equal complete.id, another.id

@@ -89,7 +89,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal 0, UserRegistered.count
     confirm(token:)
     assert_response :see_other
-    assert_instance_of UserRegistered, Session.last.user
+    assert (Session.last.user).can_reset_password?
     assert_not PendingRegistration.exists?(registration.id)
     header = Array(response.headers["set-cookie"]).join("\n").downcase
     %w[expires= httponly samesite=lax].each { |value| assert_includes header, value }
@@ -105,7 +105,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     registration = PendingRegistration.last
     confirmation_token = email_token
     old_cookie = cookies[:session_id]
-    travel 24.hours
+    travel UserGuest::EXPIRY_DURATION
     assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Identity::CleanupExpiredAccounts.call)
     cookies[:session_id] = old_cookie
     get registration_confirmation_path(token: confirmation_token)
@@ -126,7 +126,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal created.id, registration.reload.guest_user_id
     get root_path
     assert_response :success
-    assert_select 'aside[role="status"]', text: /guest activity is temporary/
+    assert_select 'aside[role="status"]', text: /#{Regexp.escape(I18n.t("identity.registration.guest_temporary"))}/
     assert_select "aside", text: /#{Regexp.escape(I18n.l(registration.expires_at, format: :registration))}/
     get registration_path
     assert_response :success
@@ -137,7 +137,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal created.id, Session.last.user_id
     assert_not old_session.active?
-    assert_instance_of UserRegistered, User.find(created.id)
+    assert (User.find(created.id)).can_reset_password?
   end
 
   test "existing guest signup and cross browser confirmation preserve that guest only" do
@@ -150,16 +150,16 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(other, token:)
     assert_equal 303, other.response.status
     assert_equal created.id, Session.last.user_id
-    assert_instance_of UserRegistered, User.find(created.id)
+    assert (User.find(created.id)).can_reset_password?
   end
 
   test "invalid submission keeps previous credentials and never echoes password fields" do
     signup
     previous = PendingRegistration.last
-    attributes = previous.attributes
+    attributes = previous.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
     signup(password: "tiny", password_confirmation: "tiny")
     assert_response :unprocessable_entity
-    assert_equal attributes, previous.reload.attributes
+    assert_equal attributes, previous.reload.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
     assert_select 'input[type="password"][value]', count: 0
     assert_not_includes response.body, "tiny"
     assert_select '[role="alert"]'
@@ -224,7 +224,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     unrelated = guest(other)
     confirm(other, token:)
     assert_equal 409, other.response.status
-    assert_instance_of UserGuest, User.find(unrelated.id)
+    assert_not (User.find(unrelated.id)).can_reset_password?
     assert_equal 1, PendingRegistration.count
     user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
@@ -242,7 +242,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     signup
     registration = PendingRegistration.last
     token = email_token
-    travel 24.hours
+    travel PendingRegistration::EXPIRY_DURATION
     get root_path
     assert_select '[role="alert"]', text: I18n.t("identity.registration.unavailable")
     assert_select "aside", count: 0

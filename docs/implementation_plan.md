@@ -1,6 +1,6 @@
 # Glutton — Initial implementation plan
 
-Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 merged; task 010 ready for review; tasks 001/001a retain their recorded review status; later tasks planned  
+Status: Tasks 001b, 002, 003 and 004 merged; task 004a merged; task 005 merged; tasks 005a and 005b merged; task 006 merged; tasks 001d and 006e merged; task 006a merged; task 006b merged; task 006f merged; task 006c merged; task 006d merged; task 006g merged; task 007 merged; task 008 merged; task 009 merged; tasks 001e and 010 merged; tasks 001/001a retain their recorded review status; later tasks planned  
 Date: 20 October 2026
 
 ## Task rules
@@ -51,7 +51,7 @@ Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](s
 
 i18n follow-ups: **001d — Merged**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Merged**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
 
-Foundation follow-up: **001e — Ready for review**, [object-role conventions spec](specs/001e_object_role_conventions.md); record agreed role trust, behaviour ownership/naming and independent freshness rules and outcome/contract-focused testing in repository instructions. Documentation only.
+Foundation follow-up: **001e — Merged**, [object-role conventions spec](specs/001e_object_role_conventions.md); record agreed role trust, behaviour ownership/naming and independent freshness rules and outcome/contract-focused testing in repository instructions. Documentation only.
 
 ## First rating and library slice
 
@@ -76,7 +76,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Merged — [spec](specs/007_film_catalogue.md), [PR #17](https://github.com/adambelton/glutton/pull/17) |
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
-| 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Ready for review — [spec](specs/010_library_watched.md); scoped dependent cascade approved and verified |
+| 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Merged — [spec](specs/010_library_watched.md), [PR #20](https://github.com/adambelton/glutton/pull/20); commit 82d9b83, hosted CI passed |
 | 011 | Library / intent | Watchlist addition/removal, retaining independent watched facts | 010 | Planned |
 | 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |
 | 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |
@@ -129,4 +129,23 @@ Plan deletion/retention, security/accessibility, seed/media validation, operatin
 
 Film knowledge sequencing clarification, 20 October 2026: task 007 starts with minimal catalogue persistence and a small local sample. JEV work remains deferred. The initial quality vocabulary is provisional and expected to evolve; validating that starting set is not a prerequisite for catalogue implementation. This does not make draft film analyses fact-checked or authorize publishing unverified claims.
 
-Deferred Identity-owned refactor: review user transitions against the action-permission convention (models own permission; transition services own source/destination coordination). No Identity implementation changes are authorized by task 010.
+Post-merge Identity role/transition fixes are implemented for review in tasks 006h–006k under the owner's subsequent authorization. They are separate from task 010.
+
+
+## Conventions fixes authorized after task 010
+
+| Task | Owner | Independently verifiable outcome | Status |
+| --- | --- | --- | --- |
+| 006h | Identity / registration | User-owned registration permission and lifetime; transition service retains destination/persistence ownership | Ready for review — [spec](specs/006h_registration_roles.md) |
+| 006i | Identity / browser sessions | Session binding and presentation delegate real user behaviour without subtype dispatch | Ready for review — [spec](specs/006i_session_roles.md) |
+| 006j | Identity / credentials | User-owned credential actions and recovery permission with unchanged security outcomes | Ready for review — [spec](specs/006j_credential_roles.md) |
+| 006k | Identity / model construction | Prevent direct User construction without subtype enumeration; preserve legacy-row loading | Ready for review — [spec](specs/006k_user_construction.md) |
+| 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Ready for review — [spec](specs/009a_film_outcome_tests.md) |
+
+Owner requested fixes rather than an audit deliverable. No separate results document is maintained. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Acceptance and merge remain pending.
+
+Guest-duration follow-ups authorized during PR #21 review: **006l — Ready for review**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Ready for review**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
+
+Pending-registration duration follow-up: **006m — Ready for review**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
+
+Explicit anonymous registration access: **006n — Ready for review**, Identity [spec](specs/006n_registration_availability.md).

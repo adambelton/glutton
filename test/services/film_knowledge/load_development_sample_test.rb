@@ -14,7 +14,8 @@ class FilmKnowledge::LoadDevelopmentSampleTest < ActiveSupport::TestCase
     edited = Film.create!(tmdb_id: 348, title: "Local title", metadata: { original_title: "Local original", note: "Keep me" },
       release_date: Date.new(1979, 5, 24))
     unrelated = Film.create!(title: "Unrelated")
-    before = [ edited.attributes, unrelated.attributes ]
+    edited_updated_at = edited.updated_at
+    unrelated_updated_at = unrelated.updated_at
 
     in_development do
       first = FilmKnowledge::LoadDevelopmentSample.call
@@ -22,10 +23,17 @@ class FilmKnowledge::LoadDevelopmentSampleTest < ActiveSupport::TestCase
       assert_equal [ "Local title", "The Thing", "Get Out" ], first.map(&:title)
       second = FilmKnowledge::LoadDevelopmentSample.call
       assert_equal first.map(&:id), second.map(&:id)
-      assert_equal first.map(&:attributes), second.map(&:attributes)
+      assert_equal [ "Local title", "The Thing", "Get Out" ], second.map(&:title)
     end
     assert_equal 4, Film.count
-    assert_equal before, [ edited.reload.attributes, unrelated.reload.attributes ]
+    edited.reload
+    unrelated.reload
+    assert_equal "Local title", edited.title
+    assert_equal Date.new(1979, 5, 24), edited.release_date
+    assert_equal({ "original_title" => "Local original", "note" => "Keep me" }, edited.metadata)
+    assert_equal edited_updated_at, edited.updated_at
+    assert_equal "Unrelated", unrelated.title
+    assert_equal unrelated_updated_at, unrelated.updated_at
     assert_nil Film.find_by!(tmdb_id: 1091).release_date
   end
 

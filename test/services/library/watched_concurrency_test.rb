@@ -78,7 +78,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     User.transaction do
       @guest.lock!
       claim
-      travel 24.hours
+      travel UserGuest::EXPIRY_DURATION
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
@@ -89,7 +89,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "cleanup wins before waiting write and cannot leave orphaned library activity" do
     freeze_time
     record
-    travel 24.hours
+    travel UserGuest::EXPIRY_DURATION
     contender = nil
     User.transaction do
       @guest.lock!
@@ -114,7 +114,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     User.transaction do
       @guest.lock!
       claim
-      travel 24.hours
+      travel UserGuest::EXPIRY_DURATION
       contender = blocked { record }
     end
     assert Timeout.timeout(5) { contender.value }.persisted?

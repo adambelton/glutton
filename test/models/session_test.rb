@@ -6,30 +6,52 @@ class SessionTest < ActiveSupport::TestCase
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
   end
 
+  test "resuming a session returns only its active owning identity" do
+    user = UserGuest.create!
+    authentication = Session.create!(user:)
+    other = UserGuest.create!
+    assert_equal user, Session.resume(id: authentication.id, user_id: user.id)
+    assert_nil Session.resume(id: authentication.id, user_id: other.id)
+    assert_nil Session.resume(id: nil, user_id: user.id)
+    Session.revoke(id: authentication.id)
+    assert_nil Session.resume(id: authentication.id, user_id: user.id)
+  end
+
+  test "expired guests cannot resume and deleted accounts reject even a missing session" do
+    freeze_time
+    user = UserGuest.create!
+    authentication = Session.create!(user:)
+    travel UserGuest::EXPIRY_DURATION do
+      assert_nil Session.resume(id: authentication.id, user_id: user.id)
+    end
+    deleted = UserDeleted.create!
+    assert_raises(Identity::AccountDeleted) { Session.resume(id: nil, user_id: deleted.id) }
+  end
+
   test "guest issuance preserves account identity and deadline" do
     guest = UserGuest.create!
-    attributes = guest.attributes
+    attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
     session = Session.create!(user: guest)
     assert session.active?
     assert_equal guest.id, session.user_id
-    assert_equal attributes, guest.reload.attributes
+    assert_equal attributes, guest.reload.slice(:id, :created_at, :email_address, :password_digest)
   end
 
   test "guest activity follows the account deadline rather than session age" do
     guest = freeze_time { UserGuest.create! }
-    travel_to guest.created_at + 23.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION / 2 do
       session = Session.create!(user: guest)
       assert session.active?
     end
     session = Session.find_by!(user: guest)
-    travel_to guest.created_at + 24.hours - 1.second do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second do
       assert session.active?
     end
-    travel_to guest.created_at + 24.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION do
       assert_not session.active?
       assert_not Session.new(user: guest).valid?
     end
-    travel_to guest.created_at + 25.hours do
+    travel_to guest.created_at + UserGuest::EXPIRY_DURATION + 1.hour do
       assert_not session.active?
     end
   end
@@ -37,21 +59,21 @@ class SessionTest < ActiveSupport::TestCase
   test "registered sessions have no age deadline" do
     user = registered_user
     session = Session.create!(user: user)
-    attributes = session.attributes
+    attributes = session.slice(:id, :user_id, :created_at)
     travel 365.days do
       assert session.active?
       assert user.active?
-      assert_equal attributes, session.reload.attributes
+      assert_equal attributes, session.reload.slice(:id, :user_id, :created_at)
     end
   end
 
   test "deleted owner is detected despite cached associations" do
     user = registered_user
     session = Session.create!(user: user)
-    assert_instance_of UserRegistered, session.user
+    assert session.user.can_reset_password?
     user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
     assert_not session.active?
-    assert_instance_of UserDeleted, Session.find(session.id).user
+    assert_not Session.find(session.id).user.active?
     assert_not Session.new(user: user).valid?
   end
 

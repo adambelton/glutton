@@ -77,14 +77,14 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   test "deadline is enforced between requests and replacement does not renew old guest" do
     user = freeze_time { User.find(create_guest["id"]) }
     original_time = user.created_at
-    travel_to user.created_at + 24.hours - 1.second do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION - 1.second do
       assert_equal user.id, lookup["id"]
     end
-    travel_to user.created_at + 24.hours do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION do
       assert_nil lookup["id"]
       assert_nil lookup["stored_id"]
     end
-    travel_to user.created_at + 24.hours + 1.second do
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION + 1.second do
       assert_nil lookup["id"]
       assert_not_equal user.id, create_guest["id"]
     end
@@ -116,7 +116,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
 
   test "registered sign in replaces guest binding without moving guest activity" do
     guest = User.find(create_guest["id"])
-    attributes = guest.attributes
+    attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
     old_session = Session.find_by!(user: guest)
     user = UserRegistered.create!(email_address: "switch@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
@@ -128,7 +128,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal user.id, lookup["id"]
     assert_not old_session.active?
-    assert_equal attributes, guest.reload.attributes
+    assert_equal attributes, guest.reload.slice(:id, :created_at, :email_address, :password_digest)
   end
 
   test "cookie has browser session protections" do

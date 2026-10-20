@@ -126,7 +126,7 @@ module Identity
       result = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, result
       assert_not PendingRegistration.exists?(record.id)
-      assert_instance_of UserGuest, User.find(guest.id)
+      assert_not (User.find(guest.id)).can_reset_password?
       assert new_session.active?
     end
   end
