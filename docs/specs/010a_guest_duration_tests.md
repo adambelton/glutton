@@ -1,6 +1,6 @@
 # 010a — Library guest lifetime verification
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / verification
 
 ## Goal
@@ -30,4 +30,4 @@ The guest lifetime can change in one model constant without rewriting guest-boun
 
 Added the frozen model-owned duration constant and updated expiry-sensitive tests. Near-deadline registration setup now creates fresh pending requests near guest expiry so tests work for shorter and longer guest lifetimes; independent pending/token deadlines retain their own values. Library changes are tests only. Daylight-saving verification uses elapsed seconds and the configured duration rather than a fixed local-hour expectation. Default lifetime is unchanged, no expiry timestamp accessor or runtime consumer coupling was added, and no non-test data changed. Session resumption ownership is handled separately by task 006i.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged in [PR #21](https://github.com/adambelton/glutton/pull/21) on 20 October 2026; verified merge commit `0fa54269df0140451ab19ac5b665fb64d6cc3c50`.

@@ -1,6 +1,6 @@
 # 006i — Browser session role ownership
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / browser sessions
 
 ## Goal
@@ -32,7 +32,7 @@ User behaviour owns access rejection, sign-out warning and browser session remem
 
 All verification used isolated test data. Owner authorized creating a PR for online review after local verification; acceptance and merge remain pending. The owner requested fixes directly; there is no separate audit-results document.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged in [PR #21](https://github.com/adambelton/glutton/pull/21) on 20 October 2026; verified merge commit `0fa54269df0140451ab19ac5b665fb64d6cc3c50`.
 
 Expiry encapsulation UI correction: the registration reminder must no longer inspect guest expiry. Show the registration-owned deadline and general localized temporary-guest information; user expiry remains internal. Relevant browser tests must pass with missing translations raised.
 

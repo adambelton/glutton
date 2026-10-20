@@ -1,6 +1,6 @@
 # 006n — Explicit anonymous registration access
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration
 
 ## Goal
@@ -30,4 +30,4 @@ Make anonymous pending-registration access explicit while available_to? trusts a
 
 The caller checks activity and explicitly chooses user availability or anonymous unattached access. available_to? trusts the user role. Existing duplicate-email validation, delivery check and completion/database enforcement are unchanged.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged in [PR #21](https://github.com/adambelton/glutton/pull/21) on 20 October 2026; verified merge commit `0fa54269df0140451ab19ac5b665fb64d6cc3c50`.

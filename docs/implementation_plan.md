@@ -136,16 +136,16 @@ Post-merge Identity role/transition fixes are implemented for review in tasks 00
 
 | Task | Owner | Independently verifiable outcome | Status |
 | --- | --- | --- | --- |
-| 006h | Identity / registration | User-owned registration permission and lifetime; transition service retains destination/persistence ownership | Ready for review — [spec](specs/006h_registration_roles.md) |
-| 006i | Identity / browser sessions | Session binding and presentation delegate real user behaviour without subtype dispatch | Ready for review — [spec](specs/006i_session_roles.md) |
-| 006j | Identity / credentials | User-owned credential actions and recovery permission with unchanged security outcomes | Ready for review — [spec](specs/006j_credential_roles.md) |
-| 006k | Identity / model construction | Prevent direct User construction without subtype enumeration; preserve legacy-row loading | Ready for review — [spec](specs/006k_user_construction.md) |
-| 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Ready for review — [spec](specs/009a_film_outcome_tests.md) |
+| 006h | Identity / registration | User-owned registration permission and lifetime; transition service retains destination/persistence ownership | Merged — [spec](specs/006h_registration_roles.md) |
+| 006i | Identity / browser sessions | Session binding and presentation delegate real user behaviour without subtype dispatch | Merged — [spec](specs/006i_session_roles.md) |
+| 006j | Identity / credentials | User-owned credential actions and recovery permission with unchanged security outcomes | Merged — [spec](specs/006j_credential_roles.md) |
+| 006k | Identity / model construction | Prevent direct User construction without subtype enumeration; preserve legacy-row loading | Merged — [spec](specs/006k_user_construction.md) |
+| 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Merged — [spec](specs/009a_film_outcome_tests.md) |
 
-Owner requested fixes rather than an audit deliverable. No separate results document is maintained. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Acceptance and merge remain pending.
+Owner requested fixes rather than an audit deliverable. No separate results document is maintained. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Owner accepted and authorized merge; PR #21 merged on 20 October 2026 at `0fa54269df0140451ab19ac5b665fb64d6cc3c50` after GitHub Repository checks passed.
 
-Guest-duration follow-ups authorized during PR #21 review: **006l — Ready for review**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Ready for review**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
+Guest-duration follow-ups authorized during PR #21 review: **006l — Merged**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Merged**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
 
-Pending-registration duration follow-up: **006m — Ready for review**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
+Pending-registration duration follow-up: **006m — Merged**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
 
-Explicit anonymous registration access: **006n — Ready for review**, Identity [spec](specs/006n_registration_availability.md).
+Explicit anonymous registration access: **006n — Merged**, Identity [spec](specs/006n_registration_availability.md).

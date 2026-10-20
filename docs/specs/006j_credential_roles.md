@@ -1,6 +1,6 @@
 # 006j — Credential action ownership
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / credentials
 
 ## Goal
@@ -32,7 +32,7 @@ Registered credential authentication and password-reset mutation/session revocat
 
 All verification used isolated test data. Owner authorized creating a PR for online review after local verification; acceptance and merge remain pending. The owner requested fixes directly; there is no separate audit-results document.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged in [PR #21](https://github.com/adambelton/glutton/pull/21) on 20 October 2026; verified merge commit `0fa54269df0140451ab19ac5b665fb64d6cc3c50`.
 
 PR review correction: use UserRegistered.transaction explicitly in the registered model action rather than reflecting through self.class. No behaviour or transaction boundary change intended. Verification: focused recovery tests passed 18 tests/243 assertions; full `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed 220 tests/2,560 assertions, zero failures/errors/skips, style/security clean. `git diff --check` passed.
 

@@ -1,6 +1,6 @@
 # 006m — Pending registration lifetime constant
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration lifetime
 
 ## Goal
@@ -32,4 +32,4 @@ A shorter pending-registration lifetime is defined once and used by its expiry l
 
 Owner requested a substantially shorter pending lifetime and constant reuse; duration preference was requested while independent test cleanup proceeded; the owner selected one hour. The owner then requested one expiry owner for registration and its confirmation links; the independent token timer is removed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by owner and merged in [PR #21](https://github.com/adambelton/glutton/pull/21) on 20 October 2026; verified merge commit `0fa54269df0140451ab19ac5b665fb64d6cc3c50`.
