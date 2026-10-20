@@ -14,7 +14,7 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
 ### Persistence and operation (owner-approved simplification)
 
 - Keep LibraryFilm as the STI root and LibraryFilmWatched and the narrowly scoped LibraryFilmToWatch subtype, with unique user/film identity, required references and existing scoped deletion policy.
-- Store id, type, user_id, film_id and standard Rails timestamps. Remove watched_at through a follow-up migration: no current feature needs a separate confirmation/viewing timestamp.
+- Store id, type, user_id, film_id and standard Rails timestamps. Omit watched_at from the initial unmerged migration: no current feature needs a separate confirmation/viewing timestamp.
 - Library::RecordWatched.call(user_id:, film_id:) accepts internal user/film IDs and resolves both records inside its transaction, returning the persisted LibraryFilm entry. An existing entry with can_watch? false raises Library::AlreadyWatched without changing its row. Concurrent requests serialize; after one succeeds, the next fails with AlreadyWatched. LibraryFilm#can_watch? returns false; LibraryFilmToWatch overrides it to true. RecordWatched owns the permitted ToWatch-to-Watched STI transition using becomes! and save!, preserving relationship identity and returning the destination object. Source subtypes know supported actions, not sibling classes. Models expose permission only; remove model record_watched methods and WatchUnavailable. The service owns success and rejection. No classification hash or library_state method.
 - Remove FilmState: no application consumer establishes a read contract. Do not add a replacement read API for tests.
 - Inline the transaction and user-before-library lock order in RecordWatched; remove FilmAccess. Refresh the locked user and check active? to coordinate with cleanup/claiming. Missing/inactive users raise IdentityUnavailable. Missing films raise FilmUnavailable. Use a normal Film lookup without a row lock: there is no film-deletion workflow; the foreign key protects integrity in a racing deletion. No model persisted? checks or separate Film.exists? query. The user ID must come from trusted Identity resolution when HTTP wiring is added. Persistence errors propagate and caller rollback remains effective.
@@ -50,7 +50,7 @@ Read the implementation plan, product brief sections 2 (Accounts and privacy), 3
   Result: Passed — focused tests cover exact guest expiry, registered longevity, stale/deleted/missing users, unavailable films, ID resolution and user isolation without classification reads.
 - **AC3:** Existing cleanup/claim compatibility, restrictive film references, rollback and explicit retry work without changing other domains.
   Check: Library retention/concurrency tests with real Identity operations; full CI, eager loading and whitespace checks.
-  Result: Passed — real cleanup/claim and separate-connection concurrency tests pass, including outer rollback, injected persistence failure and explicit retry. Full CI: 219 tests, 2,533 assertions, zero failures/errors/skips; RuboCop 123 files clean; gem/importmap audits clean; Brakeman zero errors/warnings. Zeitwerk application eager loading passes with the existing mail-preview exclusion. Whitespace checks pass.
+  Result: Passed — real cleanup/claim and separate-connection concurrency tests pass, including outer rollback, injected persistence failure and explicit retry. Full CI: 219 tests, 2,533 assertions, zero failures/errors/skips; RuboCop 121 files clean; gem/importmap audits clean; Brakeman zero errors/warnings. Zeitwerk application eager loading passes with the existing mail-preview exclusion. Whitespace checks pass.
 
 ## Implementation notes
 
@@ -58,7 +58,7 @@ LibraryFilm and LibraryFilmToWatch expose can_watch? (false by default, true for
 
 Owner explicitly replaced the earlier idempotent-success contract: repeated and concurrent requests after success must raise AlreadyWatched without modifying the row. System consumers must specify their own justified duplicate handling; they must not mask unrelated failures. A retry following rolled-back persistence remains possible. No model-level fallback action or WatchUnavailable remains.
 
-Removed FilmState, FilmAccess, library_state, subtype allowlists and redundant watched_at. Follow-up migrations preserve already-applied migration history and were applied only to the test database. Root construction is rejected without subclass enumeration. Destination-save failure and caller rollback preserve the original ToWatch row; retry succeeds. Separate-connection tests cover serialized transition rejection and existing Identity claim/cleanup compatibility. No Identity or Film implementation changes, network requests or non-test data writes.
+Removed FilmState, FilmAccess, library_state, subtype allowlists and redundant watched_at. Owner requested consolidating the final schema into the initial unmerged migration; remove both follow-up migrations. Rebuild only the isolated test Library table to verify the edited migration. Root construction is rejected without subclass enumeration. Destination-save failure and caller rollback preserve the original ToWatch row; retry succeeds. Separate-connection tests cover serialized transition rejection and existing Identity claim/cleanup compatibility. No Identity or Film implementation changes, network requests or non-test data writes.
 
 User transition refactoring remains deferred to the Identity-owned follow-up. The minimal ToWatch subtype and its watched transition are explicitly owner-approved; watchlist management/UI, dismissal and reverse transitions remain deferred.
 
@@ -72,6 +72,8 @@ RAILS_ENV=test bin/rails zeitwerk:check
 git diff --check
 ```
 
-Final already-watched rejection verification: Passed — focused suite 21 tests/102 assertions; full CI 219 tests/2,533 assertions, zero failures/errors/skips; RuboCop 123 files clean; dependency audits clean; Brakeman zero warnings/errors; Zeitwerk application eager loading passed with the existing preview exclusion; git diff --check passed. No migration was needed for this revision.
+Final already-watched rejection verification: Passed — focused suite 21 tests/102 assertions; full CI 219 tests/2,533 assertions, zero failures/errors/skips; RuboCop 121 files clean; dependency audits clean; Brakeman zero warnings/errors; Zeitwerk application eager loading passed with the existing preview exclusion; git diff --check passed. No migration was needed for this revision.
 
 Owner authorization: Spec, scoped cascade, minimal ToWatch transition, ID inputs and explicit AlreadyWatched failure approved on 20 October 2026. Updating PR #20 is authorized. PR #20 was originally opened without approval; the owner subsequently authorized updates for review. Acceptance and merge remain pending; no merge is authorized.
+
+Migration consolidation verification: Passed — rolled back versions 20261020170000, 20261020160000 and 20261020140000 in the isolated test database using RAILS_ENV=test bin/rails db:migrate:down VERSION=<version>; edited the initial migration and removed both follow-ups; RAILS_ENV=test bin/rails db:migrate recreated the final table successfully. Full CI passed: 219 tests/2,533 assertions, style (121 files) and all security checks clean. git diff --check passed. No development/production data changed.
