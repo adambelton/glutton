@@ -1,0 +1,12 @@
+en:
+  activerecord:
+    models:
+      library_film: Library film
+      library_film_watched: Watched library film
+    attributes:
+      library_film:
+        type: Library classification
+        user: User
+        film: Film
+        film_id: Film
+        watched_at: Watched confirmation time

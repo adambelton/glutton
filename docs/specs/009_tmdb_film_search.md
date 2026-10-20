@@ -1,6 +1,6 @@
 # 009 — Search TMDB for film selection
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge / search
 
 ## Goal
@@ -70,4 +70,4 @@ References checked 20 October 2026: [TMDB movie search](https://developer.themov
 
 Owner authorization: Spec approved on 20 October 2026.
 
-Owner acceptance / merge: Pending review and merge.
+Owner acceptance / merge: Owner approved publication and merge after hosted CI passes. Merged via [PR #19](https://github.com/adambelton/glutton/pull/19) on 20 October 2026 at 10:45:41 UTC after Repository checks passed for commit `9ccca7b263dfe72885c759a41b947204ddbad3f3`; squash merge `2c042c544b8083f7987fb5ea3d32200736e89a84`.
