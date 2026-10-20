@@ -55,13 +55,15 @@ module Identity
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, cleanup)
     end
 
-    test "linked pending is capped by the older guest deadline" do
+    test "guest inactivity invalidates linked registration before its own deadline" do
       freeze_time
       guest = UserGuest.create!
       travel 23.hours
       linked = pending(guest:)
-      assert_equal Time.current + 1.hour, linked.expires_at
+      assert_equal Time.current + 24.hours, linked.expires_at
       travel 1.hour
+      assert_not linked.active?
+      assert linked.expires_at > Time.current
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, cleanup)
     end
 

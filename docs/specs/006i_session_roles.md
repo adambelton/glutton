@@ -33,3 +33,7 @@ User behaviour owns access rejection, sign-out warning and browser session remem
 All verification used isolated test data. Owner authorized creating a PR for online review after local verification; acceptance and merge remain pending. The owner requested fixes directly; there is no separate audit-results document.
 
 Owner acceptance / merge: Pending.
+
+Expiry encapsulation UI correction: the registration reminder must no longer inspect guest expiry. Show the registration-owned deadline and general localized temporary-guest information; user expiry remains internal. Relevant browser tests must pass with missing translations raised.
+
+Expiry-reminder verification: focused registration/browser suite passed 100 tests/896 assertions and full CI passed 220 tests/2,560 assertions with strict missing-translation checks enabled. Only the registration deadline is rendered; no guest deadline API remains in application code.

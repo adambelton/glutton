@@ -81,9 +81,8 @@ class UserTest < ActiveSupport::TestCase
   test "registration permission follows the guest deadline and is denied by default" do
     guest = freeze_time { UserGuest.create! }
     assert guest.can_register?
-    assert_equal guest.created_at + 24.hours, guest.registration_expires_at
     assert_not UserDeleted.create!.can_register?
-    travel_to guest.registration_expires_at do
+    travel_to guest.created_at + 24.hours do
       assert_not guest.can_register?
     end
   end

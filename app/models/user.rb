@@ -33,10 +33,6 @@ class User < ApplicationRecord
     false
   end
 
-  def registration_expires_at
-    nil
-  end
-
   def active?
     true
   end

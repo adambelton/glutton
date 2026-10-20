@@ -126,7 +126,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal created.id, registration.reload.guest_user_id
     get root_path
     assert_response :success
-    assert_select 'aside[role="status"]', text: /guest activity is temporary/
+    assert_select 'aside[role="status"]', text: /#{Regexp.escape(I18n.t("identity.registration.guest_temporary"))}/
     assert_select "aside", text: /#{Regexp.escape(I18n.l(registration.expires_at, format: :registration))}/
     get registration_path
     assert_response :success

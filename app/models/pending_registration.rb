@@ -3,6 +3,8 @@ require "digest"
 class PendingRegistration < ApplicationRecord
   belongs_to :guest_user, class_name: "User", optional: true
 
+  scope :expired, -> { where(arel_table[:created_at].lteq(24.hours.ago)) }
+
   generates_token_for :email_confirmation, expires_in: 1.hour do
     Digest::SHA256.hexdigest([ email_address, password_digest ].to_json)
   end
@@ -21,19 +23,13 @@ class PendingRegistration < ApplicationRecord
   validate :email_is_unregistered, on: :create
 
   def expires_at
-    deadline = created_at + 24.hours
-    guest_deadline = guest_expires_at
-    guest_deadline.present? ? [ deadline, guest_deadline ].min : deadline
-  end
-
-  def guest_expires_at
-    User.find_by(id: guest_user_id)&.registration_expires_at if guest_user_id.present?
+    created_at + 24.hours
   end
 
   def active?
-    return false unless persisted? && created_at + 24.hours > Time.current
+    return false unless persisted? && expires_at > Time.current
 
-    guest_user_id.nil? || User.find_by(id: guest_user_id)&.can_register?
+    guest_user_id.nil? || User.find_by(id: guest_user_id)&.active?
   end
 
   def available_to?(user:)
