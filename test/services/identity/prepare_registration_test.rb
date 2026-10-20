@@ -20,7 +20,7 @@ module Identity
     end
 
     test "guest preparation and replacement retain guest state and revoke old request identity" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       session = Session.create!(user: guest)
       before = guest.attributes
       session_before = session.attributes
@@ -40,7 +40,7 @@ module Identity
     end
 
     test "every invalid replacement rolls back to previous credentials" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       first = prepare(guest_user_id: guest.id)
       before = first.attributes
       [ { password: nil }, { password: "" }, { password: "short" }, { password_confirmation: nil },
@@ -54,7 +54,7 @@ module Identity
     end
 
     test "a database failure after deleting the prior request rolls back replacement" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       first = prepare(guest_user_id: guest.id)
       before = first.attributes
       PendingRegistration.connection.execute("ALTER TABLE pending_registrations ADD CONSTRAINT test_replacement_failure CHECK (email_address <> 'fail@example.test')")
@@ -66,10 +66,10 @@ module Identity
     end
 
     test "missing registered deleted and expired guests cannot prepare" do
-      registered = RegisteredUser.create!(email_address: "registered@example.test", password: "a long password phrase",
+      registered = UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-      deleted = DeletedUser.create!
-      guest = freeze_time { GuestUser.create! }
+      deleted = UserDeleted.create!
+      guest = freeze_time { UserGuest.create! }
       travel_to guest.created_at + 24.hours - 1.second do
         assert prepare(guest_user_id: guest.id).persisted?
       end
@@ -84,20 +84,20 @@ module Identity
     end
 
     test "stored lifecycle wins over a cached guest and pending email never selects a user" do
-      cached = GuestUser.create!
-      cached.update_columns(type: "DeletedUser")
-      assert_instance_of GuestUser, cached
+      cached = UserGuest.create!
+      cached.update_columns(type: "UserDeleted")
+      assert_instance_of UserGuest, cached
       assert_raises(RegistrationUnavailable) { prepare(guest_user_id: cached.id) }
-      registered = RegisteredUser.create!(email_address: "reader@example.test", password: "registered password",
+      registered = UserRegistered.create!(email_address: "reader@example.test", password: "registered password",
         password_confirmation: "registered password", email_confirmed_at: Time.current)
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       [ {}, { guest_user_id: guest.id } ].each do |attributes|
         assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
           error = assert_raises(ActiveRecord::RecordInvalid) { prepare(email_address: " READER@Example.TEST ", **attributes) }
           assert_includes error.record.errors.details[:email_address], { error: :registered }
         end
       end
-      assert_equal registered, RegisteredUser.find_by_email("reader@example.test")
+      assert_equal registered, UserRegistered.find_by_email("reader@example.test")
       assert_nil Authenticate.call(email_address: "reader@example.test", password: "a long password phrase")
       assert_nil guest.reload.email_address
     end

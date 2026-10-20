@@ -2,7 +2,7 @@ module Identity
   class AttachRegistration
     def self.call(pending_registration_id:, guest_user_id:)
       PendingRegistration.transaction(requires_new: true) do
-        guest = GuestUser.active.lock.find_by(id: guest_user_id)
+        guest = UserGuest.active.lock.find_by(id: guest_user_id)
         registration = PendingRegistration.lock.find_by(id: pending_registration_id)
         raise RegistrationUnavailable unless guest.present? && guest.active? && registration.present? && registration.active?
 

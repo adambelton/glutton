@@ -11,7 +11,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     @origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example.test"
-    @user = RegisteredUser.create!(email_address: "recovery@example.test", password: "original password phrase",
+    @user = UserRegistered.create!(email_address: "recovery@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     @reset_token = @user.password_reset_token
     ActionMailer::Base.deliveries.clear
@@ -73,7 +73,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     assert_equal digest, @user.reload.password_digest
-    assert_equal @user, RegisteredUser.find_by_password_reset_token(@reset_token)
+    assert_equal @user, UserRegistered.find_by_password_reset_token(@reset_token)
   end
 
   test "invalid input rerenders empty fields and success requires fresh sign in" do
@@ -126,7 +126,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "another registered browser conflicts and deleted browser fails explicitly" do
-    other = RegisteredUser.create!(email_address: "different@example.test", password: "original password phrase",
+    other = UserRegistered.create!(email_address: "different@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     sign_in(user: other)
     cookie = cookies[:session_id]
@@ -136,7 +136,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_response :conflict
     assert_equal cookie, cookies[:session_id]
     assert @user.reload.authenticate("original password phrase")
-    other.update_columns(type: "DeletedUser", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+    other.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
     get new_password_reset_path
     assert_response :gone
   end
@@ -160,7 +160,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal cookie, cookies[:session_id]
     assert guest_session.active?
-    assert_instance_of GuestUser, guest.reload
+    assert_instance_of UserGuest, guest.reload
     assert PendingRegistration.exists?(pending.id)
     get registration_path
     assert_response :success

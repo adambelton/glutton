@@ -97,7 +97,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     key = :session_id
     other.cookies[key] = cookies[key]
     tokens = [ lookup["token"], lookup(other)["token"] ]
-    user.update_column(:type, "DeletedUser")
+    user.update_column(:type, "UserDeleted")
     Session.where(user_id: user.id).delete_all
 
     assert_no_difference "User.count" do
@@ -118,7 +118,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     guest = User.find(create_guest["id"])
     attributes = guest.attributes
     old_session = Session.find_by!(user: guest)
-    user = RegisteredUser.create!(email_address: "switch@example.test", password: "a long password phrase",
+    user = UserRegistered.create!(email_address: "switch@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     post session_path, params: { email_address: user.email_address, password: "incorrect", authenticity_token: lookup["token"] }
     assert_response :unprocessable_entity

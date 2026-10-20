@@ -18,14 +18,14 @@ module Identity
         digest = record.password_digest
         token = token_for(record)
         session = nil
-        assert_difference [ "RegisteredUser.count", "Session.count" ], 1 do
+        assert_difference [ "UserRegistered.count", "Session.count" ], 1 do
           assert_difference "PendingRegistration.count", -1 do
             session = CompleteRegistration.call(token:)
           end
         end
         user = session.user
         assert session.active?
-        assert_instance_of RegisteredUser, user
+        assert_instance_of UserRegistered, user
         assert_equal "reader@example.test", user.email_address
         assert_equal digest, user.password_digest
         assert_equal Time.current, user.email_confirmed_at
@@ -35,7 +35,7 @@ module Identity
     end
 
     test "guest confirmation retains identity and revokes every preconfirmation session" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       old_sessions = 2.times.map { Session.create!(user: guest) }
       created_at = guest.created_at
       record = prepare(guest_user_id: guest.id)
@@ -46,7 +46,7 @@ module Identity
         session = CompleteRegistration.call(token:)
       end
       user = User.find(guest.id)
-      assert_instance_of RegisteredUser, user
+      assert_instance_of UserRegistered, user
       assert_equal created_at, user.created_at
       assert_equal digest, user.password_digest
       assert_equal user, session.user
@@ -62,18 +62,18 @@ module Identity
           assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
         end
       end
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       record = prepare(guest_user_id: guest.id)
       token = token_for(record)
-      guest.update_columns(type: "DeletedUser")
+      guest.update_columns(type: "UserDeleted")
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       assert PendingRegistration.exists?(record.id)
-      assert_instance_of DeletedUser, User.find(guest.id)
+      assert_instance_of UserDeleted, User.find(guest.id)
     end
 
     test "email conflict never authenticates or changes the existing account" do
       record = prepare
-      existing = RegisteredUser.create!(email_address: "reader@example.test", password: "existing password phrase",
+      existing = UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
       existing_attributes = existing.attributes
       error = nil
@@ -86,7 +86,7 @@ module Identity
     end
 
     test "failure at each mutation stage rolls back the entire guest completion" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       Session.create!(user: guest)
       record = prepare(guest_user_id: guest.id)
       token = token_for(record)

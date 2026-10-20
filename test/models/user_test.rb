@@ -3,7 +3,7 @@ require "test_helper"
 class UserTest < ActiveSupport::TestCase
   test "guest persists an identity and fixed expiry without credentials" do
     freeze_time do
-      user = GuestUser.create!
+      user = UserGuest.create!
       id = user.id
 
       user.reload
@@ -11,22 +11,22 @@ class UserTest < ActiveSupport::TestCase
       assert_equal id, user.id
       assert_equal Time.current, user.created_at
       assert_equal Time.current, user.updated_at
-      assert_instance_of GuestUser, User.find(id)
+      assert_instance_of UserGuest, User.find(id)
       assert_not user.has_attribute?(:guest_expires_at)
       assert_not user.has_attribute?(:email)
       assert_nil user.email_address
       assert_nil user.password_digest
-      assert_not_equal id, GuestUser.create!.id
+      assert_not_equal id, UserGuest.create!.id
     end
   end
 
   test "active guest scope evaluates the current time and excludes the expiry boundary" do
-    guest = freeze_time { GuestUser.create! }
+    guest = freeze_time { UserGuest.create! }
     travel_to guest.created_at + 24.hours - 1.second do
-      assert_includes GuestUser.active, guest
+      assert_includes UserGuest.active, guest
     end
     travel_to guest.created_at + 24.hours do
-      assert_not_includes GuestUser.active, guest
+      assert_not_includes UserGuest.active, guest
       assert_not guest.active?
     end
   end
@@ -36,7 +36,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "guest expires exactly at its deadline" do
-    user = freeze_time { GuestUser.create! }
+    user = freeze_time { UserGuest.create! }
 
     travel_to (user.created_at + 24.hours) - 1.second do
       assert user.active?
@@ -50,7 +50,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "reads and timestamp updates do not renew expiry" do
-    user = GuestUser.create!
+    user = UserGuest.create!
     expiry = user.created_at + 24.hours
 
     travel 12.hours do
@@ -62,7 +62,7 @@ class UserTest < ActiveSupport::TestCase
 
   test "guest lifetime is 24 elapsed hours across daylight saving" do
     Time.use_zone("Europe/London") do
-      user = travel_to(Time.zone.local(2026, 10, 24, 12)) { GuestUser.create! }
+      user = travel_to(Time.zone.local(2026, 10, 24, 12)) { UserGuest.create! }
       travel_time = user.created_at + 24.hours
       assert_equal 11, travel_time.in_time_zone.hour
       travel_to travel_time - 1.second do
@@ -75,7 +75,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "deleted users are inactive regardless of age" do
-    user = DeletedUser.create!
+    user = UserDeleted.create!
     assert_not User.find(user.id).active?
 
     travel 48.hours do
@@ -96,6 +96,6 @@ class UserTest < ActiveSupport::TestCase
         User.new.save!(validate: false)
       end
     end
-    assert GuestUser.create!.persisted?
+    assert UserGuest.create!.persisted?
   end
 end

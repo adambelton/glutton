@@ -6,7 +6,7 @@ module Identity
     self.use_transactional_tests = false
 
     setup do
-      @user = RegisteredUser.create!(email_address: "recovery-concurrency@example.test", password: "original password phrase",
+      @user = UserRegistered.create!(email_address: "recovery-concurrency@example.test", password: "original password phrase",
         password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     end
 
@@ -20,7 +20,7 @@ module Identity
     test "waiting duplicate redemption revalidates digest after locking" do
       token = @user.password_reset_token
       ready = Queue.new
-      RegisteredUser.transaction do
+      UserRegistered.transaction do
         @user.lock!
         @thread = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do |connection|
@@ -57,8 +57,8 @@ module Identity
         raise "SMTP inside transaction" if ActiveRecord::Base.connection.transaction_open?
         Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
-            RegisteredUser.transaction do
-              RegisteredUser.lock("FOR UPDATE NOWAIT").find(user_id)
+            UserRegistered.transaction do
+              UserRegistered.lock("FOR UPDATE NOWAIT").find(user_id)
             end
           end
         end.value

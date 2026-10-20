@@ -96,7 +96,7 @@ module Identity
     end
 
     test "attachment waiting behind replacement rejects the old request" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       @user_ids << guest.id
       record = prepare(guest:)
       contender = nil
@@ -113,7 +113,7 @@ module Identity
 
     test "attachment after committed confirmation cannot resurrect pending credentials" do
       record = prepare
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       @user_ids << guest.id
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       contender = nil
@@ -126,7 +126,7 @@ module Identity
       result = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, result
       assert_not PendingRegistration.exists?(record.id)
-      assert_instance_of GuestUser, User.find(guest.id)
+      assert_instance_of UserGuest, User.find(guest.id)
       assert new_session.active?
     end
   end

@@ -2,7 +2,7 @@ require "test_helper"
 
 class Identity::AuthenticateTest < ActiveSupport::TestCase
   setup do
-    @user = RegisteredUser.create!(email_address: "viewer@example.test", password: "a long password phrase",
+    @user = UserRegistered.create!(email_address: "viewer@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
   end
 
@@ -37,8 +37,8 @@ class Identity::AuthenticateTest < ActiveSupport::TestCase
   end
 
   test "guest and deleted identities cannot authenticate with registered credentials" do
-    guest = GuestUser.create!
-    @user.update_columns(type: "DeletedUser", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+    guest = UserGuest.create!
+    @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
     assert_no_difference [ "Session.count", "User.count" ] do
       assert_nil Identity::Authenticate.call(email_address: "viewer@example.test", password: "a long password phrase")
       assert_nil Identity::Authenticate.call(email_address: guest.email_address, password: "a long password phrase")

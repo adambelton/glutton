@@ -83,13 +83,13 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_select 'form[action="/registration_confirmation"] input[type="submit"]'
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_equal "no-referrer", response.headers["Referrer-Policy"]
-    assert_equal 0, RegisteredUser.count
+    assert_equal 0, UserRegistered.count
     head registration_confirmation_path, params: { token: }
     assert_response :success
-    assert_equal 0, RegisteredUser.count
+    assert_equal 0, UserRegistered.count
     confirm(token:)
     assert_response :see_other
-    assert_instance_of RegisteredUser, Session.last.user
+    assert_instance_of UserRegistered, Session.last.user
     assert_not PendingRegistration.exists?(registration.id)
     header = Array(response.headers["set-cookie"]).join("\n").downcase
     %w[expires= httponly samesite=lax].each { |value| assert_includes header, value }
@@ -137,7 +137,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal created.id, Session.last.user_id
     assert_not old_session.active?
-    assert_instance_of RegisteredUser, User.find(created.id)
+    assert_instance_of UserRegistered, User.find(created.id)
   end
 
   test "existing guest signup and cross browser confirmation preserve that guest only" do
@@ -150,7 +150,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(other, token:)
     assert_equal 303, other.response.status
     assert_equal created.id, Session.last.user_id
-    assert_instance_of RegisteredUser, User.find(created.id)
+    assert_instance_of UserRegistered, User.find(created.id)
   end
 
   test "invalid submission keeps previous credentials and never echoes password fields" do
@@ -177,7 +177,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal 1, PendingRegistration.count
     confirm(token:)
     assert_response :unprocessable_entity
-    assert_equal 0, RegisteredUser.count
+    assert_equal 0, UserRegistered.count
   end
 
   test "resend enforces a minute interval five attempts and preserves expiry" do
@@ -224,9 +224,9 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     unrelated = guest(other)
     confirm(other, token:)
     assert_equal 409, other.response.status
-    assert_instance_of GuestUser, User.find(unrelated.id)
+    assert_instance_of UserGuest, User.find(unrelated.id)
     assert_equal 1, PendingRegistration.count
-    user = RegisteredUser.create!(email_address: "existing@example.test", password: "a long password phrase",
+    user = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     other.post session_path, params: { email_address: user.email_address, password: "a long password phrase", authenticity_token: csrf(other) }
     confirm(other, token:)
@@ -253,7 +253,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "already registered email is rejected without pending creation or another email" do
-    existing = RegisteredUser.create!(email_address: "reader@example.test", password: "existing password phrase",
+    existing = UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
       password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
     assert_no_difference [ "PendingRegistration.count", "Session.count", "ActionMailer::Base.deliveries.count" ] do
       signup(email_address: " READER@Example.TEST ")
@@ -333,7 +333,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   test "deleted browser identity retains its explicit failure even with pending state" do
     created = guest
     signup
-    created.update_columns(type: "DeletedUser")
+    created.update_columns(type: "UserDeleted")
     get registration_path
     assert_response :gone
     get root_path

@@ -11,7 +11,7 @@ module Identity
       recipient, token = PendingRegistration.transaction(requires_new: true) do
         registration = PendingRegistration.lock.find_by(id: pending_registration_id)
         raise RegistrationUnavailable unless registration.present? && registration.active?
-        raise RegistrationUnavailable if RegisteredUser.exists?(email_address: registration.email_address)
+        raise RegistrationUnavailable if UserRegistered.exists?(email_address: registration.email_address)
         raise Exhausted if registration.confirmation_delivery_attempts >= 5
         if registration.confirmation_delivery_attempted_at.present? && registration.confirmation_delivery_attempted_at > 60.seconds.ago
           raise Limited

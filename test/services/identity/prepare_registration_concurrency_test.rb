@@ -6,7 +6,7 @@ module Identity
     self.use_transactional_tests = false
 
     test "same guest preparations serialize across separate connections" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       ready = Queue.new
       thread = nil
       first = nil

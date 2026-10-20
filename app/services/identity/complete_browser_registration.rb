@@ -4,7 +4,7 @@ module Identity
       return CompleteRegistration.call(token:) if current_user_id.nil?
 
       PendingRegistration.transaction(requires_new: true) do
-        guest = GuestUser.active.lock.find_by(id: current_user_id)
+        guest = UserGuest.active.lock.find_by(id: current_user_id)
         raise RegistrationConflict unless guest.present? && guest.active?
         raise RegistrationUnavailable unless token.is_a?(String) && token.present?
 

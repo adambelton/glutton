@@ -3,7 +3,7 @@ require "test_helper"
 module Identity
   class ResetPasswordTest < ActiveSupport::TestCase
     setup do
-      @user = RegisteredUser.create!(email_address: "reset@example.test", password: "original password phrase",
+      @user = UserRegistered.create!(email_address: "reset@example.test", password: "original password phrase",
         password_confirmation: "original password phrase", email_confirmed_at: Time.current)
       @token = @user.password_reset_token
       2.times { Session.create!(user: @user) }
@@ -16,18 +16,18 @@ module Identity
     test "native tokens expire at fifteen minutes and expose no credentials" do
       freeze_time do
         token = @user.password_reset_token
-        definition = RegisteredUser.token_definitions.fetch(:password_reset)
+        definition = UserRegistered.token_definitions.fetch(:password_reset)
         payload = definition.message_verifier.verified(token, purpose: definition.full_purpose).to_json
         [ @user.email_address, @user.password_digest, "original password phrase" ].each { |value| refute_includes payload, value }
         travel 899.seconds
-        assert_equal @user, RegisteredUser.find_by_password_reset_token(token)
+        assert_equal @user, UserRegistered.find_by_password_reset_token(token)
         travel 1.second
         assert_raises(PasswordResetUnavailable) { reset(token:) }
       end
       [ nil, "", "tampered", @user.signed_id(purpose: :other) ].each do |token|
         assert_raises(PasswordResetUnavailable) { reset(token:) }
       end
-      [ GuestUser, DeletedUser, PendingRegistration ].each { |model| refute model.method_defined?(:password_reset_token) }
+      [ UserGuest, UserDeleted, PendingRegistration ].each { |model| refute model.method_defined?(:password_reset_token) }
     end
 
     test "validation preserves digest sessions and token at all policy boundaries" do
@@ -37,7 +37,7 @@ module Identity
         assert_raises(ActiveRecord::RecordInvalid) { reset(password:, password_confirmation:) }
         assert_equal digest, @user.reload.password_digest
         assert_equal 2, Session.where(user: @user).count
-        assert_equal @user, RegisteredUser.find_by_password_reset_token(@token)
+        assert_equal @user, UserRegistered.find_by_password_reset_token(@token)
       end
       [ "x" * 15, "x" * 72, "é" * 36 ].each do |password|
         @token = @user.reload.password_reset_token
@@ -47,7 +47,7 @@ module Identity
     end
 
     test "success revokes only target sessions invalidates all links and never authenticates" do
-      guest_session = Session.create!(user: GuestUser.create!)
+      guest_session = Session.create!(user: UserGuest.create!)
       second_token = travel(1.second) { @user.password_reset_token }
       assert_no_difference "User.count" do
         assert_difference "Session.count", -2 do
@@ -71,11 +71,11 @@ module Identity
       end
       assert_equal digest, @user.reload.password_digest
       assert_equal 2, Session.where(user: @user).count
-      assert_equal @user, RegisteredUser.find_by_password_reset_token(@token)
+      assert_equal @user, UserRegistered.find_by_password_reset_token(@token)
     end
 
     test "deleted account cannot redeem an earlier token" do
-      @user.update_columns(type: "DeletedUser", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+      @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
       assert_raises(PasswordResetUnavailable) { reset }
     end
   end

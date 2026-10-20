@@ -1,7 +1,7 @@
 require "digest"
 
 class PendingRegistration < ApplicationRecord
-  belongs_to :guest_user, class_name: "GuestUser", optional: true
+  belongs_to :guest_user, class_name: "UserGuest", optional: true
 
   generates_token_for :email_confirmation, expires_in: 1.hour do
     Digest::SHA256.hexdigest([ email_address, password_digest ].to_json)
@@ -34,7 +34,7 @@ class PendingRegistration < ApplicationRecord
   def active?
     return false unless persisted? && created_at + 24.hours > Time.current
 
-    guest_user_id.nil? || GuestUser.active.exists?(guest_user_id)
+    guest_user_id.nil? || UserGuest.active.exists?(guest_user_id)
   end
 
   private
@@ -42,6 +42,6 @@ class PendingRegistration < ApplicationRecord
   def email_is_unregistered
     return if email_address.blank? || errors[:email_address].any?
 
-    errors.add(:email_address, :registered) if RegisteredUser.exists?(email_address: email_address)
+    errors.add(:email_address, :registered) if UserRegistered.exists?(email_address: email_address)
   end
 end

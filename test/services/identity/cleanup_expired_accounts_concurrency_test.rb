@@ -19,7 +19,7 @@ module Identity
     end
 
     def guest
-      GuestUser.create!.tap { |record| @user_ids << record.id }
+      UserGuest.create!.tap { |record| @user_ids << record.id }
     end
 
     def pending(guest: nil)
@@ -62,7 +62,7 @@ module Identity
         completed
       end
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
-      assert_instance_of RegisteredUser, User.find(owner.id)
+      assert_instance_of UserRegistered, User.find(owner.id)
       assert session.active?
       assert_not PendingRegistration.exists?(request.id)
     end
@@ -145,9 +145,9 @@ module Identity
       blocked = guest
       Session.create!(user: blocked)
       travel 24.hours
-      original = GuestUser.instance_method(:destroy!)
+      original = UserGuest.instance_method(:destroy!)
       blocked_id = blocked.id
-      GuestUser.define_method(:destroy!) do
+      UserGuest.define_method(:destroy!) do
         raise IOError, "simulated failure" if id == blocked_id
         original.bind_call(self)
       end
@@ -159,7 +159,7 @@ module Identity
       end.value
       assert_equal [ false, true, true ], visible
     ensure
-      GuestUser.define_method(:destroy!, original) if original
+      UserGuest.define_method(:destroy!, original) if original
     end
   end
 end

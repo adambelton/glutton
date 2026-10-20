@@ -69,7 +69,7 @@ module Identity
     end
 
     test "committed guest replacement wins over waiting confirmation" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       @user_ids << guest.id
       original = prepare(email: "replacement-confirmation@example.test", guest:)
       @pending_ids << original.id
@@ -83,13 +83,13 @@ module Identity
       @pending_ids << replacement.id
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
-      assert_instance_of GuestUser, User.find(guest.id)
+      assert_instance_of UserGuest, User.find(guest.id)
       assert PendingRegistration.exists?(replacement.id)
       assert_not Session.exists?(user_id: guest.id)
     end
 
     test "guest confirmation prevents a waiting preparation from recreating pending credentials" do
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       @user_ids << guest.id
       record = prepare(email: "confirmation-wins@example.test", guest:)
       @pending_ids << record.id
@@ -101,14 +101,14 @@ module Identity
         CompleteRegistration.call(token:)
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert_instance_of RegisteredUser, User.find(guest.id)
+      assert_instance_of UserRegistered, User.find(guest.id)
       assert session.active?
       assert_not PendingRegistration.exists?(guest_user_id: guest.id)
     end
 
     test "waiting across the guest expiry deadline cannot complete registration" do
       freeze_time
-      guest = GuestUser.create!
+      guest = UserGuest.create!
       @user_ids << guest.id
       record = prepare(email: "waiting-expiry@example.test", guest:)
       @pending_ids << record.id
@@ -121,7 +121,7 @@ module Identity
         travel 2.seconds
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert_instance_of GuestUser, User.find(guest.id)
+      assert_instance_of UserGuest, User.find(guest.id)
       assert PendingRegistration.exists?(record.id)
       assert_not Session.exists?(user_id: guest.id)
     end
@@ -144,7 +144,7 @@ module Identity
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
       assert_nil loser.cause
-      assert_equal 1, RegisteredUser.where(email_address: "email-race@example.test").count
+      assert_equal 1, UserRegistered.where(email_address: "email-race@example.test").count
       assert_equal 1, Session.where(user_id: winner.user_id).count
       assert PendingRegistration.exists?(second.id)
     end
