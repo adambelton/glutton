@@ -10,7 +10,7 @@ This section summarizes current delivery status; task tables and linked specs re
 | Area | Current status |
 | --- | --- |
 | Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f is Ready for review. Documentation follow-up 001g is Ready for review. |
-| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o and confirmation simplification 006p are Ready for review. |
+| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p and explicit confirmation paths 006q are Ready for review. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b is Ready for review. |
 | Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist/dismissal management and product UI remain planned. |
 | Ratings and Recommendations | Planned; no implementation delivered. |
@@ -180,3 +180,5 @@ The owner authorized implementation after reviewing audit 001f and discussing Id
 Submission/delivery orchestration, broad Identity rewrites and release infrastructure remain outside this change. Owner acceptance and merge are pending.
 
 Verification for 006o/006p/009b/001g: full local CI passed 232 tests / 2,633 assertions, zero failures/errors/skips; RuboCop 127 files clean; dependency audits clean; Brakeman zero warnings/errors. Application eager loading and whitespace checks passed. Individual specs record commands, initial regression failure and limitations. No hosted CI or merge performed.
+
+Confirmation readability follow-up: **006q — Ready for review**, Identity / registration; [spec](specs/006q_confirmation_paths.md). The owner requested an explicit top-level current-user versus anonymous branch while reviewing PR #22. Full local CI passed 232 tests / 2,633 assertions, style and security checks. Existing contracts and lock order are preserved; acceptance and merge remain pending.

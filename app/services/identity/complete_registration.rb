@@ -5,18 +5,18 @@ module Identity
 
       PendingRegistration.transaction(requires_new: true) do
         # Preparation and cleanup also lock the user before the pending request.
-        source_user_id = current_user_id || candidate.guest_user_id
-        source_user = User.lock.find_by(id: source_user_id) if source_user_id
-        raise RegistrationConflict if current_user_id && source_user.nil?
-
-        registration = PendingRegistration.lock.resolve_confirmation!(token:)
-        raise RegistrationUnavailable unless registration.guest_user_id == candidate.guest_user_id
-
         if current_user_id
-          registration.authorize_confirmation!(user: source_user, pending_registration_id:)
-          registration.attach_to!(user: source_user) if registration.unattached?
-        elsif registration.guest_user_id && !source_user&.can_register?
-          raise RegistrationUnavailable
+          current_user = User.lock.find_by(id: current_user_id)
+          raise RegistrationConflict unless current_user
+
+          registration = lock_registration(token:, candidate:)
+          registration.authorize_confirmation!(user: current_user, pending_registration_id:)
+          registration.attach_to!(user: current_user) if registration.unattached?
+          source_user = current_user
+        else
+          source_user = User.lock.find_by(id: candidate.guest_user_id) if candidate.guest_user_id
+          registration = lock_registration(token:, candidate:)
+          raise RegistrationUnavailable if registration.guest_user_id && !source_user&.can_register?
         end
 
         user = source_user.present? ? source_user.becomes!(UserRegistered) : UserRegistered.new
@@ -45,5 +45,13 @@ module Identity
 
       raise
     end
+
+    def self.lock_registration(token:, candidate:)
+      registration = PendingRegistration.lock.resolve_confirmation!(token:)
+      raise RegistrationUnavailable unless registration.guest_user_id == candidate.guest_user_id
+
+      registration
+    end
+    private_class_method :lock_registration
   end
 end
