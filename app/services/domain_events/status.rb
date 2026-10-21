@@ -1,8 +1,7 @@
 module DomainEvents
   class Status
     def self.call(subscriptions: Subscriptions.all)
-      outstanding = EventDelivery.where(status: [ EventDelivery::Statuses::PENDING, EventDelivery::Statuses::FAILED ])
-      oldest = outstanding.minimum(:created_at)
+      oldest = EventDelivery.outstanding.minimum(:created_at)
       {
         retained_events: DomainEvent.count,
         undiscovered: subscriptions.map do |subscription|

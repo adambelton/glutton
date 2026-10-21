@@ -13,6 +13,7 @@ class EventDelivery < ApplicationRecord
   belongs_to :domain_event
 
   scope :completed, -> { where(status: Statuses::TERMINAL) }
+  scope :outstanding, -> { where(status: [ Statuses::PENDING, Statuses::FAILED ]) }
   scope :due, -> { where(status: Statuses::PENDING).where(next_attempt_at: ..Time.current) }
 
   def complete!(outcome)

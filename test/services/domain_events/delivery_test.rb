@@ -40,6 +40,23 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     refute_includes JSON.generate(status), "private"
   end
 
+  test "backlog age excludes completed work and includes pending and failed deliveries" do
+    publish
+    dispatch(subscription)
+    travel 1.hour
+    event = publish
+    dispatch(subscription { raise ArgumentError })
+    travel 10.seconds
+    assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+    receipt = delivery(event)
+    receipt.update!(attempts: EventDelivery::MAX_ATTEMPTS)
+    receipt.record_failure!(ArgumentError.new)
+    assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+    receipt.retry!
+    dispatch(subscription)
+    assert_nil DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+  end
+
   test "publication retains an immutable envelope and rolls back source and sequence together" do
     first = publish
     assert_equal 1, first.sequence
