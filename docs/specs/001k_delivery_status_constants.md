@@ -11,7 +11,7 @@ Give delivery statuses named constants and status-selection scopes, preserving e
 
 - Define frozen PENDING, FAILED, PROCESSED, IGNORED and SKIPPED strings inside EventDelivery::Statuses. The completed scope groups the three completion statuses directly; no separate collection constant is needed.
 - Reference constants from EventDelivery and Deliver. Reuse EventDelivery.completed in Dispatch's predecessor query and add EventDelivery.outstanding (pending or failed) for Status reporting.
-- Add a failed scope for failure reporting. Keep existing subscription, discovery, ordering and predecessor queries in place; do not expand this into a general query refactor.
+- Limit scope reuse to queries selecting arrays of statuses: completed and outstanding. Keep single-status queries and existing subscription, discovery, ordering and predecessor queries in place.
 - Replace stored-status literals in delivery, concurrency and job tests. The job test is one additional affected test file found during the full usage search.
 
 ## Scope restrictions
@@ -31,8 +31,10 @@ Give delivery statuses named constants and status-selection scopes, preserving e
 
 ## Implementation notes
 
-Implemented named frozen statuses and the completed/outstanding/failed status scopes across four production files and three test files. Dispatch reuses completed in its existing predecessor subquery; Status reuses outstanding and failed. The single-use TERMINAL collection has been removed. No schema, stored values, handler outcomes or delivery behaviour changed.
+Implemented named frozen statuses and the completed/outstanding status scopes across four production files and three test files. Dispatch reuses completed in its existing predecessor subquery; Status reuses outstanding; the single-status failed query continues to use its named constant. The single-use TERMINAL collection has been removed. No schema, stored values, handler outcomes or delivery behaviour changed.
 
 Review correction: I interpreted the request for scopes too broadly and added subscription, discovery, ordering and readiness scopes without establishing that scope with the owner. Those additions have been removed, including all changes to DomainEvent. The backlog-age regression remains relevant to outstanding status reporting. After narrowing the change, the focused command passed 25 tests / 158 assertions and full CI passed 339 tests / 3,497 assertions with clean style/security checks. `git diff --check` passed.
 
 Spec authorization: Owner approved this follow-up. Implementation acceptance / merge: Pending.
+
+Final owner clarification: scope extraction is limited to status-array queries. Removed the added failed scope as well. Focused delivery/job tests passed again (25 tests / 158 assertions), targeted RuboCop passed for the two changed Ruby files, and `git diff --check` passed. Full CI above predates this final removal.
