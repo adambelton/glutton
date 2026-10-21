@@ -1,6 +1,6 @@
 # 013 — Ratings queue and dismissal
 
-Status: Accepted — owner approved PR and merge after CI on 21 October 2026  
+Status: Merged — PR #27 on 21 October 2026  
 Owner: Ratings / presentations
 
 ## Goal
@@ -50,4 +50,4 @@ Implemented `RatingFilm.dismissed` / `.pending`, model-owned dismissal and `Rati
 
 Scope naming follow-up: replaced `undismissed` with `pending` in the model, batch query and existing scope assertions. Re-ran `PARALLEL_WORKERS=1 bin/rails test test/models/rating_persistence_test.rb test/services/ratings`: 19 tests / 95 assertions passed. `git diff --check` passed. Final full CI rerun after the naming change passed on 21 October 2026: 320 tests / 3,270 assertions, style and security checks clean.
 
-Owner acceptance: Approved on 21 October 2026. Merge: Pending CI and PR merge.
+Owner acceptance: Approved on 21 October 2026. Merged via [PR #27](https://github.com/adambelton/glutton/pull/27) at 18:04:00 UTC (19:04 BST), commit `69bfe2e5862bcd5cca65c77bb2e465e153a6c4e1`. Hosted Repository checks passed on head `98598fb808229e10bf46ac98ac5f2ba1f9a8b371` before merge. Local main fast-forwarded to the merge commit.

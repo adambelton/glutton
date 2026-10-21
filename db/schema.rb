@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -226,6 +226,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_180000) do
     t.index ["user_id", "film_id"], name: "index_rating_films_on_user_id_and_film_id", unique: true
   end
 
+  create_table "ratings", force: :cascade do |t|
+    t.bigint "rating_film_id", null: false
+    t.string "value", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rating_film_id"], name: "index_ratings_on_rating_film_id", unique: true
+    t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'i_enjoyed_that'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
@@ -253,5 +262,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_180000) do
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
   add_foreign_key "rating_films", "films"
   add_foreign_key "rating_films", "users", on_delete: :cascade
+  add_foreign_key "ratings", "rating_films", on_delete: :cascade
   add_foreign_key "sessions", "users"
 end

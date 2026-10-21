@@ -1,13 +1,23 @@
 en:
   ratings:
+    values:
+      brilliant: Brilliant
+      i_enjoyed_that: I enjoyed that
+      not_for_me: Not For Me
+      garbage: Garbage
     errors:
+      already_rated: This film has already been rated.
       identity_unavailable: An active account is required to rate films.
       film_unavailable: This rating film is unavailable.
       dismissal_unavailable: This film has already been dismissed from rating rotation.
   activerecord:
     models:
+      rating: Rating
       rating_film: Rating film
     attributes:
+      rating:
+        rating_film: Rating film
+        value: Rating
       rating_film:
         user: User
         film: Film

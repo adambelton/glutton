@@ -40,6 +40,23 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     refute_includes JSON.generate(status), "private"
   end
 
+  test "backlog age excludes completed work and includes pending and failed deliveries" do
+    publish
+    dispatch(subscription)
+    travel 1.hour
+    event = publish
+    dispatch(subscription { raise ArgumentError })
+    travel 10.seconds
+    assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+    receipt = delivery(event)
+    receipt.update!(attempts: EventDelivery::MAX_ATTEMPTS)
+    receipt.record_failure!(ArgumentError.new)
+    assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+    receipt.retry!
+    dispatch(subscription)
+    assert_nil DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+  end
+
   test "publication retains an immutable envelope and rolls back source and sequence together" do
     first = publish
     assert_equal 1, first.sequence
@@ -79,7 +96,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal({ processed: 1 }, dispatch(subscription))
     assert_equal 1, EventEffect.count
     assert_equal event.id, EventEffect.first.event_id
-    assert_equal "processed", delivery(event).status
+    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
     assert_empty dispatch(subscription)
     assert_equal :not_due, DomainEvents::Deliver.call(delivery_id: delivery(event).id, subscription: subscription)
     assert_equal 1, EventEffect.count
@@ -143,7 +160,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
       assert_equal({ index == 9 ? :failed : :retrying => 1 }, dispatch(failing))
       travel_to delivery(event).next_attempt_at
     end
-    assert_equal "failed", delivery(event).status
+    assert_equal EventDelivery::Statuses::FAILED, delivery(event).status
     assert_empty dispatch(subscription)
     delivery(event).with_lock { delivery(event).retry! }
     assert_equal({ processed: 1 }, dispatch(subscription))
@@ -157,7 +174,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal({ retrying: 1 }, dispatch(subscription(name: "invalid") { |event:, user:| nil }))
     assert_equal({ retrying: 1 }, dispatch(subscription(name: "rollback") { |event:, user:| raise ActiveRecord::Rollback }))
     assert_equal 0, EventEffect.count
-    assert_equal "ignored", delivery(event, subscriber: "ignored").status
+    assert_equal EventDelivery::Statuses::IGNORED, delivery(event, subscriber: "ignored").status
   end
 
   test "expired and deleted owners skip handlers and physical cleanup cascades payloads" do
@@ -170,7 +187,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     travel UserGuest::EXPIRY_DURATION
     assert_equal({ skipped: 2 }, dispatch(subscription))
     assert_equal 0, EventEffect.count
-    assert_equal "skipped", delivery(other_event).status
+    assert_equal EventDelivery::Statuses::SKIPPED, delivery(other_event).status
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not DomainEvent.exists?(expired_event.id)
     assert_not EventDelivery.exists?(domain_event_id: expired_event.id)

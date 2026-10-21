@@ -41,7 +41,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     GoodJob.perform_inline("domain_events", limit: 5)
     assert job.reload.finished_at
     assert_equal [ event.id ], EventEffect.pluck(:event_id)
-    assert_equal "processed", delivery(event).status
+    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
   end
 
   test "source rollback produces neither an event nor a wakeup job" do
@@ -102,9 +102,9 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     assert status.signaled?
     assert_equal Signal.list.fetch("KILL"), status.termsig
     assert_equal 0, EventEffect.count
-    assert_equal "pending", delivery(event).status
+    assert_equal EventDelivery::Statuses::PENDING, delivery(event).status
     GoodJob.perform_inline("domain_events", limit: 5)
     assert_equal [ event.id ], EventEffect.pluck(:event_id)
-    assert_equal "processed", delivery(event).status
+    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
   end
 end

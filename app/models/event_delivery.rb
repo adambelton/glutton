@@ -1,11 +1,19 @@
 class EventDelivery < ApplicationRecord
   MAX_ATTEMPTS = 10
-  TERMINAL_STATUSES = %w[processed ignored skipped].freeze
+  module Statuses
+    PENDING = "pending".freeze
+    FAILED = "failed".freeze
+    PROCESSED = "processed".freeze
+    IGNORED = "ignored".freeze
+    SKIPPED = "skipped".freeze
+  end
 
   belongs_to :domain_event
 
-  scope :completed, -> { where(status: TERMINAL_STATUSES) }
-  scope :due, -> { where(status: "pending").where(next_attempt_at: ..Time.current) }
+  scope :completed, -> { where(status: [ Statuses::PROCESSED, Statuses::IGNORED, Statuses::SKIPPED ]) }
+  scope :failed, -> { where(status: Statuses::FAILED) }
+  scope :outstanding, -> { where(status: [ Statuses::PENDING, Statuses::FAILED ]) }
+  scope :due, -> { where(status: Statuses::PENDING).where(next_attempt_at: ..Time.current) }
 
   def complete!(outcome)
     update!(status: outcome.to_s, completed_at: Time.current, last_error_class: nil)
@@ -13,14 +21,14 @@ class EventDelivery < ApplicationRecord
 
   def record_failure!(error)
     delay = [ 5 * 2**(attempts - 1), 300 ].min.seconds
-    update!(status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+    update!(status: attempts >= MAX_ATTEMPTS ? Statuses::FAILED : Statuses::PENDING,
       next_attempt_at: Time.current + delay, last_error_class: error.class.name)
   end
 
   def retry!
-    raise DomainEvents::RetryUnavailable, "Only failed deliveries can be retried" unless status == "failed"
+    raise DomainEvents::RetryUnavailable, "Only failed deliveries can be retried" unless status == Statuses::FAILED
 
-    update!(status: "pending", attempts: 0, next_attempt_at: Time.current, last_error_class: nil)
+    update!(status: Statuses::PENDING, attempts: 0, next_attempt_at: Time.current, last_error_class: nil)
   end
 
   def predecessor_pending?(subscription)
