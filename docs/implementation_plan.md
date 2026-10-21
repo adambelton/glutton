@@ -207,4 +207,4 @@ Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glut
 
 **001i — Ready for review**, Foundation / event delivery; [spec](specs/001i_durable_event_delivery.md). Implements durable outbox events and ordered subscriber receipts with GoodJob 4.22, after-commit notification wakeups and a recurring recovery sweep. Full local CI passed 292 tests / 3,020 assertions, style and security checks; process-kill recovery and concurrent delivery are covered. [Operations](domain_event_operations.md) documents connections, retry/status and retention. No domain subscriptions, deployment or merge.
 
-PR #25 review follow-up centralizes publishing-domain identifiers and uses them in the delivery tests. Focused checks passed 20 tests / 125 assertions and scoped Ruby style checks; 001i remains Ready for review.
+PR #25 review follow-up puts publishing-domain constants and inclusion validation on DomainEventStream and uses them in delivery tests. Full CI passed 294 tests / 3,027 assertions, style and security checks; 001i remains Ready for review.

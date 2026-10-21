@@ -1,0 +1,11 @@
+en:
+  activerecord:
+    attributes:
+      domain_event_stream:
+        publisher: Publishing domain
+    errors:
+      models:
+        domain_event_stream:
+          attributes:
+            publisher:
+              inclusion: is not supported

@@ -6,6 +6,19 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
 
   setup { prepare_events }
 
+  test "publication rejects unknown domains without persisting a stream or event" do
+    assert_no_difference [ "DomainEventStream.count", "DomainEvent.count" ] do
+      error = assert_raises(ActiveRecord::RecordInvalid) { publish(publisher: "unknown") }
+      assert error.record.errors.added?(:publisher, :inclusion, value: "unknown")
+    end
+  end
+
+  test "publishing domains have independent streams for the same user and film" do
+    events = DomainEventStream::PublishingDomains::ALL.map { |publisher| publish(publisher:) }
+    assert_equal 3, events.map(&:domain_event_stream_id).uniq.size
+    assert events.all? { |event| event.sequence == 1 }
+  end
+
   test "status exposes undiscovered backlog and failure classes without payloads" do
     event = publish(payload: { value: 1, secret: "private content" })
     consumer = subscription { raise ArgumentError, "private failure" }
