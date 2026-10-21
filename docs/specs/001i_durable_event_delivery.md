@@ -19,6 +19,7 @@ Implement the approved asynchronous design's delivery foundation: PostgreSQL out
 - Expired/deleted users get skipped receipts without handler invocation. Foundation-owned user-to-stream-to-event-to-delivery cascades remove payloads on physical cleanup; no Identity changes. In-place claim retains stream ownership. Jobs carry no private payload or user ID.
 - Initial retention: no age-based active-owner purge, so future consumers can bootstrap. Physical user deletion purges dependent infrastructure rows. Monitor size and outstanding age. Active-owner compaction needs a later explicit subscriber checkpoint/bootstrap policy; no silent loss and no promise of permanent history.
 - Developer status/retry tasks expose counts, oldest pending age, failure IDs/classes only. Manual retry resets only failed work. Completed receipts cannot be reset for accidental replay; an explicitly approved new subscriber name can rebuild from retained events.
+- Dispatch review follow-up: discover event/owner IDs together, then check event existence after locking the owner. Remove the pre-lock event and stream loads; preserve batching, ordering and cleanup behaviour. Verify cleanup winning before receipt insertion with separate database connections. No changes to domain contracts or delivery execution in this follow-up.
 
 ## Scope restrictions
 
@@ -48,6 +49,10 @@ Implement the approved asynchronous design's delivery foundation: PostgreSQL out
 - **AC6 (database safeguard):** PostgreSQL rejects unsupported publishers even when Rails validation is bypassed.
   Check: `RAILS_ENV=test bin/rails db:migrate`; `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`; `git diff --check`.
   Result: Passed — migration applied to test DB; direct update raised `PG::CheckViolation` and retained the original publisher. Full CI passed 295 tests / 3,030 assertions, no failures/errors/skips, with style and security checks clean. Migration literals deliberately preserve the historical storage contract independently of application constants; adding a publisher requires updating both.
+
+- **AC7 (dispatch discovery):** Receipt discovery obtains the event and owner IDs together and checks event existence only after acquiring the owner lock; concurrent cleanup cannot recreate a receipt or invoke a handler.
+  Check: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`; `git diff --check`. The new separate-connection test blocks dispatch on the owner lock, completes physical cleanup, then verifies dispatch exits without events, receipts or effects.
+  Result: Passed — 296 tests / 3,036 assertions, no failures/errors/skips; Ruby style, security and whitespace checks passed.
 
 ## Implementation notes
 

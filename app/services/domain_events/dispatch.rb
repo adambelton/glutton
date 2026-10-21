@@ -9,12 +9,11 @@ module DomainEvents
         events = DomainEvent.joins(:domain_event_stream)
           .where(domain_event_streams: { publisher: subscription.publisher }, name: subscription.event_names)
         missing = events.where.not(id: EventDelivery.where(subscriber: subscription.name).select(:domain_event_id))
-        missing.order(:created_at, :id).limit(limit).pluck(:id).each do |event_id|
+        missing.order(:created_at, :id).limit(limit)
+          .pluck("domain_events.id", "domain_event_streams.user_id").each do |event_id, user_id|
           # The owner may be physically cleaned up between discovery and insertion.
           DomainEvent.transaction do
-            event = DomainEvent.find_by(id: event_id)
-            next unless event
-            user = User.lock.find_by(id: event.domain_event_stream.user_id)
+            user = User.lock.find_by(id: user_id)
             next unless user && DomainEvent.exists?(event_id)
 
             EventDelivery.create_or_find_by!(subscriber: subscription.name, domain_event_id: event_id) do |delivery|

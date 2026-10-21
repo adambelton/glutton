@@ -83,6 +83,21 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, EventEffect.count
   end
 
+  test "cleanup winning before receipt insertion leaves no delivery or effect" do
+    event = publish
+    travel UserGuest::EXPIRY_DURATION
+    contender = nil
+    User.transaction do
+      @user.lock!
+      contender = blocked { dispatch(subscription) }
+      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    end
+    assert_empty Timeout.timeout(5) { contender.value }
+    assert_equal 0, EventDelivery.count
+    assert_equal 0, EventEffect.count
+    assert_not DomainEvent.exists?(event.id)
+  end
+
   test "cleanup winning before delivery prevents resurrection" do
     event = publish
     receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)

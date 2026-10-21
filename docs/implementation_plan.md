@@ -210,3 +210,5 @@ Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glut
 PR #25 review follow-up puts publishing-domain constants and inclusion validation on DomainEventStream and uses them in delivery tests. Full CI passed 294 tests / 3,027 assertions, style and security checks; 001i remains Ready for review.
 
 The subsequent database safeguard adds a publisher check constraint and validation-bypass coverage. Full CI passed 295 tests / 3,030 assertions, style and security checks. Publisher/subscriber specs must settle stream granularity, historical schema handling and bootstrap; compaction remains deferred pending usage evidence.
+
+Dispatch discovery now fetches event/owner IDs together and checks event existence after locking the user. Concurrent cleanup coverage and full CI passed: 296 tests / 3,036 assertions, style and security checks. Task 001i remains Ready for review in PR #25.
