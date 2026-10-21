@@ -1,7 +1,7 @@
 module Library
   class RemoveFromWatchlist
     def self.call(user_id:, film_id:)
-      LibraryFilm.transaction do
+      LibraryFilm.transaction(requires_new: true) do
         user = User.lock.find_by(id: user_id)
         raise IdentityUnavailable, "An active identity is required" unless user&.active?
 
@@ -12,6 +12,8 @@ module Library
         raise NotOnWatchlist, "Film is not on the watchlist" unless library_film
 
         library_film.destroy!
+        library_film.publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST, classification: nil)
+        library_film
       end
     end
   end

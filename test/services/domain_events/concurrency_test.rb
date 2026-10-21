@@ -40,7 +40,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
 
   test "publication requires a transaction and concurrent appends retain consecutive versions" do
     assert_raises(ArgumentError) do
-      DomainEvents::Publish.call(user_id: @user.id, publisher: DomainEventStream::PublishingDomains::LIBRARY, stream_key: "film:1", name: "Changed", payload: {})
+      DomainEvents::Publish.call(user_id: @user.id, publisher: "test_domain", stream_key: "film:1", name: "Changed", payload: {})
     end
     contender = first = nil
     User.transaction do

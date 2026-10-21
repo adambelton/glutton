@@ -8,4 +8,4 @@ en:
         domain_event_stream:
           attributes:
             publisher:
-              inclusion: is not supported
+              blank: cannot be blank
