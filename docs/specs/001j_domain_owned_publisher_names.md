@@ -1,6 +1,6 @@
 # 001j — Domain-owned publisher names
 
-Status: Ready for review
+Status: Merged
 Owner: Foundation / event delivery
 
 ## Goal
@@ -32,4 +32,4 @@ No publisher registry, discovery, domain handlers, deployment, new domains or ch
 
 Implemented after owner approval. Foundation tests use synthetic publisher identifiers without depending on product domains. An initial storage test used stale in-memory attributes after a rejected write; refreshing the test record fixed the assertion, and the focused suite passed before Library adoption. Only the test database was migrated. Migration rollback restores the old allowlist and will reject data using newer publisher names; no automatic deletion or renaming is allowed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #26](https://github.com/adambelton/glutton/pull/26) on 21 October 2026 at 16:49:30 UTC; squash commit `f4d911344a830b413fba9ea85aa2b44ce5b07a3e`. Hosted Repository checks passed on head `a703a329ec21302e2e57f8741f1e55e512715f73` before merge.

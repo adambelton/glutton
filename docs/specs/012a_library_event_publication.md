@@ -1,6 +1,6 @@
 # 012a — Library event publication
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / event publication
 
 ## Goal
@@ -57,4 +57,4 @@ Naming follow-up: use `library_film` throughout creation/transition/publication,
 
 Constant layout follow-up: publisher `Library::EVENTS_PUBLISHING_DOMAIN` and event names under `Library::Events` share `app/services/library.rb`; removed the separate event-names file. Library tests passed again (55 tests / 423 assertions), application autoload check and `git diff --check` passed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #26](https://github.com/adambelton/glutton/pull/26) on 21 October 2026 at 16:49:30 UTC; squash commit `f4d911344a830b413fba9ea85aa2b44ce5b07a3e`. Hosted Repository checks passed on head `a703a329ec21302e2e57f8741f1e55e512715f73` before merge.
