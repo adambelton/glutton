@@ -9,7 +9,7 @@ module DomainEvents
         user = User.lock.find_by(id: user_id)
         delivery = EventDelivery.lock.find_by(id: delivery_id, subscriber: subscription.name)
         return :missing unless delivery
-        return :not_due unless delivery.status == "pending" && delivery.next_attempt_at <= Time.current
+        return :not_due unless delivery.status == EventDelivery::Statuses::PENDING && delivery.next_attempt_at <= Time.current
         return :blocked if delivery.predecessor_pending?(subscription)
 
         unless user&.active?
@@ -30,7 +30,7 @@ module DomainEvents
           end
         rescue StandardError => error
           delivery.reload.record_failure!(error)
-          delivery.status == "failed" ? :failed : :retrying
+          delivery.status == EventDelivery::Statuses::FAILED ? :failed : :retrying
         end
       end
     end

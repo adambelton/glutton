@@ -77,7 +77,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_raises(interruption) { DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: interrupted) }
     assert_equal 0, EventEffect.count
-    assert_equal "pending", receipt.reload.status
+    assert_equal EventDelivery::Statuses::PENDING, receipt.reload.status
     assert_equal 0, receipt.attempts
     assert_equal :processed, DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription)
     assert_equal 1, EventEffect.count

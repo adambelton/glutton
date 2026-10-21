@@ -142,4 +142,108 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert @rating_film.reload.dismissed?
     assert_empty candidates
   end
+
+  def submit
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::ENJOYED)
+  end
+
+  def rating_events
+    DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
+      user_id: @user.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN
+    })
+  end
+
+  test "competing first submissions produce one rating one event and an explicit failure" do
+    contender = nil
+    User.transaction do
+      submit
+      contender = blocked do
+        submit
+      rescue Ratings::AlreadyRated
+        :already_rated
+      end
+    end
+    assert_equal :already_rated, Timeout.timeout(5) { contender.value }
+    assert_equal 1, @rating_film.ratings.count
+    assert_equal 1, rating_events.count
+  end
+
+  test "submission waiting across expiry rejects freshly inactive owner" do
+    contender = nil
+    User.transaction do
+      @user.lock!
+      contender = blocked do
+        submit
+      rescue Ratings::IdentityUnavailable
+        :inactive
+      end
+      travel UserGuest::EXPIRY_DURATION
+    end
+    assert_equal :inactive, Timeout.timeout(5) { contender.value }
+    assert_empty @rating_film.ratings
+    assert_empty rating_events
+  end
+
+  test "cleanup before waiting submission cannot resurrect activity" do
+    contender = nil
+    travel UserGuest::EXPIRY_DURATION
+    User.transaction do
+      @user.lock!
+      contender = blocked do
+        submit
+      rescue Ratings::IdentityUnavailable
+        :inactive
+      end
+      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    end
+    assert_equal :inactive, Timeout.timeout(5) { contender.value }
+    assert_not RatingFilm.exists?(@rating_film.id)
+    assert_empty Rating.where(rating_film_id: @rating_film.id)
+    assert_empty rating_events
+    assert Film.exists?(@film.id)
+  end
+
+  test "cleanup removes saved rating and event but retains the shared film" do
+    rating = submit
+    assert_equal 1, rating_events.count
+    travel UserGuest::EXPIRY_DURATION
+    assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_not Rating.exists?(rating.id)
+    assert_not RatingFilm.exists?(@rating_film.id)
+    assert_empty rating_events
+    assert Film.exists?(@film.id)
+  end
+
+  test "claim before waiting submission preserves owner and allows rating past guest deadline" do
+    contender = nil
+    User.transaction do
+      @user.lock!
+      assert_equal @user.id, claim.user_id
+      contender = blocked { submit }
+      travel UserGuest::EXPIRY_DURATION
+    end
+    rating = Timeout.timeout(5) { contender.value }
+    assert_equal @rating_film.id, rating.rating_film_id
+    assert_equal Rating::Values::ENJOYED, rating.reload.value
+    assert_equal @user.id, rating_events.sole.payload["user_id"]
+    assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+  end
+
+  test "claim winning against cleanup retains saved rating and stream identity" do
+    rating = submit
+    event = rating_events.sole
+    contender = nil
+    User.transaction do
+      @user.lock!
+      claim
+      travel UserGuest::EXPIRY_DURATION
+      contender = blocked { Identity::CleanupExpiredAccounts.call }
+    end
+    assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
+    assert_equal Rating::Values::ENJOYED, rating.reload.value
+    assert_equal @rating_film.id, rating.rating_film_id
+    assert_equal @user.id, @rating_film.reload.user_id
+    assert_equal event.id, rating_events.sole.id
+    assert_equal event.domain_event_stream_id, rating_events.sole.domain_event_stream_id
+  end
 end

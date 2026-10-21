@@ -13,7 +13,7 @@ This section summarizes current delivery status; task tables and linked specs re
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
 | Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; product UI remains planned. |
-| Ratings and Recommendations | Ratings presentation task 013 is Ready for review; oldest-first candidate batches and boolean dismissal implemented. |
+| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission is Ready for review. |
 
 ## Task rules
 
@@ -93,8 +93,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Merged — [spec](specs/012_library_dismissal.md), [PR #24](https://github.com/adambelton/glutton/pull/24); commit 78aba75, hosted CI passed; classification reads deferred to a consumer-driven spec |
 | 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Merged via PR #25 — [spec](specs/001i_durable_event_delivery.md) |
 | 012a | Library / event publication | Publish versioned Library facts; retain stream versions through row deletion/recreation | 001i, 012 | Merged via PR #26 — [spec](specs/012a_library_event_publication.md) |
-| 013 | Ratings / presentations | Own oldest-first candidate batches and boolean dismissal; catalogue admission and event consumption remain separate | 005a, 007 | Ready for review — [spec](specs/013_rating_presentations.md) |
-| 014 | Ratings / ratings | Add has_many ratings and rated/unrated scopes; save a four-level rating, establishing viewing evidence; establish current submission/history and publish committed submission/revision events | 013, 001i | Planned |
+| 013 | Ratings / presentations | Own oldest-first candidate batches and boolean dismissal; catalogue admission and event consumption remain separate | 005a, 007 | Merged via PR #27 — [spec](specs/013_rating_presentations.md) |
+| 014 | Ratings / ratings | First rating submission, rated/unrated/pending scopes and atomic RatingSubmitted publication | 013, 001i | Ready for review — [spec](specs/014_first_rating_submission.md) |
 | 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
 | 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Planned |
 | 017 | Ratings / Library-event consumer | Project Library facts into eligibility and known-seen unrated priority; preserve current ratings/history and handle stale/duplicate events | 012a, 013, 014 | Planned |
@@ -106,7 +106,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 020 | Library / watched view | Distinguish awaiting-rating/rated using the Library-owned projection of Ratings events; link to targeted rating | 014, 019 | Planned |
 | 021 | Library / watchlist view | To watch list with existing mark-watched workflow and rating entry point | 011, 017, 019 | Planned |
 | 022 | Library / dismissed view | Not interested list with reconsideration | 012 | Planned |
-| 023 | Ratings / revisions | Re-rate while retaining agreed history and superseding the current submission | 016, 019 | Planned |
+| 023 | Ratings / revisions | Re-rate with explicit current/history semantics, extend first-submission storage and publish RatingRevised | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 
 The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered sessions follow Rails authentication conventions with no application-imposed TTL. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 supplies shared guest/registered session lifecycle and registered authentication and task 005a exposes both identity modes through HTTP. Registered sessions end through sign-out/revocation or inactive-account rejection, not a custom age deadline. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
@@ -200,7 +200,7 @@ Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glut
 
 **012 — Merged via PR #24**, Library / dismissal; [spec](specs/012_library_dismissal.md). Implements creation/transition into NotInterested and explicit dismissal removal. Task 011 already supplies reconsideration into ToWatch. Watched entries remain protected; classification read contracts await a concrete consumer. Focused Library checks passed: 58 tests/330 assertions. Full CI passed: 272 tests/2,895 assertions, style and security checks clean. Owner approved merge; merged 21 October 2026, commit 78aba75, after hosted CI passed.
 
-**013 — Ready for review**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Owns one RatingFilm per user/film, oldest-first batches and viewing-neutral dismissal. Library event consumption is task 017. Local ordering and retention approved; catalogue recognition/admission remains separate.
+**013 — Merged via PR #27**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Owns one RatingFilm per user/film, oldest-first batches and viewing-neutral dismissal. Library event consumption is task 017. Local ordering and retention approved; catalogue recognition/admission remains separate.
 
 **001h — Merged via PR #25**, Foundation / architecture documentation; [spec](specs/001h_async_domain_design.md). Replaces synchronous-only coordination with asynchronous events across Library, Ratings and Recommendations. Delivery infrastructure is implemented in 001i; domain publishers/subscribers remain unimplemented.
 
@@ -228,7 +228,7 @@ Foundation **001j — Merged via PR #26**: remove the product-domain allowlist f
 
 Accepted by the owner and merged via [PR #26](https://github.com/adambelton/glutton/pull/26) on 21 October 2026 at 16:49:30 UTC; squash commit `f4d911344a830b413fba9ea85aa2b44ce5b07a3e`. Hosted Repository checks passed on head `a703a329ec21302e2e57f8741f1e55e512715f73` before merge. Local main was fast-forwarded. Final local CI passed 301 tests / 3,175 assertions, style and security checks.
 
-**013 — Ready for review**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Implements minimal candidate storage, oldest-first batch selection, boolean dismissal, concurrency and guest retention. Catalogue admission/recognition policy remains a separate prerequisite for the complete discovery feed; no global popularity ordering is assumed. Spec approved by the owner on 21 October 2026; implemented on `codex/ratings-presentations`. Owner review simplified this to one record and no seen/unseen question or presentation history. Revised verification is recorded in the spec. Implementation acceptance and merge remain pending.
+**013 — Merged via PR #27**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Implements minimal candidate storage, oldest-first batch selection, boolean dismissal, concurrency and guest retention. Catalogue admission/recognition policy remains a separate prerequisite for the complete discovery feed; no global popularity ordering is assumed. Spec approved by the owner on 21 October 2026; implemented on `codex/ratings-presentations`. Owner review simplified this to one record and no seen/unseen question or presentation history. Revised verification is recorded in the spec. Owner accepted and merged via PR #27; see merge evidence below.
 
 ## Ratings simplification — 21 October 2026
 
@@ -239,3 +239,11 @@ Ratings-flow watchlist/not-interested actions (017a–017c) are deferred; they a
 ### Candidate batches — superseding queue policy
 
 Owner approved one oldest-first queue for all persisted candidates, including future Library watched-event admissions and unfinished candidates from earlier sessions. Order by created_at then ID, excluding dismissal and (once task 014 exists) rows with ratings. Newly watched films do not jump ahead of older candidates. Task 013 stores only user, film, dismissed and standard timestamps; NextCandidates returns a read-only bounded batch. Task 014 owns has_many ratings, rated/unrated scopes and extending the existing pending scope to exclude rated rows. Catalogue replenishment will fill batch shortfalls under its separately agreed selection policy; existing user/film records are not recreated or reordered. Task 017 preserves existing dismissal and creation time on repeated admissions. Earlier watched-first/current-selection descriptions are superseded by this decision.
+
+## PR #27 merge and next task
+
+Owner accepted and merged [PR #27](https://github.com/adambelton/glutton/pull/27) on 21 October 2026 at 18:04:00 UTC (19:04 BST). Squash commit `69bfe2e5862bcd5cca65c77bb2e465e153a6c4e1`; hosted Repository checks passed on head `98598fb808229e10bf46ac98ac5f2ba1f9a8b371` before merge. Final local CI passed 320 tests / 3,270 assertions with clean style/security checks. Local main was fast-forwarded.
+
+**014 — Ready for review**, Ratings / ratings; [spec](specs/014_first_rating_submission.md). Implements first rating persistence, the has_many ratings relationship, rated/unrated/pending scopes and atomic v1 RatingSubmitted publication. Revision history/RatingRevised belongs to task 023; expressions remain 015. Spec approved on 21 October 2026; implemented on `codex/first-rating-submission`. Focused checks passed 37 tests / 319 assertions; full local CI passed 338 tests / 3,494 assertions with clean style/security checks. Application eager loading and whitespace checks passed. [Publication contract](ratings_event_publication.md). Implementation acceptance and merge remain pending.
+
+**001k — Ready for review**, Foundation / event delivery; [spec](specs/001k_delivery_status_constants.md). Owner authorized named delivery-status constants alongside task 014, preserving storage and delivery contracts. Implemented and verified: focused delivery checks 24 tests / 155 assertions; combined full CI 338 tests / 3,494 assertions with clean style/security checks. Implementation acceptance and merge remain pending.

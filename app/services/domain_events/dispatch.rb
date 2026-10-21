@@ -25,7 +25,7 @@ module DomainEvents
         due = EventDelivery.due.where(subscriber: subscription.name, domain_event_id: events.select(:id))
           .joins(:domain_event)
         # Filter blocked successors before LIMIT so one failed stream cannot starve others.
-        due = due.where(<<~SQL, subscription.event_names, subscription.name)
+        due = due.where(<<~SQL, subscription.event_names, subscription.name, EventDelivery::Statuses::TERMINAL)
           NOT EXISTS (
             SELECT 1 FROM domain_events earlier
             WHERE earlier.domain_event_stream_id = domain_events.domain_event_stream_id
@@ -33,7 +33,7 @@ module DomainEvents
               AND NOT EXISTS (
                 SELECT 1 FROM event_deliveries receipt
                 WHERE receipt.domain_event_id = earlier.id AND receipt.subscriber = ?
-                  AND receipt.status IN ('processed', 'ignored', 'skipped')
+                  AND receipt.status IN (?)
               )
           )
         SQL
