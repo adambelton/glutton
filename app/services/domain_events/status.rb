@@ -14,7 +14,7 @@ module DomainEvents
         end,
         deliveries: EventDelivery.group(:subscriber, :status).count.map { |(subscriber, status), count| { subscriber:, status:, count: } },
         oldest_outstanding_age_seconds: oldest ? (Time.current - oldest).to_i : nil,
-        failed: EventDelivery.where(status: EventDelivery::Statuses::FAILED).order(:id).limit(100).pluck(:id, :subscriber, :last_error_class)
+        failed: EventDelivery.failed.order(:id).limit(100).pluck(:id, :subscriber, :last_error_class)
       }
     end
   end
