@@ -1,6 +1,6 @@
 # 012 — Library dismissal and removal
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / dismissal
 
 ## Goal
@@ -73,4 +73,4 @@ Added ten operation/retention tests, eight separate-connection concurrency tests
 
 No scope deviations. Classification reads, UI and NotInterested-to-Watched remain deferred as approved.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Approved by the owner and merged via [PR #24](https://github.com/adambelton/glutton/pull/24) on 21 October 2026 at 13:47:25 UTC; squash commit `78aba75b37605cdc09f199cbf996fadc889ef328`. Hosted Repository checks passed on head `c4dfd303e5a3a0fa955a80a64ea449ab749a3447` before merge.

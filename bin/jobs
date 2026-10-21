@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+# Use the direct PostgreSQL endpoint for the entire worker so handler effects,
+# outbox writes and delivery receipts share one Active Record transaction.
+if ENV["RAILS_ENV"] == "production"
+  ENV["DATABASE_URL"] = ENV.fetch("JOB_DATABASE_URL")
+elsif ENV["JOB_DATABASE_URL"]
+  ENV["DATABASE_URL"] = ENV.fetch("JOB_DATABASE_URL")
+end
+
+require_relative "../config/environment"
+require "good_job/cli"
+
+GoodJob::CLI.start(ARGV.include?("--help") ? [ "help", "start" ] : [ "start", *ARGV ])
