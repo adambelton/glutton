@@ -12,6 +12,14 @@ class LibraryFilm < ApplicationRecord
     Library::WatchlistUnavailable unless can_add_to_watchlist?
   end
 
+  def can_mark_not_interested?
+    false
+  end
+
+  def dismissal_error
+    Library::DismissalUnavailable unless can_mark_not_interested?
+  end
+
   def can_watch?
     false
   end
