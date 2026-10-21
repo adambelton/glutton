@@ -2,7 +2,7 @@ en:
   ratings:
     values:
       brilliant: Brilliant
-      enjoyed: I Enjoyed That
+      i_enjoyed_that: I enjoyed that
       not_for_me: Not For Me
       garbage: Garbage
     errors:

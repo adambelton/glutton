@@ -15,7 +15,7 @@ The JSON payload has exactly these keys:
 | `user_id` | Stable internal owner ID |
 | `film_id` | Shared internal Film ID |
 | `rating_id` | Persisted Rating ID |
-| `value` | One of `brilliant`, `enjoyed`, `not_for_me`, `garbage` |
+| `value` | One of `brilliant`, `i_enjoyed_that`, `not_for_me`, `garbage` |
 
 Values are rating choices, not numeric preference weights. Localized display labels belong in `config/locales/ratings.en.yml`. No expressions, credentials or serialized model data are included. Version 1 is immutable; incompatible changes require a new schema version.
 

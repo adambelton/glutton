@@ -144,7 +144,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def submit
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::ENJOYED)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT)
   end
 
   def rating_events
@@ -224,7 +224,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     rating = Timeout.timeout(5) { contender.value }
     assert_equal @rating_film.id, rating.rating_film_id
-    assert_equal Rating::Values::ENJOYED, rating.reload.value
+    assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @user.id, rating_events.sole.payload["user_id"]
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
   end
@@ -240,7 +240,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
-    assert_equal Rating::Values::ENJOYED, rating.reload.value
+    assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal @user.id, @rating_film.reload.user_id
     assert_equal event.id, rating_events.sole.id

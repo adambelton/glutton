@@ -232,7 +232,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["rating_film_id"], name: "index_ratings_on_rating_film_id", unique: true
-    t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'enjoyed'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
+    t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'i_enjoyed_that'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
   end
 
   create_table "sessions", force: :cascade do |t|

@@ -9,7 +9,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   def submit(**options)
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::ENJOYED, **options)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT, **options)
   end
 
   test "all four choices save owned ratings and exact v1 facts without Library changes" do
@@ -40,8 +40,8 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "invalid choices fail without rating event or stream including coercible inputs" do
     coercible = Object.new
-    def coercible.to_s = Rating::Values::ENJOYED
-    [ nil, "", "unknown", "ENJOYED", " enjoyed ", Rating::Values::ENJOYED.to_sym, 1, false, [], {}, coercible ].each do |value|
+    def coercible.to_s = Rating::Values::I_ENJOYED_THAT
+    [ nil, "", "unknown", "I_ENJOYED_THAT", " i_enjoyed_that ", Rating::Values::I_ENJOYED_THAT.to_sym, 1, false, [], {}, coercible ].each do |value|
       assert_no_difference [ "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
         error = assert_raises(ActiveRecord::RecordInvalid) { submit(value:) }
         assert error.record.errors.of_kind?(:value, :inclusion)
@@ -51,12 +51,12 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "duplicates reject identical and different values without another event" do
     rating = submit
-    [ Rating::Values::ENJOYED, Rating::Values::BRILLIANT ].each do |value|
+    [ Rating::Values::I_ENJOYED_THAT, Rating::Values::BRILLIANT ].each do |value|
       assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
         assert_raises(Ratings::AlreadyRated) { submit(value:) }
       end
     end
-    assert_equal Rating::Values::ENJOYED, rating.reload.value
+    assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
   end
 
   test "explicit submission accepts dismissal without changing candidate timestamps or flag" do

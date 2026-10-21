@@ -1,11 +1,11 @@
 class Rating < ApplicationRecord
   module Values
     BRILLIANT = "brilliant".freeze
-    ENJOYED = "enjoyed".freeze
+    I_ENJOYED_THAT = "i_enjoyed_that".freeze
     NOT_FOR_ME = "not_for_me".freeze
     GARBAGE = "garbage".freeze
 
-    ALL = [ BRILLIANT, ENJOYED, NOT_FOR_ME, GARBAGE ].freeze
+    ALL = [ BRILLIANT, I_ENJOYED_THAT, NOT_FOR_ME, GARBAGE ].freeze
   end
 
   belongs_to :rating_film
