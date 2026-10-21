@@ -1,13 +1,13 @@
 module DomainEvents
   class Deliver
     def self.call(delivery_id:, subscription:)
-      delivery = EventDelivery.for_subscriber(subscription.name).find_by(id: delivery_id)
+      delivery = EventDelivery.find_by(id: delivery_id, subscriber: subscription.name)
       return :missing unless delivery
 
       user_id = delivery.domain_event.domain_event_stream.user_id
       User.transaction do
         user = User.lock.find_by(id: user_id)
-        delivery = EventDelivery.for_subscriber(subscription.name).lock.find_by(id: delivery_id)
+        delivery = EventDelivery.lock.find_by(id: delivery_id, subscriber: subscription.name)
         return :missing unless delivery
         return :not_due unless delivery.status == EventDelivery::Statuses::PENDING && delivery.next_attempt_at <= Time.current
         return :blocked if delivery.predecessor_pending?(subscription)
