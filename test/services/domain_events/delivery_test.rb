@@ -185,6 +185,17 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal @user.id, event.domain_event_stream.user_id
   end
 
+  test "storage rejects unsupported publishers when validation is bypassed" do
+    stream = publish.domain_event_stream
+    error = assert_raises(ActiveRecord::StatementInvalid) do
+      DomainEventStream.transaction(requires_new: true) do
+        stream.update_columns(publisher: "unknown")
+      end
+    end
+    assert_kind_of PG::CheckViolation, error.cause
+    assert_equal DomainEventStream::PublishingDomains::LIBRARY, stream.reload.publisher
+  end
+
   test "storage enforces one receipt and sequence and object payload" do
     event = publish
     dispatch(subscription)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_154733) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_154733) do
     t.index ["user_id", "publisher", "stream_key"], name: "idx_on_user_id_publisher_stream_key_dbea133667", unique: true
     t.index ["user_id"], name: "index_domain_event_streams_on_user_id"
     t.check_constraint "publisher::text <> ''::text AND stream_key::text <> ''::text", name: "domain_event_stream_identity"
+    t.check_constraint "publisher::text = ANY (ARRAY['library'::character varying, 'ratings'::character varying, 'recommendations'::character varying]::text[])", name: "domain_event_stream_publisher"
     t.check_constraint "sequence >= 0", name: "domain_event_stream_sequence"
   end
 

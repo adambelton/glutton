@@ -1,6 +1,6 @@
 # Asynchronous domain communication
 
-Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. No event transport, publishers or consumers are implemented yet.
+Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport is Ready for review in task 001i; domain publishers and consumers remain unimplemented.
 
 ## Decision and boundaries
 
@@ -46,6 +46,7 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 ## Delivery contract and failure handling
 
 - Envelope: unique event ID, event name/schema version, owning domain, durable stream identity, monotonic stream sequence, occurred_at, correlation/causation IDs, and minimum necessary payload. No credentials, email, raw expression text or serialized Active Record objects.
+- Each publisher spec defines its stream granularity and ordering needs. Library uses user/film streams; user-wide preferences may require a user-level stream. Each subscriber spec defines supported historical schema versions and explicit handling of unsupported versions before implementation.
 - A Library stream is per user/film, not per deletable LibraryFilm row. Sequence continuity must survive removal/recreation. Allocate versions atomically with the user-locked source write; specify persistent stream/version storage in the publisher task.
 - At-least-once delivery with independent receipts per subscriber. Domain update and unique subscriber/event receipt commit together; retry after a worker crash cannot duplicate domain effects. Source rollback leaves no deliverable event. Enqueue failure after source commit is recovered by polling the durable outbox.
 - Process each subscriber's stream in order. Retry/backoff a failed predecessor without silently advancing dependent events; unrelated users/films and subscribers continue. Monitor backlog age, retries and terminal failures, and provide an explicit retry/replay procedure. Workers running in the same app do not eliminate this requirement.
