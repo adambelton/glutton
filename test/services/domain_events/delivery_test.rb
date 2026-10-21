@@ -6,17 +6,22 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
 
   setup { prepare_events }
 
-  test "publication rejects unknown domains without persisting a stream or event" do
-    assert_no_difference [ "DomainEventStream.count", "DomainEvent.count" ] do
-      error = assert_raises(ActiveRecord::RecordInvalid) { publish(publisher: "unknown") }
-      assert error.record.errors.added?(:publisher, :inclusion, value: "unknown")
+  test "publication rejects blank publishers without persisting a stream or event" do
+    [ nil, "", " " ].each do |publisher|
+      assert_no_difference [ "DomainEventStream.count", "DomainEvent.count" ] do
+        error = assert_raises(ActiveRecord::RecordInvalid) { publish(publisher:) }
+        assert error.record.errors.added?(:publisher, :blank)
+      end
     end
   end
 
-  test "publishing domains have independent streams for the same user and film" do
-    events = DomainEventStream::PublishingDomains::ALL.map { |publisher| publish(publisher:) }
-    assert_equal 3, events.map(&:domain_event_stream_id).uniq.size
+  test "new publishing domains have independent streams and can deliver without registration" do
+    events = [ "test_domain", "another_domain" ].map { |publisher| publish(publisher:) }
+    assert_equal 2, events.map(&:domain_event_stream_id).uniq.size
     assert events.all? { |event| event.sequence == 1 }
+    consumer = subscription.with(publisher: "another_domain")
+    assert_equal({ processed: 1 }, dispatch(consumer))
+    assert_equal events.last.id, EventEffect.sole.event_id
   end
 
   test "status exposes undiscovered backlog and failure classes without payloads" do
@@ -185,15 +190,21 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal @user.id, event.domain_event_stream.user_id
   end
 
-  test "storage rejects unsupported publishers when validation is bypassed" do
+  test "storage allows new publishers but retains nonempty and unique stream identities" do
     stream = publish.domain_event_stream
-    error = assert_raises(ActiveRecord::StatementInvalid) do
-      DomainEventStream.transaction(requires_new: true) do
-        stream.update_columns(publisher: "unknown")
+    stream.update_columns(publisher: "new_publisher")
+    assert_equal "new_publisher", stream.reload.publisher
+    [ nil, "" ].each do |publisher|
+      assert_raises(ActiveRecord::StatementInvalid) do
+        DomainEventStream.transaction(requires_new: true) { stream.update_columns(publisher:) }
       end
     end
-    assert_kind_of PG::CheckViolation, error.cause
-    assert_equal DomainEventStream::PublishingDomains::LIBRARY, stream.reload.publisher
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      DomainEventStream.transaction(requires_new: true) do
+        DomainEventStream.insert_all!([ stream.reload.attributes.except("id") ])
+      end
+    end
+    assert_equal "new_publisher", stream.reload.publisher
   end
 
   test "storage enforces one receipt and sequence and object payload" do

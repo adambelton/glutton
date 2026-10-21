@@ -1,6 +1,6 @@
 # Asynchronous domain communication
 
-Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport is Ready for review in task 001i; domain publishers and consumers remain unimplemented.
+Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport merged via PR #25 in task 001i; Library publication is implemented and Ready for review in task 012a; consumers remain unimplemented.
 
 ## Decision and boundaries
 
@@ -46,20 +46,21 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 ## Delivery contract and failure handling
 
 - Envelope: unique event ID, event name/schema version, owning domain, durable stream identity, monotonic stream sequence, occurred_at, correlation/causation IDs, and minimum necessary payload. No credentials, email, raw expression text or serialized Active Record objects.
+- Publisher identifiers are stable constants owned by each publishing domain (for example, `Library::EVENTS_PUBLISHING_DOMAIN`). Foundation validates presence and storage identity constraints, without a product-domain allowlist or registration step.
 - Each publisher spec defines its stream granularity and ordering needs. Library uses user/film streams; user-wide preferences may require a user-level stream. Each subscriber spec defines supported historical schema versions and explicit handling of unsupported versions before implementation.
 - A Library stream is per user/film, not per deletable LibraryFilm row. Sequence continuity must survive removal/recreation. Allocate versions atomically with the user-locked source write; specify persistent stream/version storage in the publisher task.
 - At-least-once delivery with independent receipts per subscriber. Domain update and unique subscriber/event receipt commit together; retry after a worker crash cannot duplicate domain effects. Source rollback leaves no deliverable event. Enqueue failure after source commit is recovered by polling the durable outbox.
 - Process each subscriber's stream in order. Retry/backoff a failed predecessor without silently advancing dependent events; unrelated users/films and subscribers continue. Monitor backlog age, retries and terminal failures, and provide an explicit retry/replay procedure. Workers running in the same app do not eliminate this requirement.
 - Cross-domain streams have no total order. Use source-specific versions, causal links and the conflict rules above; do not compare unrelated sequence numbers or trust timestamps to resolve races.
-- Persist events even when a planned subscriber does not yet exist. Each new subscriber needs a defined bootstrap: retained events from a recorded cursor, or an owner-provided snapshot plus subsequent versions with no gap. Library has existing rows before events are introduced; task 012a must publish/version a consistent bootstrap. Backfill must not masquerade as fresh user activity or overwrite newer events.
+- Persist events even when a planned subscriber does not yet exist. Each new subscriber needs a defined bootstrap: retained events from a recorded cursor, or an owner-provided snapshot plus subsequent versions with no gap. This new project has no existing Library entries to backfill; task 012a publishes facts from creation onward. Future subscribers must define how they consume retained events.
 - Event retention/compaction must account for registered and future consumers, replay needs and privacy. Do not purge unacknowledged events simply because the initial subscriber finished. Avoid promising indefinite history retention; agree concrete policy before runtime implementation.
 - Handlers lock/recheck the user before activity writes. Expired/deleted/missing owners must not be recreated by delayed events. Record a terminal skipped outcome where safe, and clean up user-owned payloads/receipts under the approved retention policy. Guest claim preserves the user ID. Infrastructure retention ownership must be decided without introducing Identity callbacks mechanically.
 - No direct publisher-to-consumer synchronous fallback during outages. Show locally committed results and allow other views to converge. Failed asynchronous requests expose a rejected outcome rather than falsely reporting a completed Library action.
 
 ## Delivery sequence
 
-1. Foundation task 001i: narrowly scoped durable outbox, job execution and delivery receipts, with ordering, crash recovery, privacy and operational checks. Implemented with GoodJob and PostgreSQL storage in the [001i spec](specs/001i_durable_event_delivery.md), Ready for review; see [operations](domain_event_operations.md).
-2. Library task 012a: versioned Library publication and bootstrap for existing rows, using the Foundation contract. No consumer implementation.
+1. Foundation task 001i: narrowly scoped durable outbox, job execution and delivery receipts, with ordering, crash recovery, privacy and operational checks. Implemented with GoodJob and PostgreSQL storage in the [001i spec](specs/001i_durable_event_delivery.md), merged via PR #25; see [operations](domain_event_operations.md).
+2. Library task 012a: versioned Library publication, using the Foundation contract. Ready for review; see the [v1 publication contract](library_event_publication.md). No consumer implementation.
 3. Ratings task 013: own presentation state and local seen/unseen workflows. Store known-seen unrated separately from unknown/unseen eligibility; no MakeAvailableForRating cross-domain API.
 4. Ratings tasks 014/015: rating/submission/expression persistence; task 014 defines committed submission/revision publication, and 015 preserves atomic rating-plus-expression save. Later preference work owns PreferencesUpdated publication.
 5. Library task 016: consume completed-rating events, define system reconciliation and duplicate outcomes, and publish actual Library changes.

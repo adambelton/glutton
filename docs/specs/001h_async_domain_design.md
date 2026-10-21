@@ -1,6 +1,6 @@
 # 001h — Asynchronous product-domain communication design
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation / architecture documentation
 
 ## Goal
@@ -32,4 +32,4 @@ Replace the synchronous-only product-domain communication decision with durable 
 
 Created the domain-event design and updated current briefs, plan, task 013 and AGENTS.md. The owner's explicit event direction supersedes the previous prohibition. Existing merged specs retain historical implementation evidence. Delivery infrastructure is now planned as 001i, Library publication as 012a, and consumers/action publishers remain separately owned tasks. Exact event schemas, backend, retention windows and metadata ordering still need implementation specs. No application code, migrations or dependencies changed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Approved by the owner and merged via [PR #25](https://github.com/adambelton/glutton/pull/25) on 21 October 2026 at 16:16:38 UTC; squash commit `4a0943bcbc94573d6048c534a857388fdc416ff2`. Hosted Repository checks passed on head `cbb297642c092ec712d99574eadd3324e7955791` before merge.

@@ -9,10 +9,10 @@ This section summarizes current delivery status; task tables and linked specs re
 
 | Area | Current status |
 | --- | --- |
-| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h is Ready for review; durable delivery 001i is Ready for review. |
+| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h and durable delivery 001i merged via PR #25. Publisher ownership follow-up 001j is Ready for review. |
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
-| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24 and product UI remains planned. |
+| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a is Ready for review; product UI remains planned. |
 | Ratings and Recommendations | Ratings presentation task 013 is Draft; no implementation delivered. |
 
 ## Task rules
@@ -91,8 +91,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Merged — [spec](specs/010_library_watched.md), [PR #20](https://github.com/adambelton/glutton/pull/20); commit 82d9b83, hosted CI passed |
 | 011 | Library / intent | Watchlist creation, NotInterested-to-ToWatch transition and removal without changing watched entries | 010 | Merged — [spec](specs/011_library_watchlist.md), [PR #23](https://github.com/adambelton/glutton/pull/23); commit 4817bbe, hosted CI passed |
 | 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Merged — [spec](specs/012_library_dismissal.md), [PR #24](https://github.com/adambelton/glutton/pull/24); commit 78aba75, hosted CI passed; classification reads deferred to a consumer-driven spec |
-| 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Ready for review — [spec](specs/001i_durable_event_delivery.md) |
-| 012a | Library / event publication | Publish versioned Library facts and consistent bootstrap for existing rows; retain stream versions through row deletion/recreation | 001i, 012 | Planned — publisher-only spec required |
+| 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Merged via PR #25 — [spec](specs/001i_durable_event_delivery.md) |
+| 012a | Library / event publication | Publish versioned Library facts; retain stream versions through row deletion/recreation | 001i, 012 | Ready for review — [spec](specs/012a_library_event_publication.md) |
 | 013 | Ratings / presentations | Own presentation history, unknown/seen/unseen eligibility and known-seen unrated priority; no synchronous cross-domain make-available API | 005a, 007 | Draft — [spec](specs/013_rating_presentations.md) |
 | 014 | Ratings / ratings | Save a four-level rating from seen evidence; establish current submission/history and publish committed submission/revision events | 013, 001i | Planned |
 | 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
@@ -113,7 +113,7 @@ The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed a
 
 Guest cleanup must remove associated activity as well as the identity. Task 010 covers Library activity through its approved scoped user foreign-key cascade, with existing Identity cleanup/claim compatibility verified; other domains require their own retention decisions before persistence. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
 
-Tasks 010–012 retain their merged local operation contracts. Their old synchronous integration proposals are superseded by the owner-approved [event design](domain_events.md), not by retroactively changing historical verification. Task 001i supplies durable delivery; 012a publishes Library facts and bootstraps existing entries. Task 014 owns rating-event publication. Task 016 is now Library-owned consumption of completed ratings, including the explicitly scoped system reconciliation of NotInterested to watched that current RecordWatched does not support. Task 017 is now Ratings-owned consumption of Library facts. Task 013 owns local presentation/history; it no longer supplies MakeAvailableForRating across domains.
+Tasks 010–012 retain their merged local operation contracts. Their old synchronous integration proposals are superseded by the owner-approved [event design](domain_events.md), not by retroactively changing historical verification. Task 001i supplies durable delivery; 012a publishes Library facts from creation onward. Task 014 owns rating-event publication. Task 016 is now Library-owned consumption of completed ratings, including the explicitly scoped system reconciliation of NotInterested to watched that current RecordWatched does not support. Task 017 is now Ratings-owned consumption of Library facts. Task 013 owns local presentation/history; it no longer supplies MakeAvailableForRating across domains.
 
 Task 017a publishes Ratings UI Library-action requests, 017b applies them in Library and emits outcomes, and 017c consumes those outcomes in Ratings. Recommendations follows the same separate publication, Library consumption and outcome-consumption steps in its later milestone tasks. No originating screen may claim a Library transition completed solely because its response was recorded. Consumer retries do not turn distinct duplicate user actions into silent successes.
 
@@ -202,13 +202,24 @@ Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glut
 
 **013 — Draft, revised for events**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Owns local presentation/history and ready-to-rate versus unknown/unseen state. Library event consumption is task 017. Recognition ordering and retention details remain review decisions. No implementation started.
 
-**001h — Ready for review**, Foundation / architecture documentation; [spec](specs/001h_async_domain_design.md). Replaces synchronous-only coordination with asynchronous events across Library, Ratings and Recommendations. Delivery infrastructure is implemented in 001i; domain publishers/subscribers remain unimplemented.
+**001h — Merged via PR #25**, Foundation / architecture documentation; [spec](specs/001h_async_domain_design.md). Replaces synchronous-only coordination with asynchronous events across Library, Ratings and Recommendations. Delivery infrastructure is implemented in 001i; domain publishers/subscribers remain unimplemented.
 
 
-**001i — Ready for review**, Foundation / event delivery; [spec](specs/001i_durable_event_delivery.md). Implements durable outbox events and ordered subscriber receipts with GoodJob 4.22, after-commit notification wakeups and a recurring recovery sweep. Full local CI passed 292 tests / 3,020 assertions, style and security checks; process-kill recovery and concurrent delivery are covered. [Operations](domain_event_operations.md) documents connections, retry/status and retention. No domain subscriptions, deployment or merge.
+**001i — Merged via PR #25**, Foundation / event delivery; [spec](specs/001i_durable_event_delivery.md). Implements durable outbox events and ordered subscriber receipts with GoodJob 4.22, after-commit notification wakeups and a recurring recovery sweep. Full local CI passed 292 tests / 3,020 assertions, style and security checks; process-kill recovery and concurrent delivery are covered. [Operations](domain_event_operations.md) documents connections, retry/status and retention. No domain subscriptions or deployment. Merge evidence below.
 
-PR #25 review follow-up puts publishing-domain constants and inclusion validation on DomainEventStream and uses them in delivery tests. Full CI passed 294 tests / 3,027 assertions, style and security checks; 001i remains Ready for review.
+PR #25 review follow-up puts publishing-domain constants and inclusion validation on DomainEventStream and uses them in delivery tests. Full CI passed 294 tests / 3,027 assertions, style and security checks; 001i was subsequently merged via PR #25.
 
 The subsequent database safeguard adds a publisher check constraint and validation-bypass coverage. Full CI passed 295 tests / 3,030 assertions, style and security checks. Publisher/subscriber specs must settle stream granularity, historical schema handling and bootstrap; compaction remains deferred pending usage evidence.
 
-Dispatch discovery now fetches event/owner IDs together and checks event existence after locking the user. Concurrent cleanup coverage and full CI passed: 296 tests / 3,036 assertions, style and security checks. Task 001i remains Ready for review in PR #25.
+Dispatch discovery now fetches event/owner IDs together and checks event existence after locking the user. Concurrent cleanup coverage and full CI passed: 296 tests / 3,036 assertions, style and security checks. Task 001i was subsequently merged via PR #25.
+
+
+## PR #25 merge and next task
+
+Approved by the owner and merged via [PR #25](https://github.com/adambelton/glutton/pull/25) on 21 October 2026 at 16:16:38 UTC; squash commit `4a0943bcbc94573d6048c534a857388fdc416ff2`. Hosted Repository checks passed on head `cbb297642c092ec712d99574eadd3324e7955791` before merge. Local main was fast-forwarded to the merge commit. Final local CI passed 296 tests / 3,036 assertions, style and security checks.
+
+**012a — Scope revised by owner**, Library / event publication; [spec](specs/012a_library_event_publication.md). The project has no existing entries, so baseline/bootstrap work was removed. Operations publish one v1 fact using shared event-name constants and explicit classifications.
+
+Task **012a — Ready for review**: Library operations publish versioned facts atomically; each operation supplies its resulting classification and uses shared event-name constants. [Spec and verification](specs/012a_library_event_publication.md); [publication contract](library_event_publication.md). Owner acceptance and merge remain pending.
+
+Foundation **001j — Ready for review**: remove the product-domain allowlist from event streams, retain structural constraints and accept domain-owned publisher names. [Spec](specs/001j_domain_owned_publisher_names.md). Library task 012a adopts its own identifier after independent provider verification.
