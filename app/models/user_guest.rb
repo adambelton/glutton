@@ -6,6 +6,10 @@ class UserGuest < User
   scope :active, -> { where(arel_table[:created_at].gt(EXPIRY_DURATION.ago)) }
   scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
 
+  def inactive_error
+    Identity::GuestExpired.new unless active?
+  end
+
   def sign_out_warning
     I18n.t("identity.registration.guest_signout_warning")
   end
