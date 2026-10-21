@@ -6,13 +6,11 @@ class EventDelivery < ApplicationRecord
     PROCESSED = "processed".freeze
     IGNORED = "ignored".freeze
     SKIPPED = "skipped".freeze
-
-    TERMINAL = [ PROCESSED, IGNORED, SKIPPED ].freeze
   end
 
   belongs_to :domain_event
 
-  scope :completed, -> { where(status: Statuses::TERMINAL) }
+  scope :completed, -> { where(status: [ Statuses::PROCESSED, Statuses::IGNORED, Statuses::SKIPPED ]) }
   scope :pending, -> { where(status: Statuses::PENDING) }
   scope :failed, -> { where(status: Statuses::FAILED) }
   scope :outstanding, -> { where(status: [ Statuses::PENDING, Statuses::FAILED ]) }
