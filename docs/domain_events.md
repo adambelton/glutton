@@ -1,6 +1,6 @@
 # Asynchronous domain communication
 
-Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport merged via PR #25 in task 001i; Library publication is implemented and Ready for review in task 012a; consumers remain unimplemented.
+Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport merged via PR #25 in task 001i; Library publication and domain-owned publisher identifiers merged via PR #26 in tasks 012a/001j; consumers remain unimplemented.
 
 ## Decision and boundaries
 
@@ -16,20 +16,20 @@ Names are domain facts, not generic model-update notifications. Every film-speci
 
 | Publisher / fact | Consumer / reaction |
 | --- | --- |
-| Library: FilmMarkedWatched | Ratings establishes seen evidence and a ready-to-rate entry if there is no current rating; it supersedes earlier unseen suppression. Already-rated films remain rated and are not queued. Recommendations excludes the film. |
-| Library: FilmAddedToWatchlist | Recommendations excludes the film. Ratings records current Library intent but does not infer seen/unseen from watchlist intent alone. It clears an earlier Library dismissal suppression if this is the newer classification; independent Ratings unseen responses still apply. |
+| Library: FilmMarkedWatched | Ratings establishes seen evidence and a ready-to-rate entry if there is no current rating; it preserves explicit rating dismissal, which only an explicit user rating entry may bypass. Already-rated films remain rated and are not queued. Recommendations excludes the film. |
+| Library: FilmAddedToWatchlist | Recommendations excludes the film. Ratings records current Library intent but does not infer seen/unseen from watchlist intent alone. It clears an earlier Library dismissal suppression if this is the newer classification; independent Ratings dismissal still applies. |
 | Library: FilmMarkedNotInterested | Ratings records the not-seen/no-intent fact and suppresses prompts. Recommendations excludes the film. Do not overwrite prior presentation history or delete saved ratings when processing a delayed contradictory event. |
-| Library: FilmRemovedFromWatchlist / FilmDismissalRemoved | Consumers remove the applicable Library classification/suppression. Recommendations re-evaluates eligibility against its other owned facts. Ratings retains recorded seen/unseen evidence; removing a dismissal does not assert the person has now watched it. |
+| Library: FilmRemovedFromWatchlist / FilmDismissalRemoved | Consumers remove the applicable Library classification/suppression. Recommendations re-evaluates eligibility against its other owned facts. Ratings retains viewing evidence and explicit rating dismissal; removing a dismissal does not assert the person has now watched it. |
 | Ratings: RatingSubmitted / RatingRevised | Library consumes the completed-viewing fact and ensures watched state. Recommendations records that the film is rated and excludes it immediately on receipt, even if the Library event has not arrived. Revisions update the local rating revision without producing repeated watched transitions. |
 | Ratings: PreferencesUpdated (later scoring/profile milestone) | Recommendations updates its preference projection and schedules ranking refresh. Only completed published preference versions cross this boundary; raw expressions and intermediate model output stay in Ratings. |
 | Recommendations: RecommendationResponseRecorded | Library consumes explicit watchlist, watched or not-interested choices. The event says the response was recorded, not that Library already changed. Recommendations retains its response and pending application status. No-op navigation/exposure has no Library reaction. |
-| Ratings: RatingFlowLibraryActionRequested (future UI) | Library consumes explicit add-to-watchlist or other supported Library actions made from the rating flow. Seen/unseen answers themselves do not request Library changes. Ratings retains request status separately from its answers. |
+| Ratings: RatingFlowLibraryActionRequested (deferred; not part of the rating/dismissal flow) | Library consumes explicit add-to-watchlist or other supported Library actions made from the rating flow. Seen/unseen answers themselves do not request Library changes. Ratings retains request status separately from its answers. |
 | Library: LibraryActionApplied / LibraryActionRejected | The requesting domain updates its pending response/action status using the request event ID. These outcomes are emitted for asynchronous action requests, not for ordinary direct Library calls. Other domains react to the resulting Library fact, not to these acknowledgements. |
 | Film knowledge: catalogue/analysis revision publication (later) | Ratings may update stored selection inputs and invalidate affected assessments; Recommendations may refresh film evidence. Define actual payload and consumers in the metadata/analysis tasks, not a blanket event for every Film update. |
 
 A Library transition publishes the resulting fact once. ToWatch-to-NotInterested publishes FilmMarkedNotInterested, not a fabricated user removal followed by a new action. Explicit removal publishes its own fact. Facts retain the resulting classification plus source sequence where needed for projection consistency, without exposing STI names.
 
-Recommendations and Ratings presentation histories remain independent. Recommendations does not subscribe to every Ratings page view or unseen answer: unseen alone does not exclude discovery. Ratings need not subscribe to recommendation exposure. Publish only when another domain has a concrete reaction.
+Recommendations activity and Ratings queue state remain independent. Recommendations does not subscribe to Ratings dismissal: dismissal alone does not exclude discovery. Ratings need not subscribe to recommendation exposure. Publish only when another domain has a concrete reaction.
 
 ## Requests, conflicts and loops
 
@@ -60,11 +60,13 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 ## Delivery sequence
 
 1. Foundation task 001i: narrowly scoped durable outbox, job execution and delivery receipts, with ordering, crash recovery, privacy and operational checks. Implemented with GoodJob and PostgreSQL storage in the [001i spec](specs/001i_durable_event_delivery.md), merged via PR #25; see [operations](domain_event_operations.md).
-2. Library task 012a: versioned Library publication, using the Foundation contract. Ready for review; see the [v1 publication contract](library_event_publication.md). No consumer implementation.
-3. Ratings task 013: own presentation state and local seen/unseen workflows. Store known-seen unrated separately from unknown/unseen eligibility; no MakeAvailableForRating cross-domain API.
+2. Library task 012a: versioned Library publication, using the Foundation contract. Merged via PR #26; see the [v1 publication contract](library_event_publication.md). No consumer implementation.
+3. Ratings task 013: own one user/film queue record, current selection and persistent viewing-neutral dismissal; no MakeAvailableForRating cross-domain API.
 4. Ratings tasks 014/015: rating/submission/expression persistence; task 014 defines committed submission/revision publication, and 015 preserves atomic rating-plus-expression save. Later preference work owns PreferencesUpdated publication.
 5. Library task 016: consume completed-rating events, define system reconciliation and duplicate outcomes, and publish actual Library changes.
-6. Ratings task 017: consume Library facts into its owned eligibility state; known watched but unrated films are presented for a rating first, without asking seen again. Preserve current ratings and historical answers.
+6. Ratings task 017: consume Library facts into its owned eligibility state; known watched but unrated films are presented for a rating first, without asking seen again. Preserve current ratings and explicit rating dismissal.
 7. Separate domain-owned tasks for Ratings/Recommendations action publication, Library action consumption/outcomes, and requesting-domain outcome consumption before the associated UI is complete. Recommendations also consumes Library exclusions and completed rating/preference facts in separately scoped tasks.
 
 Selection metadata remains a separate Film knowledge concern. TMDB vote count is a candidate recognition proxy discussed with the owner, not yet an approved/imported field or final ranking policy. Asynchronous coordination does not settle catalogue eligibility or ranking.
+
+Ratings candidate ordering clarification: the owner subsequently approved oldest-first batches from a single persistent RatingFilm queue. Candidates admitted by future Library watched events and unfinished catalogue candidates use the same created_at/ID order; newly watched entries do not jump the queue. The row stores user, film, boolean dismissal and standard timestamps only. Selection records no presentation/current state. Task 014 adds the real ratings relationship and rated/unrated scopes; selection then excludes rated rows. Catalogue replenishment fills only batch shortfalls under a separately approved policy, preserving all existing user/film records and dismissal. This supersedes earlier watched-first priority descriptions.

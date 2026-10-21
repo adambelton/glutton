@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_21_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_21_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -216,6 +216,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_170000) do
     t.check_constraint "password_digest::text ~ '[^[:space:]]'::text", name: "pending_registrations_require_password_digest"
   end
 
+  create_table "rating_films", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "film_id", null: false
+    t.boolean "dismissed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_rating_films_on_film_id"
+    t.index ["user_id", "film_id"], name: "index_rating_films_on_user_id_and_film_id", unique: true
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.datetime "created_at", null: false
@@ -241,5 +251,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_21_170000) do
   add_foreign_key "library_films", "films"
   add_foreign_key "library_films", "users", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
+  add_foreign_key "rating_films", "films"
+  add_foreign_key "rating_films", "users", on_delete: :cascade
   add_foreign_key "sessions", "users"
 end
