@@ -1,6 +1,6 @@
 # 006r — Confirm an unattached registration with the current guest
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration
 
 ## Goal
@@ -36,4 +36,4 @@ Allow a valid confirmation token for an unattached registration to upgrade the c
 
 Removed the pending ID argument through the confirmation call chain. Authorization now requires a user who can register and an unattached request or matching linked user. POST retains existing attachment checks, locking and transaction semantics. Replaced the synthetic cookie-copy test with the actual separate-browser flow; added competing-guest and conflicting-state coverage. The existing prohibition on replacing another pending request linked to the current guest remains unchanged. No schema or UI copy changes. Verification used isolated test records and fake/local mail; no live mail, deployment, owner acceptance or merge.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.

@@ -1,6 +1,6 @@
 # Codebase audit — 20 October 2026
 
-Status: Ready for review  
+Status: Merged  
 Owning supporting area: Foundation / repository review  
 Task: [001f](../specs/001f_codebase_audit.md)  
 Baseline: `main`, `3cd3034e0e48fe04648c8a36c4e1d0028a622270`
@@ -11,7 +11,7 @@ The organisation is sound for the current application size. Keep the Rails monol
 
 ## Subsequent remediation
 
-The findings and verification below describe the original audit baseline. The owner subsequently authorized fixes and confirmation simplification, implemented in [006o](../specs/006o_authentication_reset_serialization.md) (A1), [006p](../specs/006p_confirmation_orchestration.md) (A2), [009b](../specs/009b_tmdb_boundary_consistency.md) (A3), and [001g](../specs/001g_current_documentation.md) (A4). All four are **Ready for review**, with acceptance/merge pending. Final local CI passed 232 tests / 2,633 assertions, style and security checks; application eager loading passed. See the individual specs for reproduction commands, limitations and the initial failing authentication regression.
+The findings and verification below describe the original audit baseline. The owner subsequently authorized fixes and confirmation simplification, implemented in [006o](../specs/006o_authentication_reset_serialization.md) (A1), [006p](../specs/006p_confirmation_orchestration.md) (A2), [009b](../specs/009b_tmdb_boundary_consistency.md) (A3), and [001g](../specs/001g_current_documentation.md) (A4). These fixes and subsequent confirmation follow-ups were accepted and merged via PR #22 on 20 October 2026. Final local CI passed 232 tests / 2,633 assertions, style and security checks; application eager loading passed. See the individual specs for reproduction commands, limitations and the initial failing authentication regression.
 
 ## Findings
 
@@ -134,4 +134,4 @@ ensure
 end
 ```
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.

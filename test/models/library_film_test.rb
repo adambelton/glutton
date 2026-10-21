@@ -26,6 +26,12 @@ class LibraryFilmTest < ActiveSupport::TestCase
     assert LibraryFilmToWatch.new.can_watch?
   end
 
+  test "watchlist addition error is present only when the action is denied" do
+    assert_nil LibraryFilmNotInterested.new.watchlist_addition_error
+    assert_equal Library::WatchlistUnavailable, LibraryFilmToWatch.new.watchlist_addition_error
+    assert_equal Library::WatchlistUnavailable, LibraryFilmWatched.new.watchlist_addition_error
+  end
+
   test "subtypes share one user-film relationship" do
     LibraryFilmToWatch.create!(attributes)
     duplicate = LibraryFilmWatched.new(attributes)

@@ -1,6 +1,6 @@
 # 006q — Make confirmation paths explicit
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / registration
 
 ## Goal
@@ -32,4 +32,4 @@ Make CompleteRegistration readable as two explicit paths: a browser with a curre
 
 The transaction now starts with an explicit current_user_id branch. That path resolves current_user, verifies confirmation access and attaches an owned request; the anonymous path resolves only the guest already linked to the request. A private lock_registration helper preserves fresh locked token/ownership validation in both paths. The common account transition remains below the conditional. No new classes or behaviour changes; existing outcome/concurrency tests cover the refactor without tests of private method structure.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.

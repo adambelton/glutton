@@ -21,8 +21,15 @@ class SessionTest < ActiveSupport::TestCase
     freeze_time
     user = UserGuest.create!
     authentication = Session.create!(user:)
-    travel UserGuest::EXPIRY_DURATION do
-      assert_nil Session.resume(id: authentication.id, user_id: user.id)
+    travel_to user.created_at + UserGuest::EXPIRY_DURATION - 1.second do
+      assert_nil user.inactive_error
+      assert_equal user, Session.resume(id: authentication.id, user_id: user.id)
+    end
+    [ 0.seconds, 1.second ].each do |offset|
+      travel_to user.created_at + UserGuest::EXPIRY_DURATION + offset do
+        assert_raises(Identity::GuestExpired) { Session.resume(id: authentication.id, user_id: user.id) }
+        assert_raises(Identity::GuestExpired) { Session.resume(id: nil, user_id: user.id) }
+      end
     end
     deleted = UserDeleted.create!
     assert_raises(Identity::AccountDeleted) { Session.resume(id: nil, user_id: deleted.id) }

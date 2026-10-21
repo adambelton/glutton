@@ -21,6 +21,9 @@ module Identity
       @current_user = Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
       clear_identity_cookie unless @current_user
       @current_user
+    rescue Identity::GuestExpired
+      clear_identity_cookie
+      nil
     end
 
     def ensure_guest_user!
