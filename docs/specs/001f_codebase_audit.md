@@ -1,6 +1,6 @@
 # 001f — Codebase organisation and conventions audit
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation / repository review
 
 ## Goal
@@ -35,6 +35,6 @@ Produce an evidence-backed audit of the implemented codebase's organisation, dom
 
 Created the audit report and recorded its baseline, source evidence, reproduction and verification. No application, schema or test changes. The concurrency probe used synthetic test-database records and removed them afterward. Findings recommend separately scoped remediation; this review does not implement or approve it.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.
 
 Publication authorization: On 20 October 2026, the owner requested a PR for online review. Acceptance and merge remain pending.

@@ -1,6 +1,6 @@
 # 006o — Serialize authentication with password recovery
 
-Status: Ready for review  
+Status: Merged  
 Owner: Identity / sessions
 
 ## Goal
@@ -31,6 +31,6 @@ Authenticate now applies the user row lock to model-owned credential verificatio
 
 Verification used isolated local test records and deterministic fake providers. Local database/process/network checks required approved sandbox elevation. No live mail, live TMDB request, deployment, hosted CI, PR or merge occurred.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.
 
 Publication authorization: On 20 October 2026, the owner requested a PR for online review. Acceptance and merge remain pending.
