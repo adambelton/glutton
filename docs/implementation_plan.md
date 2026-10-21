@@ -9,11 +9,11 @@ This section summarizes current delivery status; task tables and linked specs re
 
 | Area | Current status |
 | --- | --- |
-| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. |
+| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h is Ready for review; durable delivery 001i is Ready for review. |
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
-| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 is Ready for review and product UI remains planned. |
-| Ratings and Recommendations | Planned; no implementation delivered. |
+| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24 and product UI remains planned. |
+| Ratings and Recommendations | Ratings presentation task 013 is Draft; no implementation delivered. |
 
 ## Task rules
 
@@ -44,9 +44,9 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 - Recommendation candidates are assumed unwatched unless evidence says otherwise. Recommendations excludes Library's To watch, Watched and Not interested entries; existence of a Ratings/Recommendations history record alone does not imply exclusion.
 - Library owns watched-but-unrated films. “Awaiting rating” means watched without a current rating owned by Ratings; derive the display from that result initially. Library links to the targeted Ratings flow.
 - Ratings owns current rating/history; Library's rated presentation reflects it rather than maintaining an independent rating value.
-- Ratings does not require a Library watched record to accept a rating. Confirming seen alone stays in Ratings; a completed rating synchronously records watched through Library.
-- Ratings selects the next film from its own queue/presentation state. Library's user-facing mark-watched workflow synchronously requests rating eligibility; a previous unseen response must not prevent this. Recording watched after a completed rating must not trigger that request again.
-- Cross-domain communication uses a few explicit synchronous contracts, not events or asynchronous jobs. Each provider and consumer has its own task and tests. Specify rollback/retry behaviour before implementing each consumer; do not assume separate domain writes are automatically atomic. This decision does not remove deferred AI assessment work.
+- Ratings does not require a Library watched record to accept a rating. Confirming seen alone stays in Ratings; a completed rating publishes viewing evidence for Library to consume asynchronously.
+- Ratings selects the next film from its own queue/presentation state. Library publishes watched facts; Ratings consumes them as known-seen evidence and prioritizes unrated films without another seen question. Prior unseen suppression is superseded, while already-rated films remain rated.
+- Product domains communicate through durable asynchronous events with independent transactions and eventual consistency. See [domain events](domain_events.md). Agree publisher/subscriber contracts and implement them in separate owned tasks. Internal domain operations and Identity/catalogue reads remain synchronous; AI processing retains separate rules.
 - Analysis pages are directly accessible, with spoiler-labelled navigation normally from the watched Library view; Library watched status is not an analysis authorization gate.
 
 ## Initial scaffold
@@ -90,15 +90,20 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
 | 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Merged — [spec](specs/010_library_watched.md), [PR #20](https://github.com/adambelton/glutton/pull/20); commit 82d9b83, hosted CI passed |
 | 011 | Library / intent | Watchlist creation, NotInterested-to-ToWatch transition and removal without changing watched entries | 010 | Merged — [spec](specs/011_library_watchlist.md), [PR #23](https://github.com/adambelton/glutton/pull/23); commit 4817bbe, hosted CI passed |
-| 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Ready for review — [spec](specs/012_library_dismissal.md); classification reads deferred to a consumer-driven spec |
-| 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |
-| 014 | Ratings / ratings | Save a four-level rating based on Ratings' seen confirmation; expose current-rating result and establish submission/history invariants without requiring Library state | 013 | Planned |
+| 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Merged — [spec](specs/012_library_dismissal.md), [PR #24](https://github.com/adambelton/glutton/pull/24); commit 78aba75, hosted CI passed; classification reads deferred to a consumer-driven spec |
+| 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Ready for review — [spec](specs/001i_durable_event_delivery.md) |
+| 012a | Library / event publication | Publish versioned Library facts and consistent bootstrap for existing rows; retain stream versions through row deletion/recreation | 001i, 012 | Planned — publisher-only spec required |
+| 013 | Ratings / presentations | Own presentation history, unknown/seen/unseen eligibility and known-seen unrated priority; no synchronous cross-domain make-available API | 005a, 007 | Draft — [spec](specs/013_rating_presentations.md) |
+| 014 | Ratings / ratings | Save a four-level rating from seen evidence; establish current submission/history and publish committed submission/revision events | 013, 001i | Planned |
 | 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
-| 016 | Ratings / Library contract consumer | On completed rating, synchronously invoke Library's existing record-watched operation; test agreed success, rollback and retry behaviour without requeueing | 010, 015 | Planned |
-| 017 | Library / Ratings contract consumer | User mark-watched workflow synchronously invokes Ratings' make-available operation; test earlier unseen, already-rated and repeated requests | 010, 013, 014 | Planned |
-| 018 | Ratings / rating flow | Cycling seen/unseen and rating UI, including direct watchlist action through the existing Library contract | 011, 016 | Planned |
+| 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Planned |
+| 017 | Ratings / Library-event consumer | Project Library facts into eligibility and known-seen unrated priority; preserve current ratings/history and handle stale/duplicate events | 012a, 013, 014 | Planned |
+| 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Planned |
+| 017b | Library / action consumption | Apply Ratings action requests and publish applied/rejected outcomes; preserve public transition failures | 012a, 017a | Planned |
+| 017c | Ratings / action outcomes | Consume Library outcomes into recorded request status | 017a, 017b | Planned |
+| 018 | Ratings / rating flow | Cycling seen/unseen and rating UI with recorded asynchronous Library action requests/outcomes | 016, 017, 017a, 017b, 017c | Planned |
 | 019 | Ratings / targeted entry | Open a specified film for rating using Ratings' state, including films made available by Library; no Library watched-record prerequisite | 017, 018 | Planned |
-| 020 | Library / watched view | Distinguish awaiting-rating/rated using Ratings' current-rating result; link to targeted rating | 014, 019 | Planned |
+| 020 | Library / watched view | Distinguish awaiting-rating/rated using the Library-owned projection of Ratings events; link to targeted rating | 014, 019 | Planned |
 | 021 | Library / watchlist view | To watch list with existing mark-watched workflow and rating entry point | 011, 017, 019 | Planned |
 | 022 | Library / dismissed view | Not interested list with reconsideration | 012 | Planned |
 | 023 | Ratings / revisions | Re-rate while retaining agreed history and superseding the current submission | 016, 019 | Planned |
@@ -108,11 +113,11 @@ The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed a
 
 Guest cleanup must remove associated activity as well as the identity. Task 010 covers Library activity through its approved scoped user foreign-key cascade, with existing Identity cleanup/claim compatibility verified; other domains require their own retention decisions before persistence. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
 
-Task 010 provides Library's record-watched contract (already-watched entries raise Library::AlreadyWatched) without calling Ratings. Task 013 provides Ratings' make-available contract, and task 014 provides its current-rating read contract. Agree each contract's inputs, results and failures before implementing it. Tasks 016 and 017 implement the separate consuming sides; they do not modify their providers. Neither task introduces events, background delivery or a generic integration layer. Their specs must define handling of AlreadyWatched explicitly; repeated transition calls are not successful no-ops.
+Tasks 010–012 retain their merged local operation contracts. Their old synchronous integration proposals are superseded by the owner-approved [event design](domain_events.md), not by retroactively changing historical verification. Task 001i supplies durable delivery; 012a publishes Library facts and bootstraps existing entries. Task 014 owns rating-event publication. Task 016 is now Library-owned consumption of completed ratings, including the explicitly scoped system reconciliation of NotInterested to watched that current RecordWatched does not support. Task 017 is now Ratings-owned consumption of Library facts. Task 013 owns local presentation/history; it no longer supplies MakeAvailableForRating across domains.
 
-Task 010 includes the minimal ToWatch subtype and watched transition; tasks 011 and 012 define the remaining intent/dismissal transitions without recommendation logic. Task 013 owns selection and presentation history independently of Library. Task 014 owns current-submission invariants before revision UI arrives. A seen response without a saved rating creates no Library classification and therefore does not exclude recommendations. Task 017 checks Ratings' current-rating result so marking an already-rated film watched does not requeue it.
+Task 017a publishes Ratings UI Library-action requests, 017b applies them in Library and emits outcomes, and 017c consumes those outcomes in Ratings. Recommendations follows the same separate publication, Library consumption and outcome-consumption steps in its later milestone tasks. No originating screen may claim a Library transition completed solely because its response was recorded. Consumer retries do not turn distinct duplicate user actions into silent successes.
 
-Each consuming task verifies real provider compatibility as well as failure handling. A failed save must not appear rated, and a watched action must not imply a completed rating. Decide the concrete synchronous consistency mechanism in the relevant spec before implementation; retain ownership of writes in the providing domain.
+Watched-but-unrated films take priority and skip the seen question. NotInterested means unseen/unwanted and suppresses rating and recommendation presentation. Removal retains unseen evidence. TMDB recognition inputs and the initial unknown-film selection policy remain to be specified; add a Film knowledge provider task before Ratings consumes new metadata. No live TMDB requests belong in presentation selection.
 
 All private operations include checks against accessing another user's records, including other guests, and reject expired guest access. Early domain operations can be verified with representative records and existing contracts; they need not wait for every user interface.
 
@@ -122,15 +127,15 @@ Break down only when approaching each milestone. Domain/capability ownership bel
 
 - **Film knowledge:** media enrichment, reviewed trailer data, versioned sourced analyses, quality vocabulary and film associations. Analysis pages are directly accessible with clear spoiler labelling; normal navigation is from the watched Library view. No watched authorization contract is needed.
 - **Ratings / analysis:** benchmark JEV scoring contracts and cost against labelled expressions and ratings.
-- **Foundation:** configure durable jobs when first needed; domain-specific processing rules remain with their domain.
+- **Foundation:** task 001i configures durable jobs and outbox delivery now required by product-domain events; domain-specific processing rules remain with their domain.
 - **Ratings / scoring:** capture pre-submission expressions profile, separate implicit/explicit evidence and handle stale/duplicate assessments.
 - **Ratings / profile building:** explicit-only synthesis and assessment of meaningful changes; evaluate JEV gate and Claude usage.
 - **Ratings / preferences:** aggregate completed evidence and expose a preference result for recommendation consumption.
 - **Ratings / reassessment:** historical reinterpretation, scheduling and freshness, divided into small tasks. Original input and inference remain distinct inside the domain.
-- **Recommendations / selection:** apply eligibility rules to Library classifications; do not infer exclusion merely from rating/recommendation history.
-- **Recommendations / ranking:** rank eligible films against a defined Ratings preference result.
+- **Recommendations / eligibility:** consume Library classification and completed-rating events into owned eligibility projections; do not infer exclusion merely from presentation history. Bootstrap and stale/duplicate handling require a dedicated consumer spec.
+- **Recommendations / ranking:** consume published completed Ratings preference versions and rank eligible films; define bootstrap, refresh and version handling in its own task.
 - **Recommendations / presentation:** record each presented suggestion and explanation, with film media from Film knowledge.
-- **Recommendations / responses:** retain response history and invoke existing Library operations for watchlist, watched and dismissal. Implement/test Library providers and Recommendation consumers in separate tasks; define synchronous failure and retry behaviour before implementation.
+- **Recommendations / responses:** retain response history and publish user choices; a separate Library-owned task consumes requests and publishes applied/rejected outcomes. A Recommendations-owned task consumes outcomes. Define version/conflict and pending UI behaviour before implementation.
 - **Recommendations / evaluation:** compare rating-only and expression-informed results from fixed inputs; required Ratings changes become separate work after boundary review.
 
 The first complete loop still requires rating-only usefulness, explicit evidence, historical reinterpretation, media, spoiler-safe explanations and feedback. Boundary changes do not reduce product scope. User-requested imports, conversations and custom artwork production remain later features.
@@ -193,4 +198,11 @@ Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glut
 
 **006s — Merged via PR #23**, Identity / guest lifecycle; [spec](specs/006s_expired_guest_error.md). UserGuest supplies GuestExpired after expiry; browser session resolution handles it while preserving cookie clearing and guest restart behaviour. Focused checks: 27 tests/139 assertions; full CI: 252 tests/2,769 assertions, style and security checks passed. Owner approved merge; merged 21 October 2026, commit 4817bbe, after hosted CI passed.
 
-**012 — Ready for review**, Library / dismissal; [spec](specs/012_library_dismissal.md). Implements creation/transition into NotInterested and explicit dismissal removal. Task 011 already supplies reconsideration into ToWatch. Watched entries remain protected; classification read contracts await a concrete consumer. Focused Library checks passed: 58 tests/330 assertions. Full CI passed: 272 tests/2,895 assertions, style and security checks clean. Owner acceptance and merge pending.
+**012 — Merged via PR #24**, Library / dismissal; [spec](specs/012_library_dismissal.md). Implements creation/transition into NotInterested and explicit dismissal removal. Task 011 already supplies reconsideration into ToWatch. Watched entries remain protected; classification read contracts await a concrete consumer. Focused Library checks passed: 58 tests/330 assertions. Full CI passed: 272 tests/2,895 assertions, style and security checks clean. Owner approved merge; merged 21 October 2026, commit 78aba75, after hosted CI passed.
+
+**013 — Draft, revised for events**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Owns local presentation/history and ready-to-rate versus unknown/unseen state. Library event consumption is task 017. Recognition ordering and retention details remain review decisions. No implementation started.
+
+**001h — Ready for review**, Foundation / architecture documentation; [spec](specs/001h_async_domain_design.md). Replaces synchronous-only coordination with asynchronous events across Library, Ratings and Recommendations. Delivery infrastructure is implemented in 001i; domain publishers/subscribers remain unimplemented.
+
+
+**001i — Ready for review**, Foundation / event delivery; [spec](specs/001i_durable_event_delivery.md). Implements durable outbox events and ordered subscriber receipts with GoodJob 4.22, after-commit notification wakeups and a recurring recovery sweep. Full local CI passed 292 tests / 3,020 assertions, style and security checks; process-kill recovery and concurrent delivery are covered. [Operations](domain_event_operations.md) documents connections, retry/status and retention. No domain subscriptions, deployment or merge.
