@@ -14,7 +14,7 @@ module DomainEventHelpers
 
   def publish(stream_key: "film:1", user_id: @user.id, **attributes)
     User.transaction do
-      DomainEvents::Publish.call(user_id:, publisher: "test", stream_key:,
+      DomainEvents::Publish.call(user_id:, publisher: DomainEvents::PublishingDomains::LIBRARY, stream_key:,
         name: "Changed", payload: { value: 1 }, **attributes)
     end
   end
@@ -24,7 +24,7 @@ module DomainEventHelpers
       EventEffect.create!(event_id: event.id, subscriber: name, value: event.payload.fetch("value"))
       :processed
     end
-    DomainEvents::Subscription.new(name:, publisher: "test", event_names: [ "Changed" ], handler:)
+    DomainEvents::Subscription.new(name:, publisher: DomainEvents::PublishingDomains::LIBRARY, event_names: [ "Changed" ], handler:)
   end
 
   def dispatch(*subscriptions, limit: 100)

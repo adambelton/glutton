@@ -81,7 +81,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
         EventEffect.create!(event_id: event.id, subscriber: "projection", value: 1)
         Process.kill("KILL", Process.pid)
       end
-      registration = DomainEvents::Subscription.new(name: "projection", publisher: "test", event_names: ["Changed"], handler:)
+      registration = DomainEvents::Subscription.new(name: "projection", publisher: DomainEvents::PublishingDomains::LIBRARY, event_names: ["Changed"], handler:)
       DomainEvents::Subscriptions.define_singleton_method(:all) { [registration] }
       GoodJob.perform_inline("domain_events", limit: 1)
     RUBY_SCRIPT
