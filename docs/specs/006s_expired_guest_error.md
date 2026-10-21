@@ -1,6 +1,6 @@
 # 006s — Explicit expired-guest session failure
 
-Status: Ready for review
+Status: Merged
 Owner: Identity / guest lifecycle
 
 ## Goal
@@ -30,4 +30,4 @@ Give expired guests a specific inactive error through the existing User/Session 
 
 Added the model-owned GuestExpired error and a narrow rescue at the browser session boundary. Session.resume remains unchanged and propagates the model-provided error. Existing browser fallback semantics are retained; no other-domain code changed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Approved by the owner and merged via [PR #23](https://github.com/adambelton/glutton/pull/23) on 21 October 2026 at 13:34:00 UTC; squash commit `4817bbe3a81c181c7cfc1699f591541239cc7632`. Hosted Repository checks passed on head `baabde5fc65aedfad9b2b9af664ec9f69ae108b7` before merge.

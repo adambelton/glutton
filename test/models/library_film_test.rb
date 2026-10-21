@@ -32,6 +32,15 @@ class LibraryFilmTest < ActiveSupport::TestCase
     assert_equal Library::WatchlistUnavailable, LibraryFilmWatched.new.watchlist_addition_error
   end
 
+  test "dismissal permission and error agree for supported entries" do
+    assert LibraryFilmToWatch.new.can_mark_not_interested?
+    assert_nil LibraryFilmToWatch.new.dismissal_error
+    assert_not LibraryFilmWatched.new.can_mark_not_interested?
+    assert_equal Library::DismissalUnavailable, LibraryFilmWatched.new.dismissal_error
+    assert_not LibraryFilmNotInterested.new.can_mark_not_interested?
+    assert_equal Library::DismissalUnavailable, LibraryFilmNotInterested.new.dismissal_error
+  end
+
   test "subtypes share one user-film relationship" do
     LibraryFilmToWatch.create!(attributes)
     duplicate = LibraryFilmWatched.new(attributes)

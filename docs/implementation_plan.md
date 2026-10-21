@@ -10,9 +10,9 @@ This section summarizes current delivery status; task tables and linked specs re
 | Area | Current status |
 | --- | --- |
 | Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. |
-| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. |
+| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
-| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 is Ready for review; dismissal and product UI remain planned. |
+| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 is Ready for review and product UI remains planned. |
 | Ratings and Recommendations | Planned; no implementation delivered. |
 
 ## Task rules
@@ -89,8 +89,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
 | 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
 | 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Merged — [spec](specs/010_library_watched.md), [PR #20](https://github.com/adambelton/glutton/pull/20); commit 82d9b83, hosted CI passed |
-| 011 | Library / intent | Watchlist creation, NotInterested-to-ToWatch transition and removal without changing watched entries | 010 | Ready for review — [spec](specs/011_library_watchlist.md) |
-| 012 | Library / dismissal | Not-interested/reconsideration operations and classification reads | 011 | Planned |
+| 011 | Library / intent | Watchlist creation, NotInterested-to-ToWatch transition and removal without changing watched entries | 010 | Merged — [spec](specs/011_library_watchlist.md), [PR #23](https://github.com/adambelton/glutton/pull/23); commit 4817bbe, hosted CI passed |
+| 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Ready for review — [spec](specs/012_library_dismissal.md); classification reads deferred to a consumer-driven spec |
 | 013 | Ratings / presentations | Own next-film selection, presentation/seen/unseen history and suppression; expose an idempotent make-available-for-rating operation that overrides earlier unseen suppression | 005a, 007 | Planned |
 | 014 | Ratings / ratings | Save a four-level rating based on Ratings' seen confirmation; expose current-rating result and establish submission/history invariants without requiring Library state | 013 | Planned |
 | 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
@@ -189,6 +189,8 @@ Current-guest confirmation: **006r — Merged**, Identity / registration; [spec]
 
 Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge. Local main was fast-forwarded to that commit. No additional application changes were made while preparing the next spec.
 
-**011 — Ready for review**, Library / intent; [watchlist spec](specs/011_library_watchlist.md). Implements watchlist creation, permitted NotInterested-to-ToWatch transitions and explicit removal outcomes, preserves watched entries, and retains existing identity, lock and retention contracts. Rewatch, UI, Ratings and Recommendations changes are excluded. Focused verification: 39 tests/207 assertions; full CI: 253 tests/2,772 assertions, style and security checks passed. Owner acceptance and merge pending.
+**011 — Merged via PR #23**, Library / intent; [watchlist spec](specs/011_library_watchlist.md). Implements watchlist creation, permitted NotInterested-to-ToWatch transitions and explicit removal outcomes, preserves watched entries, and retains existing identity, lock and retention contracts. Rewatch, UI, Ratings and Recommendations changes are excluded. Focused verification: 39 tests/207 assertions; full CI: 253 tests/2,772 assertions, style and security checks passed. Owner approved merge; merged 21 October 2026, commit 4817bbe, after hosted CI passed.
 
-**006s — Ready for review**, Identity / guest lifecycle; [spec](specs/006s_expired_guest_error.md). UserGuest supplies GuestExpired after expiry; browser session resolution handles it while preserving cookie clearing and guest restart behaviour. Focused checks: 27 tests/139 assertions; full CI: 252 tests/2,769 assertions, style and security checks passed. Owner acceptance and merge pending.
+**006s — Merged via PR #23**, Identity / guest lifecycle; [spec](specs/006s_expired_guest_error.md). UserGuest supplies GuestExpired after expiry; browser session resolution handles it while preserving cookie clearing and guest restart behaviour. Focused checks: 27 tests/139 assertions; full CI: 252 tests/2,769 assertions, style and security checks passed. Owner approved merge; merged 21 October 2026, commit 4817bbe, after hosted CI passed.
+
+**012 — Ready for review**, Library / dismissal; [spec](specs/012_library_dismissal.md). Implements creation/transition into NotInterested and explicit dismissal removal. Task 011 already supplies reconsideration into ToWatch. Watched entries remain protected; classification read contracts await a concrete consumer. Focused Library checks passed: 58 tests/330 assertions. Full CI passed: 272 tests/2,895 assertions, style and security checks clean. Owner acceptance and merge pending.

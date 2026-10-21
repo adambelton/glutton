@@ -1,6 +1,6 @@
 # 011 — Library watchlist addition and removal
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / intent
 
 ## Goal
@@ -90,4 +90,4 @@ Shared-error revision: owner requested LibraryFilm to supply WatchlistUnavailabl
 
 Conditional-error revision: watchlist_addition_error now returns nil when can_add_to_watchlist? is true. Model tests cover allowed and denied outcomes. Focused Library command under AC5 passed 39 tests/207 assertions; full CI passed 253 tests/2,772 assertions, style and security checks clean. Targeted RuboCop and git diff --check passed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Approved by the owner and merged via [PR #23](https://github.com/adambelton/glutton/pull/23) on 21 October 2026 at 13:34:00 UTC; squash commit `4817bbe3a81c181c7cfc1699f591541239cc7632`. Hosted Repository checks passed on head `baabde5fc65aedfad9b2b9af664ec9f69ae108b7` before merge.
