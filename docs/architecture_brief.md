@@ -103,6 +103,8 @@ Film analyses are directly accessible; normal navigation is through spoiler-labe
 
 ## 6. Saving a rated film
 
+Scoring clarification, 22 October 2026: [Ratings scoring design](ratings_scoring_design.md) records the agreed unexpressed, implicitly expressed and explicitly expressed classifications, current-profile recomputation rules and proposed Rating/RatingExpression/RatingQuality relationships. It supersedes the earlier separate-score terminology and mandatory prior-profile capture described below. Task 015 captures original expressions only; scoring and profile processing remain deferred.
+
 ### Record the submission
 
 A Ratings operation validates its own seen confirmation and the rating, without requiring a Library watched record, then atomically persists the rating and expressions, records a submission revision, and identifies the expressions profile revision that existed before this submission. The viewer can continue rating once their input is durably saved.

@@ -8,7 +8,12 @@ class Rating < ApplicationRecord
     ALL = [ BRILLIANT, I_ENJOYED_THAT, NOT_FOR_ME, GARBAGE ].freeze
   end
 
+  MAX_EXPRESSIONS = 20
+
   belongs_to :rating_film
+  has_many :rating_expressions, -> { order(:id) }
+
+  accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
 
   validate :recognized_value
 

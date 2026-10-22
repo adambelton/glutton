@@ -21,13 +21,13 @@ Values are rating choices, not numeric preference weights. Localized display lab
 
 ## Source operation and atomicity
 
-`Ratings::SubmitRating.call(user_id:, rating_film_id:, value:)` accepts an existing owned candidate and returns the saved Rating. It locks the fresh active owner, then the candidate. The model owns submission permission and creation. The operation publishes through the established `DomainEvents::Publish` contract within the same savepoint.
+`Ratings::SubmitRating.call(user_id:, rating_film_id:, value:, expression_texts: [])` accepts an existing owned candidate and returns the saved Rating. It locks the fresh active owner, then the candidate. The models own submission permission, creation and original-expression validation. Rating has many rating_expressions, saved with it before publication. The operation publishes through the established `DomainEvents::Publish` contract within the same savepoint.
 
-Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Invalid input raises `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. First-submission uniqueness and required valid values/references are also database constraints.
+Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Malformed expression collections raise `Ratings::InvalidExpressions`; blank or overlong expressions and invalid rating values raise `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. First-submission uniqueness and required valid values/references are also database constraints.
 
 A dismissed candidate may be explicitly rated. Its dismissal and creation time remain unchanged; automatic selection uses `pending` (unrated and not dismissed). No Library change is performed synchronously. Rating revisions, edits and `RatingRevised` publication are reserved for task 023, which must explicitly revise first-submission uniqueness and settle current/history semantics.
 
-Validation failure, publication failure or caller rollback leaves neither a rating nor its event. After-commit wake failure follows Foundation's durable recovery contract; it does not undo committed source activity.
+Validation failure, publication failure or caller rollback leaves no rating, expressions or event. After-commit wake failure follows Foundation's durable recovery contract; it does not undo committed source activity.
 
 ## Stream and delivery
 
@@ -37,6 +37,6 @@ Delivery is at least once, ordered within a subscriber's stream, with independen
 
 ## Ownership and retention
 
-Guest claim keeps the owner, candidate, rating and event/stream identities. Expired/deleted owners cannot submit. Physical owner cleanup cascades candidates, ratings and the existing Foundation event storage; shared Film rows remain. Film references stay restrictive while a candidate exists. No age-based event purge or new retention schedule is introduced.
+Guest claim keeps the owner, candidate, rating, expression and event/stream identities. Expired/deleted owners cannot submit. Physical owner cleanup cascades candidates, ratings, rating expressions and the existing Foundation event storage; shared Film rows remain. Film references stay restrictive while a candidate exists. No age-based event purge or new retention schedule is introduced.
 
 See [Foundation operations](domain_event_operations.md) for delivery recovery and [domain communication](domain_events.md) for consumer boundaries.

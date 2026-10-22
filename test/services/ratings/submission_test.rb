@@ -9,7 +9,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   def submit(**options)
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT, **options)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "The ending", "The ending" ], **options)
   end
 
   test "all four choices save owned ratings and exact v1 facts without Library changes" do
@@ -21,6 +21,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
           rating = submit(rating_film_id: candidate.id, value:)
         end
       end
+      assert_equal [ "  Atmosphere!\nÉerie 👻  ", "The ending", "The ending" ], rating.reload.rating_expressions.pluck(:text)
       assert_equal value, rating.reload.value
       assert_equal candidate.id, rating.rating_film_id
       event = DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED, payload: {
@@ -42,7 +43,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
     coercible = Object.new
     def coercible.to_s = Rating::Values::I_ENJOYED_THAT
     [ nil, "", "unknown", "I_ENJOYED_THAT", " i_enjoyed_that ", Rating::Values::I_ENJOYED_THAT.to_sym, 1, false, [], {}, coercible ].each do |value|
-      assert_no_difference [ "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
+      assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
         error = assert_raises(ActiveRecord::RecordInvalid) { submit(value:) }
         assert error.record.errors.of_kind?(:value, :inclusion)
       end
@@ -52,7 +53,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   test "duplicates reject identical and different values without another event" do
     rating = submit
     [ Rating::Values::I_ENJOYED_THAT, Rating::Values::BRILLIANT ].each do |value|
-      assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
+      assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count" ] do
         assert_raises(Ratings::AlreadyRated) { submit(value:) }
       end
     end
@@ -72,7 +73,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "missing foreign and inactive identities fail without writes" do
     other = UserGuest.create!
-    assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count" ] do
       assert_raises(Ratings::FilmUnavailable) { submit(user_id: other.id) }
       assert_raises(Ratings::FilmUnavailable) { submit(rating_film_id: -1) }
       deleted = UserDeleted.create!
@@ -84,7 +85,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   test "caller rollback removes both rating and event" do
-    assert_no_difference [ "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
+    assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
       Rating.transaction(requires_new: true) do
         submit
         raise ActiveRecord::Rollback
@@ -97,7 +98,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
     connection = DomainEvent.connection
     connection.execute("ALTER TABLE domain_events ADD CONSTRAINT ratings_test_block_publication CHECK (name <> 'RatingSubmitted')")
     Rating.transaction do
-      assert_no_difference [ "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
+      assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count", "DomainEventStream.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { submit }
       end
       assert @rating_film.can_submit_rating?
@@ -108,9 +109,61 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   test "selection and dismissal do not publish rating events" do
-    assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count" ] do
       Ratings::NextCandidates.call(user_id: @user.id)
       Ratings::Dismiss.call(user_id: @user.id, rating_film_id: @rating_film.id)
     end
+  end
+
+  test "omitted and empty expressions preserve rating only submission" do
+    rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::BRILLIANT)
+    assert_empty rating.reload.rating_expressions
+    other = RatingFilm.create!(user: @user, film: Film.create!(title: "No expressions"))
+    assert_empty submit(rating_film_id: other.id, expression_texts: []).reload.rating_expressions
+  end
+
+  test "malformed collections fail without persistence or coercion" do
+    coercible = Object.new
+    def coercible.to_s = "An expression"
+    [ nil, "text", {}, [ nil ], [ 1 ], [ :text ], [ coercible ], Array.new(Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
+      assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+        assert_raises(Ratings::InvalidExpressions) { submit(expression_texts:) }
+      end
+    end
+  end
+
+  test "blank and overlong later expressions fail atomically" do
+    [ "", " \n\t", "é" * (RatingExpression::MAX_TEXT_LENGTH + 1) ].each do |text|
+      assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+        assert_raises(ActiveRecord::RecordInvalid) { submit(expression_texts: [ "valid", text ]) }
+      end
+    end
+  end
+
+  test "count and unicode character limits are inclusive" do
+    texts = Array.new(Rating::MAX_EXPRESSIONS, "é" * RatingExpression::MAX_TEXT_LENGTH)
+    assert_equal texts, submit(expression_texts: texts).reload.rating_expressions.pluck(:text)
+  end
+
+  test "duplicate failure takes precedence and preserves original expressions" do
+    rating = submit
+    texts = rating.rating_expressions.pluck(:text)
+    [ nil, [ "replacement" ] ].each do |expression_texts|
+      assert_raises(Ratings::AlreadyRated) { submit(expression_texts:) }
+      assert_equal texts, rating.reload.rating_expressions.pluck(:text)
+    end
+  end
+
+  test "expression database failure rolls back rating and earlier expressions with usable outer transaction" do
+    connection = RatingExpression.connection
+    connection.execute("ALTER TABLE rating_expressions ADD CONSTRAINT ratings_test_block_expression CHECK (text <> 'blocked')")
+    Rating.transaction do
+      assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+        assert_raises(ActiveRecord::StatementInvalid) { submit(expression_texts: [ "valid", "blocked" ]) }
+      end
+      assert_equal [ "valid" ], submit(expression_texts: [ "valid" ]).reload.rating_expressions.pluck(:text)
+    end
+  ensure
+    connection&.execute("ALTER TABLE rating_expressions DROP CONSTRAINT IF EXISTS ratings_test_block_expression")
   end
 end

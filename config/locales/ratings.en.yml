@@ -6,6 +6,7 @@ en:
       not_for_me: Not For Me
       garbage: Garbage
     errors:
+      invalid_expressions: Provide a list of no more than %{count} text expressions.
       already_rated: This film has already been rated.
       identity_unavailable: An active account is required to rate films.
       film_unavailable: This rating film is unavailable.
@@ -13,11 +14,16 @@ en:
   activerecord:
     models:
       rating: Rating
+      rating_expression: Rating expression
       rating_film: Rating film
     attributes:
+      rating_expression:
+        rating: Rating
+        text: Expression
       rating:
         rating_film: Rating film
         value: Rating
+        rating_expressions: Expressions
       rating_film:
         user: User
         film: Film
