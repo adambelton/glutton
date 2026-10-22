@@ -17,7 +17,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     }).order(:sequence)
   end
 
-  test "creation transition and removal facts have the immutable v1 contract" do
+  test "creation transition and removal facts have the minimal v1 contract" do
     entry = act(Library::MarkNotInterested)
     assert_equal entry.id, act(Library::AddToWatchlist).id
     assert_equal entry.id, act(Library::MarkNotInterested).id
@@ -31,9 +31,8 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     assert_equal [ Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_ADDED_TO_WATCHLIST, Library::Events::FILM_MARKED_NOT_INTERESTED,
       Library::Events::FILM_DISMISSAL_REMOVED, Library::Events::FILM_ADDED_TO_WATCHLIST, Library::Events::FILM_REMOVED_FROM_WATCHLIST, Library::Events::FILM_ADDED_TO_WATCHLIST,
       Library::Events::FILM_MARKED_WATCHED ], events.pluck(:name)
-    classifications = [ "not_interested", "to_watch", "not_interested", nil, "to_watch", nil, "to_watch", "watched" ]
     events.each_with_index do |event, index|
-      assert_equal({ "user_id" => @user.id, "film_id" => @film.id, "classification" => classifications[index] }, event.payload)
+      assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
       assert_equal index + 1, event.sequence
       assert_equal 1, event.schema_version
       assert_equal Time.current, event.occurred_at

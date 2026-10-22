@@ -4,12 +4,12 @@ class RatingFilm < ApplicationRecord
   has_many :ratings
 
   validates :film_id, uniqueness: { scope: :user_id }
-  validates :dismissed, inclusion: { in: [ true, false ] }
+  validates :dismissed, :held, inclusion: { in: [ true, false ] }
 
   scope :dismissed, -> { where(dismissed: true) }
   scope :rated, -> { where(id: Rating.select(:rating_film_id)) }
   scope :unrated, -> { where.not(id: Rating.select(:rating_film_id)) }
-  scope :pending, -> { unrated.where(dismissed: false) }
+  scope :pending, -> { unrated.where(dismissed: false, held: false) }
 
   def can_submit_rating?
     !ratings.exists?
@@ -25,6 +25,28 @@ class RatingFilm < ApplicationRecord
     end
 
     ratings.create!(value:, rating_expressions_attributes: expression_texts.map { |text| { text: } })
+  end
+
+  def can_hold?
+    !held?
+  end
+
+  def hold!
+    raise Ratings::HoldUnavailable unless can_hold?
+
+    update!(held: true)
+    self
+  end
+
+  def can_release_hold?
+    held?
+  end
+
+  def release_hold!
+    raise Ratings::HoldReleaseUnavailable unless can_release_hold?
+
+    update!(held: false)
+    self
   end
 
   def can_dismiss?

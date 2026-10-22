@@ -33,3 +33,11 @@ Read `docs/implementation_plan.md`, the current task spec and relevant brief sec
 - Put all new or changed application-authored user-facing text in Rails locale files (`config/locales/`), starting with English. This includes page titles, headings, labels, buttons, placeholders, accessibility text, notices, errors, validation messages, and email subjects/bodies. Use Rails `t`/`I18n.t` at runtime and symbolic Active Model validation errors; do not hard-code copy or cache translated strings in constants.
 - Use named interpolation and locale pluralization rather than concatenating sentences. Share identical copy where appropriate, preserve HTML escaping, and check rendered content with missing-translation errors enabled in development/tests.
 - Do not translate user-entered content. Developer-only logs/configuration diagnostics and static emergency pages that must work without Rails are exceptions; any text surfaced to users through the application must use locale entries.
+
+## Event-handler organization
+
+- Place production event reaction handlers under `ReceivingDomain::EventHandlers::PublishingDomain::EventName`, with matching Rails directories, for example `Ratings::EventHandlers::Library::FilmMarkedWatched`. The publishing namespace names the domain, not its models.
+- Keep one ordered subscription for related event reactions whose order matters. An explicit mapping may dispatch to individual handlers; shared boundary validation/loading may remain in the subscription coordinator. Do not split subscriptions solely to match handler files.
+- Use explicit top-level publisher constants when a nested publisher namespace would shadow them. Keep model actions and permissions in the receiving domain's models.
+
+- Keep internal domain models private to their owning domain: LibraryFilm belongs to Library, RatingFilm to Ratings. Cross-domain consumers reference publisher events and shared identifiers, not publisher models or records. Name subscription entry points for the publishing domain (for example Ratings::ConsumeLibraryEvent and Library::ConsumeRatingsEvent); do not encode the publisher’s internal model names in consumer names.

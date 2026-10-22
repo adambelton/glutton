@@ -6,6 +6,8 @@ en:
       not_for_me: Not For Me
       garbage: Garbage
     errors:
+      hold_unavailable: This film is already held from rating rotation.
+      hold_release_unavailable: This film is not held from rating rotation.
       invalid_expressions: Provide a list of no more than %{count} text expressions.
       already_rated: This film has already been rated.
       identity_unavailable: An active account is required to rate films.
@@ -29,3 +31,4 @@ en:
         film: Film
         film_id: Film
         dismissed: Dismissed
+        held: Held

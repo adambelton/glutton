@@ -1,6 +1,6 @@
 # 016 — Establish watched Library state from completed ratings
 
-Status: Ready for review — implemented 22 October 2026  
+Status: Merged — PR #30 on 22 October 2026  
 Owner: Library / rating-event consumer
 
 ## Goal
@@ -71,6 +71,10 @@ Approval: owner approved task 016 on 22 October 2026. No scope deviations. Only 
 
 Verification limitations and corrections: the first focused invocation omitted PARALLEL_WORKERS=1 and the local pg driver segfaulted during parallel-worker startup; the hung parent was stopped. All final checks used the project's established single-worker configuration, with explicit separate-connection thread tests for concurrency. One initial catch-up assertion assumed frozen created_at timestamps would sort events by source sequence; corrected the test to create successive retained events at distinct times. The transport's existing bounded discovery behaviour is documented rather than changed. No live worker was deployed or exercised against production.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see evidence below.
 
 Owner review correction: removed duplicated rating choices and rating-value validation from the consumer. Library validates only the event envelope and identifiers needed to apply viewing evidence; rating_id and other unused fields are also opaque. Synthetic consumer tests exercise that minimal dependency; the existing real Ratings submission integration test still verifies the actual published contract. Verification: `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/services/library test/services/domain_events test/jobs` passed (97 tests / 716 assertions). Targeted RuboCop on the consumer and both consumer test files passed; `git diff --check` passed. Full CI results above predate this focused correction; full CI was not rerun.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #30](https://github.com/adambelton/glutton/pull/30) merged on 22 October 2026 at 10:46:23 UTC (11:46:23 BST), squash commit `8aa83001b91187ce6af892246f65be5754f24624`. Hosted Repository checks passed on exact head `9e52547dc2e0597e248d135e145982ae1673fc9b` before merge. Local main was fast-forwarded.

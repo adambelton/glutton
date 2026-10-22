@@ -17,7 +17,7 @@ module Library
         else
           raise library_film.watchlist_addition_error
         end
-        library_film.publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST, classification: "to_watch")
+        library_film.publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST)
         library_film
       end
     end
