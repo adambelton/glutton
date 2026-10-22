@@ -43,7 +43,7 @@ Implicitly expressed qualities are interpreted against the user's current expres
 
 Aggregate the user's rating-quality points by quality. Score each eligible recommendation candidate by summing the user's points for its associated qualities. Repeated positive evidence across films raises the matching contribution; negative evidence reduces it. This is the proposed initial additive ranking model.
 
-Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Rating revisions must define which rating contributes so superseded opinions are not inadvertently counted as independent evidence.
+Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Owner decision: replacing a rating creates a new Rating with its own expressions and derived qualities, and atomically marks the previous rating superseded. Only the current rating contributes to current preferences; late processing of superseded ratings must not restore their contributions. Task 023 defines the storage constraints and revision event contract.
 
 Evaluate common-quality frequency and unequal numbers of film qualities before deciding on normalization. Normalization, complete weights and ranking evaluation remain future scoring work, not requirements for original-expression persistence.
 

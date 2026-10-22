@@ -1,6 +1,6 @@
 # Asynchronous domain communication
 
-Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport merged via PR #25 in task 001i; Library publication and domain-owned publisher identifiers merged via PR #26 in tasks 012a/001j; consumers remain unimplemented.
+Status: Design direction authorized by the owner on 21 October 2026; event names and detailed contracts below are proposed for the scoped implementation specs. Foundation transport merged via PR #25 in task 001i; Library publication and domain-owned publisher identifiers merged via PR #26 in tasks 012a/001j; Library completed-rating consumption is implemented in task 016 and awaiting review; other consumers remain unimplemented.
 
 ## Decision and boundaries
 
@@ -70,3 +70,5 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 Selection metadata remains a separate Film knowledge concern. TMDB vote count is a candidate recognition proxy discussed with the owner, not yet an approved/imported field or final ranking policy. Asynchronous coordination does not settle catalogue eligibility or ranking.
 
 Ratings candidate ordering clarification: the owner subsequently approved oldest-first batches from a single persistent RatingFilm queue. Candidates admitted by future Library watched events and unfinished catalogue candidates use the same created_at/ID order; newly watched entries do not jump the queue. The row stores user, film, boolean dismissal and standard timestamps only. Selection records no presentation/current state. Task 014 adds the real ratings relationship and rated/unrated scopes; selection then excludes rated rows. Catalogue replenishment fills only batch shortfalls under a separately approved policy, preserving all existing user/film records and dismissal. This supersedes earlier watched-first priority descriptions.
+
+Task 016 implementation: `library.completed_ratings` consumes RatingSubmitted v1 and reconciles Library to watched, emitting a causally linked watched fact only on change. The registry catches up retained events through normal bounded dispatch. Invalid/unsupported contracts fail and retry; inactive owners are skipped. No Ratings/Recommendations consumer or deployment is included. See [task 016](specs/016_library_rating_consumer.md) for review status and verification.

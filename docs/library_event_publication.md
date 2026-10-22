@@ -1,6 +1,6 @@
 # Library event publication
 
-Task 012a publishes facts from the five supported Library operations. The source change and events commit together; a publication failure rolls back the operation. There are no Library event subscribers yet. Raw SQL, fixture creation and direct Active Record writes are not supported Library action APIs.
+Task 012a publishes facts from the five supported Library operations. The source change and events commit together; a publication failure rolls back the operation. Task 016 adds Library consumption of completed Ratings facts; there are no subscribers to Library facts yet. Raw SQL, fixture creation and direct Active Record writes are not supported Library action APIs.
 
 ## Version 1 contract
 
@@ -23,3 +23,7 @@ A transition emits one resulting action fact, without synthetic removal facts. F
 Version 1 is an immutable published contract. An incompatible payload change requires a new schema version. Each future subscriber must explicitly define its historical and unsupported-version handling. Do not silently interpret unknown versions as v1. Retention and delivery remain governed by [Foundation operations](domain_event_operations.md).
 
 Guest claim preserves stream ownership; physical owner cleanup cascades events without emitting a Library removal action.
+
+## Completed-rating consumption
+
+`library.completed_ratings` consumes RatingSubmitted v1 through normal durable delivery. A missing, ToWatch or NotInterested entry becomes watched; already watched is ignored without publication. Derived FilmMarkedWatched facts have the same v1 payload, retain the source correlation ID and identify the source event as causation. The transition, derived event and successful delivery receipt commit together. Public RecordWatched permissions and duplicate failures are unchanged. See [operations](domain_event_operations.md) for retained-event catch-up and failure recovery.

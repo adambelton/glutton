@@ -1,6 +1,6 @@
 # Ratings event publication — version 1
 
-Task 014 publishes first rating submissions. It adds no subscribers; Library and Recommendations will implement their own consumers in separately approved tasks.
+Task 014 publishes first rating submissions. Library task 016 consumes these facts through `library.completed_ratings`; Recommendations consumption remains separate.
 
 ## Meaning and payload
 
@@ -33,7 +33,7 @@ Validation failure, publication failure or caller rollback leaves no rating, exp
 
 Stream identity is `(user_id, publisher: "ratings", stream_key: "film:<internal film ID>")`, independent of candidate/rating row IDs. Foundation allocates monotonic stream sequences and event UUIDs. `occurred_at` records publication time. Direct submissions start their own correlation (event ID) with no causation ID.
 
-Delivery is at least once, ordered within a subscriber's stream, with independent consumer transactions and receipts. There is no total ordering against Library streams. Future consumers must define supported schemas, retained-event bootstrap, duplicate handling and contradiction resolution before implementation. An event retry must not be treated as another user submission. No subscriber or synchronous fallback is installed by this task.
+Delivery is at least once, ordered within a subscriber's stream, with independent consumer transactions and receipts. There is no total ordering against Library streams. Future consumers must define supported schemas, retained-event bootstrap, duplicate handling and contradiction resolution before implementation. An event retry must not be treated as another user submission. Library task 016 installs its consumer independently; no synchronous fallback is installed.
 
 ## Ownership and retention
 
