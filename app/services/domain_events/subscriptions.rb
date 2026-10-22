@@ -1,8 +1,8 @@
 module DomainEvents
   module Subscriptions
     def self.all
-      # Domain-owned subscription tasks add explicit registrations here.
-      []
+      [ Subscription.new(name: Library::ConsumeRating::SUBSCRIBER, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
+        event_names: [ Ratings::Events::RATING_SUBMITTED ], handler: Library::ConsumeRating) ]
     end
   end
 end

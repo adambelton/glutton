@@ -24,10 +24,14 @@ class LibraryFilm < ApplicationRecord
     false
   end
 
-  def publish_event!(name:, classification:)
+  def can_confirm_watched?
+    false
+  end
+
+  def publish_event!(name:, classification:, correlation_id: nil, causation_id: nil)
     DomainEvents::Publish.call(user_id:, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
       stream_key: "film:#{film_id}", name:, schema_version: 1,
-      payload: { user_id:, film_id:, classification: })
+      payload: { user_id:, film_id:, classification: }, correlation_id:, causation_id:)
   end
 
   def initialize(...)

@@ -13,7 +13,7 @@ This section summarizes current delivery status; task tables and linked specs re
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
 | Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; product UI remains planned. |
-| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions is Ready for review. |
+| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer is Ready for review. |
 
 ## Task rules
 
@@ -95,8 +95,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 012a | Library / event publication | Publish versioned Library facts; retain stream versions through row deletion/recreation | 001i, 012 | Merged via PR #26 — [spec](specs/012a_library_event_publication.md) |
 | 013 | Ratings / presentations | Own oldest-first candidate batches and boolean dismissal; catalogue admission and event consumption remain separate | 005a, 007 | Merged via PR #27 — [spec](specs/013_rating_presentations.md) |
 | 014 | Ratings / ratings | First rating submission, rated/unrated/pending scopes and atomic RatingSubmitted publication | 013, 001i | Merged via PR #28 — [spec](specs/014_first_rating_submission.md) |
-| 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Ready for review — [spec](specs/015_rating_expressions.md) |
-| 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Planned |
+| 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Merged via PR #29 — [spec](specs/015_rating_expressions.md) |
+| 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Ready for review — [spec](specs/016_library_rating_consumer.md) |
 | 017 | Ratings / Library-event consumer | Project Library facts into eligibility and known-seen unrated priority; preserve current ratings/history and handle stale/duplicate events | 012a, 013, 014 | Planned |
 | 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Deferred — Ratings flow has no Library-action choices |
 | 017b | Library / action consumption | Apply Ratings action requests and publish applied/rejected outcomes; preserve public transition failures | 012a, 017a | Deferred — Ratings flow has no Library-action choices |
@@ -106,7 +106,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 020 | Library / watched view | Distinguish awaiting-rating/rated using the Library-owned projection of Ratings events; link to targeted rating | 014, 019 | Planned |
 | 021 | Library / watchlist view | To watch list with existing mark-watched workflow and rating entry point | 011, 017, 019 | Planned |
 | 022 | Library / dismissed view | Not interested list with reconsideration | 012 | Planned |
-| 023 | Ratings / revisions | Re-rate with explicit current/history semantics, extend first-submission storage and publish RatingRevised | 016, 019 | Planned |
+| 023 | Ratings / revisions | Create replacement rating with new expressions/qualities, supersede previous rating atomically and publish RatingRevised | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 
 The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered sessions follow Rails authentication conventions with no application-imposed TTL. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 supplies shared guest/registered session lifecycle and registered authentication and task 005a exposes both identity modes through HTTP. Registered sessions end through sign-out/revocation or inactive-account rejection, not a custom age deadline. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
@@ -257,3 +257,13 @@ Owner approved and merged [PR #28](https://github.com/adambelton/glutton/pull/28
 22 October 2026: recorded the [scoring design](ratings_scoring_design.md). Task 015 names the association `Rating#rating_expressions` and preserves original evidence for future scoring. RatingQuality and expression-profile processing remain later work; this documentation update does not start implementation.
 
 **015 — Ready for review**, 22 October 2026. Owner approved the spec; implemented original RatingExpression persistence and atomic submission with unchanged v1 publication. Focused checks passed 46 tests / 429 assertions; full CI passed 348 tests / 3,607 assertions with clean style/security checks. Application eager loading and whitespace checks passed. Only the test database was migrated. [Spec and evidence](specs/015_rating_expressions.md). Owner acceptance and merge remain pending.
+
+## PR #29 merge and next task
+
+Owner approved and merged [PR #29](https://github.com/adambelton/glutton/pull/29) on 22 October 2026 at 10:25:39 UTC (11:25:39 BST), squash commit `a85db3d4f39f92dddfcadb34bda088fd496862ba`. Hosted Repository checks passed on exact head `94c426f4e1e3fe474aa7d1758b3947291bddafef` before merge. Local main was fast-forwarded.
+
+**016 — Draft**, Library / rating-event consumer; [spec](specs/016_library_rating_consumer.md). Consume retained and new completed-rating facts, reconcile to watched, and publish actual changes atomically with delivery. No implementation started.
+
+Task 023 owner clarification: replacement creates a new Rating with its own expressions and derived qualities, and atomically marks the previous rating superseded. Preserve original evidence; enforce one current rating per RatingFilm and exclude superseded contributions from current preferences, including stale asynchronous work. Exact schema and RatingRevised contract belong to that spec.
+
+**016 — Ready for review**, 22 October 2026. Owner-approved Library consumer establishes watched from completed-rating v1 facts, reconciles NotInterested, preserves public action failures and emits causal watched events only for actual changes. Existing delivery handles catch-up, retries and inactive-owner skips. Focused checks passed 96 tests / 714 assertions; full CI passed 364 tests / 3,740 assertions with clean style/security checks. Application eager loading and whitespace checks passed. No schema changes or deployment. [Spec and verification](specs/016_library_rating_consumer.md). Owner acceptance and merge remain pending.

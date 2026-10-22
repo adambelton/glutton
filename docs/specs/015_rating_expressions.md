@@ -1,6 +1,6 @@
 # 015 — Original expressions with a rating
 
-Status: Ready for review — implemented 22 October 2026  
+Status: Merged — PR #29 on 22 October 2026  
 Owner: Ratings / expressions
 
 ## Goal
@@ -64,6 +64,10 @@ Added RatingExpression, the ordered Rating#rating_expressions association, model
 
 Verification notes: initial sandboxed database commands could not connect to PostgreSQL; approved escalated test commands succeeded. The first full CI run passed all tests/security checks but caught one extra blank line; corrected before the final CI run. Development and production databases were not migrated. Owner review and merge remain pending.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Approved and merged; see evidence below.
 
 Review follow-up: owner requested Rails nested attributes. Removed the custom capture_expressions method; RatingFilm validates the external collection after duplicate permission checks, then creates the rating with text-only nested attributes. Rating declares accepts_nested_attributes_for with the named count limit. Verification: repeated the focused command above (46 tests / 429 assertions) and full CI (348 tests / 3,607 assertions, style/security clean); both passed. `git diff --check` passed. Existing rollback, malformed-input, duplicate, cleanup and claim tests passed unchanged.
+
+## Merge evidence
+
+Owner approved and merged [PR #29](https://github.com/adambelton/glutton/pull/29) on 22 October 2026 at 10:25:39 UTC (11:25:39 BST), squash commit `a85db3d4f39f92dddfcadb34bda088fd496862ba`. Hosted Repository checks passed on exact head `94c426f4e1e3fe474aa7d1758b3947291bddafef` before merge. Local main was fast-forwarded.
