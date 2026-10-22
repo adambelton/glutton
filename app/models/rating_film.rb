@@ -18,10 +18,13 @@ class RatingFilm < ApplicationRecord
   def submit_rating!(value:, expression_texts: [])
     raise Ratings::AlreadyRated unless can_submit_rating?
 
-    rating = ratings.build(value:)
-    rating.capture_expressions(expression_texts:)
-    rating.save!
-    rating
+    # Check external values before nested attributes coerce expression text.
+    unless expression_texts.is_a?(Array) && expression_texts.size <= Rating::MAX_EXPRESSIONS &&
+        expression_texts.all? { |text| text.is_a?(String) }
+      raise Ratings::InvalidExpressions
+    end
+
+    ratings.create!(value:, rating_expressions_attributes: expression_texts.map { |text| { text: } })
   end
 
   def can_dismiss?

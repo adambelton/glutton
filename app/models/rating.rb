@@ -13,17 +13,9 @@ class Rating < ApplicationRecord
   belongs_to :rating_film
   has_many :rating_expressions, -> { order(:id) }
 
+  accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
+
   validate :recognized_value
-
-  def capture_expressions(expression_texts:)
-    # External collection and elements must be checked before text coercion.
-    unless expression_texts.is_a?(Array) && expression_texts.size <= MAX_EXPRESSIONS &&
-        expression_texts.all? { |text| text.is_a?(String) }
-      raise Ratings::InvalidExpressions
-    end
-
-    expression_texts.each { |text| rating_expressions.build(text:) }
-  end
 
   def publish_event!
     DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
