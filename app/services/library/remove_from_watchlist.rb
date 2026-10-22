@@ -12,7 +12,7 @@ module Library
         raise NotOnWatchlist, "Film is not on the watchlist" unless library_film
 
         library_film.destroy!
-        library_film.publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST, classification: nil)
+        library_film.publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST)
         library_film
       end
     end

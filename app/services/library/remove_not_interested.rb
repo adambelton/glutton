@@ -12,7 +12,7 @@ module Library
         raise NotMarkedNotInterested, "Film is not marked not interested" unless library_film
 
         library_film.destroy!
-        library_film.publish_event!(name: Events::FILM_DISMISSAL_REMOVED, classification: nil)
+        library_film.publish_event!(name: Events::FILM_DISMISSAL_REMOVED)
         library_film
       end
     end

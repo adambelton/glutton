@@ -17,7 +17,7 @@ module Library
         else
           raise AlreadyWatched, "Film is already watched"
         end
-        library_film.publish_event!(name: Events::FILM_MARKED_WATCHED, classification: "watched")
+        library_film.publish_event!(name: Events::FILM_MARKED_WATCHED)
         library_film
       end
     end

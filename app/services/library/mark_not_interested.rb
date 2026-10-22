@@ -17,7 +17,7 @@ module Library
         else
           raise library_film.dismissal_error
         end
-        library_film.publish_event!(name: Events::FILM_MARKED_NOT_INTERESTED, classification: "not_interested")
+        library_film.publish_event!(name: Events::FILM_MARKED_NOT_INTERESTED)
         library_film
       end
     end

@@ -9,7 +9,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     @threads, @user_ids, @film_ids = [], [], []
     @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
-    @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRating::SUBSCRIBER }
+    @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRatingsEvent::SUBSCRIBER }
     event = User.transaction do
       DomainEvents::Publish.call(user_id: @guest.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Ratings::Events::RATING_SUBMITTED,

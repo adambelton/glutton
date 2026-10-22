@@ -5,7 +5,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     freeze_time
     @user = UserGuest.create!
     @film = Film.create!(title: "Rated film")
-    @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRating::SUBSCRIBER }
+    @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRatingsEvent::SUBSCRIBER }
   end
 
   def publish(payload: { user_id: @user.id, film_id: @film.id }, **options)
@@ -16,7 +16,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   def dispatch(**options)
-    DomainEvents::Dispatch.call(**options)
+    DomainEvents::Dispatch.call(subscriptions: [ @subscription ], **options)
   end
 
   def derived
@@ -32,7 +32,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
       value: Rating::Values::BRILLIANT, expression_texts: [ "Atmosphere" ])
     source = DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED)
-    assert_equal 1, DomainEvents::Status.call[:undiscovered].sole[:count]
+    assert_equal 1, DomainEvents::Status.call(subscriptions: [ @subscription ])[:undiscovered].sole[:count]
     assert_no_difference [ "Rating.count", "RatingExpression.count" ] do
       assert_equal({ processed: 1 }, dispatch)
     end
@@ -40,7 +40,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal Rating::Values::BRILLIANT, rating.value
     assert LibraryFilmWatched.exists?(user: @user, film: @film)
     event = derived.sole
-    assert_equal({ "user_id" => @user.id, "film_id" => @film.id, "classification" => "watched" }, event.payload)
+    assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
     assert_equal 1, event.schema_version
     assert_equal source.id, event.causation_id
     assert_equal source.correlation_id, event.correlation_id
