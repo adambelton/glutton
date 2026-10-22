@@ -8,9 +8,22 @@ class Rating < ApplicationRecord
     ALL = [ BRILLIANT, I_ENJOYED_THAT, NOT_FOR_ME, GARBAGE ].freeze
   end
 
+  MAX_EXPRESSIONS = 20
+
   belongs_to :rating_film
+  has_many :rating_expressions, -> { order(:id) }
 
   validate :recognized_value
+
+  def capture_expressions(expression_texts:)
+    # External collection and elements must be checked before text coercion.
+    unless expression_texts.is_a?(Array) && expression_texts.size <= MAX_EXPRESSIONS &&
+        expression_texts.all? { |text| text.is_a?(String) }
+      raise Ratings::InvalidExpressions
+    end
+
+    expression_texts.each { |text| rating_expressions.build(text:) }
+  end
 
   def publish_event!
     DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,

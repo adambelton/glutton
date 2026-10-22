@@ -143,8 +143,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_empty candidates
   end
 
-  def submit
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT)
+  def submit(expression_texts: [ "Atmosphere", "  Ending!  " ])
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts:)
   end
 
   def rating_events
@@ -158,12 +158,13 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     User.transaction do
       submit
       contender = blocked do
-        submit
+        submit(expression_texts: [ "Losing submission" ])
       rescue Ratings::AlreadyRated
         :already_rated
       end
     end
     assert_equal :already_rated, Timeout.timeout(5) { contender.value }
+    assert_equal [ "Atmosphere", "  Ending!  " ], @rating_film.ratings.sole.rating_expressions.pluck(:text)
     assert_equal 1, @rating_film.ratings.count
     assert_equal 1, rating_events.count
   end
@@ -208,6 +209,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, rating_events.count
     travel UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_not RatingExpression.where(rating_id: rating.id).exists?
     assert_not Rating.exists?(rating.id)
     assert_not RatingFilm.exists?(@rating_film.id)
     assert_empty rating_events
@@ -224,6 +226,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     rating = Timeout.timeout(5) { contender.value }
     assert_equal @rating_film.id, rating.rating_film_id
+    assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
     assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @user.id, rating_events.sole.payload["user_id"]
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
@@ -232,6 +235,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "claim winning against cleanup retains saved rating and stream identity" do
     rating = submit
     event = rating_events.sole
+    expression_ids = rating.rating_expressions.pluck(:id)
     contender = nil
     User.transaction do
       @user.lock!
@@ -240,9 +244,11 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
+    assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
     assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal @user.id, @rating_film.reload.user_id
+    assert_equal expression_ids, rating.reload.rating_expressions.pluck(:id)
     assert_equal event.id, rating_events.sole.id
     assert_equal event.domain_event_stream_id, rating_events.sole.domain_event_stream_id
   end

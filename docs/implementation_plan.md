@@ -9,11 +9,11 @@ This section summarizes current delivery status; task tables and linked specs re
 
 | Area | Current status |
 | --- | --- |
-| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h and durable delivery 001i merged via PR #25. Publisher ownership follow-up 001j merged via PR #26. |
+| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h and durable delivery 001i merged via PR #25. Publisher ownership follow-up 001j merged via PR #26; delivery status follow-up 001k merged via PR #28. |
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
 | Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; product UI remains planned. |
-| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission is Ready for review. |
+| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions is Ready for review. |
 
 ## Task rules
 
@@ -94,8 +94,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Merged via PR #25 — [spec](specs/001i_durable_event_delivery.md) |
 | 012a | Library / event publication | Publish versioned Library facts; retain stream versions through row deletion/recreation | 001i, 012 | Merged via PR #26 — [spec](specs/012a_library_event_publication.md) |
 | 013 | Ratings / presentations | Own oldest-first candidate batches and boolean dismissal; catalogue admission and event consumption remain separate | 005a, 007 | Merged via PR #27 — [spec](specs/013_rating_presentations.md) |
-| 014 | Ratings / ratings | First rating submission, rated/unrated/pending scopes and atomic RatingSubmitted publication | 013, 001i | Ready for review — [spec](specs/014_first_rating_submission.md) |
-| 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Planned |
+| 014 | Ratings / ratings | First rating submission, rated/unrated/pending scopes and atomic RatingSubmitted publication | 013, 001i | Merged via PR #28 — [spec](specs/014_first_rating_submission.md) |
+| 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Ready for review — [spec](specs/015_rating_expressions.md) |
 | 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Planned |
 | 017 | Ratings / Library-event consumer | Project Library facts into eligibility and known-seen unrated priority; preserve current ratings/history and handle stale/duplicate events | 012a, 013, 014 | Planned |
 | 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Deferred — Ratings flow has no Library-action choices |
@@ -128,7 +128,7 @@ Break down only when approaching each milestone. Domain/capability ownership bel
 - **Film knowledge:** media enrichment, reviewed trailer data, versioned sourced analyses, quality vocabulary and film associations. Analysis pages are directly accessible with clear spoiler labelling; normal navigation is from the watched Library view. No watched authorization contract is needed.
 - **Ratings / analysis:** benchmark JEV scoring contracts and cost against labelled expressions and ratings.
 - **Foundation:** task 001i configures durable jobs and outbox delivery now required by product-domain events; domain-specific processing rules remain with their domain.
-- **Ratings / scoring:** capture pre-submission expressions profile, separate implicit/explicit evidence and handle stale/duplicate assessments.
+- **Ratings / scoring:** implement the [agreed scoring design](ratings_scoring_design.md): unexpressed, implicitly expressed and explicitly expressed rating qualities; current-profile interpretation only for qualities without direct expressions; handle stale/duplicate assessments.
 - **Ratings / profile building:** explicit-only synthesis and assessment of meaningful changes; evaluate JEV gate and Claude usage.
 - **Ratings / preferences:** aggregate completed evidence and expose a preference result for recommendation consumption.
 - **Ratings / reassessment:** historical reinterpretation, scheduling and freshness, divided into small tasks. Original input and inference remain distinct inside the domain.
@@ -244,6 +244,16 @@ Owner approved one oldest-first queue for all persisted candidates, including fu
 
 Owner accepted and merged [PR #27](https://github.com/adambelton/glutton/pull/27) on 21 October 2026 at 18:04:00 UTC (19:04 BST). Squash commit `69bfe2e5862bcd5cca65c77bb2e465e153a6c4e1`; hosted Repository checks passed on head `98598fb808229e10bf46ac98ac5f2ba1f9a8b371` before merge. Final local CI passed 320 tests / 3,270 assertions with clean style/security checks. Local main was fast-forwarded.
 
-**014 — Ready for review**, Ratings / ratings; [spec](specs/014_first_rating_submission.md). Implements first rating persistence, the has_many ratings relationship, rated/unrated/pending scopes and atomic v1 RatingSubmitted publication. Revision history/RatingRevised belongs to task 023; expressions remain 015. Spec approved on 21 October 2026; implemented on `codex/first-rating-submission`. Focused checks passed 37 tests / 319 assertions; full local CI passed 338 tests / 3,494 assertions with clean style/security checks. Application eager loading and whitespace checks passed. [Publication contract](ratings_event_publication.md). Implementation acceptance and merge remain pending.
+**014 — Merged via PR #28**, Ratings / ratings; [spec](specs/014_first_rating_submission.md). Implements first rating persistence, the has_many ratings relationship, rated/unrated/pending scopes and atomic v1 RatingSubmitted publication. Revision history/RatingRevised belongs to task 023; expressions remain 015. Spec approved on 21 October 2026; implemented on `codex/first-rating-submission`. Focused checks passed 37 tests / 319 assertions; full local CI passed 338 tests / 3,494 assertions with clean style/security checks. Application eager loading and whitespace checks passed. [Publication contract](ratings_event_publication.md). Owner accepted and merged via PR #28; see merge evidence below.
 
-**001k — Ready for review**, Foundation / event delivery; [spec](specs/001k_delivery_status_constants.md). Owner authorized named delivery-status constants and status-selection scopes alongside task 014, preserving storage and delivery contracts. Implemented and verified: focused delivery checks 25 tests / 158 assertions; combined full CI 339 tests / 3,497 assertions with clean style/security checks. Implementation acceptance and merge remain pending.
+**001k — Merged via PR #28**, Foundation / event delivery; [spec](specs/001k_delivery_status_constants.md). Owner authorized named delivery-status constants and status-selection scopes alongside task 014, preserving storage and delivery contracts. Implemented and verified: focused delivery checks 25 tests / 158 assertions; combined full CI 339 tests / 3,497 assertions with clean style/security checks. Owner accepted and merged via PR #28; see merge evidence below.
+
+## PR #28 merge and next task
+
+Owner approved and merged [PR #28](https://github.com/adambelton/glutton/pull/28) on 21 October 2026 at 19:18:59 UTC (20:18:59 BST), squash commit `18454ac916f3f208eb2a113a674b0664fee1b278`. GitHub Repository checks passed on exact head `01201d1f10704bcfe2b5800938ea68fb36fbfea2` before merge. Local main was fast-forwarded.
+
+**015 — Draft**, Ratings / expressions; [spec](specs/015_rating_expressions.md). Proposes optional original expressions saved atomically with the first rating and its unchanged v1 event. Review the proposed input bounds and blank/malformed-input handling. UI, editing and AI processing remain separate. Prepared on `codex/rating-expressions`; implementation has not started.
+
+22 October 2026: recorded the [scoring design](ratings_scoring_design.md). Task 015 names the association `Rating#rating_expressions` and preserves original evidence for future scoring. RatingQuality and expression-profile processing remain later work; this documentation update does not start implementation.
+
+**015 — Ready for review**, 22 October 2026. Owner approved the spec; implemented original RatingExpression persistence and atomic submission with unchanged v1 publication. Focused checks passed 46 tests / 429 assertions; full CI passed 348 tests / 3,607 assertions with clean style/security checks. Application eager loading and whitespace checks passed. Only the test database was migrated. [Spec and evidence](specs/015_rating_expressions.md). Owner acceptance and merge remain pending.

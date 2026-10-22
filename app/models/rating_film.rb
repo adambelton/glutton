@@ -15,10 +15,13 @@ class RatingFilm < ApplicationRecord
     !ratings.exists?
   end
 
-  def submit_rating!(value:)
+  def submit_rating!(value:, expression_texts: [])
     raise Ratings::AlreadyRated unless can_submit_rating?
 
-    ratings.create!(value:)
+    rating = ratings.build(value:)
+    rating.capture_expressions(expression_texts:)
+    rating.save!
+    rating
   end
 
   def can_dismiss?

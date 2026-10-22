@@ -1,6 +1,6 @@
 # 001k — Delivery status constants and scopes
 
-Status: Ready for review  
+Status: Merged — PR #28 on 21 October 2026  
 Owner: Foundation / domain event delivery
 
 ## Goal
@@ -35,8 +35,12 @@ Implemented named frozen statuses and the completed/outstanding/failed status sc
 
 Review correction: I interpreted the request for scopes too broadly and added subscription, discovery, ordering and readiness scopes without establishing that scope with the owner. Those additions have been removed, including all changes to DomainEvent. The backlog-age regression remains relevant to outstanding status reporting. After narrowing the change, the focused command passed 25 tests / 158 assertions and full CI passed 339 tests / 3,497 assertions with clean style/security checks. `git diff --check` passed.
 
-Spec authorization: Owner approved this follow-up. Implementation acceptance / merge: Pending.
+Spec authorization: Owner approved this follow-up. Implementation acceptance / merge: Approved and merged; see merge evidence below.
 
 Final owner clarification: scope extraction is limited to status-array queries. Removed the added failed scope as well. Focused delivery/job tests passed again (25 tests / 158 assertions), targeted RuboCop passed for the two changed Ruby files, and `git diff --check` passed. Full CI above predates this final removal.
 
 Subsequent owner request: restored only EventDelivery.failed for use in DomainEvents::Status. Focused delivery/job tests passed (25 tests / 158 assertions); targeted RuboCop for both changed Ruby files and `git diff --check` passed. Full CI was not rerun for this scope extraction.
+
+## Merge evidence
+
+Owner approved and merged [PR #28](https://github.com/adambelton/glutton/pull/28) on 21 October 2026 at 19:18:59 UTC (20:18:59 BST), squash commit `18454ac916f3f208eb2a113a674b0664fee1b278`. GitHub Repository checks passed on exact head `01201d1f10704bcfe2b5800938ea68fb36fbfea2` before merge. Local main was fast-forwarded.

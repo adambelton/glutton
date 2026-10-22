@@ -1,6 +1,6 @@
 # 014 — First rating submission and publication
 
-Status: Ready for review — implemented 21 October 2026  
+Status: Merged — PR #28 on 21 October 2026  
 Owner: Ratings / ratings
 
 ## Goal
@@ -70,6 +70,10 @@ Spec approval: Owner approved implementation on 21 October 2026.
 
 Review follow-up: replaced the flat value array with `Rating::Values::{BRILLIANT, I_ENJOYED_THAT, NOT_FOR_ME, GARBAGE}` and `ALL`. Validation and Ratings tests use these constants; historical migration literals and locale keys remain stable. Re-ran `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/models/rating_test.rb test/models/rating_persistence_test.rb test/services/ratings`: 37 tests / 319 assertions passed. Targeted RuboCop on the four changed Ruby files and `git diff --check` passed. Subsequent combined full CI after the Foundation 001k status-constant follow-up passed: 338 tests / 3,494 assertions, style/security checks clean. This includes the rating constant changes.
 
-Implementation acceptance / merge: Pending.
+Implementation acceptance / merge: Approved and merged; see merge evidence below.
 
 Choice wording follow-up: renamed ENJOYED/enjoyed to `Rating::Values::I_ENJOYED_THAT` / `i_enjoyed_that`, with the label “I enjoyed that”. Updated the unmerged migration, schema constraint, locale, tests and v1 payload documentation. Replaced the migration in the test database only using `RAILS_ENV=test bin/rails db:migrate:down VERSION=20261021190000` then `RAILS_ENV=test bin/rails db:migrate`. Focused Ratings checks passed 37 tests / 319 assertions; full local CI passed 339 tests / 3,497 assertions with clean style/security checks. `git diff --check` passed. No development/production migration or compatibility alias was added.
+
+## Merge evidence
+
+Owner approved and merged [PR #28](https://github.com/adambelton/glutton/pull/28) on 21 October 2026 at 19:18:59 UTC (20:18:59 BST), squash commit `18454ac916f3f208eb2a113a674b0664fee1b278`. GitHub Repository checks passed on exact head `01201d1f10704bcfe2b5800938ea68fb36fbfea2` before merge. Local main was fast-forwarded.
