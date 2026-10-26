@@ -252,4 +252,77 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal event.id, rating_events.sole.id
     assert_equal event.domain_event_stream_id, rating_events.sole.domain_event_stream_id
   end
+
+  def submit_selected_film
+    row = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
+      value: Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
+  end
+
+  test "competing targeted submissions admit one candidate and one first rating" do
+    @rating_film.destroy!
+    contender = nil
+    User.transaction do
+      submit_selected_film
+      contender = blocked do
+        submit_selected_film
+      rescue Ratings::AlreadyRated
+        :already_rated
+      end
+    end
+    assert_equal :already_rated, Timeout.timeout(5) { contender.value }
+    row = RatingFilm.where(user: @user, film: @film).sole
+    assert_equal [ "Selected film evidence" ], row.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal 1, rating_events.count
+  end
+
+  test "targeted and queue submissions serialize in either order" do
+    [ true, false ].each do |targeted_first|
+      contender = nil
+      User.transaction do
+        targeted_first ? submit_selected_film : submit
+        contender = blocked do
+          targeted_first ? submit : submit_selected_film
+        rescue Ratings::AlreadyRated
+          :already_rated
+        end
+      end
+      assert_equal :already_rated, Timeout.timeout(5) { contender.value }
+      expected = targeted_first ? [ "Selected film evidence" ] : [ "Atmosphere", "  Ending!  " ]
+      assert_equal expected, @rating_film.ratings.sole.rating_expressions.pluck(:text)
+      assert_equal 1, rating_events.count
+      Rating.where(rating_film: @rating_film).delete_all
+      DomainEventStream.where(user: @user).delete_all
+    end
+  end
+
+  test "targeted admission waiting across expiry leaves no candidate" do
+    @rating_film.destroy!
+    contender = nil
+    User.transaction do
+      @user.lock!
+      contender = blocked do
+        submit_selected_film
+      rescue Ratings::IdentityUnavailable
+        :inactive
+      end
+      travel UserGuest::EXPIRY_DURATION
+    end
+    assert_equal :inactive, Timeout.timeout(5) { contender.value }
+    assert_empty RatingFilm.where(user: @user)
+    assert_empty rating_events
+  end
+
+  test "concurrent explicit entries return the same unfinished candidate" do
+    @rating_film.destroy!
+    first = contender = nil
+    User.transaction do
+      first = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
+      contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id) }
+    end
+    assert_equal first.id, Timeout.timeout(5) { contender.value }.id
+    assert_equal [ first.id ], RatingFilm.where(user: @user, film: @film).pluck(:id)
+    assert_empty first.ratings
+    assert_empty rating_events
+  end
 end

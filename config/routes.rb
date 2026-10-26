@@ -13,12 +13,9 @@ Rails.application.routes.draw do
 
   resource :session, only: [ :new, :create, :destroy ]
 
-  namespace :ratings do
-    resources :candidates, only: :index do
-      member do
-        post :rate
-        post :dismiss
-      end
+  scope module: :ratings do
+    resources :ratings, only: [ :new, :create ] do
+      post :dismiss, on: :collection
     end
   end
 

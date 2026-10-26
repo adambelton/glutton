@@ -1,6 +1,6 @@
 # 018 — Rate and dismiss existing candidates in the browser
 
-Status: Ready for review — 26 October 2026  
+Status: Merged — PR #32 on 26 October 2026  
 Owner: Ratings / browser flow
 
 ## Goal
@@ -81,4 +81,8 @@ Browser walkthrough (26 October 2026):
 
 Browser server used normal test configuration; CSRF was explicitly enabled and verified in request tests. No development data, migration, external requests or deployment. Existing queue admission remains Library activity or pre-existing candidates; catalogue replenishment/new-visitor discovery and targeted entry are still deferred.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see evidence below.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #32](https://github.com/adambelton/glutton/pull/32) merged on 26 October 2026 at 08:57:13 UTC (GMT), squash commit `f2d8abbfbd2d3f2a335ba49c432904c804310b5a`. Hosted Repository checks passed on exact head `5340552cc874248a58bb84a5a0e2c97b678753bb` at 08:56:55 UTC. Local main was fast-forwarded. Final local CI passed 392 tests / 4,190 assertions with clean style/security checks after refreshing advisory data and patching crass.

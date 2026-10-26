@@ -1,7 +1,6 @@
 module Ratings
-  class CandidatesController < ApplicationController
+  class RatingsController < ::ApplicationController
     before_action :require_identity
-    before_action :load_candidate, only: [ :rate, :dismiss ]
 
     rescue_from IdentityUnavailable do
       render :signed_out, status: :unauthorized
@@ -15,12 +14,16 @@ module Ratings
       render :unavailable, status: :conflict
     end
 
-    def index
-      @rating_film = NextCandidates.call(user_id: current_user.id, limit: 1).first
+    def new
       @expression_texts = []
+      if params.key?(:film_id)
+        @rating_film = PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
+      else
+        @rating_film = NextCandidates.call(user_id: current_user.id, limit: 1).first
+      end
     end
 
-    def rate
+    def create
       @value = params[:value] if params[:value].is_a?(String)
       @expression_texts = []
       texts = params.fetch(:expression_texts, [])
@@ -28,20 +31,20 @@ module Ratings
         raise InvalidExpressions
       end
       @expression_texts = texts
-      SubmitRating.call(user_id: current_user.id, rating_film_id: @rating_film.id,
+      SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
         value: @value, expression_texts: texts.reject(&:blank?))
-      redirect_to ratings_candidates_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
+      redirect_to new_rating_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
     rescue ActiveRecord::RecordInvalid => error
       @errors = error.record.errors.full_messages
-      render :index, status: :unprocessable_entity
+      render_invalid_rating
     rescue InvalidExpressions => error
       @errors = [ error.message ]
-      render :index, status: :unprocessable_entity
+      render_invalid_rating
     end
 
     def dismiss
-      Dismiss.call(user_id: current_user.id, rating_film_id: @rating_film.id)
-      redirect_to ratings_candidates_path, notice: I18n.t("ratings.browser.dismissed"), status: :see_other
+      Dismiss.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
+      redirect_to new_rating_path, notice: I18n.t("ratings.browser.dismissed"), status: :see_other
     end
 
     private
@@ -50,13 +53,23 @@ module Ratings
       raise IdentityUnavailable unless current_user
     end
 
-    def load_candidate
-      # Route IDs are untrusted; do not allow integer coercion to select another row.
-      id = params[:id]
+    def film_id_param
+      id = params[:film_id]
       raise FilmUnavailable unless id.is_a?(String) && id.match?(/\A[1-9]\d*\z/)
 
-      @rating_film = RatingFilm.find_by(id: id, user_id: current_user.id)
-      raise FilmUnavailable unless @rating_film
+      id
+    end
+
+    def rating_film_id_param
+      id = params[:rating_film_id]
+      raise FilmUnavailable unless id.is_a?(String) && id.match?(/\A[1-9]\d*\z/)
+
+      id
+    end
+
+    def render_invalid_rating
+      @rating_film = FindCandidate.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
+      render :new, status: :unprocessable_entity
     end
   end
 end
