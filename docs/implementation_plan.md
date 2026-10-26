@@ -101,7 +101,7 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Deferred — Ratings flow has no Library-action choices |
 | 017b | Library / action consumption | Apply Ratings action requests and publish applied/rejected outcomes; preserve public transition failures | 012a, 017a | Deferred — Ratings flow has no Library-action choices |
 | 017c | Ratings / action outcomes | Consume Library outcomes into recorded request status | 017a, 017b | Deferred — Ratings flow has no Library-action choices |
-| 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Draft — [spec](specs/018_ratings_browser_flow.md) |
+| 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Ready for review — [spec](specs/018_ratings_browser_flow.md) |
 | 019 | Ratings / targeted entry | Explicitly open a film for rating from Library, bypassing automatic-rotation dismissal; no Library watched-record prerequisite | 017, 018 | Planned |
 | 020 | Library / watched view | Distinguish awaiting-rating/rated using the Library-owned projection of Ratings events; link to targeted rating | 014, 019 | Planned |
 | 021 | Library / watchlist view | To watch list with existing mark-watched workflow and rating entry point | 011, 017, 019 | Planned |
@@ -287,3 +287,5 @@ Task 017 hold clarification: add a Ratings-owned held boolean for temporary excl
 Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/pull/31) merged on 22 October 2026 at 12:06:57 UTC (13:06:57 BST), squash commit `4da49c223e974938f0a24bff10c89e6d65778b5f`. Hosted Repository checks passed on exact head `c0e7a0882d4ac1b90cf41e8505a7be66cbca678b` before merge. Final local CI passed 384 tests / 4,010 assertions with clean style/security checks. Local main was fast-forwarded.
 
 **018 — Ready for review**, 26 October 2026, Ratings / browser flow; [spec](specs/018_ratings_browser_flow.md). Owner approved the existing-queue scope. Implemented localized rating/expression/dismissal forms with session ownership, explicit failures, protected writes and a home link. Focused checks passed 59 tests / 793 assertions; full CI passed 392 tests / 4,190 assertions with clean style/security checks. Application eager loading, whitespace and real browser keyboard walkthrough passed. Catalogue replenishment, first-time anonymous discovery and targeted Library entry remain deferred. Owner acceptance and merge pending.
+
+**001l — Ready for review**, Foundation / dependency maintenance; [spec](specs/001l_crass_security_patch.md). PR #32 hosted CI detected GHSA-pq4g-8rxf-4g29 in crass 1.0.7. Updated only crass to 1.0.8. Refreshed advisory data and full local CI passed (392 tests / 4,190 assertions; style/security clean). Hosted verification and merge pending.
