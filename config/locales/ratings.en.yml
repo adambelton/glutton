@@ -1,5 +1,21 @@
 en:
   ratings:
+    browser:
+      title: Rate films
+      choice: What did you think?
+      expressions: Your expressions (optional)
+      expression_help: "Share distinct thoughts in separate fields. Leave any unused fields blank. Up to %{count} expressions, each up to %{length} characters."
+      expression: "Expression %{number}"
+      save: Save rating
+      dismiss: Dismiss
+      saved: Your rating has been saved.
+      dismissed: This film has been dismissed from rating rotation.
+      empty: You have no films waiting to be rated.
+      sign_in_required: Sign in or register to access your rating queue.
+      correct_errors: Please correct the following errors.
+      release_year: "Released in %{year}"
+      home: Home
+      continue: Return to rating queue
     values:
       brilliant: Brilliant
       i_enjoyed_that: I enjoyed that

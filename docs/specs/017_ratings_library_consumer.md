@@ -1,6 +1,6 @@
 # 017 — Ratings admission, holds and dismissal from Library events
 
-Status: Ready for review — implemented 22 October 2026  
+Status: Merged — PR #31 on 22 October 2026  
 Owner: Ratings / Library-event consumer
 
 ## Goal
@@ -84,7 +84,7 @@ Spec approved on 22 October 2026. No scope deviations. Earlier test runs caught 
 
 Existing-row migration verification ran with `RAILS_ENV=test bin/rails runner /tmp/glutton017-migration-check.rb`. Reproduce by loading `db/migrate/20261022120000_add_held_to_rating_films.rb`, opening an ActiveRecord transaction, running that migration down, inserting one user/film/candidate with the pre-held schema, running it up, and asserting SELECT held for that candidate is false; raise ActiveRecord::Rollback to restore schema and remove verification fixtures. This passed; the surrounding transaction rolled back the check. Normal test migration remains applied. Validation-bypass tests also confirm held cannot be null. No extra schema constraints or source-state columns were added.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see merge evidence below.
 
 Owner review follow-up: extracted FilmMarkedWatched, FilmAddedToWatchlist, FilmRemovedFromWatchlist and FilmMarkedNotInterested into individual handlers under Ratings::LibraryEvents. ConsumeLibraryFilm keeps shared validation/loading and an explicit HANDLERS mapping; EVENT_NAMES derives from the mapping. The existing single subscription and per-stream ordering remain unchanged. No Foundation or model permission changes.
 
@@ -103,3 +103,7 @@ Owner boundary follow-up: renamed the shared entry point to Ratings::ConsumeLibr
 Entry-point/boundary verification: `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/services/library test/services/ratings test/services/domain_events test/jobs` passed (148 tests / 1,329 assertions). Application eager loading and targeted entry-point/handler/registry RuboCop passed. `git diff --check` passed. Production search found no LibraryFilm references under Ratings services or RatingFilm references under Library services.
 
 Final combined verification before PR: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed on the final implementation (384 tests / 4,010 assertions; style and security checks clean). This includes all handler/entry-point renames and removal of classification. `git diff --check` passed.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/pull/31) merged on 22 October 2026 at 12:06:57 UTC (13:06:57 BST), squash commit `4da49c223e974938f0a24bff10c89e6d65778b5f`. Hosted Repository checks passed on exact head `c0e7a0882d4ac1b90cf41e8505a7be66cbca678b` before merge. Final local CI passed 384 tests / 4,010 assertions with clean style/security checks. Local main was fast-forwarded.

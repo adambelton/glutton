@@ -1,6 +1,6 @@
 # 012b — Library facts without classification
 
-Status: Ready for review — implemented 22 October 2026  
+Status: Merged — PR #31 on 22 October 2026  
 Owner: Library / event publication
 
 ## Goal
@@ -31,6 +31,10 @@ Publish Library actions without exposing their resulting internal classification
 
 Owner explicitly confirmed there is no historical data; v1 is corrected in place. No version compatibility, payload rewrite or backfill is introduced. No deployment or migrations.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see merge evidence below.
 
 Final combined verification before PR: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed on the final implementation (384 tests / 4,010 assertions; style and security checks clean). This includes all handler/entry-point renames and removal of classification. `git diff --check` passed.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/pull/31) merged on 22 October 2026 at 12:06:57 UTC (13:06:57 BST), squash commit `4da49c223e974938f0a24bff10c89e6d65778b5f`. Hosted Repository checks passed on exact head `c0e7a0882d4ac1b90cf41e8505a7be66cbca678b` before merge. Final local CI passed 384 tests / 4,010 assertions with clean style/security checks. Local main was fast-forwarded.

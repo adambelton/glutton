@@ -1,0 +1,48 @@
+<% content_for :title, t("ratings.browser.title") %>
+<main>
+  <h1><%= t("ratings.browser.title") %></h1>
+  <% if notice.present? %>
+    <p role="status"><%= notice %></p>
+  <% end %>
+  <% if @rating_film %>
+    <h2><%= @rating_film.film.title %></h2>
+    <% if @rating_film.film.release_date %>
+      <p><%= t("ratings.browser.release_year", year: @rating_film.film.release_date.year) %></p>
+    <% end %>
+    <% if @errors.present? %>
+      <div id="rating-errors" role="alert" tabindex="-1">
+        <h3><%= t("ratings.browser.correct_errors") %></h3>
+        <ul><% @errors.each do |error| %><li><%= error %></li><% end %></ul>
+      </div>
+    <% end %>
+    <%= form_with url: rate_ratings_candidate_path(@rating_film), method: :post do %>
+      <fieldset aria-describedby="<%= 'rating-errors' if @errors.present? %>">
+        <legend><%= t("ratings.browser.choice") %></legend>
+        <% Rating::Values::ALL.each do |value| %>
+          <div>
+            <%= radio_button_tag :value, value, @value == value, id: "rating-#{value}", required: true %>
+            <%= label_tag "rating-#{value}", t("ratings.values.#{value}") %>
+          </div>
+        <% end %>
+      </fieldset>
+      <details <%= "open" if @expression_texts.any?(&:present?) %>>
+        <summary><%= t("ratings.browser.expressions") %></summary>
+      <fieldset aria-describedby="expression-help<%= ' rating-errors' if @errors.present? %>">
+        <legend><%= t("ratings.browser.expressions") %></legend>
+        <p id="expression-help"><%= t("ratings.browser.expression_help", count: Rating::MAX_EXPRESSIONS, length: RatingExpression::MAX_TEXT_LENGTH) %></p>
+        <% Rating::MAX_EXPRESSIONS.times do |index| %>
+          <div>
+            <%= label_tag "expression-#{index}", t("ratings.browser.expression", number: index + 1) %>
+            <%= text_area_tag "expression_texts[]", @expression_texts[index], id: "expression-#{index}", maxlength: RatingExpression::MAX_TEXT_LENGTH, rows: 2 %>
+          </div>
+        <% end %>
+      </fieldset>
+      </details>
+      <%= submit_tag t("ratings.browser.save") %>
+    <% end %>
+    <%= button_to t("ratings.browser.dismiss"), dismiss_ratings_candidate_path(@rating_film), method: :post %>
+  <% else %>
+    <p><%= t("ratings.browser.empty") %></p>
+  <% end %>
+  <p><%= link_to t("ratings.browser.home"), root_path %></p>
+</main>

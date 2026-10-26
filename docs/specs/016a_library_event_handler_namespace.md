@@ -1,6 +1,6 @@
 # 016a — Library event-handler namespace
 
-Status: Ready for review — implemented 22 October 2026  
+Status: Merged — PR #31 on 22 October 2026  
 Owner: Library / event consumption
 
 ## Goal
@@ -33,10 +33,14 @@ Align the existing completed-rating handler with the agreed ReceivingDomain::Eve
 
 Moved the existing handler to Library::EventHandlers::Ratings::RatingSubmitted, updated references and qualified ::Ratings publisher constants to avoid lexical shadowing. Existing subscriber name and behaviour are unchanged. No deployment or migrations.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see merge evidence below.
 
 Owner entry-point follow-up implemented Library::ConsumeRatingsEvent: validation, loading and mapping are coordinated there; EventHandlers::Ratings::RatingSubmitted performs only its reaction. Existing library.completed_ratings subscriber identity is retained. Reviewed production references: LibraryFilm remains inside Library, RatingFilm inside Ratings (including their top-level Rails models); cross-domain consumption uses events and shared user/film IDs.
 
 Entry-point/boundary verification: `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/services/library test/services/ratings test/services/domain_events test/jobs` passed (148 tests / 1,329 assertions). Application eager loading and targeted entry-point/handler/registry RuboCop passed. `git diff --check` passed. Production search found no LibraryFilm references under Ratings services or RatingFilm references under Library services.
 
 Final combined verification before PR: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed on the final implementation (384 tests / 4,010 assertions; style and security checks clean). This includes all handler/entry-point renames and removal of classification. `git diff --check` passed.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/pull/31) merged on 22 October 2026 at 12:06:57 UTC (13:06:57 BST), squash commit `4da49c223e974938f0a24bff10c89e6d65778b5f`. Hosted Repository checks passed on exact head `c0e7a0882d4ac1b90cf41e8505a7be66cbca678b` before merge. Final local CI passed 384 tests / 4,010 assertions with clean style/security checks. Local main was fast-forwarded.
