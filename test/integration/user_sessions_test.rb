@@ -20,7 +20,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
       root "home#index"
-      get "/ratings/candidates", to: "ratings/candidates#index", as: :ratings_candidates
+      get "/ratings/new", to: "ratings/ratings#new", as: :new_rating
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create
       resource :registration_confirmation, only: [ :show, :create ]

@@ -1,7 +1,7 @@
 <main>
   <h1><%= t("app.name") %></h1>
   <p><%= t(".tagline") %></p>
-  <p><%= link_to t("ratings.browser.title"), ratings_candidates_path %></p>
+  <p><%= link_to t("ratings.browser.title"), new_rating_path %></p>
   <% if notice.present? %>
     <p role="status"><%= notice %></p>
   <% end %>

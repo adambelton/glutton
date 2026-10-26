@@ -160,4 +160,38 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_not EventDelivery.exists?(@delivery.id)
     assert Film.exists?(@film.id)
   end
+
+  def submit_selected_film
+    row = Ratings::PrepareCandidate.call(user_id: @guest.id, film_id: @film.id)
+    Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
+      value: Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
+  end
+
+  test "targeted admission before waiting Library delivery preserves one candidate and evidence" do
+    contender = rating = nil
+    User.transaction do
+      rating = submit_selected_film
+      contender = blocked { deliver }
+    end
+    assert_equal :processed, Timeout.timeout(5) { contender.value }
+    assert_equal 1, RatingFilm.where(user: @guest, film: @film).count
+    assert_equal rating.rating_film_id, candidate.id
+    assert candidate.held?
+    assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal 1, DomainEvent.where(name: Ratings::Events::RATING_SUBMITTED).joins(:domain_event_stream)
+      .where(domain_event_streams: { user_id: @guest.id }).count
+  end
+
+  test "Library admission before waiting targeted submission preserves its hold" do
+    contender = nil
+    User.transaction do
+      deliver
+      contender = blocked { submit_selected_film }
+    end
+    rating = Timeout.timeout(5) { contender.value }
+    assert_equal 1, RatingFilm.where(user: @guest, film: @film).count
+    assert_equal rating.rating_film_id, candidate.id
+    assert candidate.held?
+    assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
+  end
 end

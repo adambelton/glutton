@@ -21,7 +21,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
       root "home#index"
-      get "/ratings/candidates", to: "ratings/candidates#index", as: :ratings_candidates
+      get "/ratings/new", to: "ratings/ratings#new", as: :new_rating
       resource :password_reset, only: [ :new, :create, :edit, :update ]
       resource :session, only: [ :new, :create, :destroy ]
       resource :registration, only: [ :new, :create, :show ]

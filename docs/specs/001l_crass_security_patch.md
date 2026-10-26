@@ -23,10 +23,14 @@ Resolve the dependency-audit failure blocking PR #32: crass 1.0.7 is affected by
   Result: Passed — `bundle update crass --conservative` changed only crass 1.0.7 to 1.0.8. `bin/bundler-audit update` refreshed advisory data to 03da937a9e171e3fedebde6620e203559b7a60c0; the refreshed audit passed during full CI.
 - **AC2:** Repository checks pass with the patch.
   Check: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`, `git diff --check`, then hosted CI on the final PR head.
-  Result: Passed locally — `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`: 392 tests / 4,190 assertions, all style/security checks passed. `git diff --check` passed. Hosted verification pending on the updated head.
+  Result: Passed locally — `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci`: 392 tests / 4,190 assertions, all style/security checks passed. `git diff --check` passed. Hosted verification passed on the updated head; see merge evidence below.
 
 ## Implementation notes
 
 Initial hosted run for PR #32 passed 392 tests / 4,190 assertions and all other checks, but its fresh advisory database detected this dependency issue. Earlier local security checks used older advisory data.
 
-Owner acceptance / merge: Merge authorized after CI; not yet merged.
+Owner acceptance / merge: Authorized and merged; see evidence below.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #32](https://github.com/adambelton/glutton/pull/32) merged on 26 October 2026 at 08:57:13 UTC (GMT), squash commit `f2d8abbfbd2d3f2a335ba49c432904c804310b5a`. Hosted Repository checks passed on exact head `5340552cc874248a58bb84a5a0e2c97b678753bb` at 08:56:55 UTC. Local main was fast-forwarded. Final local CI passed 392 tests / 4,190 assertions with clean style/security checks after refreshing advisory data and patching crass.

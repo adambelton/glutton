@@ -13,7 +13,7 @@ This section summarizes current delivery status; task tables and linked specs re
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
 | Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; product UI remains planned. |
-| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer merged via PR #30; task 017 Ratings Library-event consumer and follow-ups 016a/012b merged via PR #31; task 018 browser flow is Ready for review. |
+| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer merged via PR #30; task 017 Ratings Library-event consumer and follow-ups 016a/012b merged via PR #31; task 018 browser flow merged via PR #32; task 019 targeted entry is Ready for review. |
 
 ## Task rules
 
@@ -101,8 +101,8 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Deferred — Ratings flow has no Library-action choices |
 | 017b | Library / action consumption | Apply Ratings action requests and publish applied/rejected outcomes; preserve public transition failures | 012a, 017a | Deferred — Ratings flow has no Library-action choices |
 | 017c | Ratings / action outcomes | Consume Library outcomes into recorded request status | 017a, 017b | Deferred — Ratings flow has no Library-action choices |
-| 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Ready for review — [spec](specs/018_ratings_browser_flow.md) |
-| 019 | Ratings / targeted entry | Explicitly open a film for rating from Library, bypassing automatic-rotation dismissal; no Library watched-record prerequisite | 017, 018 | Planned |
+| 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Merged via PR #32 — [spec](specs/018_ratings_browser_flow.md) |
+| 019 | Ratings / targeted entry | Explicitly open a film for rating from Library, bypassing automatic-rotation dismissal; no Library watched-record prerequisite | 017, 018 | Ready for review — [spec](specs/019_ratings_targeted_entry.md) |
 | 020 | Library / watched view | Distinguish awaiting-rating/rated using the Library-owned projection of Ratings events; link to targeted rating | 014, 019 | Planned |
 | 021 | Library / watchlist view | To watch list with existing mark-watched workflow and rating entry point | 011, 017, 019 | Planned |
 | 022 | Library / dismissed view | Not interested list with reconsideration | 012 | Planned |
@@ -289,3 +289,21 @@ Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/
 **018 — Ready for review**, 26 October 2026, Ratings / browser flow; [spec](specs/018_ratings_browser_flow.md). Owner approved the existing-queue scope. Implemented localized rating/expression/dismissal forms with session ownership, explicit failures, protected writes and a home link. Focused checks passed 59 tests / 793 assertions; full CI passed 392 tests / 4,190 assertions with clean style/security checks. Application eager loading, whitespace and real browser keyboard walkthrough passed. Catalogue replenishment, first-time anonymous discovery and targeted Library entry remain deferred. Owner acceptance and merge pending.
 
 **001l — Ready for review**, Foundation / dependency maintenance; [spec](specs/001l_crass_security_patch.md). PR #32 hosted CI detected GHSA-pq4g-8rxf-4g29 in crass 1.0.7. Updated only crass to 1.0.8. Refreshed advisory data and full local CI passed (392 tests / 4,190 assertions; style/security clean). Hosted verification and merge pending.
+
+## PR #32 merge and next task
+
+Owner authorized merge after CI. [PR #32](https://github.com/adambelton/glutton/pull/32) merged on 26 October 2026 at 08:57:13 UTC (GMT), squash commit `f2d8abbfbd2d3f2a335ba49c432904c804310b5a`. Hosted Repository checks passed on exact head `5340552cc874248a58bb84a5a0e2c97b678753bb` at 08:56:55 UTC. Local main was fast-forwarded. Final local CI passed 392 tests / 4,190 assertions with clean style/security checks after refreshing advisory data and patching crass.
+
+**001l — Merged via PR #32**, Foundation / dependency maintenance. The isolated crass update to 1.0.8 resolves the hosted dependency-audit failure; no CI checks were bypassed.
+
+**018 — Merged via PR #32**, Ratings / browser flow. Owner accepted the existing-queue UI and authorized merge after CI.
+
+**019 — Ready for review**, Ratings / targeted entry; [spec](specs/019_ratings_targeted_entry.md). Supplies the Ratings destination for a user choosing “Rate this film” from Library. Entry uses the shared Film ID, bypasses automatic queue holds/dismissal, and admits a missing Ratings candidate only when a first rating is successfully saved. No Library watched prerequisite or model access; Library UI links remain task 020. Owner approved implementation on 26 October 2026. Implemented read-only targeted entry and atomic first submission with shared form/input handling. Focused checks passed 78 tests / 1,050 assertions; full CI passed 411 tests / 4,447 assertions with clean style/security checks. Eager loading, whitespace and browser/keyboard walkthrough passed. [Destination contract](ratings_targeted_entry.md). Owner acceptance and merge pending.
+
+Task 019 owner review: consolidated rating entry into Ratings::RatingsController#new with optional film_id and one create action. Automatic selection retains queue eligibility; explicit selection bypasses holds/dismissal. Candidate dismissal remains separate. Updated provider destination documentation. Full local CI passed 412 tests / 4,451 assertions with clean style/security checks; application eager loading and whitespace checks passed. The earlier browser walkthrough predates the route consolidation; both modes were reverified through request tests. Ready for review.
+
+Task 019 final controller simplification: new, create and dismiss now share Ratings::RatingsController. Removed CandidatesController and the Ratings base controller; moved status/error views with the workflow. Full CI passed 412 tests / 4,451 assertions, style/security clean; eager loading and whitespace passed. Ready for review.
+
+Task 019 final admission decision: owner explicitly requested GET new(film_id:) to find/create RatingFilm before rendering. Unfinished candidates persist for the automatic queue. Create requires an existing owned rating_film_id and uses SubmitRating; removed SubmitFilmRating. Existing flags/timestamps and explicit duplicate failures remain. Focused tests passed 79 tests / 1,017 assertions; full CI passed 412 tests / 4,414 assertions, all style/security checks clean. Eager loading and whitespace passed. This supersedes prior read-only entry/submission-time admission descriptions. Ready for review.
+
+Task 019 controller/service boundary follow-up: controller validates HTTP params, services load/validate entities, models retain domain permissions. Added FindCandidate for safe validation-error rendering; PrepareCandidate owns already-rated rejection. No controller entity queries remain. Full CI passed 416 tests / 4,438 assertions with clean style/security checks; eager loading and whitespace passed. Ready for review.
