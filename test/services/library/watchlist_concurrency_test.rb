@@ -182,4 +182,47 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     assert_not row.can_watch?
     assert_equal first.id, row.id
   end
+
+  test "detail action refuses an entry removed while waiting for the owner lock" do
+    original = add
+    contender = nil
+    User.transaction do
+      remove
+      contender = blocked do
+        begin
+          Library::WatchFilm.call(user_id: @guest.id, library_film_id: original.id)
+        rescue Library::FilmUnavailable
+          :unavailable
+        end
+      end
+    end
+    assert_equal :unavailable, Timeout.timeout(5) { contender.value }
+    assert_not LibraryFilm.exists?(user_id: @guest.id, film_id: @film.id)
+  end
+
+  test "removal cannot enter between detail lookup and watched transition" do
+    original = add
+    contender = nil
+    observed = false
+    test_case = self
+    callback = lambda do |row|
+      if row.id == original.id && !observed
+        observed = true
+        contender = test_case.blocked do
+          begin
+            test_case.remove
+          rescue Library::NotOnWatchlist
+            :rejected
+          end
+        end
+      end
+    end
+    LibraryFilm.set_callback(:find, :after, callback)
+    result = Library::WatchFilm.call(user_id: @guest.id, library_film_id: original.id)
+    assert_equal :rejected, Timeout.timeout(5) { contender.value }
+    assert_equal original.id, result.id
+    assert_not LibraryFilm.find(original.id).can_watch?
+  ensure
+    LibraryFilm.skip_callback(:find, :after, callback, raise: false) if callback
+  end
 end

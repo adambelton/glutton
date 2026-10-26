@@ -3,6 +3,9 @@
   <meta name="turbo-cache-control" content="no-cache">
 <% end %>
 <main class="library-page">
+  <% if notice.present? %>
+    <p role="status"><%= notice %></p>
+  <% end %>
   <h1><%= t("library.browser.title") %></h1>
   <%= form_with url: library_path, method: :get, class: "library-filter", data: { controller: "library-view" } do |form| %>
     <%= form.label :view, t("library.browser.view") %>
@@ -18,7 +21,7 @@
       <% @page.entries.each do |library_film| %>
         <li class="library-film">
           <div>
-            <h3><%= library_film.film.title %></h3>
+            <h3><%= link_to library_film.film.title, library_film_path(library_film) %></h3>
             <% if library_film.film.release_date %>
               <p><%= t("library.browser.released", year: library_film.film.release_date.year) %></p>
             <% end %>

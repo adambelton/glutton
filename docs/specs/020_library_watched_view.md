@@ -1,6 +1,6 @@
 # 020 — Browse the Library and start a rating
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / browsing
 
 ## Goal
@@ -88,7 +88,7 @@ Read the implementation plan, task 010, task 019 and docs/ratings_targeted_entry
 
 Implemented GET `/library` through `LibraryController#show`, `Library::Browse`, localized templates and scoped responsive CSS. The controller validates URL inputs and resolves session identity; Browse loads owned entries and batches authoritative Ratings evidence. Pages contain at most 25 entries, with one extra row to detect the next page. Positive page numbers accept at most nine digits to bound offset arithmetic. The native dropdown automatically submits through a small Stimulus controller, as requested during review; there is no Show films button. Existing event consumers are unchanged. Shared navigation/root wiring remains the separately scoped supporting UI work.
 
-Owner acceptance / merge: Pending.
+Owner accepted and authorized merge; merged via PR #34.
 
 Documentation verification: reviewed AGENTS.md, architecture/event guidance, task template and implementation plan for the ownership/read distinction; marked 020a withdrawn and removed it as a dependency. `git diff --check` passed. No application code changed and no runtime tests were run for this documentation update.
 
@@ -104,4 +104,6 @@ Scope revision: the owner selected three mobile bottom destinations and one Libr
 - Browser persistence was verified before removing the disposable account/films. Temporary server stopped and viewport override reset. The browser used test-environment CSRF settings; existing Ratings regression tests exercise CSRF separately. Real-device/screen-reader testing and zoom were not performed.
 - Initial checks found test-clock boundary fixtures and accidentally replaced model locale labels; both corrected. Browser history exposed stale Turbo snapshot selection, fixed with page-local no-cache metadata. One later CI run was contaminated by disposable browser fixtures; removing those fixtures restored the empty baseline and the full suite passed. No migrations, domain-state duplication or new event contracts.
 
-Owner-requested refinements during implementation: automatic collection update on dropdown change; `LibraryController` instead of `Library::FilmsController`. Supporting follow-up 020b applies the agreed top-level controller convention to both Library and Ratings. These remain within the approved Library browsing scope. Owner acceptance and merge remain pending.
+Owner-requested refinements during implementation: automatic collection update on dropdown change; `LibraryController` instead of `Library::FilmsController`. Supporting follow-up 020b applies the agreed top-level controller convention to both Library and Ratings. These remain within the approved Library browsing scope. Owner accepted and authorized merge; merged via PR #34.
+
+Merge evidence: owner approved on 26 October 2026. [PR #34](https://github.com/adambelton/glutton/pull/34) merged at 11:26:07 UTC as `3ed26aed38ca404329efbfa06df144a663abc819`. Hosted Repository checks passed at 11:25:36 UTC for head `42468ab9d5ae88bf0e580b97a04c5ab4d92ffe12`.

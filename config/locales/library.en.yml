@@ -33,3 +33,13 @@ en:
       sign_in_required: Sign in or register to browse your library.
       invalid: This library view or page is not available.
       return: Return to Library
+    detail:
+      mark_watched: Mark watched
+      mark_film_watched: Mark %{title} watched
+      remove: Remove from watchlist
+      remove_film: Remove %{title} from watchlist
+      watched: Film marked watched.
+      removed: Film removed from your watchlist.
+      unavailable: This library film is unavailable.
+      watch_unavailable: This library film cannot be marked watched in its current state.
+      not_on_watchlist: This film is no longer on your watchlist.
