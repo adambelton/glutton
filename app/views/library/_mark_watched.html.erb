@@ -1,0 +1,2 @@
+<%= button_to t("library.detail.mark_watched"), mark_watched_library_film_path(library_film),
+  aria: { label: t("library.detail.mark_film_watched", title: library_film.film.title) } %>

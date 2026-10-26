@@ -1,0 +1,7 @@
+<% if (status = library_film.rating_status) %>
+  <p><%= t("library.browser.#{status}") %></p>
+<% end %>
+<% if library_film.can_rate? %>
+  <%= link_to t("library.browser.rate"), new_rating_path(film_id: library_film.film_id),
+    aria: { label: t("library.browser.rate_film", title: library_film.film.title) } %>
+<% end %>

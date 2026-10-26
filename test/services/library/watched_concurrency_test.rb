@@ -9,6 +9,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     @threads, @user_ids, @film_ids = [], [], []
     @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
+    @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
   end
 
   teardown do
@@ -40,7 +41,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   end
 
   def record
-    Library::RecordWatched.call(user_id: @guest.id, film_id: @film.id)
+    Library::RecordWatched.call(user_id: @guest.id, library_film_id: @entry.id)
   end
 
   def claim
@@ -53,7 +54,6 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "concurrent watched transitions serialize and reject the second request without changes" do
     contender = nil
     first = attributes = nil
-    LibraryFilmToWatch.create!(user: @guest, film: @film)
     User.transaction do
       first = record
       attributes = [ first.id, first.created_at, first.updated_at ]

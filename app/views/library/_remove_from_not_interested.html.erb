@@ -1,0 +1,2 @@
+<%= button_to t("library.detail.remove_from_not_interested"), remove_from_not_interested_library_film_path(library_film), method: :delete,
+  aria: { label: t("library.detail.remove_film_from_not_interested", title: library_film.film.title) } %>

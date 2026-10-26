@@ -75,9 +75,11 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   { "watchlist" => Library::AddToWatchlist, "not interested" => Library::MarkNotInterested }.each do |intent, operation|
     test "#{intent} committed first is reconciled by waiting delivery" do
-      contender = entry = nil
+      contender = nil
+      source = intent == "watchlist" ? LibraryFilmNotInterested : LibraryFilmToWatch
+      entry = source.create!(user: @guest, film: @film)
       User.transaction do
-        entry = operation.call(user_id: @guest.id, film_id: @film.id)
+        entry = operation.call(user_id: @guest.id, library_film_id: entry.id)
         contender = blocked { deliver }
       end
       assert_equal :processed, Timeout.timeout(5) { contender.value }
@@ -93,8 +95,9 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       User.transaction do
         @guest.lock!
         deliver
+        entry = LibraryFilm.find_by!(user: @guest, film: @film)
         contender = blocked do
-          operation.call(user_id: @guest.id, film_id: @film.id)
+          operation.call(user_id: @guest.id, library_film_id: entry.id)
         rescue failure
           :rejected
         end

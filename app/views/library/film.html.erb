@@ -10,6 +10,23 @@
   <% if @library_film.film.release_date %>
     <p><%= t("library.browser.released", year: @library_film.film.release_date.year) %></p>
   <% end %>
-  <%= render @library_film %>
+  <%= render "rating_status", library_film: @library_film %>
+  <div class="library-actions">
+    <% if @library_film.can_watch? %>
+      <%= render "mark_watched", library_film: @library_film %>
+    <% end %>
+    <% if @library_film.can_remove_from_watchlist? %>
+      <%= render "remove_from_watchlist", library_film: @library_film %>
+    <% end %>
+    <% if @library_film.can_mark_not_interested? %>
+      <%= render "mark_not_interested", library_film: @library_film %>
+    <% end %>
+    <% if @library_film.can_add_to_watchlist? %>
+      <%= render "add_to_watchlist", library_film: @library_film %>
+    <% end %>
+    <% if @library_film.can_remove_from_not_interested? %>
+      <%= render "remove_from_not_interested", library_film: @library_film %>
+    <% end %>
+  </div>
   <p><%= link_to t("library.browser.return"), library_path %></p>
 </main>

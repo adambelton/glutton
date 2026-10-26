@@ -39,178 +39,67 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     thread
   end
 
-  def add
-    Library::AddToWatchlist.call(user_id: @guest.id, film_id: @film.id)
+  def call(operation)
+    operation.call(user_id: @guest.id, library_film_id: @entry.id)
   end
 
-  def remove
-    Library::RemoveFromWatchlist.call(user_id: @guest.id, film_id: @film.id)
-  end
-
-  def watch
-    Library::RecordWatched.call(user_id: @guest.id, film_id: @film.id)
-  end
-
-  test "duplicate adds serializes against fresh state" do
-    contender = first = nil
-    User.transaction do
-      first = add
-      contender = blocked do
-        begin
-          add
-        rescue Library::WatchlistUnavailable
-          :rejected
+  [
+    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::AddToWatchlist, Library::WatchlistUnavailable ],
+    [ LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RemoveFromWatchlist, Library::FilmUnavailable ],
+    [ LibraryFilmToWatch, Library::RecordWatched, Library::RemoveFromWatchlist, Library::NotOnWatchlist ],
+    [ LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RecordWatched, Library::FilmUnavailable ],
+    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::RecordWatched, nil ],
+    [ LibraryFilmToWatch, Library::RecordWatched, Library::AddToWatchlist, Library::WatchlistUnavailable ],
+    [ LibraryFilmNotInterested, Library::RemoveNotInterested, Library::AddToWatchlist, Library::FilmUnavailable ],
+    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::RemoveNotInterested, Library::NotMarkedNotInterested ],
+    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::MarkNotInterested, Library::DismissalUnavailable ],
+    [ LibraryFilmNotInterested, Library::RemoveNotInterested, Library::RemoveNotInterested, Library::FilmUnavailable ],
+    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::MarkNotInterested, nil ],
+    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::AddToWatchlist, nil ],
+    [ LibraryFilmToWatch, Library::RecordWatched, Library::MarkNotInterested, Library::DismissalUnavailable ],
+    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::RecordWatched, Library::AlreadyWatched ]
+  ].each do |source, first, second, failure|
+    test "#{first} before #{second} serializes on the existing relationship" do
+      @entry = source.create!(user: @guest, film: @film)
+      contender = result = nil
+      User.transaction do
+        result = call(first)
+        contender = blocked do
+          begin
+            call(second)
+          rescue failure || StandardError => error
+            raise unless failure && error.is_a?(failure)
+            :rejected
+          end
         end
       end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert_equal :rejected, result
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id)
-    assert row.can_watch?
-    assert_equal first.id, row.id
-  end
-
-  test "concurrent reconsideration transitions once and rejects the waiting request" do
-    original = LibraryFilmNotInterested.create!(user: @guest, film: @film)
-    contender = nil
-    User.transaction do
-      assert_equal original.id, add.id
-      contender = blocked do
-        begin
-          add
-        rescue Library::WatchlistUnavailable
-          :rejected
-        end
+      outcome = Timeout.timeout(5) { contender.value }
+      if failure
+        assert_equal :rejected, outcome
+      else
+        assert_equal @entry.id, outcome.id
+        assert_equal @entry.created_at, outcome.created_at
+      end
+      if result.destroyed?
+        assert_not LibraryFilm.exists?(user_id: @guest.id, film_id: @film.id)
+      else
+        assert_equal @entry.id, LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
       end
     end
-    assert_equal :rejected, Timeout.timeout(5) { contender.value }
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find(original.id)
-    assert_equal original.created_at, row.created_at
-    assert row.can_watch?
   end
 
-  test "duplicate removes serializes against fresh state" do
-    original = add
-    contender = first = nil
-    User.transaction do
-      first = remove
-      contender = blocked do
-        begin
-          remove
-        rescue Library::NotOnWatchlist
-          :rejected
-        end
-      end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert_equal :rejected, result
-    assert_equal 0, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-  end
-
-  test "watched before remove serializes against fresh state" do
-    original = add
-    contender = first = nil
-    User.transaction do
-      first = watch
-      contender = blocked do
-        begin
-          remove
-        rescue Library::NotOnWatchlist
-          :rejected
-        end
-      end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert_equal :rejected, result
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id)
-    assert_not row.can_watch?
-    assert_equal first.id, row.id
-  end
-
-  test "remove before watched serializes against fresh state" do
-    original = add
-    contender = first = nil
-    User.transaction do
-      first = remove
-      contender = blocked do
-        watch
-      end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert result.persisted?
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id)
-    assert_not row.can_watch?
-    assert_not_equal original.id, row.id
-  end
-
-  test "add before watched serializes against fresh state" do
-    contender = first = nil
-    User.transaction do
-      first = add
-      contender = blocked do
-        watch
-      end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert result.persisted?
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id)
-    assert_not row.can_watch?
-    assert_equal first.id, row.id
-  end
-
-  test "watched before add serializes against fresh state" do
-    contender = first = nil
-    User.transaction do
-      first = watch
-      contender = blocked do
-        begin
-          add
-        rescue Library::WatchlistUnavailable
-          :rejected
-        end
-      end
-    end
-    result = Timeout.timeout(5) { contender.value }
-    assert_equal :rejected, result
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film_id: @film.id).count
-    row = LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id)
-    assert_not row.can_watch?
-    assert_equal first.id, row.id
-  end
-
-  test "detail action refuses an entry removed while waiting for the owner lock" do
-    original = add
-    contender = nil
-    User.transaction do
-      remove
-      contender = blocked do
-        begin
-          Library::WatchFilm.call(user_id: @guest.id, library_film_id: original.id)
-        rescue Library::FilmUnavailable
-          :unavailable
-        end
-      end
-    end
-    assert_equal :unavailable, Timeout.timeout(5) { contender.value }
-    assert_not LibraryFilm.exists?(user_id: @guest.id, film_id: @film.id)
-  end
-
-  test "removal cannot enter between detail lookup and watched transition" do
-    original = add
+  test "removal cannot enter between existing-entry lookup and watched transition" do
+    @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
+    entry_id = @entry.id
     contender = nil
     observed = false
     test_case = self
     callback = lambda do |row|
-      if row.id == original.id && !observed
+      if row.id == entry_id && !observed
         observed = true
         contender = test_case.blocked do
           begin
-            test_case.remove
+            test_case.call(Library::RemoveFromWatchlist)
           rescue Library::NotOnWatchlist
             :rejected
           end
@@ -218,10 +107,10 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
       end
     end
     LibraryFilm.set_callback(:find, :after, callback)
-    result = Library::WatchFilm.call(user_id: @guest.id, library_film_id: original.id)
+    result = call(Library::RecordWatched)
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
-    assert_equal original.id, result.id
-    assert_not LibraryFilm.find(original.id).can_watch?
+    assert_equal @entry.id, result.id
+    assert_not LibraryFilm.find(@entry.id).can_watch?
   ensure
     LibraryFilm.skip_callback(:find, :after, callback, raise: false) if callback
   end

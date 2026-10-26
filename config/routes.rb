@@ -23,6 +23,10 @@ Rails.application.routes.draw do
   post "library/films/:id/mark_watched", to: "library#mark_watched", as: :mark_watched_library_film
   delete "library/films/:id/remove_from_watchlist", to: "library#remove_from_watchlist", as: :remove_from_watchlist_library_film
 
+  post "library/films/:id/mark_not_interested", to: "library#mark_not_interested", as: :mark_not_interested_library_film
+  post "library/films/:id/add_to_watchlist", to: "library#add_to_watchlist", as: :add_to_watchlist_library_film
+  delete "library/films/:id/remove_from_not_interested", to: "library#remove_from_not_interested", as: :remove_from_not_interested_library_film
+
   # Defines the root path route ("/")
   root "home#index"
 end

@@ -43,3 +43,15 @@ en:
       unavailable: This library film is unavailable.
       watch_unavailable: This library film cannot be marked watched in its current state.
       not_on_watchlist: This film is no longer on your watchlist.
+      mark_not_interested: Mark not interested
+      dismiss_film: Mark %{title} not interested
+      add_to_watchlist: Add to watchlist
+      watchlist_film: Add %{title} to watchlist
+      remove_from_not_interested: Remove from not interested
+      remove_film_from_not_interested: Remove %{title} from not interested
+      dismissed: Film marked not interested.
+      watchlisted: Film added to your watchlist.
+      removed_from_not_interested: Film removed from not interested.
+      dismissal_unavailable: This film cannot be marked not interested in its current state.
+      watchlist_unavailable: This film cannot be added to your watchlist in its current state.
+      not_dismissed: This film is no longer marked not interested.

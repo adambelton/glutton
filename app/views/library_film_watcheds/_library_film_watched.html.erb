@@ -1,8 +1,0 @@
-<h2><%= t("library.browser.views.watched") %></h2>
-<% if library_film_watched.rated? %>
-  <p><%= t("library.browser.rated") %></p>
-<% else %>
-  <p><%= t("library.browser.awaiting_rating") %></p>
-  <%= link_to t("library.browser.rate"), new_rating_path(film_id: library_film_watched.film_id),
-    aria: { label: t("library.browser.rate_film", title: library_film_watched.film.title) } %>
-<% end %>
