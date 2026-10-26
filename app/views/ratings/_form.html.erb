@@ -8,8 +8,11 @@
     <ul><% @errors.each do |error| %><li><%= error %></li><% end %></ul>
   </div>
 <% end %>
-<%= form_with url: rating_path, method: :post do %>
+<%= form_with url: form_url, method: form_method do %>
   <%= hidden_field_tag :rating_film_id, rating_film.id %>
+  <% if form_method == :patch %>
+    <%= hidden_field_tag :previous_rating_id, @previous_rating_id %>
+  <% end %>
   <fieldset aria-describedby="<%= 'rating-errors' if @errors.present? %>">
     <legend><%= t("ratings.browser.choice") %></legend>
     <% Rating::Values::ALL.each do |value| %>

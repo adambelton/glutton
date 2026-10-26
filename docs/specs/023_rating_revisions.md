@@ -1,6 +1,6 @@
 # 023 — Replace a rating while preserving its history
 
-Status: Ready for review  
+Status: Merged  
 Owner: Ratings / revisions
 
 ## Goal
@@ -59,10 +59,14 @@ Verification commands:
 
 The first full CI run passed all tests but found one extra blank line in the concurrency test; corrected and rerun. Only the test database was migrated. No browser walkthrough was needed for this backend-only task; existing request tests ran. Browser replacement remains task 023a. Qualities, current-preference aggregation and late-job guards remain unimplemented future capabilities; no claim is made that scores or profiles are recomputed. No implementation-scope deviations.
 
-Owner acceptance / merge: Pending. Spec approved on 26 October 2026; implementation ready for review.
+Owner acceptance / merge: Accepted and merged via PR #37; see merge evidence below.
 
 Owner simplification: derive currentness from the highest Rating ID per candidate. No superseded column or partial unique index; existing owner/candidate locks retain stale/concurrent submission protection. Final verification: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed 452 tests / 4,930 assertions with clean style/security checks. Eager loading and whitespace checks passed. The test-only original migration was reversed before applying the replacement migration; no deployed data or development database was changed.
 
 Rollback simplification: removed the explicit history query/guard from `down`. `RAILS_ENV=test PARALLEL_WORKERS=1 bin/rails test test/models/rating_revision_persistence_test.rb` passed (3 tests / 15 assertions), including database uniqueness failure inside a migration-style transaction and preservation of history and its index. Targeted RuboCop and `git diff --check` passed. Full CI evidence above predates this migration-only refinement.
 
 Owner deferral: removed the unused RatingRevised constant, publishing method and service call. No replacement event is emitted. Full CI after removal passed 452 tests / 4,930 assertions with clean style/security checks; the obsolete revision-publication failure test was removed.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #37](https://github.com/adambelton/glutton/pull/37) merged on 26 October 2026 at 14:26:22 UTC; squash commit `cbee7a2001a75fcbbc3bd4814d16b55529ab2cf5`. Hosted Repository checks passed at 14:25:37 UTC on exact head `a1bfa9ed6ccf41154e4e1f344287fb56edc83e33`. Final local CI passed 452 tests / 4,930 assertions with clean style/security checks.

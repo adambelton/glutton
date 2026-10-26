@@ -1,0 +1,7 @@
+<% content_for :title, t("ratings.browser.edit_title") %>
+<main>
+  <h1><%= t("ratings.browser.edit_title") %></h1>
+  <p role="alert"><%= @error %></p>
+  <p><%= link_to t("ratings.browser.reload"), edit_rating_path(film_id: @rating_film.film_id) %></p>
+  <p><%= link_to t("ratings.browser.continue"), new_rating_path %></p>
+</main>

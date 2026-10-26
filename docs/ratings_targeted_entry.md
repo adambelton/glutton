@@ -14,7 +14,7 @@ Outcomes:
 - `401`: signed-out/expired/revoked session, with sign-in/registration links. No guest is created.
 - `410`: existing deleted-account response.
 - `404`: missing/malformed Film ID, with the localized unavailable response.
-- `409`: the user already rated the film, with an explicit message and queue link. Replacement is not supported yet.
+- `409`: the user already rated the film, with an explicit message and queue link. Use the separate editing destination below for replacement.
 
 ## Form submission
 
@@ -24,6 +24,17 @@ GET entry uses Ratings::PrepareCandidate under the fresh active-owner lock to fi
 
 Success returns `303` to `new_rating_path` with the saved notice. Validation returns `422` with the selected film, choice and valid-shaped text preserved. Duplicate submission returns `409`; identity and film failures use the outcomes above. All responses retain no-store handling, and Rails enforces CSRF on submission. No untrusted return URL is accepted.
 
-Automatic selection still respects pending eligibility. Dismissal is handled by RatingsController#dismiss: POST `/rating/dismiss` (`dismiss_rating_path`) with a CSRF token and `rating_film_id`. The service resolves the candidate for the session owner; foreign/missing candidates return 404 and repeated dismissal returns 409. There is no separate candidate controller or queue rating submission endpoint. This destination does not implement Library links, rating replacement, candidate replenishment or anonymous first-use discovery.
+Automatic selection still respects pending eligibility. Dismissal is handled by RatingsController#dismiss: POST `/rating/dismiss` (`dismiss_rating_path`) with a CSRF token and `rating_film_id`. The service resolves the candidate for the session owner; foreign/missing candidates return 404 and repeated dismissal returns 409. There is no separate candidate controller or queue rating submission endpoint. This first-rating destination does not implement Library links, candidate replenishment or anonymous first-use discovery.
 
 Controller/service boundary: RatingsController validates parameter shape/format and translates failures into HTTP responses. PrepareCandidate, SubmitRating and Dismiss own entity existence/ownership/freshness checks; model actions own permissions. PrepareCandidate rejects an already-rated entry. On invalid submission, FindCandidate loads the existing owned candidate under a fresh active-owner lock for rendering; it does not admit a candidate. Missing/deleted/foreign candidates remain unavailable rather than being recreated.
+
+
+## Editing an existing rating
+
+Use `edit_rating_path(film_id: film_id)` (`GET /rating/edit?film_id=<shared Film ID>`). RatingsController#edit reads the session owner's existing candidate and latest rating, even when held or dismissed, without admitting candidates or changing state. Missing/malformed/foreign candidates return 404; an owned unrated candidate returns 409. Identity failures retain 401/410 handling. Library can link here in its own future task; this task adds an edit link after first submission in Ratings.
+
+The shared form submits `PATCH /rating` with `rating_film_id`, `previous_rating_id`, `value`, `expression_texts[]` and CSRF token. IDs are parsed as positive integers at the HTTP boundary. The previous ID identifies the rating displayed to the viewer. `Ratings::ReviseRating` locks/reloads the active owner and owned candidate and delegates full replacement to the model. Success preserves historical evidence, saves the full new expression set, publishes no event, and redirects with 303 to the same film's edit page. Empty fields are omitted; clearing every expression saves an empty expression set.
+
+Validation failures return 422 with safe submitted values and the original expected previous ID preserved. A malformed/missing/stale previous ID or replay returns 409 with a link to reload the current rating. Reload is explicit; neither error redisplay nor resubmission silently adopts a newer revision. Missing/foreign/deleted candidates remain 404. The caller cannot select a different owner or arbitrary redirect destination. Responses remain no-store and all application copy is localized.
+
+This full-replacement flow also edits expressions. Planned task 024 should be reconsidered before implementation; no separate in-place expression editing mechanism is needed for this outcome.
