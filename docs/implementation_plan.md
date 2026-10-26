@@ -12,8 +12,8 @@ This section summarizes current delivery status; task tables and linked specs re
 | Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h and durable delivery 001i merged via PR #25. Publisher ownership follow-up 001j merged via PR #26; delivery status follow-up 001k merged via PR #28. |
 | Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
 | Film knowledge | Catalogue 007, TMDB import 008, search 009 and outcome-test follow-up 009a merged. Boundary consistency 009b merged via PR #22. |
-| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; product UI remains planned. |
-| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer merged via PR #30; task 017 Ratings Library-event consumer and follow-ups 016a/012b merged via PR #31; task 018 browser flow merged via PR #32; task 019 targeted entry merged via PR #33; task 020 Library browsing is Ready for review; duplicated rating-status proposal 020a is withdrawn. |
+| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; Library browsing task 020 merged via PR #34; Library film details/watchlist actions task 021 is Ready for review. |
+| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer merged via PR #30; task 017 Ratings Library-event consumer and follow-ups 016a/012b merged via PR #31; task 018 browser flow merged via PR #32; task 019 targeted entry merged via PR #33; task 020 Library browsing and supporting follow-ups 020b/020c merged via PR #34; duplicated rating-status proposal 020a is withdrawn. |
 
 ## Task rules
 
@@ -106,11 +106,11 @@ Candidate task boundaries; write each detailed spec just before starting, splitt
 | 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Merged via PR #32 — [spec](specs/018_ratings_browser_flow.md) |
 | 019 | Ratings / targeted entry | Explicitly open a film for rating from Library, bypassing automatic-rotation dismissal; no Library watched-record prerequisite | 017, 018 | Merged via PR #33 — [spec](specs/019_ratings_targeted_entry.md) |
 | 020a | Library / rating-event consumption | Withdrawn: duplicate rated flag is unnecessary with shared reads | — | Withdrawn — [decision](specs/020a_library_rating_status.md) |
-| 020 | Library / browsing | One Library page with Watchlist/Watched/Not interested dropdown; watched rating status and entry | 010, 011, 012, 019 | Ready for review — [spec](specs/020_library_watched_view.md) |
-| 020b | Supporting UI / controller organisation | Top-level domain controllers and singular Library/rating workflow routes | 019, 020 | Ready for review — [spec](specs/020b_controller_organisation.md) |
-| 020c | Supporting UI / request access | Shared opt-in controller identity requirement with unchanged public access and domain responses | 020b | Ready for review — [spec](specs/020c_shared_identity_guard.md) |
-| 021 | Library / watchlist actions | Add management actions to the Watchlist view, including mark-watched and rating entry | 011, 017, 019 | Planned |
-| 022 | Library / dismissal actions | Add reconsideration actions to the Not interested view | 012 | Planned |
+| 020 | Library / browsing | One Library page with Watchlist/Watched/Not interested dropdown; watched rating status and entry | 010, 011, 012, 019 | Merged via PR #34 — [spec](specs/020_library_watched_view.md) |
+| 020b | Supporting UI / controller organisation | Top-level domain controllers and singular Library/rating workflow routes | 019, 020 | Merged via PR #34 — [spec](specs/020b_controller_organisation.md) |
+| 020c | Supporting UI / request access | Shared opt-in controller identity requirement with unchanged public access and domain responses | 020b | Merged via PR #34 — [spec](specs/020c_shared_identity_guard.md) |
+| 021 | Library / film details and watchlist actions | Polymorphic Library film detail pages; remove ToWatch entries or transition to Watched and use existing rating entry | 010, 011, 012a, 019, 020, 020b, 020c | Ready for review — [spec](specs/021_library_watchlist_actions.md) |
+| 022 | Library / dismissal actions | Add dismissal/reconsideration actions to Library film detail pages | 012 | Planned |
 | 023 | Ratings / revisions | Create replacement rating with new expressions/qualities, supersede previous rating atomically and publish RatingRevised | 016, 019 | Planned |
 | 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 015, 019 | Planned |
 

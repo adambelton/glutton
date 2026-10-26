@@ -35,3 +35,15 @@
   .library-film > div { min-width: 0; }
   .library-rating { margin-top: 0; flex-shrink: 0; }
 }
+
+.library-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1rem 0; }
+.library-actions button {
+  min-height: 44px;
+  padding: .5rem .75rem;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #657e78;
+  border-radius: .35rem;
+  cursor: pointer;
+}

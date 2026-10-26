@@ -1,0 +1,15 @@
+<% content_for :title, @library_film.film.title %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+<main class="library-page">
+  <% if notice.present? %>
+    <p role="status"><%= notice %></p>
+  <% end %>
+  <h1><%= @library_film.film.title %></h1>
+  <% if @library_film.film.release_date %>
+    <p><%= t("library.browser.released", year: @library_film.film.release_date.year) %></p>
+  <% end %>
+  <%= render @library_film %>
+  <p><%= link_to t("library.browser.return"), library_path %></p>
+</main>

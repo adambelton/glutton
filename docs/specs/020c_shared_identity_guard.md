@@ -1,6 +1,6 @@
 # 020c — Shared controller identity requirement
 
-Status: Ready for review  
+Status: Merged  
 Owner: Supporting UI / request access
 
 ## Goal
@@ -29,4 +29,6 @@ Centralize the session identity requirement in ApplicationController while keepi
 
 ## Implementation notes
 
-Implemented the private shared guard and Identity::Required error; Library/Ratings opt in and retain their translated signed-out templates and service identity rescues. No service freshness checks or session behaviour changed. Existing tests cover the observable outcomes; no implementation-only tests added. Owner acceptance / merge: Pending.
+Implemented the private shared guard and Identity::Required error; Library/Ratings opt in and retain their translated signed-out templates and service identity rescues. No service freshness checks or session behaviour changed. Existing tests cover the observable outcomes; no implementation-only tests added. Owner accepted and authorized merge; merged via PR #34.
+
+Merge evidence: owner approved on 26 October 2026. [PR #34](https://github.com/adambelton/glutton/pull/34) merged at 11:26:07 UTC as `3ed26aed38ca404329efbfa06df144a663abc819`. Hosted Repository checks passed at 11:25:36 UTC for head `42468ab9d5ae88bf0e580b97a04c5ab4d92ffe12`.
