@@ -13,7 +13,7 @@ One independently verifiable outcome, prerequisites and any existing contracts c
 
 ## Scope restrictions
 
-- Do not change another domain. Agree any cross-domain contract before implementation; implement and test its provider and consumer in separate tasks. Review misplaced ownership or unnecessary coupling.
+- Preserve domain ownership: shared-data reads are allowed, but do not mutate another domain’s records or change its implementation. New behavioural contracts require agreement and independently scoped provider/consumer changes; an ordinary read does not require a new contract or projection. Review misplaced ownership or unnecessary coupling.
 - Exclusions and constraints that prevent the included work from expanding: relevant design limits, dependencies, side effects or decisions deferred to another task.
 
 ## Acceptance criteria

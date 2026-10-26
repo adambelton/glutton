@@ -1,6 +1,6 @@
 # 019 — Explicitly rate a selected film
 
-Status: Ready for review — 26 October 2026  
+Status: Merged — PR #33 on 26 October 2026  
 Owner: Ratings / targeted entry
 
 ## Goal
@@ -84,7 +84,7 @@ Browser walkthrough (26 October 2026):
 
 Browser server used normal test configuration; request tests explicitly enabled and exercised CSRF enforcement. Test fixtures were removed. No migration, development-data changes, external service calls or deployment.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Authorized and merged; see evidence below.
 
 ## Owner review refinement — unified rating entry
 
@@ -109,3 +109,7 @@ Owner boundary refinement: controllers validate HTTP parameter shape/format and 
 Controller/service boundary verification: existing focused Ratings request/service tests passed (79 tests / 1,017 assertions). Added four service regression tests for read-only owned lookup, missing/foreign/deleted candidates, inactive identity and already-rated preparation. Final full CI passed (416 tests / 4,438 assertions; style/security clean). Rails eager loading and git diff --check passed. Controller contains no entity queries or model-permission checks; ID helpers validate HTTP shape/format, services enforce entity rules, and FindCandidate reloads an owned candidate for validation rerender without admission. AGENTS.md records the agreed boundary. No browser walkthrough was repeated for this internal refactor.
 
 Final owner edit retained: create passes rating_film_id_param directly to SubmitRating instead of storing a temporary local. Full CI rerun on the final tree passed (416 tests / 4,438 assertions; style/security clean); git diff --check passed. Owner approved PR and merge after hosted CI.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #33](https://github.com/adambelton/glutton/pull/33) merged on 26 October 2026 at 10:15:01 UTC (GMT), squash commit `ec279e23ed17312900fac7ea32d6ed1a9c08f8d5`. Hosted Repository checks passed on exact head `8f2197dca066b36584e35813707593cabc92ca50` at 10:14:26 UTC. Local main was fast-forwarded. Final local CI passed 416 tests / 4,438 assertions with clean style/security checks, including the owner’s final controller edit.

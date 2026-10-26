@@ -9,3 +9,27 @@ en:
         user: User
         film: Film
         film_id: Film
+  library:
+    browser:
+      title: Library
+      view: Library view
+      views:
+        watchlist: Watchlist
+        watched: Watched
+        not_interested: Not interested
+      empty:
+        watchlist: No films on this watchlist page.
+        watched: No watched films on this page.
+        not_interested: No not-interested films on this page.
+      released: Released in %{year}
+      rated: Rated
+      awaiting_rating: Awaiting rating
+      rate: Rate this film
+      rate_film: Rate %{title}
+      pagination: Library pages
+      previous: Previous
+      next: Next
+      page: Page %{number}
+      sign_in_required: Sign in or register to browse your library.
+      invalid: This library view or page is not available.
+      return: Return to Library

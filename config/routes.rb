@@ -13,11 +13,11 @@ Rails.application.routes.draw do
 
   resource :session, only: [ :new, :create, :destroy ]
 
-  scope module: :ratings do
-    resources :ratings, only: [ :new, :create ] do
-      post :dismiss, on: :collection
-    end
+  resource :rating, only: [ :new, :create ], controller: :ratings do
+    post :dismiss
   end
+
+  resource :library, only: :show, controller: :library
 
   # Defines the root path route ("/")
   root "home#index"

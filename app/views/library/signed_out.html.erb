@@ -1,0 +1,7 @@
+<% content_for :title, t("library.browser.title") %>
+<main class="library-page">
+  <h1><%= t("library.browser.title") %></h1>
+  <p><%= t("library.browser.sign_in_required") %></p>
+  <%= link_to t("identity.sessions.sign_in"), new_session_path %>
+  <%= link_to t("identity.registration.title"), new_registration_path %>
+</main>
