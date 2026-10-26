@@ -325,4 +325,86 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_empty first.ratings
     assert_empty rating_events
   end
+
+  def revise(previous_rating_id:)
+    Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
+      previous_rating_id:, value: Rating::Values::BRILLIANT, expression_texts: [ "Replacement evidence" ])
+  end
+
+  test "competing revisions yield one replacement and one stale failure" do
+    original = submit
+    contender = replacement = nil
+    User.transaction do
+      replacement = revise(previous_rating_id: original.id)
+      contender = blocked do
+        revise(previous_rating_id: original.id)
+      rescue Ratings::StaleRating
+        :stale
+      end
+    end
+    assert_equal :stale, Timeout.timeout(5) { contender.value }
+    assert_equal replacement.id, @rating_film.reload.current_rating.id
+    assert Rating.exists?(original.id)
+    assert_equal 2, @rating_film.ratings.count
+    assert_equal 1, rating_events.count
+  end
+
+  test "revision waiting across expiry rejects owner without superseding" do
+    original = submit
+    contender = nil
+    User.transaction do
+      @user.lock!
+      contender = blocked do
+        revise(previous_rating_id: original.id)
+      rescue Ratings::IdentityUnavailable
+        :inactive
+      end
+      travel UserGuest::EXPIRY_DURATION
+    end
+    assert_equal :inactive, Timeout.timeout(5) { contender.value }
+    assert_equal original.id, @rating_film.reload.current_rating.id
+    assert_equal 1, rating_events.count
+  end
+
+  test "claim preserves revision history and waiting replacement past guest expiry" do
+    original = submit
+    replacement = revise(previous_rating_id: original.id)
+    contender = nil
+    User.transaction do
+      @user.lock!
+      claim
+      contender = blocked { revise(previous_rating_id: replacement.id) }
+      travel UserGuest::EXPIRY_DURATION
+    end
+    latest = Timeout.timeout(5) { contender.value }
+    assert_equal latest.id, @rating_film.reload.current_rating.id
+    assert_equal 3, @rating_film.ratings.count
+    assert Rating.exists?(original.id)
+    assert Rating.exists?(replacement.id)
+    assert_equal [ "Atmosphere", "  Ending!  " ], original.rating_expressions.pluck(:text)
+    assert_equal [ "Replacement evidence" ], replacement.rating_expressions.pluck(:text)
+    assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_equal 1, rating_events.count
+  end
+
+  test "cleanup deletes complete revision history before a waiting revision" do
+    original = submit
+    replacement = revise(previous_rating_id: original.id)
+    contender = nil
+    travel UserGuest::EXPIRY_DURATION
+    User.transaction do
+      @user.lock!
+      contender = blocked do
+        revise(previous_rating_id: replacement.id)
+      rescue Ratings::IdentityUnavailable
+        :inactive
+      end
+      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    end
+    assert_equal :inactive, Timeout.timeout(5) { contender.value }
+    assert_empty Rating.where(rating_film_id: @rating_film.id)
+    assert_empty RatingExpression.where(rating_id: [ original.id, replacement.id ])
+    assert_empty rating_events
+    assert Film.exists?(@film.id)
+  end
 end

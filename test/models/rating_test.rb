@@ -16,13 +16,13 @@ class RatingTest < ActiveSupport::TestCase
     end
   end
 
-  test "database enforces required reference allowed choices and one first submission" do
+  test "database enforces required reference and allowed choices" do
     assert_raises(ActiveRecord::NotNullViolation) { insert(rating_film_id: nil) }
     assert_raises(ActiveRecord::InvalidForeignKey) { insert(rating_film_id: -1) }
     assert_raises(ActiveRecord::NotNullViolation) { insert(value: nil) }
     assert_raises(ActiveRecord::StatementInvalid) { insert(value: "unknown") }
     insert
-    assert_raises(ActiveRecord::RecordNotUnique) { insert(value: Rating::Values::BRILLIANT) }
+    insert(value: Rating::Values::BRILLIANT)
   end
 
   test "candidate owns submission permission and action independently of dismissal" do

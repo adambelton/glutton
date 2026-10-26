@@ -1,6 +1,6 @@
 # 022a — Existing-entry Library actions
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / action boundary
 
 ## Goal
@@ -33,7 +33,7 @@ Give each Library user action one existing-entry contract. Remove overlapping wr
 
 ## Implementation notes
 
-Owner explicitly approved revisiting the old operation contracts rather than preserving redundant wrappers. Prior specs record historical behaviour; this spec supersedes their film-based user-action creation contracts. Owner acceptance / merge: Pending.
+Owner explicitly approved revisiting the old operation contracts rather than preserving redundant wrappers. Prior specs record historical behaviour; this spec supersedes their film-based user-action creation contracts. Owner acceptance / merge: Accepted and merged via PR #36; see merge evidence below.
 
 
 Implemented five direct user-action services and removed the five overlapping wrappers. The existing Ratings consumer is unchanged; it is the only production LibraryFilm creation site. No endpoint was added for future search/watchlist creation. Domain event names and payloads are unchanged.
@@ -45,3 +45,7 @@ Verification commands:
 - `git diff --check` — passed.
 
 Test counts changed because overlapping operation/concurrency suites and obsolete create-if-missing expectations were consolidated around the new contract. Persistence failures, exact guest expiry, registered access, claim/cleanup retention, publication/stream ordering, consumer creation, ownership and removal races remain covered. This service-only refinement used request regressions rather than repeating the earlier browser walkthrough; UI and routes are unchanged.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #36](https://github.com/adambelton/glutton/pull/36) merged on 26 October 2026 at 13:13:30 UTC; squash commit `79e2a4cc30e9c1a5f35d56d37c3619022bac333d`. Hosted Repository checks passed on exact head `6468b2baa2475d937762e69f775a25668c7caa21` at 13:10:57 UTC. Final local CI passed 436 tests / 4,752 assertions with clean style/security checks.
