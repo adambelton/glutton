@@ -1,0 +1,37 @@
+/* Scoped to Library; the shared application navigation is a separate task. */
+.library-page {
+  box-sizing: border-box;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #192d2a;
+  overflow-wrap: anywhere;
+}
+.library-page a { color: #155b50; }
+.library-filter label { display: block; font-weight: 600; margin-bottom: .5rem; }
+.library-filter-controls { display: flex; flex-wrap: wrap; gap: .75rem; }
+.library-filter select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: .5rem .75rem;
+  font: inherit;
+  border: 1px solid #657e78;
+  border-radius: .35rem;
+  background: #fff;
+  color: inherit;
+}
+.library-page :focus-visible { outline: 3px solid #167666; outline-offset: 3px; }
+.library-films { list-style: none; padding: 0; margin: 0; }
+.library-film { padding: 1.25rem 0; border-bottom: 1px solid #ccd8d4; }
+.library-film h3, .library-film p { margin: 0 0 .5rem; }
+.library-rating { margin-top: .75rem; }
+.library-page a { display: inline-flex; align-items: center; min-height: 44px; }
+.library-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 1.5rem; margin-top: 1.5rem; }
+@media (min-width: 48rem) {
+  .library-page { padding: 2rem; }
+  .library-film { display: flex; justify-content: space-between; gap: 2rem; padding: 1.5rem 0; }
+  .library-film > div { min-width: 0; }
+  .library-rating { margin-top: 0; flex-shrink: 0; }
+}

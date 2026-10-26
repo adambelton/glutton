@@ -1,0 +1,50 @@
+<% content_for :title, t("library.browser.title") %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+<main class="library-page">
+  <h1><%= t("library.browser.title") %></h1>
+  <%= form_with url: library_path, method: :get, class: "library-filter", data: { controller: "library-view" } do |form| %>
+    <%= form.label :view, t("library.browser.view") %>
+    <div class="library-filter-controls">
+      <%= form.select :view, Library::Browse::Views::ALL.map { |view| [t("library.browser.views.#{view}"), view] }, { selected: @view }, { data: { action: "change->library-view#change" } } %>
+    </div>
+  <% end %>
+  <h2><%= t("library.browser.views.#{@view}") %></h2>
+  <% if @page.entries.empty? %>
+    <p><%= t("library.browser.empty.#{@view}") %></p>
+  <% else %>
+    <ul class="library-films">
+      <% @page.entries.each do |library_film| %>
+        <li class="library-film">
+          <div>
+            <h3><%= library_film.film.title %></h3>
+            <% if library_film.film.release_date %>
+              <p><%= t("library.browser.released", year: library_film.film.release_date.year) %></p>
+            <% end %>
+          </div>
+          <% if @view == Library::Browse::Views::WATCHED %>
+            <div class="library-rating">
+              <% if @page.rated_film_ids.include?(library_film.film_id) %>
+                <p><%= t("library.browser.rated") %></p>
+              <% else %>
+                <p><%= t("library.browser.awaiting_rating") %></p>
+                <%= link_to t("library.browser.rate"), new_rating_path(film_id: library_film.film_id),
+                  aria: { label: t("library.browser.rate_film", title: library_film.film.title) } %>
+              <% end %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+  <nav class="library-pagination" aria-label="<%= t("library.browser.pagination") %>">
+    <% if @page_number > 1 %>
+      <%= link_to t("library.browser.previous"), library_path(view: @view, page: @page_number - 1) %>
+    <% end %>
+    <span><%= t("library.browser.page", number: @page_number) %></span>
+    <% if @page.next_page %>
+      <%= link_to t("library.browser.next"), library_path(view: @view, page: @page_number + 1) %>
+    <% end %>
+  </nav>
+</main>

@@ -2,15 +2,15 @@ require "test_helper"
 
 class RatingsBrowserTest < ActionDispatch::IntegrationTest
   setup do
-    @forgery = Ratings::RatingsController.allow_forgery_protection
-    Ratings::RatingsController.allow_forgery_protection = true
+    @forgery = RatingsController.allow_forgery_protection
+    RatingsController.allow_forgery_protection = true
     @user = UserGuest.create!
     bind_user(@user)
     @candidate = candidate("First film", created_at: 2.days.ago)
   end
 
   teardown do
-    Ratings::RatingsController.allow_forgery_protection = @forgery
+    RatingsController.allow_forgery_protection = @forgery
   end
 
   def bind_user(user)
@@ -30,7 +30,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def rate(row = @candidate, **attributes)
-    post ratings_path, params: { rating_film_id: row.id, value: Rating::Values::BRILLIANT, authenticity_token: csrf }.merge(attributes)
+    post rating_path, params: { rating_film_id: row.id, value: Rating::Values::BRILLIANT, authenticity_token: csrf }.merge(attributes)
   end
 
   test "queue excludes ineligible and foreign rows and advances through save dismiss and empty" do
@@ -44,7 +44,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", new_rating_path
     get new_rating_path
     assert_select "h2", "First film"
-    assert_select "form[action=?]", ratings_path
+    assert_select "form[action=?]", rating_path
     assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
     assert_select "p", "Released in 1982"
     assert_equal "no-store", response.headers["Cache-Control"]
@@ -60,7 +60,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "h2", "Next film"
     assert_select '[role="status"]', I18n.t("ratings.browser.saved")
     assert_no_difference [ "DomainEvent.count", "Rating.count" ] do
-      post dismiss_ratings_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf }
+      post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf }
     end
     assert_response :see_other
     assert next_candidate.reload.dismissed?
@@ -117,7 +117,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     foreign = candidate("Private title", user: UserGuest.create!)
     token = csrf
     [ foreign.id, RatingFilm.maximum(:id) + 1, "#{@candidate.id}junk" ].each do |id|
-      post dismiss_ratings_path, params: { rating_film_id: id, authenticity_token: token, user_id: foreign.user_id }
+      post dismiss_rating_path, params: { rating_film_id: id, authenticity_token: token, user_id: foreign.user_id }
       assert_response :not_found
       assert_select '[role="alert"]', I18n.t("ratings.errors.film_unavailable")
       assert_not_includes response.body, "Private title"
@@ -129,7 +129,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   test "duplicates report failure and stale forms may still explicitly rate" do
     token = csrf
     @candidate.update!(held: true, dismissed: true)
-    post ratings_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
+    post rating_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
     assert_response :see_other
     assert @candidate.reload.held?
     assert @candidate.dismissed?
@@ -137,7 +137,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       rate
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("ratings.errors.already_rated")
-      post dismiss_ratings_path, params: { rating_film_id: @candidate.id, authenticity_token: csrf }
+      post dismiss_rating_path, params: { rating_film_id: @candidate.id, authenticity_token: csrf }
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("ratings.errors.dismissal_unavailable")
     end
@@ -147,7 +147,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     token = csrf
     @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
     assert_no_difference [ "User.count", "Session.count", "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
-      post ratings_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
+      post rating_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :unauthorized
       get new_rating_path
       assert_response :unauthorized
@@ -167,9 +167,9 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
 
   test "csrf is enforced for both writes and expression parameters are filtered" do
     assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
-      post ratings_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT }
+      post rating_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT }
       assert_response :unprocessable_entity
-      post dismiss_ratings_path, params: { rating_film_id: @candidate.id }
+      post dismiss_rating_path, params: { rating_film_id: @candidate.id }
       assert_response :unprocessable_entity
     end
     assert_not @candidate.reload.dismissed?
