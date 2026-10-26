@@ -8,7 +8,7 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
   end
 
   test "missing and inactive owners and foreign entries cannot be used" do
-    [ Library::FindFilm, Library::WatchFilm, Library::RemoveWatchlistFilm ].each do |operation|
+    [ Library::FindFilm, Library::RecordWatched, Library::RemoveFromWatchlist, Library::MarkNotInterested, Library::AddToWatchlist, Library::RemoveNotInterested ].each do |operation|
       assert_raises(Library::IdentityUnavailable) { operation.call(user_id: -1, library_film_id: @entry.id) }
       assert_raises(Library::FilmUnavailable) { operation.call(user_id: UserGuest.create!.id, library_film_id: @entry.id) }
       travel 25.hours do
@@ -18,7 +18,7 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
   end
 
   test "caller rollback and publication failure leave original entry and events intact" do
-    [ Library::WatchFilm, Library::RemoveWatchlistFilm ].each do |operation|
+    [ Library::RecordWatched, Library::RemoveFromWatchlist ].each do |operation|
       assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
         LibraryFilm.transaction(requires_new: true) do
           operation.call(user_id: @user.id, library_film_id: @entry.id)
@@ -29,11 +29,33 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
     end
     failure = -> { raise ActiveRecord::StatementInvalid, "injected publication failure" }
     DomainEvent.set_callback(:create, :before, failure)
-    [ Library::WatchFilm, Library::RemoveWatchlistFilm ].each do |operation|
+    [ Library::RecordWatched, Library::RemoveFromWatchlist ].each do |operation|
       assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: @entry.id) }
       end
       assert LibraryFilm.find(@entry.id).can_watch?
+    end
+  ensure
+    DomainEvent.skip_callback(:create, :before, failure, raise: false) if failure
+  end
+
+  test "dismissal detail operations roll back state and events on publication failure" do
+    failure = -> { raise ActiveRecord::StatementInvalid, "injected publication failure" }
+    DomainEvent.set_callback(:create, :before, failure)
+    assert_no_difference "DomainEvent.count" do
+      assert_raises(ActiveRecord::StatementInvalid) do
+        Library::MarkNotInterested.call(user_id: @user.id, library_film_id: @entry.id)
+      end
+    end
+    assert LibraryFilm.find(@entry.id).can_watch?
+    DomainEvent.skip_callback(:create, :before, failure)
+    Library::MarkNotInterested.call(user_id: @user.id, library_film_id: @entry.id)
+    DomainEvent.set_callback(:create, :before, failure)
+    [ Library::AddToWatchlist, Library::RemoveNotInterested ].each do |operation|
+      assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
+        assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: @entry.id) }
+      end
+      assert LibraryFilm.find(@entry.id).can_remove_from_not_interested?
     end
   ensure
     DomainEvent.skip_callback(:create, :before, failure, raise: false) if failure

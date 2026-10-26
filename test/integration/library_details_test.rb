@@ -30,14 +30,13 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     post mark_watched_library_film_path(@entry), params: { authenticity_token: token }.merge(params)
   end
 
-  test "collections link to existing entries and each submodel presents its information" do
+  test "collections link to existing entries and present supported actions and information" do
     get library_path
     assert_select "h3 a[href=?]", library_film_path(@entry), text: @film.title
     assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
       get library_film_path(@entry)
       assert_response :success
       assert_select "h1", @film.title
-      assert_select "h2", "Watchlist"
       assert_select "p", "Released in 2001"
       assert_select "form[action=?]", mark_watched_library_film_path(@entry)
       assert_select "form[action=?]", remove_from_watchlist_library_film_path(@entry)
@@ -47,8 +46,8 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       assert_no_match(/translation missing/i, response.body)
       row = LibraryFilmNotInterested.create!(user: @user, film: Film.create!(title: "Other film"))
       get library_film_path(row)
-      assert_select "h2", "Not interested"
-      assert_select "form", count: 0
+      assert_select "form[action=?]", add_to_watchlist_library_film_path(row)
+      assert_select "form[action=?]", remove_from_not_interested_library_film_path(row)
       assert_select "p", text: /Released/, count: 0
       row.destroy!
     end
@@ -71,7 +70,6 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     assert_equal @film.id, event.payload.fetch("film_id")
     follow_redirect!
     assert_select '[role="status"]', I18n.t("library.detail.watched")
-    assert_select "h2", "Watched"
     assert_select "form", count: 0
     assert_select "a[href=?]", new_rating_path(film_id: @film.id)
     assert_no_difference "DomainEvent.count" do
@@ -84,7 +82,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
   end
 
   test "watched detail reads same-user actual ratings independent of candidate flags" do
-    Library::RecordWatched.call(user_id: @user.id, film_id: @film.id)
+    Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
     foreign.submit_rating!(value: Rating::Values::BRILLIANT)
     row = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
@@ -132,7 +130,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       post mark_watched_library_film_path(id), params: { authenticity_token: csrf }
       assert_response :not_found
     end
-    Library::RecordWatched.call(user_id: @user.id, film_id: @film.id)
+    Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
       delete remove_from_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict

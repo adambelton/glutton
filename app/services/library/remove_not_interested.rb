@@ -1,15 +1,13 @@
 module Library
   class RemoveNotInterested
-    def self.call(user_id:, film_id:)
+    def self.call(user_id:, library_film_id:)
       LibraryFilm.transaction(requires_new: true) do
         user = User.lock.find_by(id: user_id)
-        raise IdentityUnavailable, "An active identity is required" unless user&.active?
+        raise IdentityUnavailable unless user&.active?
 
-        film = Film.find_by(id: film_id)
-        raise FilmUnavailable, "Film is unavailable" unless film
-
-        library_film = LibraryFilmNotInterested.lock.find_by(user_id: user.id, film_id: film.id)
-        raise NotMarkedNotInterested, "Film is not marked not interested" unless library_film
+        library_film = LibraryFilm.lock.find_by(user_id: user.id, id: library_film_id)
+        raise FilmUnavailable unless library_film
+        raise NotMarkedNotInterested unless library_film.can_remove_from_not_interested?
 
         library_film.destroy!
         library_film.publish_event!(name: Events::FILM_DISMISSAL_REMOVED)

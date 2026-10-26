@@ -1,0 +1,2 @@
+<%= button_to t("library.detail.remove"), remove_from_watchlist_library_film_path(library_film), method: :delete,
+  aria: { label: t("library.detail.remove_film", title: library_film.film.title) } %>

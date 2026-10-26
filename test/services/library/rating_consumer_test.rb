@@ -50,22 +50,23 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "watchlist and not interested are reconciled preserving identity and public failures" do
-    [ Library::AddToWatchlist, Library::MarkNotInterested ].each do |operation|
+    [ LibraryFilmToWatch, LibraryFilmNotInterested ].each do |model|
       @film = Film.create!(title: "Intent")
-      entry = operation.call(user_id: @user.id, film_id: @film.id)
+      entry = model.create!(user: @user, film: @film)
       publish
       assert_equal({ processed: 1 }, dispatch)
       watched = LibraryFilmWatched.find_by!(user: @user, film: @film)
       assert_equal entry.id, watched.id
       assert_equal entry.created_at, watched.created_at
-      assert_raises(Library::AlreadyWatched) { Library::RecordWatched.call(user_id: @user.id, film_id: @film.id) }
-      assert_raises(Library::WatchlistUnavailable) { Library::AddToWatchlist.call(user_id: @user.id, film_id: @film.id) }
-      assert_raises(Library::DismissalUnavailable) { Library::MarkNotInterested.call(user_id: @user.id, film_id: @film.id) }
+      assert_raises(Library::AlreadyWatched) { Library::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
+      assert_raises(Library::WatchlistUnavailable) { Library::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id) }
+      assert_raises(Library::DismissalUnavailable) { Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id) }
     end
   end
 
   test "already watched and repeated viewing evidence are ignored without timestamp or event changes" do
-    entry = Library::RecordWatched.call(user_id: @user.id, film_id: @film.id)
+    entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    entry = Library::RecordWatched.call(user_id: @user.id, library_film_id: entry.id)
     updated_at = entry.updated_at
     travel 1.hour
     event = publish
@@ -80,7 +81,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "publication failure rolls back transition and receipt then retry commits once" do
-    entry = Library::MarkNotInterested.call(user_id: @user.id, film_id: @film.id)
+    entry = LibraryFilmNotInterested.create!(user: @user, film: @film)
     event = publish
     connection = DomainEvent.connection
     connection.execute("ALTER TABLE domain_events ADD CONSTRAINT consumer_test_block_watched CHECK (name <> 'FilmMarkedWatched')")

@@ -14,7 +14,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
     registered = UserRegistered.create!(email_address: "library-keep@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     film = Film.create!(title: "Shared Library film")
-    [ guest, active, registered ].each { |user| Library::RecordWatched.call(user_id: user.id, film_id: film.id) }
+    [ guest, active, registered ].each { |user| LibraryFilmWatched.create!(user:, film:) }
     session = Session.create!(user: guest)
     travel UserGuest::EXPIRY_DURATION / 2 + 1.second do
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::CleanupExpiredAccounts.call)
@@ -29,7 +29,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "in-place registration preserves relationship identity and watched confirmation" do
     guest = UserGuest.create!
     film = Film.create!(title: "Claim retained film")
-    Library::RecordWatched.call(user_id: guest.id, film_id: film.id)
+    LibraryFilmWatched.create!(user: guest, film:)
     row = LibraryFilm.find_by!(user_id: guest.id)
     before = [ row.id, row.created_at, row.updated_at ]
     session = claim(guest)
@@ -41,7 +41,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "a restrictive dependent still rolls back cleanup and restores Library and Identity rows" do
     guest = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION / 2).ago)
     film = Film.create!(title: "Rollback retention film")
-    Library::RecordWatched.call(user_id: guest.id, film_id: film.id)
+    LibraryFilmWatched.create!(user: guest, film:)
     session = Session.create!(user: guest)
     connection = User.connection
     connection.execute("CREATE TABLE library_cleanup_blocker (user_id bigint REFERENCES users(id))")
@@ -53,5 +53,26 @@ class Library::RetentionTest < ActiveSupport::TestCase
     assert Session.exists?(session.id)
     assert LibraryFilm.exists?(user_id: guest.id)
     assert Film.exists?(film.id)
+  end
+
+  [ [ LibraryFilmToWatch, Library::RemoveFromWatchlist ],
+    [ LibraryFilmNotInterested, Library::RemoveNotInterested ] ].each do |model, removal|
+    test "claim and cleanup preserve the existing-entry contract for #{model}" do
+      freeze_time
+      guest = UserGuest.create!
+      film = Film.create!(title: "Intent retention")
+      original = model.create!(user: guest, film:)
+      claim(guest)
+      expired = UserGuest.create!
+      expired_entry = model.create!(user: expired, film:)
+      travel UserGuest::EXPIRY_DURATION do
+        assert_raises(Library::IdentityUnavailable) { removal.call(user_id: expired.id, library_film_id: expired_entry.id) }
+        assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+        assert_not LibraryFilm.exists?(expired_entry.id)
+        assert Film.exists?(film.id)
+        assert_equal original.created_at, LibraryFilm.find(original.id).created_at
+        assert_equal original.id, removal.call(user_id: guest.id, library_film_id: original.id).id
+      end
+    end
   end
 end

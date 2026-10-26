@@ -1,6 +1,6 @@
 # 021 — Library film details and watchlist actions
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / film details and watchlist actions
 
 ## Goal
@@ -72,7 +72,7 @@ Depends on tasks 010/011 (Library operations), 012a (publication), 019 (targeted
 
 Implemented LibraryController detail/actions, native subtype partials, FindFilm lookup, WatchFilm/RemoveWatchlistFilm existing-entry service boundaries, and LibraryFilmWatched#rated? using authoritative Ratings data. No schema/event-contract changes. This revision supersedes the list-row controls and direct film_id action proposal. The owner selected a Library relationship detail destination and submodel-owned behaviour/presentation, rendered through Rails polymorphism. Unlike the earlier draft, stale detail actions cannot recreate removed relationships. Transition services continue to return the updated submodel.
 
-Owner acceptance / merge: Pending.
+Owner accepted and authorized merge; merged via PR #35.
 
 
 ### Verification — 26 October 2026
@@ -86,3 +86,5 @@ Owner acceptance / merge: Pending.
 - Initial concurrency-test instrumentation used a callback whose Rails execution context was the model; corrected it to reference the test helper explicitly. Final full CI passes. No production behaviour changes were required by testing.
 
 Implementation uses small explicit action services rather than a generic dispatcher. Each takes the relationship ID, locks the fresh owner then the exact owned row, and invokes the established film-based operation inside that transaction. Thus removal/recreation cannot redirect a stale request to another row. General RecordWatched creation semantics remain unchanged for existing callers.
+
+Merge evidence: [PR #35](https://github.com/adambelton/glutton/pull/35) merged on 26 October 2026 at 12:07:41 UTC as `d9c9d2b4f08ee4c15c046d9b25eb4ff0f1b7c7ed`. Hosted Repository checks passed at 12:06:58 UTC for head `fc8aa677f7e60369f0da470fc9e259004186dc8b`.

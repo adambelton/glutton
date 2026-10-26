@@ -1,7 +1,0 @@
-<h2><%= t("library.browser.views.watchlist") %></h2>
-<div class="library-actions">
-  <%= button_to t("library.detail.mark_watched"), mark_watched_library_film_path(library_film_to_watch),
-    aria: { label: t("library.detail.mark_film_watched", title: library_film_to_watch.film.title) } %>
-  <%= button_to t("library.detail.remove"), remove_from_watchlist_library_film_path(library_film_to_watch), method: :delete,
-    aria: { label: t("library.detail.remove_film", title: library_film_to_watch.film.title) } %>
-</div>

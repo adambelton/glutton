@@ -18,18 +18,46 @@ class LibraryController < ApplicationController
     render :unavailable, status: :conflict
   end
 
+  rescue_from Library::DismissalUnavailable do
+    @error = I18n.t("library.detail.dismissal_unavailable")
+    render :unavailable, status: :conflict
+  end
+  rescue_from Library::WatchlistUnavailable do
+    @error = I18n.t("library.detail.watchlist_unavailable")
+    render :unavailable, status: :conflict
+  end
+  rescue_from Library::NotMarkedNotInterested do
+    @error = I18n.t("library.detail.not_dismissed")
+    render :unavailable, status: :conflict
+  end
+
   def film
     @library_film = Library::FindFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
   end
 
   def mark_watched
-    library_film = Library::WatchFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    library_film = Library::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_film_path(library_film), notice: I18n.t("library.detail.watched"), status: :see_other
   end
 
   def remove_from_watchlist
-    Library::RemoveWatchlistFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    Library::RemoveFromWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path, notice: I18n.t("library.detail.removed"), status: :see_other
+  end
+
+  def mark_not_interested
+    library_film = Library::MarkNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_film_path(library_film), notice: I18n.t("library.detail.dismissed"), status: :see_other
+  end
+
+  def add_to_watchlist
+    library_film = Library::AddToWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_film_path(library_film), notice: I18n.t("library.detail.watchlisted"), status: :see_other
+  end
+
+  def remove_from_not_interested
+    Library::RemoveNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_path(view: Library::Browse::Views::NOT_INTERESTED), notice: I18n.t("library.detail.removed_from_not_interested"), status: :see_other
   end
 
   def show

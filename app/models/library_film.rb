@@ -4,6 +4,27 @@ class LibraryFilm < ApplicationRecord
 
   validates :film_id, uniqueness: { scope: :user_id }
 
+  module RatingStatuses
+    RATED = "rated".freeze
+    AWAITING_RATING = "awaiting_rating".freeze
+  end
+
+  def rating_status
+    nil
+  end
+
+  def can_rate?
+    false
+  end
+
+  def can_remove_from_watchlist?
+    false
+  end
+
+  def can_remove_from_not_interested?
+    false
+  end
+
   def can_add_to_watchlist?
     false
   end

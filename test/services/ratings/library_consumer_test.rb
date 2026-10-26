@@ -161,8 +161,9 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   test "real cross domain delivery in either order preserves rating and dismissal without loops" do
     [ true, false ].each do |library_first|
       @film = Film.create!(title: "Both domains")
-      Library::AddToWatchlist.call(user_id: @user.id, film_id: @film.id)
-      Library::MarkNotInterested.call(user_id: @user.id, film_id: @film.id)
+      entry = LibraryFilmNotInterested.create!(user: @user, film: @film)
+      Library::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id)
+      Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id)
       2.times { dispatch } if library_first
       row = candidate || RatingFilm.create!(user: @user, film: @film)
       rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
