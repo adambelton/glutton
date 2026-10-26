@@ -1,6 +1,6 @@
 # 022 — Dismiss and reconsider Library films
 
-Status: Ready for review  
+Status: Merged  
 Owner: Library / dismissal actions
 
 ## Goal
@@ -57,7 +57,7 @@ Depends on tasks 011/012 (existing operations), 012a (Library publication), and 
 
 Implemented shared detail composition, content-named action/rating-status partials, model removal/rating permissions and three explicit existing-entry services with corresponding controller actions/routes/localized responses. Owner revision: task 022 also replaces task 021's subtype-based rendering with content-named partials and direct model-permission guards. This supersedes the earlier rendering decision without changing STI storage or transition ownership. Reuses the existing dismissal/reconsideration semantics and task 021's strict existing-entry action boundary. Creation is separate from user actions: the current Ratings-event handler can create a missing Library relationship; future explicit watchlist creation requires its own entry-point scope.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Accepted and merged via PR #36; see merge evidence below.
 
 
 ### Verification — 26 October 2026
@@ -77,3 +77,7 @@ Owner naming refinement: use “Remove from not interested” for the action thr
 Naming-refinement verification: `RAILS_ENV=test PARALLEL_WORKERS=1 CI=true bin/ci` passed (442 tests / 4,843 assertions; zero failures/errors/skips). `RAILS_ENV=test bin/rails zeitwerk:check` and `git diff --check` passed. No old remove-dismissal action identifiers remain in app/config/test.
 
 Action-boundary refinement: [022a](022a_library_action_boundary.md) consolidates all five user operations on `(user_id:, library_film_id:)`, removes wrappers and implicit creation, and updates dependent tests. Final full CI after consolidation passed: 436 tests / 4,752 assertions. Earlier verification above records the prior implementation stages.
+
+## Merge evidence
+
+Owner authorized merge after CI. [PR #36](https://github.com/adambelton/glutton/pull/36) merged on 26 October 2026 at 13:13:30 UTC; squash commit `79e2a4cc30e9c1a5f35d56d37c3619022bac333d`. Hosted Repository checks passed on exact head `6468b2baa2475d937762e69f775a25668c7caa21` at 13:10:57 UTC. Final local CI passed 436 tests / 4,752 assertions with clean style/security checks.

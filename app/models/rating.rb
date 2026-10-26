@@ -15,6 +15,8 @@ class Rating < ApplicationRecord
 
   accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
 
+  scope :current, -> { where(id: Rating.group(:rating_film_id).select("MAX(id)")) }
+
   validate :recognized_value
 
   def publish_event!

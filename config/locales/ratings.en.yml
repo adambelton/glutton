@@ -22,6 +22,8 @@ en:
       not_for_me: Not For Me
       garbage: Garbage
     errors:
+      revision_unavailable: This film has no current rating to replace.
+      stale_rating: This rating has changed. Reload it before submitting a replacement.
       hold_unavailable: This film is already held from rating rotation.
       hold_release_unavailable: This film is not held from rating rotation.
       invalid_expressions: Provide a list of no more than %{count} text expressions.

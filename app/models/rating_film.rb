@@ -2,6 +2,7 @@ class RatingFilm < ApplicationRecord
   belongs_to :user
   belongs_to :film
   has_many :ratings
+  has_one :current_rating, -> { order(id: :desc) }, class_name: "Rating"
 
   validates :film_id, uniqueness: { scope: :user_id }
   validates :dismissed, :held, inclusion: { in: [ true, false ] }
@@ -18,13 +19,17 @@ class RatingFilm < ApplicationRecord
   def submit_rating!(value:, expression_texts: [])
     raise Ratings::AlreadyRated unless can_submit_rating?
 
-    # Check external values before nested attributes coerce expression text.
-    unless expression_texts.is_a?(Array) && expression_texts.size <= Rating::MAX_EXPRESSIONS &&
-        expression_texts.all? { |text| text.is_a?(String) }
-      raise Ratings::InvalidExpressions
-    end
+    create_rating!(value:, expression_texts:)
+  end
 
-    ratings.create!(value:, rating_expressions_attributes: expression_texts.map { |text| { text: } })
+  def revise_rating!(previous_rating_id:, value:, expression_texts: [])
+    transaction(requires_new: true) do
+      rating = ratings.order(id: :desc).first
+      raise Ratings::RevisionUnavailable unless rating
+      raise Ratings::StaleRating unless rating.id == previous_rating_id
+
+      create_rating!(value:, expression_texts:)
+    end
   end
 
   def can_hold?
@@ -58,5 +63,17 @@ class RatingFilm < ApplicationRecord
 
     update!(dismissed: true)
     self
+  end
+
+  private
+
+  def create_rating!(value:, expression_texts:)
+    # Check external values before nested attributes coerce expression text.
+    unless expression_texts.is_a?(Array) && expression_texts.size <= Rating::MAX_EXPRESSIONS &&
+        expression_texts.all? { |text| text.is_a?(String) }
+      raise Ratings::InvalidExpressions
+    end
+
+    ratings.create!(value:, rating_expressions_attributes: expression_texts.map { |text| { text: } })
   end
 end

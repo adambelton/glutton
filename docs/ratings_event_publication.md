@@ -23,9 +23,9 @@ Values are rating choices, not numeric preference weights. Localized display lab
 
 `Ratings::SubmitRating.call(user_id:, rating_film_id:, value:, expression_texts: [])` accepts an existing owned candidate and returns the saved Rating. It locks the fresh active owner, then the candidate. The models own submission permission, creation and original-expression validation. Rating has many rating_expressions, saved with it before publication. The operation publishes through the established `DomainEvents::Publish` contract within the same savepoint.
 
-Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Malformed expression collections raise `Ratings::InvalidExpressions`; blank or overlong expressions and invalid rating values raise `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. First-submission uniqueness and required valid values/references are also database constraints.
+Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Malformed expression collections raise `Ratings::InvalidExpressions`; blank or overlong expressions and invalid rating values raise `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. Required valid values/references remain database constraints. First-submission duplicate rejection is model-owned and serialized by the owner/candidate locks.
 
-A dismissed candidate may be explicitly rated. Its dismissal and creation time remain unchanged; automatic selection uses `pending` (unrated and not dismissed). No Library change is performed synchronously. Rating revisions, edits and `RatingRevised` publication are reserved for task 023, which must explicitly revise first-submission uniqueness and settle current/history semantics.
+A dismissed candidate may be explicitly rated. Its dismissal and creation time remain unchanged; automatic selection uses `pending` (unrated, not dismissed and not held). No Library change is performed synchronously. Revisions use the separate replacement operation below.
 
 Validation failure, publication failure or caller rollback leaves no rating, expressions or event. After-commit wake failure follows Foundation's durable recovery contract; it does not undo committed source activity.
 
@@ -40,3 +40,15 @@ Delivery is at least once, ordered within a subscriber's stream, with independen
 Guest claim keeps the owner, candidate, rating, expression and event/stream identities. Expired/deleted owners cannot submit. Physical owner cleanup cascades candidates, ratings, rating expressions and the existing Foundation event storage; shared Film rows remain. Film references stay restrictive while a candidate exists. No age-based event purge or new retention schedule is introduced.
 
 See [Foundation operations](domain_event_operations.md) for delivery recovery and [domain communication](domain_events.md) for consumer boundaries.
+
+## Rating replacement — task 023
+
+`Ratings::ReviseRating.call(user_id:, rating_film_id:, previous_rating_id:, value:, expression_texts: [])` replaces an existing current rating. It locks the fresh active owner and exact owned candidate, then delegates replacement to RatingFilm. The result is a new Rating; the previous row retains its value and original expressions unchanged. Expressions are a complete replacement; omission supplies an empty set. Repeating the same value is permitted.
+
+`RatingFilm#ratings` retains history; `RatingFilm#current_rating` and `Rating.current` select the highest Rating ID for each candidate. This derives currentness without a stored flag, including when timestamps tie or are backdated. A nonunique (rating_film_id, id) index supports the relationship and latest-rating lookup. Existing single ratings remain current. Owner/candidate locking serializes writes; there is no database uniqueness constraint restricting rating history. The normal rating operation cannot be reused to bypass revision protection.
+
+Missing/inactive owners and missing/foreign candidates retain the submission failures above. An unrated candidate raises `Ratings::RevisionUnavailable`. A previous ID that is not the current rating for this candidate raises `Ratings::StaleRating`, including replay after successful replacement. Concurrent replacements of one previous rating have one winner. Validation, expression persistence failure or caller rollback retains the previous current rating and creates no revision event. Browser editing is not implemented by task 023.
+
+Replacement publishes no event and does not advance the existing Ratings stream. Revision events are deferred until a demonstrated consumer need establishes their meaning and payload. Existing RatingSubmitted publication and its Library consumer remain unchanged; there is no new subscriber or synchronous cross-domain mutation.
+
+Claim and cleanup retain the existing owner-bound lifecycle for all history and expressions. No history purge is added. Restoring first-rating uniqueness fails at the database constraint when any candidate has multiple ratings; PostgreSQL rolls back the migration without discarding history. There is no custom rollback guard. Scoring and profile recomputation remain future work and must exclude superseded contributions.
