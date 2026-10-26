@@ -2,6 +2,10 @@ en:
   ratings:
     browser:
       title: Rate films
+      edit_title: Edit your rating
+      edit_saved: "Edit your rating for %{title}"
+      updated: Your updated rating has been saved.
+      reload: Reload current rating
       choice: What did you think?
       expressions: Your expressions (optional)
       expression_help: "Share distinct thoughts in separate fields. Leave any unused fields blank. Up to %{count} expressions, each up to %{length} characters."

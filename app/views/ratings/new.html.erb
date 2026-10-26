@@ -4,8 +4,11 @@
   <% if notice.present? %>
     <p role="status"><%= notice %></p>
   <% end %>
+  <% if flash[:edited_film] %>
+    <p><%= link_to t("ratings.browser.edit_saved", title: flash[:edited_film]["title"]), edit_rating_path(film_id: flash[:edited_film]["id"]) %></p>
+  <% end %>
   <% if @rating_film %>
-    <%= render "ratings/form", rating_film: @rating_film %>
+    <%= render "ratings/form", rating_film: @rating_film, form_url: rating_path, form_method: :post %>
     <% unless params.key?(:film_id) %>
       <%= button_to t("ratings.browser.dismiss"), dismiss_rating_path, method: :post, params: { rating_film_id: @rating_film.id } %>
     <% else %>

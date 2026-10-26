@@ -1,0 +1,9 @@
+<% content_for :title, t("ratings.browser.edit_title") %>
+<main>
+  <h1><%= t("ratings.browser.edit_title") %></h1>
+  <% if notice.present? %>
+    <p role="status"><%= notice %></p>
+  <% end %>
+  <%= render "ratings/form", rating_film: @rating_film, form_url: rating_path, form_method: :patch %>
+  <p><%= link_to t("ratings.browser.continue"), new_rating_path %></p>
+</main>

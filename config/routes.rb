@@ -13,7 +13,7 @@ Rails.application.routes.draw do
 
   resource :session, only: [ :new, :create, :destroy ]
 
-  resource :rating, only: [ :new, :create ], controller: :ratings do
+  resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings do
     post :dismiss
   end
 
