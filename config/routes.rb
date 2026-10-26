@@ -13,6 +13,15 @@ Rails.application.routes.draw do
 
   resource :session, only: [ :new, :create, :destroy ]
 
+  namespace :ratings do
+    resources :candidates, only: :index do
+      member do
+        post :rate
+        post :dismiss
+      end
+    end
+  end
+
   # Defines the root path route ("/")
   root "home#index"
 end

@@ -1,0 +1,6 @@
+<% content_for :title, t("ratings.browser.title") %>
+<main>
+  <h1><%= t("ratings.browser.title") %></h1>
+  <p role="alert"><%= @error %></p>
+  <%= link_to t("ratings.browser.continue"), ratings_candidates_path %>
+</main>
