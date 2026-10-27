@@ -1,6 +1,6 @@
 # 023b — Open rating editing from Library
 
-Status: Accepted  
+Status: Merged  
 Owner: Library / rating navigation
 
 ## Goal
@@ -52,4 +52,4 @@ git diff --check
 
 Manual check: sign in with a rated watched film, open Library → Watched, activate Edit rating with Enter, change an expression and save. Return to its Library detail page and activate Edit rating again; verify the new expression. Repeat collection layout checks at 375px and 1280px. Eager loading retains the existing excluded test/mailers/previews notice. No scope deviations.
 
-Owner accepted on 27 October 2026 and authorized PR creation and merge after hosted CI passes. Merge pending.
+Owner accepted on 27 October 2026. [PR #39](https://github.com/adambelton/glutton/pull/39) merged at 08:09:56 UTC after hosted Repository checks passed at 08:09:37 UTC on exact head `95413ddb21966a19ef11e26ae4dfedd0a83f5434`. Squash commit: `ead137008218a0baf988b98d799e4f9b46d9003a`. Local main was fast-forwarded.

@@ -119,7 +119,7 @@ Categories and exact granularity are provisional. Capture distinctions that matt
 
 ### 5.1 Initial catalogue and expansion
 
-Seed with a **diverse set of 50 recognisable horror films** spanning decades, countries, traditions and styles. A preparatory research dataset exists with 50 draft profiles, 103 provisional qualities, 504 associations, a film–quality matrix and pairwise similarity analysis. This is **exploratory model-drafted data**, not a fact-checked production corpus; validate before presenting analyses as authoritative.
+Owner decision, 27 October 2026: target a **diverse catalogue of 500 horror films** spanning decades, countries, traditions and styles. Define analysis requirements first, validate a future pipeline on a small varied sample, then expand to the full catalogue and derive shared qualities from the analyses. A preparatory research dataset exists with 50 draft profiles, 103 provisional qualities, 504 associations, a film–quality matrix and pairwise similarity analysis. This is **exploratory model-drafted data**, not a fact-checked production corpus; validate before presenting analyses as authoritative.
 
 After launch, users should be able to search for a film not yet in the catalogue, select the correct external-metadata match, and request its import. Deduplicate by stable film identity. Import enrichment can run asynchronously; a newly requested film may not have a fully prepared analysis immediately. The initial seed and later imports should use the same analysis contract as far as practicable.
 
@@ -135,11 +135,21 @@ Film pages should eventually provide country-specific viewing options. MVP may o
 
 TheTVDB, OMDb, Fanart.tv and KinoCheck are alternatives or supplements, not required initial integrations. Custom Glutton artwork remains an optional creative direction. The architecture brief retains research findings and the limits of the KinoCheck coverage trial.
 
+### Podcast and comparison use case
+
+The planned weekly Glutton podcast follows two hosts watching one recommendation, sometimes a strong match for both and sometimes a poor match for one. After watching, they inspect the analysis and actual engine scores/reasons, discuss the plot and key moments, share reactions and record reviews/expressions through the app, then compare those expressions with the earlier expectations. Public discussion supports participation and learning; this decision does not schedule or publish a podcast.
+
+Presentation has three layers: standalone film analysis; the film's match against a viewer's profile; and comparison with their review/expressions. Film analysis contains no personal profile or host-specific interpretation. Versioned evidence references connect scenes and qualities to the other layers. Explanations must reflect the real engine, not fabricated precision about expected scene reactions. Reading the analysis before discussion is recorded as evaluation context.
+
+Retain historical film-analysis quality sets and rating-quality scores. Recommendations also persists its own recommendation-quality score contributions and total when computed, so original results remain inspectable without reconstructing other domains. Human or AI authors create editable analysis drafts and quality candidates. V1 activation is explicit approval: reuse existing qualities or create new ones, link them to the analysis and supersede the previous version atomically; their associations remain attached to their historical analysis. Ratings take effect on submission and have timestamped supersession, without drafts or activation for now. These are future persistence requirements, not implemented features. See [analysis lifecycle and comparison requirements](film_analysis_requirements.md#standalone-analysis-and-comparison-layers) and [Ratings history](ratings_scoring_design.md#historical-ratings-and-quality-scores).
+
 ### 5.2 Film analysis specification
 
-The analysis should contain detail sufficient to understand meaningful film characteristics and many scene-specific references, but does not need a shot-by-shot record. It should not be constrained by the current quality vocabulary.
+The analysis should contain a chronological plot breakdown and contextualised key moments, with source-specific evidence before experiential conclusions. It should explain character decisions and consequences to a reader who has not seen the film, but does not need a shot-by-shot record. Dimension summaries and candidate qualities follow this evidence rather than substitute for it. It should not be constrained by the current quality vocabulary.
 
-Proposed sections (variable depth by film):
+The following coverage checklist remains useful, but section organisation now follows provisional experiential dimensions in [Film analysis requirements](film_analysis_requirements.md). Identity, evidence and revision information are supporting information rather than automatic quality categories. Dimensions remain provisional and evolve from the films. The discipline-based checklist below supplies context and evidence; it is not the primary section layout or a list of quality categories.
+
+Coverage checklist (variable depth by film):
 
 1. **Identity and provenance:** Verified title, year, identifiers, credits, languages, production details, references and version.
 2. **Narrative:** Complete story progression, central conflicts, major revelations and ending, including material differences between versions.
@@ -156,6 +166,14 @@ Proposed sections (variable depth by film):
 **Evidence strategy:** Prioritise publicly accessible factual film catalogues, plot accounts, documented production information, filmmaker interviews and other reliable sources. Screenplays can offer narrative detail but do not establish the finished film's sounds/images. Critical interpretations may be useful when labelled as interpretations. Public readability is not the same as permission to reproduce source text; summaries should be original and appropriately sourced. Do not pretend an AI has watched a film; do not invent scene details, influences, quotes or certainty when evidence is insufficient. Import should support incomplete analyses rather than forced completeness.
 
 **Analysis vs qualities:** A film analysis records description **and** supported interpretation. A theme can appear explicitly in that analysis while also being extracted as a reusable quality; those serve different purposes. After analysis, run a separate quality-association step against the shared vocabulary. Improvements to the vocabulary should not require regenerating all film analyses, and analysis revisions should permit reassessment of qualities.
+
+Owner clarification, 27 October 2026: use multiple sources to build context for original analysis. Prefer independent corroboration for individual claims and distinguish it from complementary detail. Scripts/subtitles are eligible research inputs, without assuming they capture the finished film completely; reviews can confirm scenes or add craft observations. Record source dependencies, cut/draft differences, conflicting evidence and provisional single-source claims. Analysis is deliberately experiential. Multiple independent accounts of fear, disgust or other responses are evidence of those experiences, not universal or population-wide claims; contrasting responses can coexist. Technical execution supports the account rather than automatically becoming a quality. Analysis and qualities share terminology where useful without requiring one-to-one categories. Assess qualities for preference relevance, transferability, discrimination and reliable identification; actual qualities emerge from the films rather than a pre-generated list. See [requirements, evidence standards, source-use matrix and review rubric](film_analysis_requirements.md).
+
+Long-term community members or selected curators can propose changes, independently verified against the exact revision before acceptance. Authors cannot approve their own changes; whether one or two independent reviewers are required remains open. Generated drafts supply a provisional starting point. This is a future workflow requirement, not implemented functionality.
+
+Format evolution must distinguish structural changes from changed evidence or quality meanings. Preserve original user ratings and expressions; identify revisions supporting derived interpretations, reassess affected results and prevent obsolete or duplicate contributions. Detailed future requirements and open processing policies are recorded in [analysis evolution](film_analysis_requirements.md#evolving-the-format-and-derived-preferences); no recomputation implementation is authorised here.
+
+Future learning cycle: accepted analyses support qualities and discovery; eligible original user expressions can then supply experiential evidence for proposed, independently reviewed analysis improvements. Preserve contrasting experiences, provenance and source independence; generated conclusions are not fresh testimony. Contribution eligibility, consent, attribution and withdrawal/retention policies must be specified before implementing feedback. See [the feedback cycle](film_analysis_requirements.md#future-feedback-from-user-expressions).
 
 ### 5.3 Analysis visibility and error reporting
 
