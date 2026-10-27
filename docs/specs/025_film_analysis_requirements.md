@@ -1,6 +1,6 @@
 # 025 — Define film analysis requirements and evidence standards
 
-Status: Ready for review — requirements remain provisional pending pilot review  
+Status: Merged via PR #40  
 Owner: Film knowledge / analysis design
 
 ## Goal
@@ -64,3 +64,5 @@ Documentation authored at the owner's request on 27 October 2026. Owner approved
 Spec approval: Owner approved on 27 October 2026.
 
 Owner acceptance of final deliverable / merge: Pending. No pipeline implementation or real-film pilot is included in this task.
+
+Merge record: owner authorised merge after CI; merged via [PR #40](https://github.com/adambelton/glutton/pull/40) on 27 October 2026 at 11:58:21 UTC after hosted checks passed on `46873e53c51a1aed48551f63d65dc09e384bbfce`. Earlier status/evidence above describes the pre-merge deliverable. Research acceptance does not assert production accuracy or independent curator verification.

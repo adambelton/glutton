@@ -1,6 +1,6 @@
 # 026 — Evaluate experiential analysis on five films
 
-Status: Ready for review — evidence-depth revision 2  
+Status: Merged via PR #40  
 Owner: Film knowledge / analysis evaluation
 
 ## Goal
@@ -63,3 +63,5 @@ Owner acceptance / merge: Pending.
 ## Follow-up evaluation
 
 Revision 2 remains the source-based baseline. The subsequent podcast/comparison and historical-validity decisions were not evaluated by its recorded checks. Task [027](027_comparison_ready_analysis_pilot.md) proposes a separate run, preserving this baseline and distinguishing analysis-readiness probes from an actual engine evaluation.
+
+Merge record: owner authorised merge after CI; merged via [PR #40](https://github.com/adambelton/glutton/pull/40) on 27 October 2026 at 11:58:21 UTC after hosted checks passed on `46873e53c51a1aed48551f63d65dc09e384bbfce`. Earlier status/evidence above describes the pre-merge deliverable. Research acceptance does not assert production accuracy or independent curator verification.

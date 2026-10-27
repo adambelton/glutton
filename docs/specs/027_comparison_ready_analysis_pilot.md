@@ -1,6 +1,6 @@
 # 027 — Re-run the analysis pilot for traceable comparison
 
-Status: Ready for review  
+Status: Merged via PR #40  
 Owner: Film knowledge / analysis evaluation
 
 ## Goal
@@ -53,3 +53,5 @@ Owner approved execution on 27 October 2026. Completed the [repeat report](../re
 Owner acceptance / merge: Pending.
 
 Reproduction: from the repository root run `python3 docs/research/comparison_pilot/verify.py` and `git diff --check`. Review the report’s per-film causal traces against linked N/M sections and the separately labelled probe worksheet. Source rechecks and added BBFC evidence are recorded in the report; previously consulted sources are not claimed as newly independent evidence.
+
+Merge record: owner authorised merge after CI; merged via [PR #40](https://github.com/adambelton/glutton/pull/40) on 27 October 2026 at 11:58:21 UTC after hosted checks passed on `46873e53c51a1aed48551f63d65dc09e384bbfce`. Earlier status/evidence above describes the pre-merge deliverable. Research acceptance does not assert production accuracy or independent curator verification.
