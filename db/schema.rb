@@ -10,9 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_26_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "analysis_qualities", force: :cascade do |t|
+    t.bigint "film_analysis_id", null: false
+    t.bigint "film_quality_id", null: false
+    t.jsonb "evidence_references", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_analysis_id", "film_quality_id"], name: "idx_on_film_analysis_id_film_quality_id_3778e2ae3b", unique: true
+    t.index ["film_analysis_id"], name: "index_analysis_qualities_on_film_analysis_id"
+    t.index ["film_quality_id"], name: "index_analysis_qualities_on_film_quality_id"
+    t.check_constraint "jsonb_typeof(evidence_references) = 'array'::text AND jsonb_array_length(evidence_references) > 0", name: "analysis_qualities_evidence_present"
+  end
 
   create_table "domain_event_streams", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -61,6 +73,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_140000) do
     t.check_constraint "attempts >= 0", name: "event_delivery_attempts"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'processed'::character varying::text, 'ignored'::character varying::text, 'skipped'::character varying::text, 'failed'::character varying::text])", name: "event_delivery_status"
     t.check_constraint "subscriber::text <> ''::text", name: "event_delivery_subscriber"
+  end
+
+  create_table "film_analyses", force: :cascade do |t|
+    t.bigint "film_id", null: false
+    t.bigint "superseded_by_id"
+    t.jsonb "content", default: {}, null: false
+    t.jsonb "quality_candidates", default: [], null: false
+    t.datetime "published_at"
+    t.datetime "superseded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_film_analyses_on_film_id"
+    t.index ["film_id"], name: "one_active_analysis_per_film", unique: true, where: "((published_at IS NOT NULL) AND (superseded_at IS NULL))"
+    t.index ["film_id"], name: "one_draft_analysis_per_film", unique: true, where: "(published_at IS NULL)"
+    t.index ["superseded_by_id"], name: "index_film_analyses_on_superseded_by_id"
+    t.check_constraint "jsonb_typeof(content) = 'object'::text", name: "film_analyses_documents"
+    t.check_constraint "jsonb_typeof(quality_candidates) = 'array'::text", name: "film_analyses_quality_candidates_array"
+    t.check_constraint "superseded_at IS NULL AND superseded_by_id IS NULL OR published_at IS NOT NULL AND superseded_at > published_at AND superseded_by_id IS NOT NULL AND superseded_by_id <> id", name: "film_analyses_valid_supersession"
+  end
+
+  create_table "film_qualities", force: :cascade do |t|
+    t.string "dimension", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "dimension, lower((name)::text)", name: "film_qualities_dimension_name", unique: true
+    t.check_constraint "dimension::text = ANY (ARRAY['emotional_character'::character varying, 'tension_and_rhythm'::character varying, 'engagement'::character varying, 'relationships_and_stakes'::character varying, 'intensity_and_explicitness'::character varying, 'tone'::character varying, 'resolution_and_aftermath'::character varying]::text[])", name: "film_qualities_dimension"
+    t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "film_qualities_name_present"
   end
 
   create_table "films", force: :cascade do |t|
@@ -264,9 +304,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_140000) do
     t.check_constraint "type::text = 'UserRegistered'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
 
+  add_foreign_key "analysis_qualities", "film_analyses"
+  add_foreign_key "analysis_qualities", "film_qualities"
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
+  add_foreign_key "film_analyses", "film_analyses", column: "superseded_by_id"
+  add_foreign_key "film_analyses", "films"
   add_foreign_key "library_films", "films"
   add_foreign_key "library_films", "users", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
