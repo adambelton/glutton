@@ -2,7 +2,7 @@ require "test_helper"
 
 class FilmKnowledge::AnalysisPromptTest < ActiveSupport::TestCase
   setup do
-    @body = { "name" => "film-analysis", "type" => "text", "version" => 2, "prompt" => "TMDB instructions", "config" => { "contract" => "tmdb-analysis-v1" } }
+    @body = { "name" => "film-analysis", "type" => "text", "version" => 2, "prompt" => "Research instructions", "config" => { "contract" => "researched-analysis-v1" } }
     @arguments = []
     @runner = Object.new
     test = self
@@ -18,7 +18,7 @@ class FilmKnowledge::AnalysisPromptTest < ActiveSupport::TestCase
 
   test "one retrieval keeps resolved identity exact instructions and hash together" do
     prompt = fetch(label: "development")
-    assert_equal "TMDB instructions", prompt["prompt"]
+    assert_equal "Research instructions", prompt["prompt"]
     assert_equal 2, prompt["version"]
     assert_equal Digest::SHA256.hexdigest(prompt["prompt"]), prompt["sha256"]
     assert_equal 1, @arguments.size
@@ -27,7 +27,7 @@ class FilmKnowledge::AnalysisPromptTest < ActiveSupport::TestCase
   end
 
   test "legacy Markdown and incorrect prompt identities fail before generation" do
-    [ { "config" => {} }, { "name" => "other" }, { "type" => "chat" }, { "prompt" => "" }, { "version" => "2" } ].each do |changes|
+    [ { "config" => {} }, { "config" => { "contract" => "tmdb-analysis-v1" } }, { "name" => "other" }, { "type" => "chat" }, { "prompt" => "" }, { "version" => "2" } ].each do |changes|
       original = @body
       @body = original.merge(changes)
       assert_raises(FilmKnowledge::GenerationFailed) { fetch(label: "development") }

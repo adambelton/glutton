@@ -4,21 +4,19 @@ require "tmpdir"
 class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
   setup do
     @film = Film.create!(title: "Alien", tmdb_id: 348, metadata: { tmdb: { details: { overview: "A crew encounters danger." }, fetched_at: "2026-10-27" } })
-    @document = { "content" => { "format_version" => 1, "context" => "Cut unknown; TMDB overview only.",
-      "narrative" => [ { "id" => "N1", "text" => "TMDB reports danger to a crew.", "source_ids" => [ "TMDB" ] } ],
-      "moments" => [], "synthesis" => "Interpretation: isolation may support tension.",
-      "sources" => [ { "id" => "TMDB", "reference" => "https://www.themoviedb.org/movie/348" } ],
-      "gaps" => [ "Scene details and audience experiences are unknown." ] }, "quality_candidates" => [] }
-    @response = Struct.new(:status, :model, :usage, :output_text, :output).new("completed", "actual-model", nil, @document.to_json, [])
+    @document = JSON.parse(file_fixture("researched_analysis.json").read)
+    @response = Struct.new(:status, :model, :usage, :output_text, :output).new("completed", "actual-model", nil, @document.to_json, @document["content"]["sources"].map { |source|
+      { type: "web_search_call", status: "completed", action: { type: "open_page", url: source["reference"] } }
+    })
     @requests = []
-    @responses = Object.new
-    test = self
-    @responses.define_singleton_method(:create) do |**request|
-      test.instance_variable_get(:@requests) << request
-      test.instance_variable_get(:@during_request)&.call
-      test.instance_variable_get(:@response)
-    end
-    @prompt = { "name" => "film-analysis", "version" => 2, "prompt" => "Managed instructions", "sha256" => "test-hash" }
+    @responses = Struct.new(:requests, :response, :during_request) do
+      def create(**request)
+        requests << request
+        during_request&.call
+        response
+      end
+    end.new(@requests, @response)
+    @prompt = { "name" => "film-analysis", "version" => 3, "prompt" => "Managed instructions", "sha256" => "test-hash" }
     prompt = @prompt
     @prompt_source = Object.new
     @prompt_source.define_singleton_method(:call) { |**| prompt }
@@ -35,6 +33,8 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
   end
 
   def generate
+    @responses.response = @response
+    @responses.during_request = @during_request
     @generator.call(film: @film, model: "chosen-model", max_output_tokens: 1024, output_directory: @directory, label: "development")
   end
 
@@ -53,6 +53,12 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
     assert_equal "A crew encounters danger.", JSON.parse(request[:input]).dig("film", "metadata", "tmdb", "details", "overview")
     assert_equal 1024, request[:max_output_tokens]
     assert_equal false, request[:store]
+    assert_equal [ { type: "web_search" } ], request[:tools]
+    assert_equal "required", request[:tool_choice]
+    assert_equal 12, request[:max_tool_calls]
+    assert_equal [ "web_search_call.action.sources" ], request[:include]
+    assert_equal({ timeout: 180.0, max_retries: 0 }, request[:request_options])
+    assert_equal "open_page", artifact.dig("response", "output", 0, "action", "type")
     assert request.dig(:text, :format, :strict)
     assert_equal @prompt, artifact["prompt"]
     assert_equal @response.output_text, artifact.dig("response", "output_text")
@@ -60,7 +66,7 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
     generation = @exporter.finished_spans.find { |span| span.name == "generate-film-analysis-response" }
     root = @exporter.finished_spans.find { |span| span.name == "generate-film-analysis" }
     assert_equal root.span_id, generation.parent_span_id
-    assert_equal 2, generation.attributes["langfuse.observation.prompt.version"]
+    assert_equal 3, generation.attributes["langfuse.observation.prompt.version"]
     assert_equal "actual-model", generation.attributes["langfuse.observation.model.name"]
     assert_equal "generation", generation.attributes["langfuse.observation.type"]
   end
@@ -68,10 +74,10 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
   test "locked SDK response preserves raw output and actual token usage" do
     message = OpenAI::Models::Responses::ResponseOutputMessage.new(id: "message", role: :assistant, status: :completed,
       content: [ OpenAI::Models::Responses::ResponseOutputText.new(text: @document.to_json, annotations: []) ])
-    @response = OpenAI::Models::Responses::Response.new(id: "response", model: "returned-model", status: :completed, output: [ message ],
+    @response = OpenAI::Models::Responses::Response.new(id: "response", model: "returned-model", status: :completed, output: @response.output.map.with_index { |item, index| OpenAI::Models::Responses::ResponseFunctionWebSearch.new(id: "search-#{index}", **item) } + [ message ],
       usage: OpenAI::Models::Responses::ResponseUsage.new(input_tokens: 20, output_tokens: 30, total_tokens: 50))
     assert_equal @document["content"], generate.content
-    assert_equal @document.to_json, artifact.dig("response", "output", 0, "content", 0, "text")
+    assert_equal @document.to_json, artifact.dig("response", "output", 2, "content", 0, "text")
     generation = @exporter.finished_spans.find { |span| span.name == "generate-film-analysis-response" }
     assert_equal({ "input" => 20, "output" => 30, "total" => 50 }, JSON.parse(generation.attributes["langfuse.observation.usage_details"]))
   end
@@ -84,8 +90,8 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
   end
 
   test "published analyses cannot be regenerated and revisions remain manual" do
-    @document["content"]["moments"] = [ { "id" => "M1", "text" => "Overview event", "source_ids" => [ "TMDB" ] } ]
-    @document["quality_candidates"] = [ { "name" => "Dread", "dimension" => FilmQuality::Dimensions::ALL.first, "evidence_references" => [ "M1" ] } ]
+    @document["content"]["moments"] = [ @document["content"]["narrative"].first.merge("id" => "M1") ]
+    @document["quality_candidates"] = [ { "film_quality_id" => nil, "name" => "Dread", "dimension" => FilmQuality::Dimensions::ALL.first, "evidence_references" => [ "M1" ] } ]
     @response.output_text = @document.to_json
     draft = generate
     @film.publish_analysis!
@@ -98,6 +104,22 @@ class FilmKnowledge::GenerateAnalysisTest < ActiveSupport::TestCase
     assert_not_equal draft.id, revision.id
     assert_nil revision.published_at
     assert_equal draft, @film.film_analyses.current.sole
+  end
+
+  test "research cap rejects invalid settings before provider work" do
+    [ 0, 31, "12" ].each do |cap|
+      assert_raises(ArgumentError) { @generator.call(film: @film, model: "chosen", max_output_tokens: 1024, output_directory: @directory, label: "development", max_tool_calls: cap) }
+    end
+    assert_empty @requests
+  end
+
+  test "source admission does not require page opens and raw records remain preserved" do
+    @response.output = []
+    analysis = generate
+    assert_equal @document["content"], analysis.content
+    assert_equal 1, @requests.size
+    assert_equal [], artifact.dig("response", "output")
+    assert_equal "saved", artifact["outcome"]
   end
 
   test "existing vocabulary candidates persist without resolving or publishing" do

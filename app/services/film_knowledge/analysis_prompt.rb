@@ -16,7 +16,7 @@ module FilmKnowledge
       prompt = JSON.parse(output).fetch("body")
       unless prompt["name"] == "film-analysis" && prompt["type"] == "text" &&
           prompt["version"].is_a?(Integer) && prompt["prompt"].is_a?(String) && prompt["prompt"].present? &&
-          prompt.dig("config", "contract") == "tmdb-analysis-v1" && (!version || prompt["version"] == version)
+          prompt.dig("config", "contract") == "researched-analysis-v1" && (!version || prompt["version"] == version)
         raise GenerationFailed.new(:incompatible_prompt)
       end
       prompt.slice("name", "version", "prompt", "config").merge("sha256" => Digest::SHA256.hexdigest(prompt["prompt"]))

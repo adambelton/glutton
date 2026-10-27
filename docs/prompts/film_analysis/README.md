@@ -1,14 +1,75 @@
 # Film analysis generation
 
 Owner: Film knowledge  
-Prompt: `film-analysis` in Langfuse — current development version: 2  
-Status: Ready for review; TMDB/JSON development prompt retrieval verified, film-analysis quality not evaluated
+Prompt: `film-analysis` in Langfuse — current development version: 7  
+Status: Ready for review; combined research contract implemented with fake-provider checks, screenplay-led retry saved an unpublished draft; coverage limitations remain
 
 This is a new prompt written after the pilots. It is not a reconstruction of the instructions used for tasks 026/027. Those analyses were authored in a conversation without a saved standalone prompt; their uniform narrative/moment counts reflect an overly rigid outline, not demonstrated completeness. Preserve their artifacts as historical evidence.
 
 Future AI-generated analyses use the **OpenAI Responses API**, rather than undocumented conversational drafting. Human authors continue to use the same analysis requirements and editing/publication lifecycle. Task 029 implements API access and unpublished draft persistence; the prompt supplies authoring instructions.
 
-## Request assembly
+## Current combined research workflow — task 031
+
+Owner decision, 27 October 2026: the model researches its own analysis in one bounded operation. This supersedes the metadata-only restrictions in the historical task 029 documentation below. TMDB supplies identity and discovery context; no manually prepared evidence packet is needed. The request enables hosted `web_search`, requires tool use, and includes tool-action/source records. Use an explicitly selected Responses model capable of iterative research and the strict JSON schema. The current trial uses the agreed reasoning-capable model; a separate page-open action is not an admission requirement. See [official web-search documentation](https://developers.openai.com/api/docs/guides/tools-web-search).
+
+After a separately authorized live attempt, the existing command is:
+
+```sh
+TMDB_ID='<film with no existing analysis>' OPENAI_MODEL='<chosen research-capable model>' \
+  ANALYSIS_MAX_OUTPUT_TOKENS='<approved positive cap>' \
+  ANALYSIS_MAX_TOOL_CALLS=12 ANALYSIS_PROMPT_VERSION=7 \
+  bin/rails film_knowledge:generate_analysis
+```
+
+These placeholders are not an approved paid run. `ANALYSIS_MAX_TOOL_CALLS` defaults to 12 and accepts 1–30; the provider bounds all built-in calls, including page opens. Per-request timeout is 180 seconds and retries are zero. No separate background research phase, source subscription or automatic retry is added. The UUID artifact preserves the exact request, timeout/retry settings, provider tool actions, response and application outcome. Research actions are also attached to the generation observation. The Film still owns initial eligibility and atomic saving; existing analyses, including Alien's task 030 draft, cannot be regenerated.
+
+The managed prompt is `film-analysis` version 7, contract `researched-analysis-v1`, SHA-256 `79a51106e540703d003b4f482c2289738e35ec7675701b285ee4f9376bb0fd19`. Development selects v7. Earlier research versions remain historical and retrievable; incompatible metadata-only v1/v2 are rejected by the current generation loader. No production label is assigned. Langfuse remains the sole editable prompt source; local run/proposal snapshots are diagnostic evidence, never a runtime fallback.
+
+The JSON storage envelope remains `format_version: 1`, context, narrative, moments, synthesis, sources and gaps, with quality_candidates beside content. Research evidence adds fields inside these existing JSON documents:
+
+- Each narrative/moment entry is an atomic factual claim, attributed experience or labelled interpretation (`kind`). It includes `source_ids`, one `support` per source (`source_id`, short actual `excerpt`, precise `locator`, and `basis`) and `independent_support_count`.
+- Every factual entry needs two distinct URLs and at least two independent origin groups supporting the same claim. Derivative/reprinted accounts share an origin. Context and synthesis may summarize cited entries and explain limitations; they cannot introduce uncorroborated factual claims outside the evidence entries. Unsupported facts are omitted and the coverage gap recorded.
+- Experiential/interpretive entries need at least one inspected supporting account. The recorded count must match independent origins. The prompt gives multi-account experiential evidence greater weight, preserves conflicting reports and forbids audience-prevalence claims. No numeric quality score or new confidence tier is introduced.
+- Each source retains `id`, `reference` URL, `title`, independent `origin`, `kind`, `film_version` and `version_match`. Source content may be supplied through search or page opening; source admission does not inspect tool history. Substantive passages must establish the retained claim; a bare listing or unsupported snippet does not. Reading and semantic support are model responsibilities, not inferred from a particular tool action. `screenplay` is an explicit source kind. Duplicate source IDs or URLs, unresolved references and empty support excerpts/locators are rejected.
+- Owner decision (task 031a): exclude OpenSubtitles from this trial; its base domains and subdomains cannot be admitted as generated evidence. The model instead researches accessible independent plot accounts, criticism/reviews and production sources. Other accessible subtitle/caption sources remain optional. Plain subtitles support dialogue; SDH/captions may additionally support explicit audible cues. They cannot prove visual presentation or audience response. Caption evidence needs a known release/cut and `version_match: matched`, plus locator `HH:MM:SS,mmm --> HH:MM:SS,mmm; cue N`. Unknown or ambiguous alignment cannot support a retained claim. Availability is optional; absent captions leave a gap. See the [OpenSubtitles API review](../../research/generated_analysis_verification/opensubtitles.md) for the historical TMDB-ID search/download review; direct integration is deferred and no alternative subtitle provider is selected.
+
+Validation is atomic: invalid evidence/candidates reject the whole generated result and preserve raw diagnostics; no silent claim filtering or partial draft save. Explicitly incomplete research may save an empty narrative/moments result with gaps and no candidates, with cited source evidence. Generation still saves an unpublished draft; publication and quality resolution remain separate Film actions. No human review is assumed to supply missing factual verification, and this task does not implement automatic publication.
+
+Limits: neither page-open records nor reference counts establish successful semantic reading of every passage. Excerpts, source dependence, cut matching, atomic claim boundaries, claim classification and entailment are model assessments; deterministic count/reference checks cannot independently prove them. The hosted provider does not return full page bodies for an exact substring audit. Original response/tool history and cited excerpts make later inspection possible, but two citations do not guarantee truth. Task 034 verified a completed live research response and unpublished save with the current settings; editorial completeness and semantic support remain subject to the documented limits.
+
+## Narrative coverage and completion — task 035
+
+Development v7 adds a single coverage/completion section to v6; all previous instructions remain byte-for-byte unchanged. Build the chronological account first, identify missing causal connections, use relevant existing source material and targeted research to investigate those gaps, and only then finalize experiential synthesis and qualities. A gap list alone does not establish completion: important missing connections should have a reasonable targeted investigation within the research allowance before being left unresolved. Genuine source-access, contradiction or budget limits remain explicit gaps, never grounds to fabricate support.
+
+This remains one model-directed research/analysis operation with the same JSON contract, two-source factual rule, screenplay/released-film corroboration and source policy. No fixed scene/word quota, new validator, model change or automatic publication is introduced. The future comparison keeps the agreed model/budgets so the effect of this instruction change can be assessed separately. No paid run or saved-analysis modification occurred in task 035. Task 036 subsequently evaluated v7 on the same Thing input/settings without replacing the saved draft; the account was more continuous, while compound-claim/support weaknesses remained. This is one observational result, not proof of a general improvement. See the [same-film comparison](../../research/generated_analysis_verification/the_thing_coverage_comparison.md). See the [spec and verification evidence](../../specs/035_analysis_coverage_completion.md).
+
+## Screenplay decision and pragmatic source admission — task 034
+
+The owner chose screenplay-led research, with an independent finished-film account corroborating each retained event/detail. Scripts provide the narrative backbone; a second copy or script-derived summary is not independent evidence. Deleted/changed material stays out without released-film corroboration. Final editing, performance, visual treatment and reported experiences still need appropriate finished-film sources. An unavailable screenplay is a recorded gap, not a manual preparation prerequisite.
+
+The explicit `open_page` admission requirement is removed. A search tool may return substantive source content directly; absence of a separate page-open action is not a reason to reject it. The model remains instructed to read and cite supporting passages. Existing source shape, URL, duplicate-origin, reference, two-source factual and caption rules remain. Tool history is retained for diagnostics, without controlling source admission. This supersedes task 031's older retrieval gate and task 033's historical rejection criterion; it does not retroactively save or alter that rejected output.
+
+The one authorized task 034 retry saved The Thing analysis 2 with six quality candidates. It used the second-draft screenplay and independent released-film accounts, explicitly distinguishing a script-ending difference. The saved original still flags incomplete narrative coverage. See the [retry report](../../research/generated_analysis_verification/the_thing_screenplay_retry.md) for settings, hashes, exact state/trace reconciliation, cost and limitations. No publication or bulk execution followed.
+
+## Live research result — task 033
+
+The approved The Thing (1982) attempt used `gpt-5.5-2026-04-23`, a 16,000 output-token cap, 12 tool calls and prompt v5. The provider returned a completed research response, but application validation rejected bibliography URLs without explicit opens. No draft was saved. Editorial audit additionally found compound claims with insufficient per-detail corroboration and an incorrect review-author attribution. See the [original evidence report](../../research/generated_analysis_verification/the_thing.md). Request/tool/schema compatibility reached a completed response; semantic reliability and successful source admission were not established. No retry or correction was made during that verification.
+
+## Initial seed delivery and cost — task 032
+
+Owner decision, 27 October 2026: evaluate Batch APIs before scaling the initial catalogue. The next single-film research evaluation and a later bulk seed have different delivery needs; neither authorizes the other.
+
+The current [OpenAI Batch guide](https://developers.openai.com/api/docs/guides/batch) documents `/v1/responses`, a general 50% discount compared with synchronous processing, separate rate limits and a 24-hour completion window. Request bodies use the underlying endpoint parameters. This makes Batch a candidate transport for the same combined research-and-analysis request; it does not require a separate research phase.
+
+The guide does not explicitly establish that our exact combination of reasoning-model snapshot, required hosted web search/page opening, source inclusion, strict structured output and tool-call budget works through Batch. Before selecting it, run a separately authorized small probe with those exact settings. Check returned tool history, source admission, usage and actual billing; do not infer compatibility merely because the model supports Batch and web search separately. The current application implements synchronous delivery only.
+
+Compare total cost per valid saved analysis: model input/output (including reasoning where applicable), search calls/search-content tokens, source retrieval/storage, failed or expired requests and explicitly authorized replacement attempts. Do not assume the advertised model discount halves every component or that unavailable-source/invalid-evidence results are free. Compare quality on the same evidence rules and prompt version, with separate model/token/tool budgets for each approved evaluation.
+
+A later narrowly scoped Film knowledge Batch delivery task should preserve a stable per-attempt `custom_id` mapping, pinned prompt/settings and original request/output/error files. Results may arrive out of order; reconcile by ID rather than line position. Handle partial failures/expiry explicitly and never resubmit successful films simply to retry the rest. Recheck Film-owned initial-generation eligibility when applying delayed results and retain failures without silently replacing an existing draft. Save results through existing Film actions, with independent per-film outcomes and tracing/provenance. The provider currently documents output-file deletion after 30 days, so preserve local evidence promptly.
+
+No Batch files were uploaded, paid probe performed, bulk seed run or delivery implementation added by this assessment. See [task 032](../../specs/032_seed_batch_cost_assessment.md).
+
+## Historical metadata-only request assembly (tasks 029–030)
 
 Current workflow decision (task 029): import the film from TMDB, then generate and save its initial unpublished analysis. OpenAI only seeds films with no analysis; all revisions are manual. No manually supplied evidence packet or additional source-acquisition/enrichment step is planned. The runner assembles input from the imported movie data automatically and saves valid generated changes through `film.edit_analysis!`. Publication remains a separate `film.publish_analysis!` operation.
 
@@ -93,7 +154,7 @@ The service asks `film.analysis_generation_input` for identity, imported metadat
 
 Finally, `film.save_generated_analysis!` enforces the same initial-only rule and atomically saves the unpublished draft. `FilmKnowledge::GenerationUnavailable` reports ineligible generation. Provider work holds no database transaction; there is no preparation step, stored baseline, snapshot comparison or optimistic locking. Failed attempts can be explicitly retried while the film still has no analysis. After a successful seed, changes use `film.edit_analysis!` and publication uses `film.publish_analysis!`. Both remain manual operations.
 
-### Managed development prompt contract
+### Historical task 029 development prompt contract
 
 On 27 October 2026 the owner authorized the compatibility update, preserving quality guidance. Development now resolves to v2 with `config.contract = "tmdb-analysis-v1"`. Langfuse automatically numbers content changes; the prompt name and development label are unchanged. Historical v1 remains available and is rejected by the generation runner. The updated instructions preserve experiential-analysis and preference-quality guidance while replacing Markdown and manual evidence assumptions with this contract:
 

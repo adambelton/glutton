@@ -1,6 +1,6 @@
 # 028a — Simplify the Film analysis lifecycle
 
-Status: Accepted — merge after hosted CI, authorized 27 October 2026  
+Status: Merged via PR #43  
 Owner: Film knowledge
 
 ## Goal
@@ -45,3 +45,7 @@ The subsequent [028b boundary sweep](028b_model_behaviour_boundaries.md) moves t
 ## Owner acceptance — 27 October 2026
 
 The owner accepted the final implementation and authorized PR creation and merge after hosted CI, together with tasks 028a, 028b and 029. Latest combined local CI passed 522 tests / 5,618 assertions with clean style/security checks; eager loading and whitespace checks passed. This acceptance does not authorize a paid film-generation run. Hosted CI and merge evidence will be recorded after merge.
+
+## PR #43 merge — 27 October 2026
+
+Owner-authorized [PR #43](https://github.com/adambelton/glutton/pull/43) merged at 16:38:40 UTC as squash commit `94758745f8b9d1c9a8cb6f7c7fcaa2fdf2cd2fd5`. Hosted [Repository checks](https://github.com/adambelton/glutton/actions/runs/40542518272) passed on exact head `641f6de76daae15c13c82a1fc47dbd0b2c22f6e5` at 16:37:26 UTC. Local main was fast-forwarded. Earlier acceptance/pending statements describe pre-merge history. No real film-generation request was made.
