@@ -2,13 +2,13 @@
 
 Status: Agreed conceptual design; scoring implementation deferred.  
 Owner: Ratings  
-Decision date: 22 October 2026
+Decision dates: 22 and 27 October 2026
 
 This records the owner discussion preceding task 015. It supersedes earlier brief terminology about separate implicit/explicit scores and mandatory pre-submission profile capture. It does not authorize scoring implementation or prescribe processing infrastructure.
 
 ## Recorded evidence and relationships
 
-- RatingFilm has many ratings. The current first-submission constraint remains until the separately scoped rating-revision task.
+- RatingFilm has many ratings. Tasks 023/023a implemented replacement reviews while preserving previous submissions and expressions.
 - Rating has many rating_expressions: original user-authored text about what they liked or disliked. Preserve the text independently of its interpretation.
 - Rating has many rating_qualities: derived scores for the qualities associated with the film.
 - RatingQuality belongs to Rating and references a quality. Expressions and rating qualities can have a many-to-many evidence relationship: several expressions can support one rating quality, and one expression can address several rating qualities. Supporting expressions must belong to the same rating. Settle join storage when implementing rating qualities.
@@ -43,9 +43,24 @@ Implicitly expressed qualities are interpreted against the user's current expres
 
 Aggregate the user's rating-quality points by quality. Score each eligible recommendation candidate by summing the user's points for its associated qualities. Repeated positive evidence across films raises the matching contribution; negative evidence reduces it. This is the proposed initial additive ranking model.
 
-Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Owner decision: replacing a rating creates a new Rating with its own expressions and derived qualities, and atomically makes it current. Currentness is derived from the highest Rating ID per RatingFilm; previous ratings are implicitly superseded, without a stored flag. Only the current rating contributes to current preferences; late processing of superseded ratings must not restore their contributions. Task 023 defines the storage constraints and revision event contract.
+Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Only current applicable scores contribute to current preferences; late processing of superseded inputs must not restore their contributions. The timestamped lifecycle below replaces the earlier conceptual decision to rely solely on highest-ID currentness; task 023 remains an accurate record of what was implemented, not evidence that these new fields exist.
 
 Evaluate common-quality frequency and unequal numbers of film qualities before deciding on normalization. Normalization, complete weights and ranking evaluation remain future scoring work, not requirements for original-expression persistence.
+
+## Historical ratings and quality scores
+
+Owner decision, 27 October 2026:
+
+- Preserve each submitted rating/review and its expressions. Replacements take effect immediately on successful submission; record `superseded_at` on the previous version and optionally `superseded_by_id`. No rating `activated_at`, draft review or user commitment step for now. Consider those later only if frequent incremental replacement demonstrates a need.
+- For ratings created by submission, the version's start is its persisted submission time (currently creation time); the previous version ends at the same replacement boundary. A historical version applies when its start is at or before `t` and supersession is absent or after `t`. Do not infer currentness merely from the largest ID once explicit validity is implemented.
+- Preserve generated rating-quality scores and their association with the rating version that produced them. Expression-profile changes use the replacement/history pattern to produce new derived results without overwriting historical scores or representing unchanged expressions as fresh user evidence. A system-generated replacement is not a new user endorsement. Exact persistence for these reassessment versions belongs to future Ratings work.
+- Submission time and score availability are different when processing is deferred. Recommendation computation must identify which completed score set actually applies; do not pretend newly calculated scores were available at the review's creation. Validity/provenance for completed reassessments and the policy while replacement processing is pending must be settled in that implementation spec. This does not introduce user-facing activation for reviews.
+- Recommendations owns persisted recommendation qualities and their calculated score contributions, the recommendation total and scoring-rule version. Computation reads applicable rating qualities and analysis qualities; historical display uses the saved recommendation result instead of rebuilding it from those domains. Retain source-version references for provenance. New calculations must not overwrite earlier results. Analysis activation and supersession belong to Film knowledge; Ratings does not duplicate those association histories.
+- Quality names should convey their meaning without an additional definition field. A materially different concept gets a distinct identity; cosmetic wording changes must not silently change historical interpretation.
+
+The podcast/profile/review comparison is a consumer of these histories, not part of standalone film analysis. Use actual engine scores and explain their calculated positive/negative contributions. Comparing new expressions with the earlier expectation must not recompute that earlier expectation against the updated profile.
+
+Current implementation still uses highest Rating ID and immediate submission; supersession timestamps, rating qualities, expression profiles and the scoring engine are not yet implemented. Preserve the existing runtime behaviour until separately scoped work changes it.
 
 ## Effect on task 015
 

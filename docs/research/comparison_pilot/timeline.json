@@ -1,0 +1,111 @@
+{
+  "illustrative_only": true,
+  "versions": [
+    {
+      "id": "illustrative:a2",
+      "evidence": "../analysis_pilot/the_babadook.md",
+      "created_at": "2026-01-01T09:00:00Z",
+      "activated_at": "2026-01-02T09:00:00Z",
+      "superseded_at": "2026-01-05T09:00:00Z",
+      "superseded_by_id": "illustrative:a3",
+      "qualities": [
+        "Caregiving intimacy under threat",
+        "Familiar safety made threatening",
+        "Living with unresolved danger"
+      ]
+    },
+    {
+      "id": "illustrative:rejected",
+      "evidence": null,
+      "created_at": "2026-01-03T09:00:00Z",
+      "activated_at": null,
+      "superseded_at": null,
+      "superseded_by_id": null,
+      "qualities": [],
+      "outcome": "Rejected hypothetical draft; never effective"
+    },
+    {
+      "id": "illustrative:a3",
+      "evidence": "the_babadook.md",
+      "created_at": "2026-01-04T09:00:00Z",
+      "activated_at": "2026-01-05T09:00:00Z",
+      "superseded_at": "2026-01-07T09:00:00Z",
+      "superseded_by_id": "illustrative:a4",
+      "qualities": [
+        "Caregiver becomes a threat to a child",
+        "A bedtime ritual becomes threatening",
+        "A continuing threat is contained rather than destroyed",
+        "Affectionate care resumes after a domestic crisis"
+      ]
+    },
+    {
+      "id": "illustrative:a4",
+      "evidence": "the_babadook.md",
+      "created_at": "2026-01-06T09:00:00Z",
+      "activated_at": "2026-01-07T09:00:00Z",
+      "superseded_at": null,
+      "superseded_by_id": null,
+      "qualities": [
+        "Caregiver becomes a threat to a child",
+        "A bedtime ritual becomes threatening",
+        "A continuing threat is contained rather than destroyed",
+        "Affectionate care resumes after a domestic crisis"
+      ],
+      "change": "Hypothetical punctuation-only revision; same scoring inputs, not a fourth researched dossier"
+    }
+  ],
+  "cases": [
+    {
+      "at": "2026-01-01T08:59:59Z",
+      "expected": null
+    },
+    {
+      "at": "2026-01-01T09:00:00Z",
+      "expected": null
+    },
+    {
+      "at": "2026-01-02T08:59:59Z",
+      "expected": null
+    },
+    {
+      "at": "2026-01-02T09:00:00Z",
+      "expected": "illustrative:a2"
+    },
+    {
+      "at": "2026-01-03T09:00:00Z",
+      "expected": "illustrative:a2"
+    },
+    {
+      "at": "2026-01-04T09:00:00Z",
+      "expected": "illustrative:a2"
+    },
+    {
+      "at": "2026-01-05T08:59:59Z",
+      "expected": "illustrative:a2"
+    },
+    {
+      "at": "2026-01-05T09:00:00Z",
+      "expected": "illustrative:a3"
+    },
+    {
+      "at": "2026-01-05T09:00:01Z",
+      "expected": "illustrative:a3"
+    },
+    {
+      "at": "2026-01-06T09:00:00Z",
+      "expected": "illustrative:a3"
+    },
+    {
+      "at": "2026-01-07T08:59:59Z",
+      "expected": "illustrative:a3"
+    },
+    {
+      "at": "2026-01-07T09:00:00Z",
+      "expected": "illustrative:a4"
+    },
+    {
+      "at": "2026-01-08T09:00:00Z",
+      "expected": "illustrative:a4"
+    }
+  ]
+}
