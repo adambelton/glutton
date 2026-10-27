@@ -154,4 +154,61 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     get library_path
     assert_response :gone
   end
+  test "edit links expose latest owner evidence on both surfaces without writes" do
+    [ @user, UserRegistered.create!(email_address: "edit-library@example.test",
+      password: "long test password", password_confirmation: "long test password",
+      email_confirmed_at: Time.current) ].each do |user|
+      @user = user
+      bind_user
+      watched = entry(title: '<script>film</script> "title"')
+      unrated = entry
+      candidate = RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
+      original = candidate.submit_rating!(value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+      current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
+        previous_rating_id: original.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
+      edit_link = edit_rating_path(film_id: watched.film_id)
+      assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+        [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
+          get path
+          assert_response :success
+          assert_select "a[href=?]", edit_link, text: "Edit rating", count: 1 do
+            assert_select "[aria-label=?]", "Edit your rating for #{watched.film.title}"
+          end
+          assert_select "script", text: "film", count: 0
+          assert_equal "no-store", response.headers["Cache-Control"]
+          assert_no_match(/translation missing/i, response.body)
+          assert_select "a[href=?]", new_rating_path(film_id: watched.film_id), count: 0
+        end
+        get library_film_path(unrated)
+        assert_select "a[href=?]", new_rating_path(film_id: unrated.film_id)
+        assert_select 'a[href*="rating/edit"]', count: 0
+      end
+      get edit_link
+      assert_response :success
+      assert_select 'input[name="previous_rating_id"][value=?]', current.id.to_s
+      assert_select "textarea", text: "Current"
+      patch rating_path, params: { rating_film_id: candidate.id, previous_rating_id: current.id,
+        value: Rating::Values::BRILLIANT, expression_texts: [ "Updated from Library" ] }
+      assert_response :see_other
+      get library_film_path(watched)
+      get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
+      assert_response :success
+      assert_select "textarea", text: "Updated from Library"
+      assert_select 'input[name="previous_rating_id"][value=?]', candidate.ratings.order(:id).last.id.to_s
+      assert_equal [ "Original" ], original.rating_expressions.pluck(:text)
+    end
+  end
+
+  test "unwatched library pages do not offer editing even when ratings exist" do
+    { Library::Browse::Views::WATCHLIST => LibraryFilmToWatch,
+      Library::Browse::Views::NOT_INTERESTED => LibraryFilmNotInterested }.each do |view, model|
+      row = entry(model)
+      RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Rating::Values::BRILLIANT)
+      [ library_path(view:), library_film_path(row) ].each do |path|
+        get path
+        assert_response :success
+        assert_select 'a[href*="rating/edit"]', count: 0
+      end
+    end
+  end
 end

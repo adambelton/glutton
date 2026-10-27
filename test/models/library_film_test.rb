@@ -77,6 +77,20 @@ class LibraryFilmTest < ActiveSupport::TestCase
     end
   end
 
+  test "rating editing requires watched and the owners rating evidence" do
+    row = LibraryFilmWatched.create!(attributes)
+    assert_not row.can_edit_rating?
+    foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
+    foreign.submit_rating!(value: Rating::Values::BRILLIANT)
+    assert_not row.can_edit_rating?
+    candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    assert_not row.can_edit_rating?
+    candidate.submit_rating!(value: Rating::Values::BRILLIANT)
+    assert row.can_edit_rating?
+    assert_not LibraryFilmToWatch.new(attributes).can_edit_rating?
+    assert_not LibraryFilmNotInterested.new(attributes).can_edit_rating?
+  end
+
   private
 
   def insert(values)

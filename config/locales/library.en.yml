@@ -26,6 +26,8 @@ en:
       awaiting_rating: Awaiting rating
       rate: Rate this film
       rate_film: Rate %{title}
+      edit_rating: Edit rating
+      edit_film_rating: Edit your rating for %{title}
       pagination: Library pages
       previous: Previous
       next: Next

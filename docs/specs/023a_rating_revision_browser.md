@@ -1,6 +1,6 @@
 # 023a — Edit the current rating in the browser
 
-Status: Ready for review  
+Status: Merged  
 Owner: Ratings / revision browser flow
 
 ## Goal
@@ -51,4 +51,4 @@ No schema changes or revision events. Library links and shared navigation remain
 
 Verification on 26 October 2026: initial full CI found four test string-quoting style offenses while all tests passed. Corrected them and reran full CI successfully; only the final successful evidence above is the completion gate. Browser reproduction: create an active test account and unrated candidate, sign in, open `/rating/new`, submit with an expression, follow the edit link, change/save, clear/save, then open two edit tabs and submit one before submitting the other. Confirm conflict and reload the latest. Development data was not changed.
 
-Owner acceptance / merge: Pending.
+Owner accepted and authorized merge after CI. PR #38 merged on 26 October 2026 at 15:14:48 UTC; squash commit `c3b1ebf114d50eff1422dde4e5c36cce3ffc5b6a`. Hosted Repository checks passed at 15:14:32 UTC on exact head `3b08f8b2a1da635accc261bb79d5b53d1e9d192c`. Local main fast-forwarded.

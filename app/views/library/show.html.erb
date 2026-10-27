@@ -30,6 +30,8 @@
             <div class="library-rating">
               <% if @page.rated_film_ids.include?(library_film.film_id) %>
                 <p><%= t("library.browser.rated") %></p>
+                <%= link_to t("library.browser.edit_rating"), edit_rating_path(film_id: library_film.film_id),
+                  aria: { label: t("library.browser.edit_film_rating", title: library_film.film.title) } %>
               <% else %>
                 <p><%= t("library.browser.awaiting_rating") %></p>
                 <%= link_to t("library.browser.rate"), new_rating_path(film_id: library_film.film_id),
