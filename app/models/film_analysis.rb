@@ -9,30 +9,25 @@ class FilmAnalysis < ApplicationRecord
   scope :at, ->(time) { where("published_at <= ? AND (superseded_at IS NULL OR superseded_at > ?)", time, time) }
 
   validate :single_draft
+  validate :immutable_identity
   validate :document_shapes
-  validate :lifecycle_is_owned
   validate :publication_content, on: :publication
-  around_save :protect_history
-  around_destroy :protect_history, prepend: true
+  before_destroy :ensure_unpublished!, prepend: true
 
   def edit_draft!(**attributes)
     attributes.assert_valid_keys(:content, :quality_candidates)
-    with_draft_lock { update!(attributes) }
+    ensure_unpublished!
+    update!(attributes)
     self
   end
 
-  def validate_for_publication!
-    ensure_editable!
-    raise ActiveRecord::RecordInvalid.new(self) unless valid?(:publication)
-  end
-
-  def quality_proposals
-    analysis_content = FilmKnowledge::AnalysisContent.new(content)
-    quality_candidates.map { |attributes| FilmKnowledge::QualityCandidate.new(attributes, analysis_content:) }
+  def create_revision!(**attributes)
+    attributes.assert_valid_keys(:content, :quality_candidates)
+    film.film_analyses.create!(**{ content:, quality_candidates: }.merge(attributes))
   end
 
   def add_quality!(film_quality:, evidence_references:)
-    ensure_editable!
+    ensure_unpublished!
     if analysis_qualities.exists?(film_quality:)
       errors.add(:quality_candidates, :duplicate_quality)
       raise ActiveRecord::RecordInvalid.new(self)
@@ -42,14 +37,14 @@ class FilmAnalysis < ApplicationRecord
 
   def publish!(at:)
     validate_for_publication!
-    if analysis_qualities.empty?
-      errors.add(:quality_candidates, :blank)
-      raise ActiveRecord::RecordInvalid.new(self)
+    quality_proposals.each do |quality_candidate|
+      film_quality = FilmQuality.find_or_create!(quality_candidate:)
+      add_quality!(film_quality:, evidence_references: quality_candidate.evidence_references)
     end
-    @changing_lifecycle = true
     update!(published_at: at)
-  ensure
-    @changing_lifecycle = false
+  rescue ActiveModel::ValidationError
+    errors.add(:quality_candidates, :invalid)
+    raise ActiveRecord::RecordInvalid.new(self)
   end
 
   def supersede!(replacement:, at:)
@@ -61,45 +56,27 @@ class FilmAnalysis < ApplicationRecord
       errors.add(:published_at, :after_current)
       raise ActiveRecord::RecordInvalid.new(self)
     end
-    @superseding = @changing_lifecycle = true
     update!(superseded_at: at, superseded_by: replacement)
-  ensure
-    @superseding = @changing_lifecycle = false
-  end
-
-  def with_draft_lock
-    film.with_lock(requires_new: true) do
-      reload
-      ensure_editable!
-      yield
-    end
-  end
-
-  def ensure_editable!
-    raise FilmKnowledge::AnalysisNotEditable if published_at?
   end
 
   private
 
-  def protect_history
-    Film.find(film_id_in_database || film_id).with_lock do
-      stored = self.class.find_by(id: id)
-      replacing_current = @superseding && stored&.published_at? && stored.superseded_at.nil? &&
-        (changes_to_save.keys - %w[superseded_at superseded_by_id updated_at]).empty?
-      if stored&.published_at? && !replacing_current
-        raise FilmKnowledge::AnalysisNotEditable
-      end
-      yield
-    end
+  def validate_for_publication!
+    ensure_unpublished!
+    raise ActiveRecord::RecordInvalid.new(self) unless valid?(:publication)
   end
 
-  def lifecycle_is_owned
-    if persisted? && will_save_change_to_film_id?
-      errors.add(:base, :immutable_identity)
-    end
-    if !@changing_lifecycle && (will_save_change_to_published_at? || will_save_change_to_superseded_at? || will_save_change_to_superseded_by_id?)
-      errors.add(:base, :managed_lifecycle)
-    end
+  def quality_proposals
+    analysis_content = FilmKnowledge::AnalysisContent.new(content)
+    quality_candidates.map { |attributes| FilmKnowledge::QualityCandidate.new(attributes, analysis_content:) }
+  end
+
+  def ensure_unpublished!
+    raise FilmKnowledge::AnalysisNotEditable if published_at?
+  end
+
+  def immutable_identity
+    errors.add(:base, :immutable_identity) if persisted? && will_save_change_to_film_id?
   end
 
   def single_draft

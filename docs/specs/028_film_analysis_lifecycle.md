@@ -1,6 +1,6 @@
 # 028 — Persist film analysis drafts and publish quality associations
 
-Status: Accepted — merge pending  
+Status: Merged via PR #42  
 Owner: Film knowledge
 
 ## Goal
@@ -105,3 +105,15 @@ Origin and separate authoring/run provenance are intentionally deferred. Source 
 [The test content helper](../../test/support/film_analysis_helpers.rb) provides a small complete, constructed input; [lifecycle tests](../../test/models/film_analysis_test.rb) demonstrate domain calls and failures. Actual AI generation, curated content ingestion and UI remain deferred.
 
 Owner approved implementation on 27 October 2026. Owner accepted the implementation and authorized PR creation and merge after CI on 27 October 2026. Merge pending.
+
+Merge record: owner approved implementation and merge. [PR #42](https://github.com/adambelton/glutton/pull/42) merged on 27 October 2026 at 14:27:17 UTC, squash commit `b67a2b922064e40230332868d34ffeadb9506c42`. Hosted Repository checks passed on exact head `6cbf59fe526338798701182cfe73223375b67ea4` at 14:26:20 UTC. Final local CI passed 503 tests / 5,456 assertions. Earlier pending notes describe pre-merge history.
+
+Post-merge verification: [main CI](https://github.com/adambelton/glutton/actions/runs/40521256319) also passed on squash commit `b67a2b922064e40230332868d34ffeadb9506c42`.
+
+### Follow-up 028a — lifecycle simplification
+
+The owner authorized [028a](028a_simplify_analysis_lifecycle.md) on 27 October 2026 after reviewing PR #42. Its supported-write boundary supersedes the nested-lock, raw-update and direct-association race protections described above. Film edit/publication operations load fresh state and own serialization; model actions retain permissions without temporary lifecycle flags. Historical task 028 test evidence above describes the merged implementation, not the simplified follow-up.
+
+### Follow-up 028b — model behaviour boundaries
+
+[028b](028b_model_behaviour_boundaries.md) removes the publication service: Film now owns selection/replacement under its existing transaction lock, and FilmAnalysis owns candidate resolution and publication. FilmAnalysis creates revisions from its own authoring fields. This supersedes the service coordination and raw field copying described in the original implementation notes. Verification and review status are recorded in 028b.

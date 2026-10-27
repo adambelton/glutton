@@ -189,16 +189,13 @@ class FilmAnalysisTest < ActiveSupport::TestCase
     assert_not_equal old_association.id, replacement.analysis_qualities.sole.id
   end
 
-  test "published analyses candidates and associations cannot be mutated or deleted" do
+  test "published analyses reject editing actions and deletion and retain read-only associations" do
     draft = prepare_analysis
-    stale = FilmAnalysis.find(draft.id)
     original_quality_candidates = draft.quality_candidates.deep_dup
-    publish_analysis(draft)
+    draft = publish_analysis(draft)
     assert_raises(FilmKnowledge::AnalysisNotEditable) { draft.edit_draft!(content: {}) }
-    assert_raises(FilmKnowledge::AnalysisNotEditable) { stale.update!(content: {}) }
-    assert_raises(FilmKnowledge::AnalysisNotEditable) { stale.update!(quality_candidates: []) }
     assert_raises(FilmKnowledge::AnalysisNotEditable) { draft.edit_draft!(quality_candidates: []) }
-    assert_raises(FilmKnowledge::AnalysisNotEditable) { draft.analysis_qualities.create!(film_quality: draft.film_qualities.sole, evidence_references: [ "M1" ]) }
+    assert_raises(FilmKnowledge::AnalysisNotEditable) { draft.add_quality!(film_quality: draft.film_qualities.sole, evidence_references: [ "M1" ]) }
     assert_raises(ActiveRecord::ReadOnlyRecord) { draft.analysis_qualities.sole.update!(evidence_references: [ "N1" ]) }
     assert_raises(ActiveRecord::ReadOnlyRecord) { draft.analysis_qualities.sole.destroy! }
     assert_raises(FilmKnowledge::AnalysisNotEditable) { draft.destroy! }
@@ -207,10 +204,8 @@ class FilmAnalysisTest < ActiveSupport::TestCase
     assert_equal analysis_content, draft.content
   end
 
-  test "lifecycle and film identity cannot be assigned by ordinary updates" do
+  test "analysis film identity cannot be changed" do
     draft = prepare_analysis
-    assert_raises(ActiveRecord::RecordInvalid) { draft.update!(published_at: Time.current) }
-    draft.reload
     assert_raises(ActiveRecord::RecordInvalid) { draft.update!(film: Film.create!(title: "Different")) }
   end
 
@@ -319,11 +314,11 @@ class FilmAnalysisTest < ActiveSupport::TestCase
   end
 
   test "lifecycle actions retain their own permissions" do
-    draft = prepare_analysis
+    draft = @film.edit_analysis!
     assert_raises(ActiveRecord::RecordInvalid) { draft.publish!(at: Time.current) }
     other = Film.create!(title: "Another film").edit_analysis!
     assert_raises(ActiveRecord::RecordInvalid) { draft.supersede!(replacement: other, at: Time.current) }
-    active = publish_analysis(draft)
+    active = publish_analysis(prepare_analysis)
     assert_raises(ActiveRecord::RecordInvalid) { active.supersede!(replacement: other, at: Time.current) }
     assert_nil active.reload.superseded_at
   end
@@ -337,7 +332,6 @@ class FilmAnalysisTest < ActiveSupport::TestCase
     draft.errors.add(:quality_candidates, :duplicate_quality)
     draft.errors.add(:published_at, :after_current)
     draft.errors.add(:base, :immutable_identity)
-    draft.errors.add(:base, :managed_lifecycle)
     assert draft.errors.full_messages.none? { |message| message.include?("Translation missing") }
   end
 end

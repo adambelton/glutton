@@ -95,37 +95,6 @@ class FilmAnalysisConcurrencyTest < ActiveSupport::TestCase
     assert_equal "Sustained dread", draft.film_qualities.sole.name
   end
 
-  test "a direct association write racing publication is rejected after the lock is released" do
-    draft = prepare_analysis
-    film_quality = FilmQuality.create!(name: "Sustained dread", dimension: @dimension)
-    draft_id = draft.id
-    ready, release, linking = Queue.new, Queue.new, Queue.new
-    callback = -> { ready << true; release.pop if id == draft_id && will_save_change_to_published_at? }
-    FilmAnalysis.set_callback(:update, :before, callback)
-    @threads << Thread.new do
-      ActiveRecord::Base.connection_pool.with_connection { publish_analysis(draft) }
-    end
-    Timeout.timeout(10) { ready.pop }
-    @threads << Thread.new do
-      ActiveRecord::Base.connection_pool.with_connection do
-        linking << true
-        begin
-          AnalysisQuality.create!(film_analysis: draft, film_quality:, evidence_references: [ "M1" ])
-        rescue FilmKnowledge::AnalysisNotEditable => error
-          error
-        end
-      end
-    end
-    Timeout.timeout(10) { linking.pop }
-    release << true
-    results = Timeout.timeout(10) { @threads.map(&:value) }
-    assert_equal draft, results.first
-    assert_equal FilmKnowledge::AnalysisNotEditable, results.last.class
-    assert_equal 1, draft.analysis_qualities.count
-  ensure
-    FilmAnalysis.skip_callback(:update, :before, callback) if callback
-  end
-
   private
 
   def assert_competing_publication

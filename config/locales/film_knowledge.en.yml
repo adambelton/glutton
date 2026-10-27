@@ -9,6 +9,7 @@ en:
       tone: Tone
       resolution_and_aftermath: Resolution and aftermath
     errors:
+      generation_unavailable: Analysis generation requires an imported film with source metadata and no existing analysis.
       no_unpublished_analysis: There are no unpublished analysis changes to publish.
       analysis_not_editable: A published analysis cannot be edited or published again. Prepare a new draft.
   activemodel:
@@ -46,7 +47,6 @@ en:
             base:
               invalid_supersession: Only the current analysis can be superseded by another analysis of the same film.
               immutable_identity: The film cannot be changed.
-              managed_lifecycle: Use the analysis publication action to change its lifecycle.
               draft_exists: A draft already exists for this film. Edit that draft before preparing another.
             content:
               incomplete_analysis: must include version, context, sourced narrative and moments, synthesis and explicit gaps with unique evidence references

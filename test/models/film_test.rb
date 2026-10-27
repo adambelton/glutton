@@ -1,6 +1,40 @@
 require "test_helper"
 
 class FilmTest < ActiveSupport::TestCase
+  test "generated analysis saves once and subsequent edits are manual" do
+    film = Film.create!(title: "Generated film", tmdb_id: 348, metadata: { tmdb: { details: {} } })
+    draft = film.save_generated_analysis!(content: { "text" => "Generated" }, quality_candidates: [])
+    assert_equal "Generated", draft.content["text"]
+    assert_not film.can_generate_analysis?
+    assert_raises(FilmKnowledge::GenerationUnavailable) { film.save_generated_analysis!(content: { "text" => "Repeated" }) }
+    assert_equal "Generated", draft.reload.content["text"]
+    film.edit_analysis!(content: { "text" => "Manual revision" })
+    assert_equal "Manual revision", draft.reload.content["text"]
+  end
+
+  test "generation requires TMDB identity and retained details but permits sparse source data" do
+    film = Film.new(title: "Film")
+    assert_not film.can_generate_analysis?
+    film.tmdb_id = 348
+    assert_not film.can_generate_analysis?
+    film.metadata = { "tmdb" => { "details" => {} } }
+    assert film.can_generate_analysis?
+    film.tmdb_id = nil
+    assert_not film.can_generate_analysis?
+  end
+
+  test "filling TMDB metadata preserves local fields and the first retained source snapshot" do
+    film = Film.create!(title: "Local title", tmdb_id: 348, metadata: { note: "Keep" })
+    assert_not film.tmdb_metadata?
+    film.fill_tmdb_metadata!(metadata: { "tmdb" => { "details" => { "overview" => "Original source" } } })
+    assert film.reload.tmdb_metadata?
+    assert_equal "Keep", film.metadata["note"]
+    film.fill_tmdb_metadata!(metadata: { "tmdb" => { "details" => { "overview" => "Replacement" } }, "note" => "Overwrite" })
+    assert_equal "Original source", film.reload.metadata.dig("tmdb", "details", "overview")
+    assert_equal "Keep", film.metadata["note"]
+    assert_equal "Local title", film.title
+  end
+
   test "minimal and complete metadata retain their own identities" do
     minimal = Film.create!(title: "A film")
     assert_equal "A film", minimal.reload.title
