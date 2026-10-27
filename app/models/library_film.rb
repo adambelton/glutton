@@ -17,6 +17,10 @@ class LibraryFilm < ApplicationRecord
     false
   end
 
+  def can_edit_rating?
+    false
+  end
+
   def can_remove_from_watchlist?
     false
   end

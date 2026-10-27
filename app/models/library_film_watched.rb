@@ -7,6 +7,10 @@ class LibraryFilmWatched < LibraryFilm
     !rated?
   end
 
+  def can_edit_rating?
+    rated?
+  end
+
   def rated?
     RatingFilm.where(user_id:, film_id:).rated.exists?
   end
