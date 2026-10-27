@@ -1,6 +1,6 @@
 # 027b — Version the analysis prompt in Langfuse
 
-Status: Ready for review  
+Status: Merged via PR #41  
 Owner: Film knowledge / prompt management
 
 ## Goal
@@ -43,3 +43,5 @@ Published prompt and verification evidence are recorded in the [prompt guide](..
 Owner-approved follow-up: remove duplicate local prompt storage and publisher; keep the retrieval/check script. Every future analysis run records the Langfuse prompt name/version, exact instructions and content hash as immutable execution provenance, not another editable prompt source.
 
 Follow-up verification: pilot verifier passed (six baseline hashes, 196 links/anchors, twenty associations, thirteen historical selections); 117 local references across four updated documents resolved; git diff --check passed. No runtime changes or additional paid API calls were needed.
+
+Merge record: owner authorised merge after CI. [PR #41](https://github.com/adambelton/glutton/pull/41) merged on 27 October 2026 at 12:41:52 UTC, squash commit `1eee2a13d4238b98dca39b5cbc7928626e0d59a6`. Hosted checks passed on exact head `95968c58dd10d0169fd62d59859703c942d30ce4` at 12:41:31 UTC. Earlier review/pending notes describe pre-merge history.

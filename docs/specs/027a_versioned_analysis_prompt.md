@@ -1,6 +1,6 @@
 # 027a — Record a reproducible film analysis prompt
 
-Status: Ready for review  
+Status: Merged via PR #41  
 Owner: Film knowledge / analysis design
 
 ## Goal
@@ -38,3 +38,5 @@ Initially created a local v1 draft and its run/evaluation protocol. Task 027b su
 Owner acceptance / merge: Pending.
 
 Owner-requested relevance pass: removed the application-boundary section and activation/persistence instructions from the prompt, simplified the role and variable-count instructions, and retained evidence/output requirements. Inspected against the reported redundant language; no API-based film-analysis evaluation is claimed. Runtime client/tracing work is separately scoped in task 001m.
+
+Merge record: owner authorised merge after CI. [PR #41](https://github.com/adambelton/glutton/pull/41) merged on 27 October 2026 at 12:41:52 UTC, squash commit `1eee2a13d4238b98dca39b5cbc7928626e0d59a6`. Hosted checks passed on exact head `95968c58dd10d0169fd62d59859703c942d30ce4` at 12:41:31 UTC. Earlier review/pending notes describe pre-merge history.

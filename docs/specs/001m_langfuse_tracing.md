@@ -1,6 +1,6 @@
 # 001m — Configure OpenAI and Langfuse
 
-Status: Ready for review  
+Status: Merged via PR #41  
 Owner: Foundation / observability
 
 ## Goal
@@ -40,3 +40,5 @@ User authorised installation and tracing. Official skill installed from langfuse
 Owner acceptance / merge: Pending.
 
 Implemented configuration, an explicit traced connectivity task and focused tests. The [configuration guide](../ai_configuration.md) records setup, actual live trace and limitations. No automatic Rails instrumentation or analysis pipeline was introduced. The prompt relevance pass belongs to task 027a. No dev server was started.
+
+Merge record: owner authorised merge after CI. [PR #41](https://github.com/adambelton/glutton/pull/41) merged on 27 October 2026 at 12:41:52 UTC, squash commit `1eee2a13d4238b98dca39b5cbc7928626e0d59a6`. Hosted checks passed on exact head `95968c58dd10d0169fd62d59859703c942d30ce4` at 12:41:31 UTC. Earlier review/pending notes describe pre-merge history.
