@@ -1,9 +1,9 @@
 module FilmKnowledge
   class ImportTmdbFilm
-    def self.call(tmdb_id:, client: TmdbClient)
+    def self.call(tmdb_id:, client: TmdbClient, ensure_metadata: false)
       raise InvalidTmdbId, "TMDB ID must be a positive Integer" unless tmdb_id.is_a?(Integer) && tmdb_id.positive?
       existing = Film.find_by(tmdb_id:)
-      return existing if existing
+      return existing if existing && (!ensure_metadata || existing.tmdb_metadata?)
 
       payload = client.movie(tmdb_id:)
       unless payload.is_a?(Hash) && payload["id"].is_a?(Integer) && payload["id"] == tmdb_id &&
@@ -13,8 +13,14 @@ module FilmKnowledge
       end
 
       date = TmdbReleaseDate.parse(payload["release_date"])
-      metadata = { "tmdb" => { "fetched_at" => Time.current.utc.iso8601, "language" => "en-US" } }
+      metadata = { "tmdb" => { "fetched_at" => Time.current.utc.iso8601, "language" => "en-US", "details" => TmdbMetadata.from(payload) } }
       metadata["original_title"] = payload["original_title"] unless payload["original_title"].nil?
+      if existing
+        existing.with_lock do
+          existing.fill_tmdb_metadata!(metadata:)
+        end
+        return existing
+      end
       # A savepoint lets duplicate-key recovery also work within a caller transaction.
       Film.transaction(requires_new: true) do
         Film.create!(tmdb_id:, title: payload["title"], release_date: date, metadata:)

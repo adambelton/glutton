@@ -9,14 +9,18 @@ class FilmKnowledge::ImportTmdbFilmTest < ActiveSupport::TestCase
     FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348, client:)
   end
 
-  test "maps only minimal fields and source provenance" do
+  test "maps identity analysis metadata and source provenance" do
     freeze_time do
       payload = { id: 348, title: "Alien", original_title: "Alien", release_date: "1979-05-25",
-        overview: "Unused", poster_path: "Unused", credits: [ "Unused" ] }
+        overview: "The crew encounters danger", poster_path: "Unused", credits: [ "Unused" ] }
       film = assert_difference("Film.count", 1) { import(payload) }
       assert film.persisted?
       assert_equal [ "Alien", 348, Date.new(1979, 5, 25) ], [ film.title, film.tmdb_id, film.release_date ]
-      assert_equal({ "original_title" => "Alien", "tmdb" => { "fetched_at" => Time.current.utc.iso8601, "language" => "en-US" } }, film.reload.metadata)
+      assert_equal "Alien", film.reload.metadata["original_title"]
+      assert_equal Time.current.utc.iso8601, film.metadata.dig("tmdb", "fetched_at")
+      assert_equal "The crew encounters danger", film.metadata.dig("tmdb", "details", "overview")
+      assert_nil film.metadata.dig("tmdb", "details", "runtime")
+      assert_not film.metadata.dig("tmdb", "details").key?("credits")
     end
   end
 
@@ -29,6 +33,34 @@ class FilmKnowledge::ImportTmdbFilmTest < ActiveSupport::TestCase
       film.destroy!
     end
     assert_equal Date.new(2024, 2, 29), import({ id: 348, title: "Leap", release_date: "2024-02-29" }).release_date
+  end
+
+  test "generation refreshes legacy imports once through movie details and preserves local fields" do
+    film = Film.create!(title: "Local title", tmdb_id: 348, metadata: { note: "Keep" })
+    payload = { id: 348, title: "Alien", overview: "Crew in danger", tagline: "In space", runtime: 117,
+      original_language: "en", status: "Released", budget: 11000000, revenue: 100000000,
+      genres: [ { id: 27, name: "Horror" } ], production_companies: [ { id: 1, name: "Studio", origin_country: "US" } ],
+      production_countries: [ { iso_3166_1: "US", name: "United States" } ],
+      spoken_languages: [ { iso_639_1: "en", name: "English", english_name: "English" } ] }
+    client = fake_http(body: payload.to_json)
+    assert_no_difference "Film.count" do
+      assert_equal film, FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348, client:, ensure_metadata: true)
+    end
+    assert_equal "Local title", film.reload.title
+    assert_equal "Keep", film.metadata["note"]
+    assert_equal 117, film.metadata.dig("tmdb", "details", "runtime")
+    assert_equal [ { "id" => 27, "name" => "Horror" } ], film.metadata.dig("tmdb", "details", "genres")
+    assert_equal "US", film.metadata.dig("tmdb", "details", "production_companies", 0, "origin_country")
+    assert_equal film, FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348, client: Object.new, ensure_metadata: true)
+  end
+
+  test "invalid optional metadata is rejected atomically" do
+    [ { overview: [] }, { runtime: -1 }, { runtime: "117" }, { genres: "Horror" },
+      { genres: [ { id: "27", name: "Horror" } ] }, { production_countries: [ "US" ] } ].each do |changes|
+      assert_no_difference "Film.count" do
+        assert_raises(FilmKnowledge::InvalidTmdbResponse) { import({ id: 348, title: "Alien" }.merge(changes)) }
+      end
+    end
   end
 
   test "invalid responses never write" do

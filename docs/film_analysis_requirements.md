@@ -175,6 +175,8 @@ The podcast reads the analysis after watching but before discussion and expressi
 
 ## V1 draft and quality workflow
 
+Current generation scope (owner clarification for task 029): **import from TMDB, then generate and save the initial unpublished analysis**. OpenAI is only used for the initial seed of a film with no analysis; revisions are entirely manual. Automatically assemble input from the retained movie-details metadata; no manually curated evidence packet, separate source collection or additional enrichment stage is planned. The broader source/evidence discussion below remains editorial guidance, not required preparation for generation. Describe the actual supplied source and uncertainty honestly; missing coverage does not justify invented scene details or claims of independently verified audience responses. Generated changes are saved through Film; the agreed publishing step remains separate.
+
 The initial version needs a reliable revision mechanism, not a perfect or final analysis format. A person or AI can author an analysis draft against an existing Film. Both use the same content, evidence and lifecycle rules; generation is an optional authoring mechanism, not a different analysis type.
 
 1. Create a draft with narrative, key moments, evidence references and explicit gaps.
