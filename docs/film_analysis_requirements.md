@@ -54,6 +54,8 @@ Present the evidence before derived qualities or dimension summaries. A dossier 
 4. **Reported responses:** attribute a person's experience to the supported scene or broader film context. Record missing scene-specific testimony as a gap, not an invitation to invent a response.
 5. **Interpretation:** only then summarise experiential dimensions and propose qualities, referencing the evidence above. A label such as dread, grief or graphic violence cannot stand in for the scene that supports it.
 
+The number of narrative sections and key moments follows the film and available evidence. The seven experiential dimensions do not imply seven narrative beats or any moment count. The pilot’s repeated counts were a drafting limitation, not a coverage standard. Future AI drafts use the [versioned prompt and OpenAI API run protocol](prompts/film_analysis/README.md); v1 is newly authored, not recovered pilot provenance.
+
 Evidence depth is assessed by whether the reader can follow the causal story and inspect the basis for conclusions, not by length alone. Reviews that mainly supply evaluations cannot be stretched into scene documentation. Acquire additional evidence where possible and leave precise gaps where coverage remains inadequate. Model memory is not corroboration.
 
 ## Completeness

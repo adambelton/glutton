@@ -8,6 +8,10 @@ gem "propshaft"
 gem "pg", "~> 1.1"
 # Durable Active Job backend for domain-event polling.
 gem "good_job", "~> 4.22"
+# Explicit AI-workflow tracing to Langfuse via OTLP (no automatic request capture).
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
+gem "openai"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]

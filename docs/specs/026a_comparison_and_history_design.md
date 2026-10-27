@@ -1,6 +1,6 @@
 # 026a — Record comparison layers and historical validity
 
-Status: Ready for review  
+Status: Merged via PR #40  
 Owner: Supporting architecture / design documentation
 
 ## Goal
@@ -47,3 +47,5 @@ Owner acceptance / merge: Pending.
 Verification reproduction: inspect the requirements, scoring design, both briefs, plan, tasks 025/026/026a/027 and six pilot Markdown documents. Resolve each relative Markdown target from its containing directory and each fragment against the target headings; external URLs are excluded. Run `git diff --check` and `git status --short`. For the manual lifecycle check, consider a pending analysis replacement, its activation boundary, an immediate rating replacement and a later completed profile-driven reassessment. Confirm that the docs never treat a draft or unfinished calculation as historically active.
 
 Final owner-authorised closeout: the V1 workflow accepts human or AI drafts, editable candidates and atomic resolve/create/link activation; revisions retain history. Recommendations-owned saved contributions supersede the earlier reconstruction-only design. Independent community review and expression feedback remain deferred. Tasks 026/027 remain historical research evidence, not claims of production activation or recommendation accuracy. The owner authorised PR creation and merge after CI on 27 October 2026.
+
+Merge record: owner authorised merge after CI; merged via [PR #40](https://github.com/adambelton/glutton/pull/40) on 27 October 2026 at 11:58:21 UTC after hosted checks passed on `46873e53c51a1aed48551f63d65dc09e384bbfce`. Earlier status/evidence above describes the pre-merge deliverable. Research acceptance does not assert production accuracy or independent curator verification.
