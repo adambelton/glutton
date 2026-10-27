@@ -10,9 +10,10 @@ module FilmKnowledge
       @client, @provider, @prompt_source = client, provider, prompt_source
     end
 
-    def call(film:, model:, max_output_tokens:, output_directory:, version: nil, label: nil)
+    def call(film:, model:, max_output_tokens:, output_directory:, version: nil, label: nil, max_tool_calls: 12)
       @artifact = @artifact_path = nil
       raise ArgumentError, "Configure OpenAI and choose a model and positive output cap" unless @client && model.is_a?(String) && model.present? && max_output_tokens.is_a?(Integer) && max_output_tokens.positive?
+      raise ArgumentError, "Choose a research tool-call cap from 1 to 30" unless max_tool_calls.is_a?(Integer) && (1..30).cover?(max_tool_calls)
       FileUtils.mkdir_p(output_directory)
       @artifact_path = File.join(output_directory, "#{SecureRandom.uuid}.json")
       @artifact = { "film_id" => film.id, "outcome" => "started", "started_at" => Time.current.utc.iso8601(6) }
@@ -25,7 +26,6 @@ module FilmKnowledge
           film = Film.find(film.id)
           raise GenerationUnavailable unless film.can_generate_analysis?
           input = film.analysis_generation_input
-          source = input.fetch(:sources).sole
           vocabulary = input.fetch(:existing_vocabulary)
           @artifact["input"] = input
           root.set_attribute("langfuse.observation.input", input.to_json)
@@ -33,12 +33,15 @@ module FilmKnowledge
             @artifact["prompt"] = @prompt_source.call(version:, label:)
           end
           prompt = @artifact.fetch("prompt")
-          request = { model:, max_output_tokens:, store: false, instructions: prompt.fetch("prompt"), input: input.to_json,
+          request = { model:, max_output_tokens:, max_tool_calls:, store: false,
+            tools: [ { type: "web_search" } ], tool_choice: "required", include: [ "web_search_call.action.sources" ],
+            instructions: prompt.fetch("prompt"), input: input.to_json,
             text: { format: { type: "json_schema", name: "film_analysis", strict: true, schema: GeneratedAnalysis.schema } } }
           @artifact["request"] = request
+          @artifact["request_options"] = { timeout: 180.0, max_retries: 0 }
           response = generate(tracer, request, prompt)
           attributes = tracer.in_span("validate-film-analysis", attributes: common_attributes, record_exception: false) do
-            GeneratedAnalysis.parse!(response.output_text, source:, vocabulary:)
+            GeneratedAnalysis.parse!(response.output_text, vocabulary:)
           end
           analysis = film.save_generated_analysis!(**attributes)
           @artifact.merge!("outcome" => "saved", "analysis_id" => analysis.id)
@@ -86,11 +89,13 @@ module FilmKnowledge
         "langfuse.observation.prompt.name" => prompt.fetch("name"),
         "langfuse.observation.prompt.version" => prompt.fetch("version"),
         "langfuse.observation.model.name" => request[:model],
-        "langfuse.observation.model.parameters" => request.slice(:max_output_tokens, :store, :text).to_json,
+        "langfuse.observation.model.parameters" => request.slice(:max_output_tokens, :max_tool_calls, :store, :text, :tools, :tool_choice, :include).to_json,
         "langfuse.observation.input" => request.slice(:instructions, :input).to_json
       ), record_exception: false) do |span|
-        response = @client.responses.create(**request)
-        @artifact["response"] = response.to_h
+        response = @client.responses.create(**request, request_options: { timeout: 180.0, max_retries: 0 })
+        @artifact["response"] = JSON.parse(response.to_h.to_json)
+        actions = @artifact["response"].fetch("output", []).select { |item| item["type"] == "web_search_call" }
+        span.set_attribute("langfuse.observation.metadata.research_actions", actions.to_json)
         span.set_attribute("langfuse.observation.output", response.output_text.to_json)
         span.set_attribute("langfuse.observation.model.name", response.model) if response.model
         span.set_attribute("langfuse.observation.metadata.response_status", response.status.to_s)

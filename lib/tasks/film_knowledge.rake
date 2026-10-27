@@ -16,6 +16,7 @@ namespace :film_knowledge do
       version = ENV["ANALYSIS_PROMPT_VERSION"] && Integer(ENV["ANALYSIS_PROMPT_VERSION"], 10)
       film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: Integer(ENV.fetch("TMDB_ID"), 10), ensure_metadata: true)
       analysis = generator.call(film:, model:, max_output_tokens: cap,
+        max_tool_calls: Integer(ENV.fetch("ANALYSIS_MAX_TOOL_CALLS", "12"), 10),
         output_directory: ENV.fetch("ANALYSIS_OUTPUT_DIRECTORY", Rails.root.join("tmp/film_analysis_runs").to_s),
         version:, label: version ? nil : "development")
       puts "Saved unpublished analysis #{analysis.id}; artifact=#{generator.artifact_path}"
