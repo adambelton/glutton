@@ -1,28 +1,6 @@
 require "test_helper"
 
 class FilmTest < ActiveSupport::TestCase
-  test "generated analysis saves once and subsequent edits are manual" do
-    film = Film.create!(title: "Generated film", tmdb_id: 348, metadata: { tmdb: { details: {} } })
-    draft = film.save_generated_analysis!(content: { "text" => "Generated" }, quality_candidates: [])
-    assert_equal "Generated", draft.content["text"]
-    assert_not film.can_generate_analysis?
-    assert_raises(FilmKnowledge::GenerationUnavailable) { film.save_generated_analysis!(content: { "text" => "Repeated" }) }
-    assert_equal "Generated", draft.reload.content["text"]
-    film.edit_analysis!(content: { "text" => "Manual revision" })
-    assert_equal "Manual revision", draft.reload.content["text"]
-  end
-
-  test "generation requires TMDB identity and retained details but permits sparse source data" do
-    film = Film.new(title: "Film")
-    assert_not film.can_generate_analysis?
-    film.tmdb_id = 348
-    assert_not film.can_generate_analysis?
-    film.metadata = { "tmdb" => { "details" => {} } }
-    assert film.can_generate_analysis?
-    film.tmdb_id = nil
-    assert_not film.can_generate_analysis?
-  end
-
   test "filling TMDB metadata preserves local fields and the first retained source snapshot" do
     film = Film.create!(title: "Local title", tmdb_id: 348, metadata: { note: "Keep" })
     assert_not film.tmdb_metadata?

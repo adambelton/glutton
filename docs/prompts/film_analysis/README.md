@@ -1,9 +1,5 @@
-# Legacy generated-analysis integration
+# Retired generated-analysis integration
 
-This documents existing code, not the current product direction. Maintained Wikipedia source context and accepted qualities now take priority; whether to retain FilmAnalysis is under review. See [current requirements](../../film_quality_requirements.md) and [planned category replacement](../../specs/043_editable_quality_categories.md).
+Owner confirmed FilmAnalysis removal on 29 October 2026. [Task 054](../../specs/054_direct_film_qualities.md) removes the local OpenAI analysis generator, prompt retrieval/check CLI, draft/publication models and generation rake task. The catalogue now uses Quality, QualityCategory, Film and FilmQuality for current accepted associations; see [current requirements](../../film_quality_requirements.md).
 
-The application still contains its OpenAI-based initial-analysis generator, strict generated-document validation and Langfuse-managed `film-analysis` prompt. The managed prompt is the sole editable source for that legacy integration; this repository contains no runtime prompt fallback. Configuration and entry points remain in code until a separately scoped change retires or adapts them.
-
-The existing generator accepts only films with no analysis and saves an unpublished draft. It does not publish film qualities or change downstream scores. Removing this documentation's former research protocols does not remove the implementation or change eligibility/publication invariants.
-
-No further generative-analysis testing, paid run, remote prompt update or migration is planned here. Obsolete experiment reports, generated examples, cost comparisons and live-testing instructions were removed at the owner's request. The retained implementation specs record delivered behaviour; they are not the new seed or JEV pipeline contract.
+The former Langfuse film-analysis prompt and historical traces are not deleted remotely by this task. Shared AI configuration remains available to other application capabilities. No application runtime fallback, legacy generator or independent analysis lifecycle is retained. Historical implementation specs describe the retired system, not active commands or the new JEV pipeline.

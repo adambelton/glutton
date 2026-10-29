@@ -1,56 +1,33 @@
 en:
-  film_knowledge:
-    dimensions:
-      emotional_character: Emotional character
-      tension_and_rhythm: Tension and rhythm
-      engagement: Engagement
-      relationships_and_stakes: Relationships and stakes
-      intensity_and_explicitness: Intensity and explicitness
-      tone: Tone
-      resolution_and_aftermath: Resolution and aftermath
-    errors:
-      generation_unavailable: Analysis generation requires an imported film with source metadata and no existing analysis.
-      no_unpublished_analysis: There are no unpublished analysis changes to publish.
-      analysis_not_editable: A published analysis cannot be edited or published again. Prepare a new draft.
-  activemodel:
-    models:
-      film_knowledge/quality_candidate: Quality candidate
-    attributes:
-      film_knowledge/quality_candidate:
-        film_quality_id: Film quality
-        name: Quality name
-        dimension: Dimension
-        evidence_references: Evidence references
   activerecord:
     models:
-      film_analysis: Film analysis
-      analysis_quality: Analysis quality
+      quality: Quality
       film_quality: Film quality
+      quality_category: Quality category
     attributes:
-      film_analysis:
-        base: Analysis
-        film: Film
-        content: Analysis content
-        quality_candidates: Quality candidates
-        published_at: Publication time
-      analysis_quality:
-        film_analysis: Analysis
-        film_quality: Film quality
-        evidence_references: Evidence references
-      film_quality:
+      film:
+        source_context: Source context
+      quality_category:
+        key: Category key
+        name: Category name
+        maximum_qualities: Maximum qualities
+        weight: Category weight
+      quality:
         name: Quality name
-        dimension: Dimension
+        quality_category: Quality category
+      film_quality:
+        film: Film
+        quality: Quality
+        evidence_references: Evidence references
     errors:
       models:
-        film_analysis:
+        quality_category:
           attributes:
-            base:
-              invalid_supersession: Only the current analysis can be superseded by another analysis of the same film.
-              immutable_identity: The film cannot be changed.
-              draft_exists: A draft already exists for this film. Edit that draft before preparing another.
-            content:
-              incomplete_analysis: must include version, context, sourced narrative and moments, synthesis and explicit gaps with unique evidence references
-            quality_candidates:
-              duplicate_quality: must not resolve to the same quality more than once
-            published_at:
-              after_current: must be later than the current analysis publication
+            key:
+              immutable: cannot be changed
+        quality:
+          attributes:
+            quality_category:
+              unchanged: is already assigned
+            name:
+              immutable: cannot be changed

@@ -1,0 +1,41 @@
+emotional_character:
+  key: emotional_character
+  name: Emotional character
+  maximum_qualities: 3
+  weight: 1
+
+tone:
+  key: tone
+  name: Tone
+  maximum_qualities: 3
+  weight: 1
+
+tension_and_rhythm:
+  key: tension_and_rhythm
+  name: Tension and rhythm
+  maximum_qualities: 3
+  weight: 1
+
+engagement:
+  key: engagement
+  name: Engagement
+  maximum_qualities: 3
+  weight: 1
+
+relationships_and_stakes:
+  key: relationships_and_stakes
+  name: Relationships and stakes
+  maximum_qualities: 3
+  weight: 1
+
+intensity_and_explicitness:
+  key: intensity_and_explicitness
+  name: Intensity and explicitness
+  maximum_qualities: 3
+  weight: 1
+
+resolution_and_aftermath:
+  key: resolution_and_aftermath
+  name: Resolution and aftermath
+  maximum_qualities: 2
+  weight: 1

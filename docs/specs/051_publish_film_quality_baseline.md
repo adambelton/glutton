@@ -1,6 +1,6 @@
 # 051 — Publish the retained film-quality baseline through CI
 
-Status: In progress  
+Status: Merged  
 Owner: Film knowledge
 
 ## Goal
@@ -27,13 +27,13 @@ Publish the current documentation, working vocabulary/examples and installed Typ
   Result: Passed local review. Checkout matched fetched origin/main before branching. `python3 /tmp/glutton-050-check.py` verified exact 235-record meanings, reconstructed questions/policy, six source packets, all 1,410 probabilities and 318 matched reviews; 254 Markdown links/anchors, removal allowlist and whitespace passed. New retained JSON and skill lock parsed. `git diff --name-only -- app db test config lib` empty. Explicit staging excludes ignored secrets, Obsidian state and raw scratch.
 - **AC2:** The exact PR head passes hosted repository CI before merge.  
   Check: inspect run/check status for the head SHA; retain run URL, final conclusion and merge response.  
-  Result: Not run.
+  Result: Passed. [Hosted CI](https://github.com/adambelton/glutton/actions/runs/40834619291) completed successfully for exact PR head `7445d23078162c85a2209108e57965d25912f0c9`. Repository checks passed setup, Ruby style, Gem/importmap/Brakeman security checks and Rails tests: 534 runs, 5,665 assertions, zero failures/errors/skips. The head was re-read unchanged before `gh pr merge --squash --match-head-commit`; no bypass or self-approval review.
 - **AC3:** Actual merge is verified and the working checkout is ready for a separately scoped handoff.  
   Check: fetch merged main, verify merge SHA/PR state; preserve unrelated local state; update plan with actual evidence after merge.  
-  Result: Not run.
+  Result: Passed. [PR #45](https://github.com/adambelton/glutton/pull/45) reports merged on 29 October 2026 at `a03be7d43cb7c8f3755765c42af76bb2a8cdee4a`. Fetched origin/main, switched to main and fast-forwarded; local HEAD and remote main match the verified merge. Local post-merge plan/status updates and next-task draft are deliberately outside the merged PR. Ignored credentials/Obsidian state were not staged or reverted.
 
 ## Implementation notes
 
-Not implemented.
+Published the reviewed 66-file documentation/skill/data bundle. The GitHub connector could read the repository but returned a 403 for PR creation, so creation and merge used the existing authenticated GitHub CLI. PR was attached to this chat. Hosted CI and exact-head merge were verified through the read connector; no model requests, runtime changes or deployment. Task 052 is the separate prepared design handoff, not started work.
 
-Owner acceptance: PR and merge after passing CI explicitly authorised on 29 October 2026. Actual merge: Pending.
+Owner acceptance: PR and merge after passing CI explicitly authorised on 29 October 2026. Actual merge: [PR #45](https://github.com/adambelton/glutton/pull/45), `a03be7d43cb7c8f3755765c42af76bb2a8cdee4a`, 29 October 2026 after passing CI.

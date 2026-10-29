@@ -1,6 +1,6 @@
 # 047 — Record neutral JEV matching evaluation
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge
 
 Artifact disposition, 29 October 2026: this is a historical task record. Research filenames, commands and check results below describe work completed then; superseded tuning artifacts and replay scripts were intentionally removed in [task 050](050_jev_research_cleanup.md). Current inputs and reusable examples are in the [working baseline](../film_qualities/README.md); historical commands are not current reproduction instructions.
@@ -36,4 +36,4 @@ Record the owner’s source-context matching baseline, without qualitative prior
 
 Updated film-quality requirements and pipeline notes. Audited representative historical support/importance wording, including the hidden centrality criterion in presence-only haunting. Revised the unexecuted perception example to remove added substantiality guidance. This is a methodology clarification, not a completed vocabulary audit or tested new pipeline.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.

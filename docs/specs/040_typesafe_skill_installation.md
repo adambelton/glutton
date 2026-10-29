@@ -1,6 +1,6 @@
 # 040 — Install the TypeSafe skill for Codex
 
-Status: Ready for review  
+Status: Merged  
 Owner: Foundation
 
 ## Goal
@@ -30,4 +30,4 @@ Install the user-requested TypeSafe agent skill using only the non-Claude `npx s
 
 Installed on 28 October 2026 for this project's Codex agent. Installed SKILL.md SHA-256 `d1513cb2e0f72f58c11ac004ce99fd828fce8668a741b6a274247201e57db724`; lock metadata `computedHash` is the CLI's package hash, a different quantity. Full skill text was read and applied in the ongoing investigation after the already authorized 12 JEV requests had completed. No model request was repeated because of the installation. The skill is available for discovery on the next turn; current work has already used its read guidance.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.

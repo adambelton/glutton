@@ -1,6 +1,6 @@
 # 041 — Draft a master quality vocabulary and test JEV matching
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge
 
 Artifact disposition, 29 October 2026: this is a historical task record. Research filenames, commands and check results below describe work completed then; superseded tuning artifacts and replay scripts were intentionally removed in [task 050](050_jev_research_cleanup.md). Current inputs and reusable examples are in the [working baseline](../film_qualities/README.md); historical commands are not current reproduction instructions.
@@ -45,7 +45,7 @@ Create a useful, provisional master vocabulary for describing viewers' relations
 
 Authored and froze exactly 250 qualities across nine facets and 36 reference judgments before provider calls. Five batches of 50 independent Nouls per film. Fixed candidate threshold ≥0.7, not-established band ≤0.3, middle uncertain; no tuning. Conservative reservation $0.06071982 under $0.10. Source silence never means film absence.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.
 
 ## Changes and reproducible verification
 
