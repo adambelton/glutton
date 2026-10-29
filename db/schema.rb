@@ -10,21 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
-
-  create_table "analysis_qualities", force: :cascade do |t|
-    t.bigint "film_analysis_id", null: false
-    t.bigint "film_quality_id", null: false
-    t.jsonb "evidence_references", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["film_analysis_id", "film_quality_id"], name: "idx_on_film_analysis_id_film_quality_id_3778e2ae3b", unique: true
-    t.index ["film_analysis_id"], name: "index_analysis_qualities_on_film_analysis_id"
-    t.index ["film_quality_id"], name: "index_analysis_qualities_on_film_quality_id"
-    t.check_constraint "jsonb_typeof(evidence_references) = 'array'::text AND jsonb_array_length(evidence_references) > 0", name: "analysis_qualities_evidence_present"
-  end
 
   create_table "domain_event_streams", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -69,38 +57,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
     t.index ["domain_event_id"], name: "index_event_deliveries_on_domain_event_id"
     t.index ["subscriber", "domain_event_id"], name: "index_event_deliveries_on_subscriber_and_domain_event_id", unique: true
     t.index ["subscriber", "status", "next_attempt_at"], name: "index_event_deliveries_due"
-    t.check_constraint "(status::text = ANY (ARRAY['processed'::character varying::text, 'ignored'::character varying::text, 'skipped'::character varying::text])) = (completed_at IS NOT NULL)", name: "event_delivery_completion"
+    t.check_constraint "(status::text = ANY (ARRAY['processed'::character varying, 'ignored'::character varying, 'skipped'::character varying]::text[])) = (completed_at IS NOT NULL)", name: "event_delivery_completion"
     t.check_constraint "attempts >= 0", name: "event_delivery_attempts"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'processed'::character varying::text, 'ignored'::character varying::text, 'skipped'::character varying::text, 'failed'::character varying::text])", name: "event_delivery_status"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processed'::character varying, 'ignored'::character varying, 'skipped'::character varying, 'failed'::character varying]::text[])", name: "event_delivery_status"
     t.check_constraint "subscriber::text <> ''::text", name: "event_delivery_subscriber"
   end
 
-  create_table "film_analyses", force: :cascade do |t|
-    t.bigint "film_id", null: false
-    t.bigint "superseded_by_id"
-    t.jsonb "content", default: {}, null: false
-    t.jsonb "quality_candidates", default: [], null: false
-    t.datetime "published_at"
-    t.datetime "superseded_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["film_id"], name: "index_film_analyses_on_film_id"
-    t.index ["film_id"], name: "one_active_analysis_per_film", unique: true, where: "((published_at IS NOT NULL) AND (superseded_at IS NULL))"
-    t.index ["film_id"], name: "one_draft_analysis_per_film", unique: true, where: "(published_at IS NULL)"
-    t.index ["superseded_by_id"], name: "index_film_analyses_on_superseded_by_id"
-    t.check_constraint "jsonb_typeof(content) = 'object'::text", name: "film_analyses_documents"
-    t.check_constraint "jsonb_typeof(quality_candidates) = 'array'::text", name: "film_analyses_quality_candidates_array"
-    t.check_constraint "superseded_at IS NULL AND superseded_by_id IS NULL OR published_at IS NOT NULL AND superseded_at > published_at AND superseded_by_id IS NOT NULL AND superseded_by_id <> id", name: "film_analyses_valid_supersession"
-  end
-
   create_table "film_qualities", force: :cascade do |t|
-    t.string "dimension", null: false
-    t.string "name", null: false
+    t.bigint "film_id", null: false
+    t.bigint "quality_id", null: false
+    t.jsonb "evidence_references", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index "dimension, lower((name)::text)", name: "film_qualities_dimension_name", unique: true
-    t.check_constraint "dimension::text = ANY (ARRAY['emotional_character'::character varying, 'tension_and_rhythm'::character varying, 'engagement'::character varying, 'relationships_and_stakes'::character varying, 'intensity_and_explicitness'::character varying, 'tone'::character varying, 'resolution_and_aftermath'::character varying]::text[])", name: "film_qualities_dimension"
-    t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "film_qualities_name_present"
+    t.index ["film_id", "quality_id"], name: "index_film_qualities_on_film_id_and_quality_id", unique: true
+    t.index ["film_id"], name: "index_film_qualities_on_film_id"
+    t.index ["quality_id"], name: "index_film_qualities_on_quality_id"
+    t.check_constraint "jsonb_typeof(evidence_references) = 'array'::text AND jsonb_array_length(evidence_references) > 0", name: "film_qualities_evidence_present"
   end
 
   create_table "films", force: :cascade do |t|
@@ -108,10 +80,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
     t.date "release_date"
     t.jsonb "metadata", default: {}, null: false
     t.bigint "tmdb_id"
+    t.jsonb "source_context", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["tmdb_id"], name: "index_films_on_tmdb_id", unique: true
     t.check_constraint "jsonb_typeof(metadata) = 'object'::text", name: "films_metadata_is_object"
+    t.check_constraint "jsonb_typeof(source_context) = 'object'::text", name: "films_source_context_object"
   end
 
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -246,14 +220,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
     t.bigint "guest_user_id"
     t.string "email_address", null: false
     t.string "password_digest", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.integer "confirmation_delivery_attempts", default: 0, null: false
     t.datetime "confirmation_delivery_attempted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["guest_user_id"], name: "index_pending_registrations_on_guest_user_id", unique: true
     t.check_constraint "confirmation_delivery_attempts >= 0 AND confirmation_delivery_attempts <= 5", name: "pending_registration_delivery_limit"
     t.check_constraint "email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text", name: "pending_registrations_require_canonical_email"
     t.check_constraint "password_digest::text ~ '[^[:space:]]'::text", name: "pending_registrations_require_password_digest"
+  end
+
+  create_table "qualities", force: :cascade do |t|
+    t.bigint "quality_category_id", null: false
+    t.string "name", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "quality_category_id, lower((name)::text)", name: "qualities_category_name", unique: true
+    t.index ["quality_category_id"], name: "index_qualities_on_quality_category_id"
+    t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "qualities_name_present"
+  end
+
+  create_table "quality_categories", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.integer "maximum_qualities", default: 3, null: false
+    t.decimal "weight", precision: 8, scale: 3, default: "1.0", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((name)::text)", name: "quality_categories_name", unique: true
+    t.index ["key"], name: "index_quality_categories_on_key", unique: true
+    t.check_constraint "key::text ~ '^[a-z][a-z0-9_]*$'::text", name: "quality_categories_key"
+    t.check_constraint "maximum_qualities >= 0", name: "quality_categories_maximum"
+    t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "quality_categories_name_present"
+    t.check_constraint "weight >= 0::numeric AND weight <> 'NaN'::numeric", name: "quality_categories_weight"
   end
 
   create_table "rating_expressions", force: :cascade do |t|
@@ -269,9 +270,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
     t.bigint "user_id", null: false
     t.bigint "film_id", null: false
     t.boolean "dismissed", default: false, null: false
+    t.boolean "held", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "held", default: false, null: false
     t.index ["film_id"], name: "index_rating_films_on_film_id"
     t.index ["user_id", "film_id"], name: "index_rating_films_on_user_id_and_film_id", unique: true
   end
@@ -294,26 +295,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_27_130000) do
 
   create_table "users", force: :cascade do |t|
     t.string "type", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.string "email_address"
     t.string "password_digest"
     t.datetime "email_confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.check_constraint "type::text <> 'UserRegistered'::text OR email_address IS NOT NULL AND email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text AND password_digest IS NOT NULL AND password_digest::text ~ '[^[:space:]]'::text AND email_confirmed_at IS NOT NULL", name: "registered_users_require_credentials"
     t.check_constraint "type::text = 'UserRegistered'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
 
-  add_foreign_key "analysis_qualities", "film_analyses"
-  add_foreign_key "analysis_qualities", "film_qualities"
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
-  add_foreign_key "film_analyses", "film_analyses", column: "superseded_by_id"
-  add_foreign_key "film_analyses", "films"
+  add_foreign_key "film_qualities", "films"
+  add_foreign_key "film_qualities", "qualities"
   add_foreign_key "library_films", "films"
   add_foreign_key "library_films", "users", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
+  add_foreign_key "qualities", "quality_categories"
   add_foreign_key "rating_expressions", "ratings", on_delete: :cascade
   add_foreign_key "rating_films", "films"
   add_foreign_key "rating_films", "users", on_delete: :cascade

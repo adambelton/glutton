@@ -1,5 +1,4 @@
 require "test_helper"
-require Rails.root.join("db/migrate/20261026140000_allow_rating_history")
 
 class RatingRevisionPersistenceTest < ActiveSupport::TestCase
   setup do
@@ -27,23 +26,12 @@ class RatingRevisionPersistenceTest < ActiveSupport::TestCase
     assert_equal other_rating.id, other.reload.current_rating.id
   end
 
-  test "migration preserves ratings and database rejects rollback with history" do
-    migration = AllowRatingHistory.new
-    migration.suppress_messages { migration.down }
-    assert_not Rating.connection.column_exists?(:ratings, :superseded)
-    migration.suppress_messages { migration.up }
-    Rating.reset_column_information
-    assert_equal @rating.id, @rating_film.reload.current_rating.id
-    assert_equal Rating::Values::BRILLIANT, @rating.value
+  test "fresh storage accepts history without changing the earlier rating" do
     insert
-    assert_raises(ActiveRecord::RecordNotUnique) do
-      Rating.transaction(requires_new: true) { migration.suppress_messages { migration.down } }
-    end
-    assert Rating.connection.index_exists?(:ratings, [ :rating_film_id, :id ])
+    assert_equal Rating::Values::BRILLIANT, @rating.reload.value
     assert_equal 2, @rating_film.ratings.count
     assert_equal @rating_film.ratings.maximum(:id), @rating_film.reload.current_rating.id
-  ensure
-    Rating.reset_column_information
+    assert Rating.connection.index_exists?(:ratings, [ :rating_film_id, :id ])
   end
 
   test "model replacement failure preserves the previous current rating" do

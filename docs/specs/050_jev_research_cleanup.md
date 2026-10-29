@@ -1,6 +1,6 @@
 # 050 — Retire JEV tuning artifacts and retain the working baseline
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge
 
 ## Goal
@@ -67,4 +67,4 @@ git diff --check
 git diff --name-only -- app db test config lib
 ```
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.

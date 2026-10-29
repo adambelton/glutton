@@ -1,6 +1,6 @@
 # 042 — Consolidate quality direction and remove obsolete LLM research
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge
 
 Artifact disposition, 29 October 2026: this is a historical task record. Research filenames, commands and check results below describe work completed then; superseded tuning artifacts and replay scripts were intentionally removed in [task 050](050_jev_research_cleanup.md). Current inputs and reusable examples are in the [working baseline](../film_qualities/README.md); historical commands are not current reproduction instructions.
@@ -48,4 +48,4 @@ Verification actually run:
 
 Scope interpretation: obsolete LLM-generated-film research and obsolete candidate-review experiments were removed; current JEV definition/matching research remains useful and was retained. Existing remote traces, managed prompts, ignored raw artifacts, credentials and database records were untouched. Task 043 remains unimplemented and its tests are Not run.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.

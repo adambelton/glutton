@@ -1,6 +1,6 @@
 # 046 — Record equal base treatment of qualities and categories
 
-Status: Ready for review  
+Status: Merged  
 Owner: Film knowledge
 
 Artifact disposition, 29 October 2026: this is a historical task record. Research filenames, commands and check results below describe work completed then; superseded tuning artifacts and replay scripts were intentionally removed in [task 050](050_jev_research_cleanup.md). Current inputs and reusable examples are in the [working baseline](../film_qualities/README.md); historical commands are not current reproduction instructions.
@@ -39,4 +39,4 @@ Record the owner's clarification that narrative centrality must not privilege on
 
 Updated maintained product, quality, architecture and scoring docs. Added current-baseline notices to both historical JEV experiment reports and the vocabulary pipeline notes, preserving experimental inputs/results and their historical conclusions. No production implementation, category controls or score changes. Owner acceptance remains separate from these checks.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Current retained deliverables authorised and merged via [PR #45](https://github.com/adambelton/glutton/pull/45) on 29 October 2026 after CI. Historical research judgments retain their stated review/accuracy limits.

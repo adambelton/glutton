@@ -1,0 +1,28 @@
+# Baseline data only. Seeds never overwrite later tuning. No quality associations are seeded.
+- key: subgenres
+  name: Subgenres
+  maximum_qualities: 2
+- key: tropes_and_situations
+  name: Tropes and situations
+  maximum_qualities: 5
+- key: narrative_devices
+  name: Narrative devices
+  maximum_qualities: 3
+- key: themes
+  name: Themes
+  maximum_qualities: 4
+- key: ironies_and_reversals
+  name: Ironies and reversals
+  maximum_qualities: 2
+- key: character_and_social_dynamics
+  name: Character and social dynamics
+  maximum_qualities: 3
+- key: presentation_and_intensity
+  name: Presentation and intensity
+  maximum_qualities: 4
+- key: emotional_tone_and_experience
+  name: Emotional tone and experience
+  maximum_qualities: 3
+- key: resolution_and_aftermath
+  name: Resolution and aftermath
+  maximum_qualities: 2
