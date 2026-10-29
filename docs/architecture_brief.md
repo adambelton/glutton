@@ -31,7 +31,7 @@ Marking a film watched makes it available for a later rating session, with a pos
 
 ### Manage the library
 
-The library provides To watch, Watched and Not interested views. Watched films may be awaiting a rating or already rated. Users can revisit and change ratings and expressions, reconsider dismissed films, and inspect film analyses through spoiler-labelled links normally shown in the watched Library view.
+The library provides To watch, Watched and Not interested views. Watched films may be awaiting a rating or already rated. Users can revisit and change ratings and expressions, reconsider dismissed films, and inspect film information and qualities through spoiler-labelled links normally shown in the watched Library view.
 
 Viewing status (unknown, confirmed unseen, watched) is distinct from library classification. Confirmed-unseen films need not belong to a classified library view. Marking one watched through the library or discovery makes it available for rating. Removing an unwatched film's classification makes it eligible for recommendations again, while preserving confirmed-unseen status and its exclusion from rating prompts. Exact transitions between existing library choices, and their UI wording, need specification before implementation.
 
@@ -51,7 +51,7 @@ Active Record remains appropriate for persistence and straightforward local beha
 
 Treat every object as a role and name collaborators for the role actually required, whether implemented through a concrete class, superclass or shared-behaviour module. Trust internal role contracts by default; class guards and their disguised predicate equivalents require a specific justification. Put rules about an object's permitted behaviour inside that object and delegate the operation rather than identifying its class to choose behaviour elsewhere. Meaningful domain-state and action-permission predicates remain appropriate. Models own ordinary actions and their rules; transition services coordinate changes between model types, while the source model declares supported actions without sibling-class knowledge. Validate untrusted input at its boundary. Refresh/re-read and lock when freshness/concurrency matters independently of role trust. Tests follow the same role rules and verify observable outcomes and contracts rather than incidental internal state; do not introduce production interfaces solely for test assertions. The maintained implementation/review conventions and examples are in [AGENTS.md — Object roles and behaviour](../AGENTS.md#object-roles-and-behaviour).
 
-Keep external-provider calls behind narrow adapters. Initial boundaries cover JEV assessment, Claude profile synthesis, metadata lookup and film research/analysis. These boundaries should expose the operations Glutton requires rather than reproduce every provider API.
+Keep external-provider calls behind narrow adapters. Initial boundaries cover JEV assessment, Claude profile synthesis, metadata lookup and source retrieval. These boundaries should expose the operations Glutton requires rather than reproduce every provider API.
 
 Use local PostgreSQL for development. Railway plus Neon is the owner’s familiar deployment option, with production hosting still to be selected. Server-rendered Rails views and Hotwire are the initial frontend direction. Job backend and specific provider/model versions remain undecided; background processing is a separate task after the minimal scaffold. Modest model API development costs are acceptable; expensive data/media licences are not. The owner has a Claude API key and can create a JEV key; keep credentials out of source control.
 
@@ -61,7 +61,7 @@ Boundaries follow distinct activities and their language, not a generic user–f
 
 | Area | Owns | Boundary |
 | --- | --- | --- |
-| Film knowledge | Film identity, metadata/media, sourced analyses, vocabulary and film–quality assessments | Shared knowledge independent of viewers |
+| Film knowledge | Film identity, metadata/media, sourced context, editable quality categories/vocabulary and accepted film–quality associations | Shared knowledge independent of viewers |
 | Library | Canonical user–film relationship: watchlist, watched and not interested; library management | Does not own purpose-specific presentation histories, ratings or inferred preferences |
 | Ratings | Rating presentations and responses, ratings, original expressions, scoring, expressions profiles and inferred preferences | Rating submission, scoring and profile building are distinct capabilities; Ratings publishes completed-viewing facts and explicit Library action requests |
 | Recommendations | Selection, eligibility, ranking, explanations, presentation and response history | Maintains projections from Library/Rating events; publishes response choices without owning Library state |
@@ -79,8 +79,8 @@ Quality modelling consideration (owner discussion, 20 October 2026): consider di
 ## 5. Core concepts and invariants
 
 - **Film:** A distinct work identified consistently across imports, including remakes and versions where relevant.
-- **Film analysis revision:** A reusable, sourced account containing description and supported interpretation. Analysis is richer than the current quality vocabulary.
-- **Film–quality assessment:** A versioned interpretation that a film exhibits a quality, with sufficient provenance for reassessment.
+- **Film source information:** Maintained source material with provenance; an independent FilmAnalysis lifecycle is under review.
+- **Film–quality assessment:** An accepted source-backed association for current scoring; permanent historical association sets are not yet required. Current assignment freshness is distinct from retention history.
 - **Library entry:** The canonical user–film relationship, owned by Library. Viewing facts and watchlist/dismissal intent need consistent rules without prescribing a table structure. Confirmed-unseen rating responses belong to Ratings and need no Library entry.
 - **Rating presentation / response:** Ratings' record that a film was presented and the viewer's response, including haven’t seen it. Separate from canonical Library state.
 - **Recommendation presentation / response:** Recommendations' record of a proposed film and response, independent of Library persistence. Library actions use Library-owned operations.
@@ -101,7 +101,7 @@ Owner decision, 21 October 2026: Library, Ratings and Recommendations coordinate
 
 Ratings preserves its own history and distinguishes known watched awaiting rating from unknown films needing a seen/unseen prompt. NotInterested means unseen and unwanted, excluding rating and recommendation presentation; removing it does not assert seen. Consumers retain provenance and never erase a saved rating due to a delayed contradictory Library event. Completed-rating handling is a system workflow with explicitly defined duplicate/reconciliation behaviour; it does not change public user-action failure semantics. No subscriber recreates a source action just because it received the resulting fact.
 
-Film analyses are directly accessible; normal navigation is through spoiler-labelled links on the watched Library view, without a Library-based authorization gate.
+Source-backed film information is directly accessible; normal navigation is through spoiler-labelled links on the watched Library view, without a Library-based authorization gate.
 
 ## 6. Saving a rated film
 
@@ -161,35 +161,23 @@ Recommendation explanations must be supported by the evidence actually used and 
 
 Store enough information about served recommendations and scoring versions to compare outcomes and understand ranking changes. The required retention and detail should be proportionate to evaluation needs.
 
-## 9. Film knowledge pipeline
+## 9. Film knowledge sources and quality decisions
 
-Target a diverse 500-film catalogue (owner decision, 27 October 2026), after defining analysis requirements and evaluating a future pipeline on a small varied sample. The existing 50-film research catalogue remains experimental until validated. Film analyses should preserve sources, uncertainty, descriptive versus interpretive distinctions, and analysis/prompt revisions.
+Current direction, 28 October 2026: use maintained Wikipedia narrative/context and a revisable master vocabulary. Glutton owns accepted source-backed quality associations; JEV is the chosen assessment engine. Source acquisition and candidate evaluation do not automatically accept new qualities. [Current requirements](film_quality_requirements.md) supersede the former generated-analysis dossier design.
 
-Keep research/analysis separate from quality association. Vocabulary changes should permit reassociation without regenerating the underlying analysis. Analyses may be incomplete where evidence is insufficient.
+Quality categories are editable records, not the seven `FilmQuality::Dimensions` constants. Task [043](specs/043_editable_quality_categories.md) plans their replacement while preserving quality identities and existing associations. Categories organise concepts without defining scoring behaviour; a grouping-only edit does not rescore.
 
-[Film analysis requirements and evidence standards](film_analysis_requirements.md) define the documentation-first contract. Analysis sections are deliberately experiential; technical disciplines provide supporting context. Analysis and qualities share terminology where appropriate without a required one-to-one category mapping. Evaluate quality usefulness for transferable preferences rather than artistic specificity alone. Qualities emerge from the film corpus, with many-to-many film associations and meaningful overlap. Identity and evidence metadata are not automatically quality dimensions. Preserve claim-level support, source dependencies, contradictory accounts and the distinction between observation, reported experience, reported fact and interpretation. Independent accounts of a scene response support that experience without establishing audience prevalence. Multiple-source corroboration is preferred; complementary detail and repeated derivative accounts are not independent confirmation.
+Initial quality/category base weights are equal, following the owner's 28 October clarification. Do not use film centrality or model confidence as an intrinsic weight or default quality-selection gate. A presentation characteristic such as minimal dialogue may matter more to a viewer than a central theme. Actual rating/expression evidence still determines user-specific contributions. Future system- or user-controlled category weighting is optional and unspecified; no weight fields, category quotas or weighting UI are required now. The max-20 selection policy remains separate from score weighting.
 
-Evolution requirements distinguish format versions, accepted analysis revisions, vocabulary meanings and assessment versions. Preserve raw user evidence, trace derived results to their inputs, reassess semantic changes rather than merely cosmetic changes, and prevent stale/duplicate contributions. Film knowledge supplies its accepted knowledge; downstream owners retain responsibility for their derived results. Processing contracts, compatibility details and behaviour during recomputation require separate specs. See [evolution requirements](film_analysis_requirements.md#evolving-the-format-and-derived-preferences).
+A Wikipedia page refresh changes source material. A deliberate accepted film-quality change is the proposed trigger for affected downstream reassessment. Do not automatically regenerate matches or scores for every page revision. Film knowledge publishes accepted changes only through a separately agreed event contract; Ratings and Recommendations own their resulting mutations.
 
-The future [expression-feedback cycle](film_analysis_requirements.md#future-feedback-from-user-expressions) connects discovery to original experiential evidence and reviewed analysis improvements. Ratings retains original expression ownership; Film knowledge owns accepted amendments. Preserve evidence provenance, avoid counting derived summaries or repeated processing as independent contributions, and account for recommendation selection and prompt influence. No feedback mechanism or communication contract is introduced by task 025; contribution eligibility and removal policies require later specification.
+Historical rating/recommendation contributions explain the scores actually produced. They must not depend on reconstructing an old film association set. Whether FilmAnalysis/AnalysisQuality are needed for a separate review/rollback/audit purpose remains open; current source information plus direct current associations may suffice. No model removal is implemented or authorised by this requirement.
 
-The source-use matrix separates access, retrieval, retention, AI processing and publication. Scripts/subtitles are research inputs alongside other sources; original synthesis does not imply that any source is complete or that every input use is automatically permitted. Task 025 did not select a provider or storage design. Owner decision, 27 October 2026 (task 031): initial generation combines model-led research and analysis through bounded hosted web search, with TMDB identity as discovery context. Retained factual claims need two independently inspected supporting sources; derivative accounts count once. Experiential evidence is weighted toward independent corroboration. Optional subtitles/captions require established version matching and cue references; ambiguous alignment is excluded. The existing JSON draft retains claim evidence and the diagnostic artifact retains tool actions. This does not change publication ownership or add downstream processing.
+Owner clarification, 29 October 2026: further fine tuning is not a prerequisite to a useful community-improved seed. The [working baseline](film_qualities/README.md) retains the current vocabulary, neutral question contract and six uncapped examples. The next design work is selection and source-backed community review/publishing. No Langfuse prompt migration is required for that step; quality meanings remain product data.
 
-Owner decision, 27 October 2026: film-quality associations belong to an analysis version and inherit its validity. Retain previous versions with `published_at`, `superseded_at` and an optional replacement reference; drafts do not displace the active analysis. Publish a validated replacement and supersede its predecessor atomically. Shared qualities use specific, self-explanatory names without requiring a separate definition field; different concepts need distinct identities.
+JEV's logical judgments and HTTP request packing are separate. Independent per-quality questions may share state in one request or several batches; production grouping, context, thresholds and failure handling remain to be discussed. Do not hard-code category partitions or interpret support probability as a preference score.
 
-Ratings submission remains immediate, with planned timestamped supersession and retained quality-score history, but no rating publication or draft/commit workflow. Recommendations computes from applicable rating qualities and analysis qualities, then owns the persisted recommendation-quality contributions, total and scoring-rule version. Historical display uses that saved output, with source-version references for provenance; asynchronous completion must not be backdated. Current runtime still uses latest-ID ratings, and quality/scoring persistence is deferred. See [Ratings history requirements](ratings_scoring_design.md#historical-ratings-and-quality-scores).
-
-Standalone analysis remains Film knowledge-owned and viewer-independent. Profile/recommendation and review/expression comparisons are separate consumers of versioned evidence, not personal data embedded in an analysis. The planned podcast uses those layers through the ordinary app flow. These decisions do not prescribe new cross-domain contracts or authorise implementation.
-
-Owner clarification, 27 October 2026 (task 034): screenplay-led model research supplies a narrative backbone, with independent released-film corroboration for retained events/details so script-only or deleted material does not become film fact. The explicit page-open validator was removed as an unjustified proxy for reading; substantive search-returned source content can support claims. Two-source factual corroboration, source provenance and experiential attribution remain. No full-corpus import or new provider is introduced.
-
-Film is the aggregate root for its analysis lifecycle: clients edit and publish through Film, without managing draft/version identities. Shared FilmQuality vocabulary sits outside any individual film aggregate. V1 uses the same editable draft and quality-candidate workflow for AI and human authors. At explicit publication, resolve existing shared qualities or create new ones and save analysis-quality associations in the same transaction as publication/supersession. Failed publication leaves current knowledge unchanged. Published analyses are immutable; revisions start new drafts. Publication is the V1 approval step; no separate multi-person review system is required. See the [V1 workflow and ownership](film_analysis_requirements.md#v1-draft-and-quality-workflow).
-
-Future community/curator changes require independent review of the exact proposed revision, preserved authorship/provenance and renewed review after material edits. The author cannot self-approve; one versus two reviewers and moderation mechanics remain open. Generated drafts are not independently verified by virtue of generation alone.
-
-Expose directly accessible readable analyses with clear spoiler labelling and normal navigation from the watched Library view, with a manual inaccuracy-reporting workflow from the first release. Reports identify the film and preferably the disputed section; they do not directly alter published content. Community editing is deferred.
-
-Later user-requested imports should deduplicate by stable external identity and use the same analysis contract. Metadata identity can become available before enrichment completes.
+The existing generated-analysis implementation remains legacy code until separately scoped replacement/removal. Its old research trials are not the current product contract. Keep source evidence, original expressions and actual historical score outputs, without assuming that every intermediate film analysis or former association set needs permanent retention.
 
 ### Current provider decision — 18 October 2026
 
@@ -258,9 +246,9 @@ Conclusion: technically feasible as a supplementary media source, insufficient a
 
 ## 10. Persistence and PostgreSQL learning plan
 
-Prefer relational tables and constraints for stable identities, ownership, relationships, state and queryable scoring evidence. Consider JSONB for structured analysis content and evolving provider payloads; do not hide core relationships in opaque documents.
+Prefer relational tables and constraints for stable identities, ownership, relationships, state and queryable scoring evidence. Consider JSONB for sourced context and evolving provider payloads where justified; do not hide core relationships in opaque documents.
 
-Candidate persistence groups include films and external identities; analysis revisions and sources; qualities and film associations; library entries, rating/expression revisions and submissions; profile revisions; assessment runs and quality evidence; recommendation deliveries/responses; and inaccuracy reports. This is a conceptual inventory, not a committed table list.
+Candidate persistence groups include films and external identities; sources and current source revisions; quality categories, qualities and accepted film associations; library entries, rating/expression revisions and submissions; profile revisions; assessment runs and quality evidence; recommendation deliveries/responses; and inaccuracy reports. This is a conceptual inventory, not a committed table list.
 
 Database invariants should include one current library relationship per viewer/film, valid rating values, foreign-key integrity, and uniqueness for idempotent processing identities. Decide revision retention and current-record pointers explicitly before implementing constraints.
 
@@ -270,7 +258,7 @@ Design and measure the principal access paths:
 - Select rating-flow candidates without repeating confirmed-unseen films; include watched films awaiting ratings.
 - Read the viewer's watched films awaiting ratings and paginate each library view.
 - Retrieve current per-quality preference evidence and candidate film associations.
-- Find assessments affected by a changed profile or film-knowledge revision.
+- Find assessments affected by a changed profile, accepted film-quality change or semantic quality revision; a source refresh alone does not qualify.
 - Aggregate scores without counting superseded assessments.
 
 Use representative generated data and PostgreSQL execution plans to guide indexes and query changes. Measure query latency and rows processed before introducing cached aggregates, materialized views, partitioning or specialised infrastructure. These exercises should support real application access patterns.
@@ -305,11 +293,11 @@ Viewer submissions and profiles are private by default; sharing expressions as i
 
 Develop complete working slices:
 
-1. Validate a small catalogue subset; implement independent viewing status and library classification, confirmed-unseen exclusion from rating prompts, direct watchlist addition, spoiler-labelled analysis navigation, ratings and multiple expressions.
+1. Validate a small catalogue subset; implement independent viewing status and library classification, confirmed-unseen exclusion from rating prompts, direct watchlist addition, spoiler-labelled film-information navigation, ratings and multiple expressions.
 2. Establish JEV scoring contracts and a rating-only recommendation baseline.
 3. Add explicit scoring and profile synthesis using the prior-profile rule.
 4. Add historical reassessment, freshness tracking and before/after ranking evaluation.
-5. Complete discovery presentation, library management, analysis visibility and reporting; expand the validated seed catalogue.
+5. Complete discovery presentation, library management, film-information visibility and quality reporting; expand the validated seed catalogue.
 
 The first public loop requires all core behaviours above. External imports and conversational reflection do not block it.
 
@@ -325,7 +313,7 @@ Workflow tests should cover retry/idempotency, concurrent profile updates, stale
 - Define expressions profile structure, synthesis inputs and revision semantics.
 - Choose refresh cadence, material-change criteria and user-visible processing states.
 - Specify re-rating, expression editing/deletion and library-transition behaviour.
-- Establish the analysis validation bar and spoiler-safe presentation contract.
+- Agree source/evidence coverage, accepted film-quality changes and spoiler-safe presentation; resolve independent analysis-model retention.
 - Decide what recommendation evidence and delivery history to retain for evaluation.
 
 These decisions should be recorded with their reasoning, observed results and conditions for revisiting them. Domain boundaries and abstractions should evolve in response to those findings.

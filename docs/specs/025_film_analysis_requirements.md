@@ -1,11 +1,14 @@
 # 025 — Define film analysis requirements and evidence standards
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Merged via PR #40  
 Owner: Film knowledge / analysis design
 
 ## Goal
 
-Define the content and evidential standard for a maintained film analysis before selecting enrichment sources or implementing the analysis pipeline. Deliver docs/film_analysis_requirements.md and align the briefs/plan. This supersedes the unimplemented quality-vocabulary persistence proposal.
+Define the content and evidential standard for a maintained film analysis before selecting enrichment sources or implementing the analysis pipeline. Deliver docs/film_quality_requirements.md and align the briefs/plan. This supersedes the unimplemented quality-vocabulary persistence proposal.
 
 Prerequisites: existing TMDB identity import (008), product/architecture film-analysis sections and the agreed Ratings scoring design. The intended 500-film catalogue will inform shared qualities after a future pipeline is validated on a smaller sample.
 
@@ -51,11 +54,11 @@ Prerequisites: existing TMDB identity import (008), product/architecture film-an
 
 ## Pilot follow-up
 
-Task [026](026_film_analysis_pilot.md) tests these requirements on the five owner-selected films. Its findings add phase scope, separated content/response evidence, claim-level support and explicit gap-resolution requirements. Owner review of the initial pilot found inadequate depth; its approved revision now requires chronological narrative and contextual key moments before conclusions, reflected in the requirements and product brief. A completed documentation check does not validate the analysis standard empirically; the pilot and resulting revisions require owner review. No independent curator acceptance or predictive evaluation has occurred.
+Task 026 (obsolete research removed) tests these requirements on the five owner-selected films. Its findings add phase scope, separated content/response evidence, claim-level support and explicit gap-resolution requirements. Owner review of the initial pilot found inadequate depth; its approved revision now requires chronological narrative and contextual key moments before conclusions, reflected in the requirements and product brief. A completed documentation check does not validate the analysis standard empirically; the pilot and resulting revisions require owner review. No independent curator acceptance or predictive evaluation has occurred.
 
 ## Subsequent comparison and lifecycle decisions
 
-Task [026a](026a_comparison_and_history_design.md) records the podcast's three layers, viewer-independent evidence references, preserved analysis/film-quality versions, analysis-only activation and immediate ratings with timestamped supersession. Quality names are self-explanatory; no definition field is required. Task [027](027_comparison_ready_analysis_pilot.md) scopes a new pilot against those requirements. These are later requirements, not retroactive claims that task 025 implemented them or task 026 tested them.
+Task [026a](026a_comparison_and_history_design.md) records the podcast's three layers, viewer-independent evidence references, preserved analysis/film-quality versions, analysis-only activation and immediate ratings with timestamped supersession. Quality names are self-explanatory; no definition field is required. Task 027 (obsolete research removed) scopes a new pilot against those requirements. These are later requirements, not retroactive claims that task 025 implemented them or task 026 tested them.
 
 ## Implementation notes
 

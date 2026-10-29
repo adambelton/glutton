@@ -32,8 +32,8 @@ Principles:
 - **Reflection should feel worthwhile.** Rating is quick and lightweight, with optional individual expressions that make reflection worthwhile. A separate conversational interface is a possible future experiment, not a core product requirement.
 - **Useful before clever.** Start with a coarse, comprehensible quality vocabulary and simple matching; increase granularity only when results justify it.
 - **Interpretations are provisional.** Viewers' tastes may evolve, and film interpretations may differ. Retain original expressions and analyses so classification can be revisited.
-- **Traceability and visibility.** The film analysis is available to users and can be reported as inaccurate. Classification can stay internal, but the product should be able to explain recommendations meaningfully.
-- **Reusability and cost discipline.** Film research and analysis should be generated once and shared; user interactions should not require unnecessary expensive model calls.
+- **Traceability and visibility.** Sourced film information and qualities are available to users and can be reported as inaccurate. Classification can stay internal, but the product should be able to explain recommendations meaningfully.
+- **Reusability and cost discipline.** Source context and accepted film qualities should be reusable; user interactions should not require unnecessary expensive model calls.
 - **Independent and enthusiast-led.** Prioritise excellent discovery, meaningful reflection and sustainable maintenance over growth funnels, advertising inventory or maximising revenue.
 - **Recommendation integrity.** Sponsorships, commissions and commercial relationships must not influence the underlying taste match or recommendation ranking.
 
@@ -66,7 +66,7 @@ Encourage several simple, individual expressions of ideas rather than one large 
 
 Extreme reactions carry greater weight than mild reactions; numeric weights remain experimental. For MVP, prompts follow the overall rating's sentiment rather than deliberately soliciting mixed positive and negative observations. Preserve what viewers actually write.
 
-Shared expressions may later provide inspiration in placeholders, with consent and moderation. Prefer changes on page load or manual request rather than during composition. Clearly labelled curated examples may precede real shared contributions. Seen confirmation precedes spoiler-bearing rating material. Analysis links are clearly labelled for spoilers.
+Shared expressions may later provide inspiration in placeholders, with consent and moderation. Prefer changes on page load or manual request rather than during composition. Clearly labelled curated examples may precede real shared contributions. Seen confirmation precedes spoiler-bearing rating material. Film-information links are clearly labelled for spoilers.
 
 ### 3.2 Process recommendations
 
@@ -86,7 +86,7 @@ Viewing status (**unknown**, **confirmed unseen**, or **watched**) is distinct f
 
 The library is the durable home for classified films, with **To watch**, **Watched**, and **Not interested** views. Watched films can be rated or awaiting a rating. Viewers can mark watchlist films watched, revisit ratings and expressions, and reconsider dismissed films. Exact transition wording and editing/history behaviour remain to be specified.
 
-The library provides access to spoiler-labelled film analyses and inaccuracy reporting. It is also a potential future entry point for streaming/purchase options and community analysis editing; those features are not MVP requirements.
+The library provides access to spoiler-labelled film information/qualities and inaccuracy reporting. It is also a potential future entry point for streaming/purchase options and community quality editing; those features are not MVP requirements.
 
 ### 3.4 Possible future reflection experience
 
@@ -99,13 +99,13 @@ Library owns the canonical user–film relationship. Ratings owns its presentati
 ## 4. Domain vocabulary (product concepts, not prescribed code objects)
 
 - **Film:** A distinct cinematic work, with a stable external identity, credits and metadata; differentiate remakes and releases.
-- **Film analysis:** A structured, reusable, evidence-grounded account of what occurs in the film and how it is constructed and interpreted. Visible to users. The analysis is a durable knowledge asset.
+- **Film source information:** Maintained narrative/context material, principally Wikipedia, with source identity and revision. Whether Glutton needs an independent FilmAnalysis model remains open.
 - **Quality:** A reusable characteristic potentially relevant to enjoyment or dislike: e.g. slow-burn storytelling, isolated environments, practical effects, demonic possession, oppressive atmosphere, folk ritual. Qualities are grouped into broad categories for classification, but need not appear as user-facing tags.
 - **Expression:** A viewer's original natural-language account of what they appreciated or disliked. Expressions may correspond to several qualities and can carry context that those qualities do not capture.
 - **Viewing status:** Unknown, confirmed unseen, or watched. Confirmed-unseen films are excluded from rating prompts until marked watched, but remain recommendation-eligible unless classified in the library. This status supplies no enjoyment evidence.
 - **Library classification:** A viewer’s durable To watch, Watched or Not interested choice. All exclude a film from recommendations; only watched-film ratings and expressions supply enjoyment evidence.
 - **Rating:** The viewer's overall four-level personal reaction to a watched film, carrying directional and strength information.
-- **Film–quality association:** An assessment that a film exhibits a quality, grounded in its analysis; can be re-evaluated.
+- **Film–quality association:** An accepted assessment that a film substantially exhibits a quality, grounded in source evidence; changes can make downstream scoring eligible for reassessment.
 - **Expression–quality association:** An assessment that a viewer's expression indicates appreciation or dislike of a quality; can be re-evaluated with newer models/vocabularies.
 - **Expressions profile:** An interpretation based **exclusively on the viewer's actual expressions**, retaining their context and associated qualities. Inferences from rating patterns must not be added to this profile as though explicitly stated.
 - **Inferred preference profile:** The system's current positive and negative interpretation of the viewer's *entire rating history*, informed by the expressions profile. It is derived, provisional and can be recalculated as explicit context evolves.
@@ -113,15 +113,15 @@ Library owns the canonical user–film relationship. Ratings owns its presentati
 
 **People as qualities:** Do not populate an enormous static list of actors, directors, writers and other contributors. Supply film-specific candidate people dynamically from verified credits when classifying an expression. Distinguish liking a performer's involvement from liking the film's themes or story.
 
-Categories and exact granularity are provisional. Capture distinctions that matter to matching (e.g. film set in the 1970s versus a modern film with 1970s visual style) without making every individual technique a new quality. A rich film analysis need not imply a hyper-specific vocabulary.
+Categories and exact granularity are provisional. Capture distinctions that matter to matching (e.g. film set in the 1970s versus a modern film with 1970s visual style) without making every individual technique a new quality. Rich source material need not imply a hyper-specific vocabulary. Quality categories are editable data, not hard-coded dimensions.
 
-## 5. Catalogue and analysis
+## 5. Catalogue, sources and film qualities
 
 ### 5.1 Initial catalogue and expansion
 
-Owner decision, 27 October 2026: target a **diverse catalogue of 500 horror films** spanning decades, countries, traditions and styles. Define analysis requirements first, validate a future pipeline on a small varied sample, then expand to the full catalogue and derive shared qualities from the analyses. A preparatory research dataset exists with 50 draft profiles, 103 provisional qualities, 504 associations, a film–quality matrix and pairwise similarity analysis. This is **exploratory model-drafted data**, not a fact-checked production corpus; validate before presenting analyses as authoritative.
+Target a diverse initial catalogue of 500 horror films, with useful source-backed quality associations at sustainable cost. Start from the provisional master vocabulary rather than generating qualities from a handful of film analyses. Initial coverage need not be exhaustive; the vocabulary and associations should be easy to improve.
 
-After launch, users should be able to search for a film not yet in the catalogue, select the correct external-metadata match, and request its import. Deduplicate by stable film identity. Import enrichment can run asynchronously; a newly requested film may not have a fully prepared analysis immediately. The initial seed and later imports should use the same analysis contract as far as practicable.
+After launch, users should be able to find/import a film through the external metadata catalogue. Deduplicate by stable film identity. Metadata/source enrichment and reviewed quality assignment are separate steps; importing a film does not imply it has accepted qualities or require generated analysis prose.
 
 ### 5.1.1 Initial catalogue and media source: TMDB
 
@@ -135,68 +135,50 @@ Film pages should eventually provide country-specific viewing options. MVP may o
 
 TheTVDB, OMDb, Fanart.tv and KinoCheck are alternatives or supplements, not required initial integrations. Custom Glutton artwork remains an optional creative direction. The architecture brief retains research findings and the limits of the KinoCheck coverage trial.
 
-### Podcast and comparison use case
+### 5.2 Qualities and editable categories
 
-The planned weekly Glutton podcast follows two hosts watching one recommendation, sometimes a strong match for both and sometimes a poor match for one. After watching, they inspect the analysis and actual engine scores/reasons, discuss the plot and key moments, share reactions and record reviews/expressions through the app, then compare those expressions with the earlier expectations. Public discussion supports participation and learning; this decision does not schedule or publish a podcast.
+A quality must plausibly influence whether a viewer enjoys or avoids a film through its substantial portrayal. “Humans are the real monsters” describes a moral outlook; an incidental prop or plot convenience may not be a useful taste distinction. Definitions, exclusions, prominence/context and a preference hypothesis matter. These hypotheses remain revisable; perfect initial coverage is unnecessary.
 
-Presentation has three layers: standalone film analysis; the film's match against a viewer's profile; and comparison with their review/expressions. Film analysis contains no personal profile or host-specific interpretation. Versioned evidence references connect scenes and qualities to the other layers. Explanations must reflect the real engine, not fabricated precision about expected scene reactions. Reading the analysis before discussion is recorded as evaluation context.
+The [working vocabulary](film_qualities/MASTER_LIST.md) has 235 candidates, aiming for roughly 250 without padding. Assign at most **20 qualities per film**, not a quota. Reduce redundant signals; the cap alone does not establish fair comparison scores.
 
-Retain historical film-analysis quality sets and rating-quality scores. Recommendations also persists its own recommendation-quality score contributions and total when computed, so original results remain inspectable without reconstructing other domains. Human or AI authors create editable analysis drafts and quality candidates. V1 activation is explicit approval: reuse existing qualities or create new ones, link them to the analysis and supersede the previous version atomically; their associations remain attached to their historical analysis. Ratings take effect on submission and have timestamped supersession, without drafts or activation for now. These are future persistence requirements, not implemented features. See [analysis lifecycle and comparison requirements](film_analysis_requirements.md#standalone-analysis-and-comparison-layers) and [Ratings history](ratings_scoring_design.md#historical-ratings-and-quality-scores).
+Qualities and quality categories are editable product data. Adding a category must not require deployment. A category move or cosmetic rename preserves quality identity and does not itself rescore. Adding/removing concepts, changing meaning, splits and merges require appropriate reassessment without losing original ratings/expressions or historical score explanations. [Task 043](specs/043_editable_quality_categories.md) plans replacing the current code-managed dimensions; implementation has not started.
 
-### 5.2 Film analysis specification
+Owner clarification, 28 October 2026: **start with equal base quality weights and equal category multipliers**. Greed being central to a film's story does not make it more important to a viewer than minimal dialogue. JEV should establish supported characteristics, without a default film-centrality gate or importance/confidence scoring multiplier. Meaningful presentation and content qualities receive the same base treatment as themes/subgenres. Which supported qualities earn the max-20 slots remains a separate editorial/selection question; no category quotas or automatic confidence top-20 policy is settled.
 
-The analysis should contain a chronological plot breakdown and contextualised key moments, with source-specific evidence before experiential conclusions. It should explain character decisions and consequences to a reader who has not seen the film, but does not need a shot-by-shot record. Dimension summaries and candidate qualities follow this evidence rather than substitute for it. It should not be constrained by the current quality vocabulary.
+User-derived contributions still reflect rating strength and explicit likes/dislikes/indifference under the scoring design. Future category weighting may be system-controlled or user-controlled, but controller and mechanics are undecided. All categories start equally; no weight fields or controls are required now. See [equal-baseline requirements](film_quality_requirements.md#equal-starting-weights-and-personal-preference).
 
-The following coverage checklist remains useful, but section organisation now follows provisional experiential dimensions in [Film analysis requirements](film_analysis_requirements.md). Identity, evidence and revision information are supporting information rather than automatic quality categories. Dimensions remain provisional and evolve from the films. The discipline-based checklist below supplies context and evidence; it is not the primary section layout or a list of quality categories.
+### 5.3 Sources, accepted changes and historical scores
 
-Coverage checklist (variable depth by film):
+Follow Wikipedia's maintained film pages for useful narrative/context, with retained revision, attribution and licence. BFI can supplement gaps. Glutton's community should focus on quality definitions, source-backed associations and corrections rather than duplicating Wikipedia's encyclopaedic maintenance.
 
-1. **Identity and provenance:** Verified title, year, identifiers, credits, languages, production details, references and version.
-2. **Narrative:** Complete story progression, central conflicts, major revelations and ending, including material differences between versions.
-3. **Significant sequences:** Notable scenes, their events and narrative/technical significance, without artificial quotas.
-4. **Characters and relationships:** Motivations, behaviour, character changes, dynamics and distinctive performances.
-5. **Setting and world:** Locations, period, environment, culture and established rules of supernatural/speculative elements.
-6. **Narrative construction:** Structure, pacing, perspective, timing of information and resolution.
-7. **Film craft:** Cinematography, editing, lighting, design, makeup, practical and digital effects, acting choices where supported.
-8. **Sound and music:** Score, soundtrack, sound design, silence and distinctive uses.
-9. **Horror and tone:** How horror mechanisms, humour, dread, spectacle and atmosphere are achieved.
-10. **Interpretation:** Supported themes, symbolism, influences and competing readings, distinguished from factual description and never forced to a prescribed depth.
-11. **Evidence, uncertainty and revisions:** Source references for important claims, known gaps, disputed material, analysis/prompt version and revision history.
+A Wikipedia refresh updates source material; it does not automatically trigger JEV evaluation, replace accepted qualities or rescore users. A deliberate accepted change to the qualities associated with a film—likely through a manually reviewed community action—is the proposed boundary for downstream reassessment. Source refresh, candidate assessment and accepted association changes are separate actions. Exact editing/acceptance, refresh and event contracts still require discussion.
 
-**Evidence strategy:** Prioritise publicly accessible factual film catalogues, plot accounts, documented production information, filmmaker interviews and other reliable sources. Screenplays can offer narrative detail but do not establish the finished film's sounds/images. Critical interpretations may be useful when labelled as interpretations. Public readability is not the same as permission to reproduce source text; summaries should be original and appropriately sourced. Do not pretend an AI has watched a film; do not invent scene details, influences, quotes or certainty when evidence is insufficient. Import should support incomplete analyses rather than forced completeness.
+Preserve rating-quality and recommendation-quality records as the record of the qualities and contributions used in historical scoring. Historical explanations read those saved results. They should not reconstruct earlier recommendations from a film's current qualities or the user's current profile.
 
-**Analysis vs qualities:** A film analysis records description **and** supported interpretation. A theme can appear explicitly in that analysis while also being extracted as a reusable quality; those serve different purposes. After analysis, run a separate quality-association step against the shared vocabulary. Improvements to the vocabulary should not require regenerating all film analyses, and analysis revisions should permit reassessment of qualities.
+Whether FilmAnalysis/AnalysisQuality still serve a useful independent purpose remains open. They are not required solely to explain historical scores, and there is no settled requirement to archive every former film-quality set. Consider current source information plus directly managed current associations; identify any separate review, rollback or audit need before retaining additional history. No existing model or data is removed by this documentation decision.
 
-Owner clarification, 27 October 2026: use multiple sources to build context for original analysis. Prefer independent corroboration for individual claims and distinguish it from complementary detail. Scripts/subtitles are eligible research inputs, without assuming they capture the finished film completely; reviews can confirm scenes or add craft observations. Record source dependencies, cut/draft differences, conflicting evidence and provisional single-source claims. Analysis is deliberately experiential. Multiple independent accounts of fear, disgust or other responses are evidence of those experiences, not universal or population-wide claims; contrasting responses can coexist. Technical execution supports the account rather than automatically becoming a quality. Analysis and qualities share terminology where useful without requiring one-to-one categories. Assess qualities for preference relevance, transferability, discrimination and reliable identification; actual qualities emerge from the films rather than a pre-generated list. See [requirements, evidence standards, source-use matrix and review rubric](film_analysis_requirements.md).
+### 5.4 Film information, reporting and comparison
 
-Long-term community members or selected curators can propose changes, independently verified against the exact revision before acceptance. Authors cannot approve their own changes; whether one or two independent reviewers are required remains open. Generated drafts supply a provisional starting point. This is a future workflow requirement, not implemented functionality.
+Present useful sourced film information, accepted qualities and their context with spoiler labelling and a way to report inaccuracies. Keep film facts/traits separate from personal predictions. Normal navigation from watched Library may warn about spoilers; direct access need not enforce watched status. Discovery cards remain spoiler-safe. Community moderation UI remains separately scoped.
 
-Format evolution must distinguish structural changes from changed evidence or quality meanings. Preserve original user ratings and expressions; identify revisions supporting derived interpretations, reassess affected results and prevent obsolete or duplicate contributions. Detailed future requirements and open processing policies are recorded in [analysis evolution](film_analysis_requirements.md#evolving-the-format-and-derived-preferences); no recomputation implementation is authorised here.
+The proposed podcast can compare original expectations with the hosts' submitted reactions using actual historical score contributions. It does not require Glutton to own a second encyclopaedic narrative or invent predicted scene reactions. Film information, personal recommendation explanation and review comparison remain distinct presentation responsibilities, not a commitment to an analysis persistence model.
 
-Future learning cycle: accepted analyses support qualities and discovery; eligible original user expressions can then supply experiential evidence for proposed, independently reviewed analysis improvements. Preserve contrasting experiences, provenance and source independence; generated conclusions are not fresh testimony. Contribution eligibility, consent, attribution and withdrawal/retention policies must be specified before implementing feedback. See [the feedback cycle](film_analysis_requirements.md#future-feedback-from-user-expressions).
-
-### 5.3 Analysis visibility and error reporting
-
-From the beginning, expose the analysis through a readable film detail view, with clearly separated factual/descriptive and interpretive material where possible, source references and an accessible **Report an inaccuracy** action. A report should identify the film and ideally the disputed section, accept a free-text correction and optional reference, and be reviewable manually by the product owner. Reporting does not directly edit published content. A community-curated, Wikipedia-style proposed-edit and moderation workflow is explicitly **post-MVP**.
-
-Spoiler policy: analysis pages are directly accessible and may contain full spoilers, with clearly labelled links normally provided through the watched Library view. They do not require a watched authorization check. Rating pages follow seen confirmation. Recommendation cards and discovery summaries remain spoiler-safe.
+See [film-quality requirements](film_quality_requirements.md) for evidence, JEV question/request-packing discussion, reassessment boundaries and open model decisions.
 
 ## 6. From expressions to recommendations
 
-### 6.1 Classification
+### 6.1 JEV assessment and context
 
-Given a watched film, its analysis and a viewer's expression, evaluate the expression against candidate qualities grouped by category. An expression can match multiple qualities, even within one category. Keep the user's original text and enough processing provenance to rerun classification when qualities or evaluation methods change.
+JEV is the chosen engine for quality assessment and expression interpretation. Give it explicit concept definitions, exclusions and useful film/source context; preserve original viewer text. An expression can match multiple qualities and may describe a particular portrayal rather than an unrestricted liking for a topic. Presence probabilities are not preference weights.
 
-**Jev investigation:** Benchmark (a) `Choice` decisions by category, inspecting option probabilities and dynamic thresholds based on option count, against (b) independent `Noul` yes/no relevance questions for each quality, batched by category or in a combined request where supported. Choice probabilities are relative to alternatives and are not independent per-quality relevance probabilities; empirical tests, cost and latency should decide the strategy. A none-of-the-above/coverage evaluation may help flag unrepresented expressions. Don't pre-emptively overengineer false-positive handling; test it. A future language-model review can periodically inspect flagged expressions and propose missing qualities, with human review before vocabulary updates.
-
-Supply the film analysis as context to interpret references to specific scenes. Benchmark complete context against smaller sections for accuracy, latency and cost. The model must classify the viewer's expressed appreciation/dislike, not simply list whatever appears in the film.
+Discuss logical judgments separately from request packing. One independent question per quality can be sent in one request, several batches or separate calls. No production batch size, category partition, threshold or preference-strength primitive is settled. Compare the actual context/failure/cost tradeoffs before selecting packing; the earlier batch-of-50 setting is not a product requirement. See [JEV questions and packing](film_quality_requirements.md#jev-questions-and-request-packing-remain-to-be-agreed).
 
 ### 6.2 Preference evidence and contextual reinterpretation — core MVP behaviour
 
 Glutton uses **one recommendation process with two complementary sources of evidence**:
 
 1. **Rating-pattern evidence:** Each of the four ratings contributes positive or negative evidence for the qualities associated with the rated film. Brilliant/Garbage contribute more strongly than I Enjoyed That/Not For Me. A quality recurring across positively rated films accumulates positive evidence; recurring across negatively rated films accumulates negative evidence. Do not infer positive appreciation from mere exposure or frequency of watched films. Rating-only users must still receive useful recommendations.
-2. **Explicit-expression evidence:** The user's actual words, classified against qualities with film-analysis context, identify more particular reasons for enjoyment or dislike. An expression may concern *how* a quality is presented, not simply the presence of a topic (e.g. liking **monstrous, non-romanticised vampires** does not establish an unrestricted liking for vampires). Preserve original wording and contextual meaning. Support matching multiple qualities without prematurely requiring compound or conditional-quality infrastructure.
+2. **Explicit-expression evidence:** The user's actual words, classified against qualities with relevant sourced film context, identify more particular reasons for enjoyment or dislike. An expression may concern *how* a quality is presented, not simply the presence of a topic (e.g. liking **monstrous, non-romanticised vampires** does not establish an unrestricted liking for vampires). Preserve original wording and contextual meaning. Support matching multiple qualities without prematurely requiring compound or conditional-quality infrastructure.
 
 The **expressions profile is derived only from explicit expressions**, never from rating patterns or earlier inferred preference scores. It can become more precise as users express more. The **inferred preference profile** aggregates rating evidence and may use that expressions profile as an interpretive lens to attribute greater relevance to some of the qualities present in previously rated films. For example, an explicit appreciation of grotesque practical effects may make those qualities more plausible explanations for older positive ratings that had no expressions. New expressions should not be retroactively fabricated for those ratings.
 
@@ -235,16 +217,16 @@ Do not prescribe weights, thresholds, refresh schedules or scoring mathematics i
 
 ### 6.5 Evaluation
 
-Test coverage (important characteristics captured), overlap (meaningful similarities across films), discrimination (different films remain distinguishable) and usefulness to users. Benchmark Jev Choice vs Noul on expressions that are short, elaborate, ambiguous, multi-quality and paraphrased, including cases with no appropriate quality. Measure precision/recall against hand-labelled examples, cost and latency. Measure recommendation usefulness separately from quality-tag overlap. Compare **rating-only** recommendations against **expression-informed, historically reinterpreted** recommendations. Test positive and negative recurring signals; an isolated liked film with an otherwise unfamiliar quality; expressions that identify a particular portrayal rather than a whole genre; changes that materially affect and do not affect the expressions profile; and before/after recommendation rankings on a refresh. Verify that repeated recalculation without new inputs does not amplify preference strength. Re-evaluate previously stored data after vocabulary or prompt changes where justified.
+Test coverage (important characteristics captured), overlap (meaningful similarities across films), discrimination (different films remain distinguishable) and usefulness to users. Evaluate the agreed JEV question design on expressions that are short, elaborate, ambiguous, multi-quality and paraphrased, including cases with no appropriate quality. Measure precision/recall against hand-labelled examples, cost and latency. Measure recommendation usefulness separately from quality-tag overlap. Compare **rating-only** recommendations against **expression-informed, historically reinterpreted** recommendations. Test positive and negative recurring signals; an isolated liked film with an otherwise unfamiliar quality; expressions that identify a particular portrayal rather than a whole genre; changes that materially affect and do not affect the expressions profile; and before/after recommendation rankings on a refresh. Verify that repeated recalculation without new inputs does not amplify preference strength. Re-evaluate previously stored data after vocabulary or prompt changes where justified.
 
 ## 7. MVP scope and staged delivery
 
 **Foundational MVP / first working loop**
 
-- Small seed catalogue with film metadata, analyses and provisional film–quality associations.
+- Small seed catalogue with film metadata, sourced context and provisional film–quality associations.
 - A cycling rating interface with persistent confirmed-unseen status, exclusion of confirmed-unseen films from rating prompts, direct watchlist addition for unseen films, four-level personal ratings and **optional multiple individual expressions**, saved together.
 - A library with To watch, Watched and Not interested views, pending-rating access and the ability to revisit ratings and expressions.
-- Film analysis directly accessible with spoiler-labelled navigation from the watched Library view, with manual inaccuracy reporting.
+- Source-backed film information and qualities accessible with spoiler-labelled navigation and manual inaccuracy reporting; independent analysis-model retention remains open.
 - JEV implicit and explicit quality scoring using the pre-submission expressions profile, plus separate expressions-profile assessment/building based **only on explicitly submitted expressions**; retain original text.
 - Positive and negative preference inference from recurring qualities across rated films, including for users who never submit expressions.
 - **Contextual reinterpretation of existing ratings** when the expressions profile changes meaningfully, through periodic reassessment rather than compulsory recalculation after each expression; exact cadence and optional manual refresh remain open.
@@ -253,7 +235,7 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 
 **Subsequent milestones**
 
-- External catalogue lookup and user-requested film import with analysis/enrichment workflow (may be implemented earlier if useful, but should not block the first loop).
+- External catalogue lookup and user-requested film import with source/quality enrichment (may be implemented earlier if useful, but should not block the first loop).
 - A separate conversational reflection or rewatch experience is an optional future experiment, not a committed milestone.
 - More expressive recommendations and richer feedback, including reasons for Not interested, where evidence justifies it.
 - Shared viewer expressions as rotating inspiration on watched-film pages, once consent/moderation mechanisms are adequate. A prototype may use clearly labelled curated examples before real shared contributions exist.
@@ -267,21 +249,15 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 - Exhaustive fine-grained quality hierarchies, elaborate conditional-quality modelling, and constant live generative processing. (Basic retrospective reinterpretation **is** in scope.)
 - Subscriptions, mandatory paid tiers, advertisements, paid ranking or acquisition-driven growth features.
 
-## 8. Research assets and present limitations
+## 8. Working vocabulary and design limits
 
-Exploratory study dated 17 October 2026:
+The [working master list](film_qualities/MASTER_LIST.md) is provisional editorial material, not accepted production assignments or validated preference prediction. Retained [matching inputs and six review examples](film_qualities/README.md) support the next selection/community-review design work. Further individual-quality tuning is not a prerequisite. Superseded generative-analysis and JEV tuning artifacts were removed at the owner's request; [concise findings](research/film_quality_findings.md) preserve the useful evidence and limitations.
 
-- 50 model-drafted analyses: `horror_study/50_film_analyses.md`
-- 103 provisional qualities: `horror_study/qualities.csv`
-- Film–quality associations and matrix: `horror_study/film_quality_edges.csv`, `horror_study/film_quality_matrix.csv`
-- Similarity comparison across 1,225 film pairs: `horror_study/similarity_pairs.csv`
-- Interpretation and limitations: `horror_study/overlap_report.md`
-
-These indicate plausible connections across traditional genres (e.g. *Alien*/*The Descent*, *The Thing*/*Invasion of the Body Snatchers*, *Cat People*/*Skinamarink*), but do not establish good recommendations or production-quality source verification. Treat the dataset as experimental seed material and validate selected film profiles and associations before publishing.
+Editable categories are planned, while JEV request packing and the need for independent analysis/history models remain open. Historical score contributions must remain inspectable as vocabulary and film assignments evolve.
 
 ## 9. Sustainability, monetisation and long-term possibilities
 
-**Operating goal:** Glutton can succeed as a small personal project that real horror enthusiasts use and return to. Revenue is welcome insofar as it offsets infrastructure, metadata, hosting and AI costs as usage grows; profitability, recurring revenue and business scale are **not** success conditions. Keep costs observable and predictable, particularly for film analysis, quality scoring, profile synthesis and periodic reassessment; future conversations would add another variable cost. Reuse analyses and classifications wherever practical, set sensible limits on variable-cost operations, and revisit those limits using actual usage data.
+**Operating goal:** Glutton can succeed as a small personal project that real horror enthusiasts use and return to. Revenue is welcome insofar as it offsets infrastructure, metadata, hosting and AI costs as usage grows; profitability, recurring revenue and business scale are **not** success conditions. Keep costs observable and predictable, particularly for source assessment, quality scoring, profile synthesis and periodic reassessment; future conversations would add another variable cost. Reuse sourced context and classifications wherever practical, set sensible limits on variable-cost operations, and revisit those limits using actual usage data.
 
 **Initial monetisation stance:** No subscription requirement and no paywall in the MVP. Basic rating, free-text expressions, core recommendations and accessible film analyses should remain free. Consider an unobtrusive mechanism for **voluntary one-off donations** once there are users; it should not interrupt the product experience. If the future interactive/ThoughtForm-like reflection experience has substantial marginal AI costs, optional pay-per-use or one-off credits could be explored later, rather than assuming a subscription. Do not paywall it until usefulness, demand and cost are understood.
 
@@ -289,7 +265,7 @@ These indicate plausible connections across traditional genres (e.g. *Alien*/*Th
 
 **Licensing and contributor rights:** Public accessibility does not automatically mean source material, imagery, metadata or reviews can be republished or commercially reused. Check provider terms, attribution and permitted use before enabling donations/affiliates or scaling. If viewer expressions, analyses or future community contributions become valuable collective data, establish clear, respectful permissions and privacy practices; avoid treating user-submitted text as freely transferable merely because it is stored by the application.
 
-**Long-term opportunity, not roadmap obligation:** A distinctive recommendation experience, a useful body of film analyses, an evolving quality vocabulary, and an engaged horror community may become independently valuable. A discovery platform might someday wish to partner with or acquire Glutton. That is an optional outcome of building something people value, **not** a reason to adopt startup-style growth targets, premature commercial architecture or engagement tricks. The product remains successful if it stays small, loved and economically sustainable.
+**Long-term opportunity, not roadmap obligation:** A distinctive recommendation experience, useful source-backed film qualities, an evolving quality vocabulary, and an engaged horror community may become independently valuable. A discovery platform might someday wish to partner with or acquire Glutton. That is an optional outcome of building something people value, **not** a reason to adopt startup-style growth targets, premature commercial architecture or engagement tricks. The product remains successful if it stays small, loved and economically sustainable.
 
 ## 10. Non-binding technical considerations for architectural design
 
@@ -297,30 +273,30 @@ The next phase should decide architecture, persistence and integration boundarie
 
 - Ruby on Rails and PostgreSQL in a cohesive monolith; no initial distributed-service requirement.
 - Explicit separation of catalogue/enrichment, personal taste and discovery responsibilities, without assuming Rails engines or specific module boundaries.
-- Structured versioned film analyses (possibly JSONB initially) and database-backed, stable quality identities with many-to-many relationships.
-- Background jobs for reusable analysis, reclassification, periodic scoring reassessment and external enrichment; an additional on-demand refresh control remains an option.
-- Adapter boundaries for metadata provider, generative film research/analysis, JEV quality scoring/profile-change assessment, Claude expressions-profile synthesis and recommendation evaluation.
-- Persistence of source provenance, analysis version, quality-vocabulary version and classification run metadata to support reproducibility.
+- Database-backed editable quality categories, stable quality identities and current film associations. Independent analysis/history models remain an open decision.
+- Background jobs where justified for source refresh, accepted quality-change reassessment and external enrichment; an additional on-demand refresh control remains an option.
+- Adapter boundaries for metadata provider, source retrieval, JEV quality scoring/profile-change assessment, Claude expressions-profile synthesis and recommendation evaluation.
+- Persistence of source provenance, relevant source/accepted-input identity, quality-vocabulary revision and classification run metadata to support reproducibility.
 - Usage limits, deduplication, retry/idempotency and sensible costs for external model/provider calls.
 
 Avoid choosing framework patterns or building abstractions solely for potential future community features. Implement only the boundaries that current behaviours require, then evolve them.
 
 ## 11. Open product questions / acceptance tests
 
-**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; consent/review for shared expression prompts; whether the first recommendation version needs any minimum taste profile; the initial analysis completeness bar; whether user film import belongs in the first release or immediate follow-on; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful expressions-profile changes; periodic reassessment cadence and optional manual refresh; expressions-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
+**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; consent/review for shared expression prompts; whether the first recommendation version needs any minimum taste profile; source coverage sufficient for useful initial qualities; whether independent analysis models/history are needed; JEV request packing; whether user film import belongs in the first release or immediate follow-on; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful expressions-profile changes; periodic reassessment cadence and optional manual refresh; expressions-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
 
 **First-success tests:**
 
 1. Can someone rate a dozen familiar films quickly, **without writing any expressions**, and still receive plausible recommendations?
 2. Can it accumulate distinct positive and negative evidence from qualities repeatedly appearing in films the viewer rates? Can it identify meaningful shared qualities from the expressions users do choose to write?
 3. Can it suggest an unclassified film with a believable, spoiler-safe explanation, and exclude it after a To watch, Watched or Not interested decision without adding false enjoyment evidence?
-4. Can users read the supporting film analysis and flag an inaccurate claim?
+4. Can users inspect sourced film information and quality context, and report an inaccurate association?
 5. Can classifications be regenerated after a quality change without losing the viewer's original expressions?
 6. After a viewer supplies an informative expression, can Glutton **reinterpret older ratings** and produce sensibly changed recommendations at a periodic refresh (or optional on-demand refresh), without manufacturing new explicit expressions or self-reinforcing scores?
 7. Can save-time JEV scoring use the pre-submission profile while separately assessing profile changes, with explicit evidence taking effect after scoring and historical evidence improving after refresh?
 8. Can viewers manage their three library views, find watched films awaiting ratings, revise ratings/expressions, and reconsider dismissals?
 9. Does Haven’t seen it prevent repeated rating prompts while preserving recommendation eligibility, and can the viewer add it directly to To watch? Does marking it watched subsequently make it available to rate?
-10. Can a film be added or reanalysed using the same reproducible research-and-analysis specification, without claiming unsupported details?
+10. Can source information be refreshed independently of accepted quality changes, with scoring updated only for relevant accepted changes?
 
 **Product hypothesis:** Ratings identify recurring patterns in what horror enthusiasts like and dislike. Optional expressions provide the context to reinterpret those ratings more intelligently, yielding increasingly relevant and understandable recommendations as users engage—while making reflection on films rewarding in its own right. **Rate films to narrow; express yourself to supercharge discovery.**
 

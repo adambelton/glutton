@@ -1,0 +1,1651 @@
+{
+  "version": "neutral-context-v0.2-2026-10-28",
+  "status": "provisional_source_matching_baseline_six_film_tested",
+  "qualities": [
+    {
+      "id": "supernatural_haunting",
+      "name": "Supernatural haunting",
+      "facet": "Subgenres",
+      "match_rule": "A ghost or haunting causes danger, fear or disturbance in the story.",
+      "not_sufficient": "A ghost costume, a title or a metaphor for a troubled past does not establish a haunting."
+    },
+    {
+      "id": "possession_horror",
+      "name": "Possession horror",
+      "facet": "Subgenres",
+      "match_rule": "An invading entity takes control of a person's body or actions.",
+      "not_sufficient": "Unusual behaviour, hallucination or replacement by a separate duplicate does not by itself establish invading control."
+    },
+    {
+      "id": "psychological_horror",
+      "name": "Psychological horror",
+      "facet": "Subgenres",
+      "match_rule": "Mental disturbance, unreliable perception or internal psychological conflict is a source of the film's horror.",
+      "not_sufficient": "Fear caused by a known external danger alone does not establish a psychological horror mechanism."
+    },
+    {
+      "id": "body_horror",
+      "name": "Body horror",
+      "facet": "Subgenres",
+      "match_rule": "Bodily violation, mutation or loss of bodily integrity is presented as a source of horror.",
+      "not_sufficient": "An injury mentioned in a synopsis or the mere appearance of a creature does not establish horror about bodily integrity."
+    },
+    {
+      "id": "folk_horror",
+      "name": "Folk horror",
+      "facet": "Subgenres",
+      "match_rule": "Folk beliefs, local traditions or community rituals are a source of horror.",
+      "not_sufficient": "A rural setting alone does not establish folk horror. Invented folklore need not be an authentic historical practice."
+    },
+    {
+      "id": "cosmic_horror",
+      "name": "Cosmic horror",
+      "facet": "Subgenres",
+      "match_rule": "An incomprehensible nonhuman reality threatens human significance, knowledge or identity.",
+      "not_sufficient": "A god, monster, alien or global danger alone does not establish incomprehensibility or human insignificance."
+    },
+    {
+      "id": "slasher_horror",
+      "name": "Slasher horror",
+      "facet": "Subgenres",
+      "match_rule": "A killer repeatedly stalks and attacks a succession of victims.",
+      "not_sufficient": "One attack or a murder without stalking a succession of victims does not establish this pattern."
+    },
+    {
+      "id": "creature_feature",
+      "name": "Creature feature",
+      "facet": "Subgenres",
+      "match_rule": "A nonhuman creature poses a physical threat in the story.",
+      "not_sufficient": "A harmless creature, a metaphor or a creature mentioned only in a title does not establish the physical threat."
+    },
+    {
+      "id": "zombie_horror",
+      "name": "Zombie horror",
+      "facet": "Subgenres",
+      "match_rule": "Reanimated or zombie-like humans threaten people in the story.",
+      "not_sufficient": "A dead body alone or a figurative description of someone as a zombie does not establish a zombie threat."
+    },
+    {
+      "id": "vampire_horror",
+      "name": "Vampire horror",
+      "facet": "Subgenres",
+      "match_rule": "Vampirism is a source of danger or horror in the story.",
+      "not_sufficient": "Blood loss or a vampire reference alone does not establish a vampiric threat."
+    },
+    {
+      "id": "werewolf_horror",
+      "name": "Werewolf horror",
+      "facet": "Subgenres",
+      "match_rule": "A human transforms into a wolf-like predator that is a source of danger or horror.",
+      "not_sufficient": "A wolf attack or a comparison with a wolf does not establish human transformation."
+    },
+    {
+      "id": "witchcraft_horror",
+      "name": "Witchcraft horror",
+      "facet": "Subgenres",
+      "match_rule": "Witches or deliberate magical practice cause danger or horror.",
+      "not_sufficient": "An accusation of witchcraft without supported magical practice or a witch threat does not establish this mechanism."
+    },
+    {
+      "id": "occult_horror",
+      "name": "Occult horror",
+      "facet": "Subgenres",
+      "match_rule": "Hidden supernatural knowledge or esoteric practice is involved in the film's threat.",
+      "not_sufficient": "A secret with no supernatural or esoteric connection does not establish occult horror."
+    },
+    {
+      "id": "religious_horror",
+      "name": "Religious horror",
+      "facet": "Subgenres",
+      "match_rule": "Sacred beliefs, religious evil or spiritual conflict are a source of horror.",
+      "not_sufficient": "Religious clothing, a building or a character's affiliation alone does not establish religious horror."
+    },
+    {
+      "id": "science_fiction_horror",
+      "name": "Science-fiction horror",
+      "facet": "Subgenres",
+      "match_rule": "A scientific or extraterrestrial premise produces danger or horror.",
+      "not_sufficient": "A scientist's presence or ordinary technology alone does not establish a science-fiction premise."
+    },
+    {
+      "id": "ecological_horror",
+      "name": "Ecological horror",
+      "facet": "Subgenres",
+      "match_rule": "Ecological disturbance or a hostile natural world produces danger or horror.",
+      "not_sufficient": "An outdoor setting alone does not establish ecological horror."
+    },
+    {
+      "id": "survival_horror",
+      "name": "Survival horror",
+      "facet": "Subgenres",
+      "match_rule": "Characters struggle to stay alive against an immediate lethal threat.",
+      "not_sufficient": "A reference to possible death without a depicted struggle to survive does not establish survival horror."
+    },
+    {
+      "id": "home_invasion_horror",
+      "name": "Home-invasion horror",
+      "facet": "Subgenres",
+      "match_rule": "Intruders enter a domestic refuge and threaten its occupants.",
+      "not_sufficient": "A threat outside a home or an invited visitor with no threatening intrusion does not establish home invasion."
+    },
+    {
+      "id": "revenge_horror",
+      "name": "Revenge horror",
+      "facet": "Subgenres",
+      "match_rule": "Retaliation for an earlier wrong causes threatening or horrific actions.",
+      "not_sufficient": "Unrelated violence after an earlier wrong does not establish retaliation."
+    },
+    {
+      "id": "horror_comedy",
+      "name": "Horror comedy",
+      "facet": "Subgenres",
+      "match_rule": "The film combines horror with comic treatment or situations.",
+      "not_sufficient": "A character smiling or an isolated quoted joke without comic treatment of the film's events does not establish horror comedy."
+    },
+    {
+      "id": "gothic_horror",
+      "name": "Gothic horror",
+      "facet": "Subgenres",
+      "match_rule": "Decay, haunted histories or Gothic spaces and sensibilities contribute to the film's horror.",
+      "not_sufficient": "An old building alone does not establish a Gothic treatment."
+    },
+    {
+      "id": "found_footage_horror",
+      "name": "Found-footage horror",
+      "facet": "Subgenres",
+      "match_rule": "Recordings presented as recovered or discovered material form part of the film's storytelling.",
+      "not_sufficient": "A recording played as an ordinary prop does not establish a recovered-footage presentation."
+    },
+    {
+      "id": "screenlife_horror",
+      "name": "Screenlife horror",
+      "facet": "Subgenres",
+      "match_rule": "Events are presented to the audience through computer or phone interfaces.",
+      "not_sufficient": "Characters using devices in ordinary camera shots does not establish interface-based presentation."
+    },
+    {
+      "id": "anthology_horror",
+      "name": "Anthology horror",
+      "facet": "Subgenres",
+      "match_rule": "The film is composed of several distinct horror stories.",
+      "not_sufficient": "A backstory, flashback or change of viewpoint within one story does not alone establish an anthology."
+    },
+    {
+      "id": "backwoods_horror",
+      "name": "Backwoods horror",
+      "facet": "Subgenres",
+      "match_rule": "An isolated rural or backcountry environment exposes characters to the film's threat.",
+      "not_sufficient": "A brief journey through countryside without a connection to the threat does not establish this setting mechanism."
+    },
+    {
+      "id": "urban_horror",
+      "name": "Urban horror",
+      "facet": "Subgenres",
+      "match_rule": "Conditions or social spaces of city life contribute to the film's horror.",
+      "not_sufficient": "A city address alone does not establish a connection between urban life and the horror."
+    },
+    {
+      "id": "apocalyptic_horror",
+      "name": "Apocalyptic horror",
+      "facet": "Subgenres",
+      "match_rule": "Societal collapse or a world-ending catastrophe is depicted or described within the story.",
+      "not_sufficient": "A local disaster alone does not establish societal collapse or a world-ending threat."
+    },
+    {
+      "id": "epidemic_horror",
+      "name": "Epidemic horror",
+      "facet": "Subgenres",
+      "match_rule": "Disease or infection spreads through a population and creates danger.",
+      "not_sufficient": "One infected person without spread or an established outbreak does not establish an epidemic."
+    },
+    {
+      "id": "erotic_horror",
+      "name": "Erotic horror",
+      "facet": "Subgenres",
+      "match_rule": "Sexual desire is linked to the film's horror or danger.",
+      "not_sufficient": "Nudity or an intimate relationship alone does not establish the desire-horror connection."
+    },
+    {
+      "id": "medical_horror",
+      "name": "Medical horror",
+      "facet": "Subgenres",
+      "match_rule": "Medical treatment, institutions or experimentation produce danger or horror.",
+      "not_sufficient": "A hospital location or a doctor's presence alone does not establish medical horror."
+    },
+    {
+      "id": "remote_isolation",
+      "name": "Remote isolation",
+      "facet": "Tropes and situations",
+      "match_rule": "Distance from assistance limits characters' ability to obtain help against danger.",
+      "not_sufficient": "A remote place name alone does not establish difficulty obtaining help."
+    },
+    {
+      "id": "confining_interiors",
+      "name": "Confining interiors",
+      "facet": "Tropes and situations",
+      "match_rule": "Enclosed indoor spaces limit escape or action.",
+      "not_sufficient": "An indoor scene alone does not establish restricted escape or movement."
+    },
+    {
+      "id": "ritual_survival_rules",
+      "name": "Ritual survival rules",
+      "facet": "Tropes and situations",
+      "match_rule": "Following specified ritual rules enables characters to navigate or survive a threat.",
+      "not_sufficient": "A ritual performed without survival conditions or consequences does not establish survival rules."
+    },
+    {
+      "id": "bargain_with_an_entity",
+      "name": "Bargain with an entity",
+      "facet": "Tropes and situations",
+      "match_rule": "A negotiated exchange with a supernatural being has terms that affect the participants.",
+      "not_sufficient": "An offering without an exchange or agreement does not establish a bargain."
+    },
+    {
+      "id": "secret_cult",
+      "name": "Secret cult",
+      "facet": "Tropes and situations",
+      "match_rule": "An organised hidden group serves a dangerous belief or entity.",
+      "not_sufficient": "Secrecy or conspiracy alone does not establish a shared cultic belief or devotion."
+    },
+    {
+      "id": "doppelganger",
+      "name": "Doppelganger",
+      "facet": "Tropes and situations",
+      "match_rule": "A double or imitation of a person creates danger or uncertainty.",
+      "not_sufficient": "A resemblance with no identity-double role does not establish a doppelganger."
+    },
+    {
+      "id": "concealed_infection",
+      "name": "Concealed infection",
+      "facet": "Tropes and situations",
+      "match_rule": "An infected or assimilated person's condition is hidden from others.",
+      "not_sufficient": "A known infection or an unrelated secret does not establish concealed infection."
+    },
+    {
+      "id": "corrupted_child",
+      "name": "Corrupted child",
+      "facet": "Tropes and situations",
+      "match_rule": "A child becomes a threatening agent through corruption or supernatural influence.",
+      "not_sufficient": "A child in danger or a malicious adult described as childlike does not establish a corrupted child."
+    },
+    {
+      "id": "inherited_curse",
+      "name": "Inherited curse",
+      "facet": "Tropes and situations",
+      "match_rule": "A supernatural affliction passes through a family or lineage.",
+      "not_sufficient": "A family misfortune without a supernatural transmission does not establish an inherited curse."
+    },
+    {
+      "id": "hostile_landscape",
+      "name": "Hostile landscape",
+      "facet": "Tropes and situations",
+      "match_rule": "Terrain or environmental conditions increase the danger faced by characters.",
+      "not_sufficient": "A landscape description without an adverse effect on characters does not establish a hostile landscape."
+    },
+    {
+      "id": "stalking_pursuit",
+      "name": "Stalking pursuit",
+      "facet": "Tropes and situations",
+      "match_rule": "A predator repeatedly follows or hunts a particular target.",
+      "not_sufficient": "One unexpected attack without following or hunting does not establish stalking pursuit."
+    },
+    {
+      "id": "contagious_curse",
+      "name": "Contagious curse",
+      "facet": "Tropes and situations",
+      "match_rule": "A supernatural threat passes between people through a described mechanism.",
+      "not_sufficient": "An ordinary infection or several unrelated supernatural attacks do not establish curse transmission."
+    },
+    {
+      "id": "last_survivor",
+      "name": "Last survivor",
+      "facet": "Tropes and situations",
+      "match_rule": "Only one member of the threatened group is left alive in the story's stated outcome.",
+      "not_sufficient": "A source mentioning one survivor without establishing the fate of the rest does not establish a last survivor."
+    },
+    {
+      "id": "siege",
+      "name": "Siege",
+      "facet": "Tropes and situations",
+      "match_rule": "An opposing force surrounds or contains people in a location they defend.",
+      "not_sufficient": "Confinement without a besieging force or a defended position does not establish a siege."
+    },
+    {
+      "id": "grotesque_transformation",
+      "name": "Grotesque transformation",
+      "facet": "Tropes and situations",
+      "match_rule": "A body is shown or described changing into a grotesque form.",
+      "not_sufficient": "A pre-existing unusual appearance without transformation does not establish grotesque transformation."
+    },
+    {
+      "id": "slow_burn_pacing",
+      "name": "Slow-burn pacing",
+      "facet": "Narrative devices",
+      "match_rule": "The completed film's pacing is described as gradual or slow-building.",
+      "not_sufficient": "Chronological escalation, a decades-long plot or a long rough cut does not establish slow screen pacing."
+    },
+    {
+      "id": "relentless_pacing",
+      "name": "Relentless pacing",
+      "facet": "Narrative devices",
+      "match_rule": "The completed film's pacing is described as rapid or unremitting.",
+      "not_sufficient": "Many plot events or a high body count alone do not establish rapid or unremitting screen pacing."
+    },
+    {
+      "id": "investigation_led_narrative",
+      "name": "Investigation-led narrative",
+      "facet": "Narrative devices",
+      "match_rule": "Characters' systematic investigation moves the story forward.",
+      "not_sufficient": "A single question or accidental discovery without investigation does not establish an investigation-led narrative."
+    },
+    {
+      "id": "whodunit_structure",
+      "name": "Whodunit structure",
+      "facet": "Narrative devices",
+      "match_rule": "The narrative presents a mystery about which person committed a crime.",
+      "not_sufficient": "A known perpetrator or a mystery about a non-criminal event does not establish a whodunit."
+    },
+    {
+      "id": "hidden_identity_mystery",
+      "name": "Hidden-identity mystery",
+      "facet": "Narrative devices",
+      "match_rule": "Suspense concerns who or what a character really is.",
+      "not_sufficient": "A hidden name without identity-related suspense does not establish a hidden-identity mystery."
+    },
+    {
+      "id": "unreliable_narration",
+      "name": "Unreliable narration",
+      "facet": "Narrative devices",
+      "match_rule": "A narrator's account of events is misleading or unreliable.",
+      "not_sufficient": "A character who lacks information without misleading narration does not establish an unreliable narrator."
+    },
+    {
+      "id": "uncertain_perception",
+      "name": "Uncertain perception",
+      "facet": "Narrative devices",
+      "match_rule": "A viewpoint character sees or hears events whose occurrence or accuracy is called into question.",
+      "not_sufficient": "Uncertainty about another person's identity, motive or danger without unreliable seeing or hearing does not establish uncertain perception."
+    },
+    {
+      "id": "nonlinear_chronology",
+      "name": "Nonlinear chronology",
+      "facet": "Narrative devices",
+      "match_rule": "The film presents events out of chronological order.",
+      "not_sufficient": "A synopsis retelling events out of order or a character recalling something without a presented time shift does not establish nonlinear chronology."
+    },
+    {
+      "id": "time_loop",
+      "name": "Time loop",
+      "facet": "Narrative devices",
+      "match_rule": "Characters experience a literal repeated period of time.",
+      "not_sufficient": "Similar events on different days without literal temporal repetition do not establish a time loop."
+    },
+    {
+      "id": "repeated_ordeal",
+      "name": "Repeated ordeal",
+      "facet": "Narrative devices",
+      "match_rule": "A similar dangerous procedure or ordeal recurs with variations.",
+      "not_sufficient": "Several unrelated dangers or one ordeal lasting a long time do not establish a repeated ordeal."
+    },
+    {
+      "id": "dramatic_irony",
+      "name": "Dramatic irony",
+      "facet": "Narrative devices",
+      "match_rule": "The audience is given information relevant to a character's situation that the character lacks.",
+      "not_sufficient": "Characters knowing different things does not establish that the audience knows more than the affected character."
+    },
+    {
+      "id": "restricted_viewpoint",
+      "name": "Restricted viewpoint",
+      "facet": "Narrative devices",
+      "match_rule": "The audience's access to events and information is limited to one character's experience.",
+      "not_sufficient": "Having one protagonist alone does not establish restricted presentation of information."
+    },
+    {
+      "id": "alternating_viewpoints",
+      "name": "Alternating viewpoints",
+      "facet": "Narrative devices",
+      "match_rule": "The narrative alternates among different characters' perspectives.",
+      "not_sufficient": "A conversation or a camera cut between speakers alone does not establish alternating narrative viewpoints."
+    },
+    {
+      "id": "concealed_monster",
+      "name": "Concealed monster",
+      "facet": "Narrative devices",
+      "match_rule": "The film withholds the threat's physical form before revealing it or keeping it unseen.",
+      "not_sufficient": "A synopsis omitting the creature's appearance does not establish that the film conceals it."
+    },
+    {
+      "id": "delayed_explanation",
+      "name": "Delayed explanation",
+      "facet": "Narrative devices",
+      "match_rule": "The narrative postpones an explanation of events that it has presented as unexplained.",
+      "not_sufficient": "A synopsis explaining events late does not establish that the film delays the explanation."
+    },
+    {
+      "id": "unexplained_mechanism",
+      "name": "Unexplained mechanism",
+      "facet": "Narrative devices",
+      "match_rule": "The mechanism of a threat is left unexplained by the film.",
+      "not_sufficient": "A source omitting an explanation does not establish that the completed film leaves it unexplained."
+    },
+    {
+      "id": "identity_revelation_twist",
+      "name": "Identity-revelation twist",
+      "facet": "Narrative devices",
+      "match_rule": "An identity revelation changes how earlier events are understood.",
+      "not_sufficient": "An identity disclosed without revising the interpretation of earlier events does not establish an identity-revelation twist."
+    },
+    {
+      "id": "perspective_reversal_twist",
+      "name": "Perspective-reversal twist",
+      "facet": "Narrative devices",
+      "match_rule": "A revelation changes which account or perspective earlier events are understood through.",
+      "not_sufficient": "New information that only continues the story without changing its earlier interpretation does not establish a perspective reversal."
+    },
+    {
+      "id": "false_ending",
+      "name": "False ending",
+      "facet": "Narrative devices",
+      "match_rule": "An apparent conclusion is followed by renewed threat or a reversal that reopens the story.",
+      "not_sufficient": "A further scene after a conclusion without renewed threat or reversal does not establish a false ending."
+    },
+    {
+      "id": "real_time_structure",
+      "name": "Real-time structure",
+      "facet": "Narrative devices",
+      "match_rule": "The film's presented action unfolds approximately continuously in real time.",
+      "not_sufficient": "A short story duration or a synopsis without time markers does not establish real-time presentation."
+    },
+    {
+      "id": "grief_and_bereavement",
+      "name": "Grief and bereavement",
+      "facet": "Themes",
+      "match_rule": "The film portrays mourning or other responses to the loss of a loved one.",
+      "not_sufficient": "A death without a portrayed response to bereavement does not establish grief."
+    },
+    {
+      "id": "ambivalence_about_motherhood",
+      "name": "Ambivalence about motherhood",
+      "facet": "Themes",
+      "match_rule": "Motherhood is portrayed through conflicting feelings or demands.",
+      "not_sufficient": "A mother facing danger without conflicting feelings or demands about motherhood does not establish ambivalence."
+    },
+    {
+      "id": "paternal_legacy",
+      "name": "Paternal legacy",
+      "facet": "Themes",
+      "match_rule": "A father's values or actions influence the next generation's choices.",
+      "not_sufficient": "A father's presence without an effect on the next generation does not establish paternal legacy."
+    },
+    {
+      "id": "trauma_and_its_aftermath",
+      "name": "Trauma and its aftermath",
+      "facet": "Themes",
+      "match_rule": "The film portrays continuing effects of a traumatic experience.",
+      "not_sufficient": "A harmful event without its subsequent effects does not establish trauma's aftermath."
+    },
+    {
+      "id": "greed_and_corruption",
+      "name": "Greed and corruption",
+      "facet": "Themes",
+      "match_rule": "Desire for wealth or possessions leads to wrongdoing or moral compromise.",
+      "not_sufficient": "Wealth, poverty or wanting something without acquisitive desire leading to corruption does not establish this quality."
+    },
+    {
+      "id": "class_inequality",
+      "name": "Class inequality",
+      "facet": "Themes",
+      "match_rule": "Unequal social or economic position affects characters' opportunities, treatment or conflict.",
+      "not_sufficient": "Different incomes alone without depicted consequences do not establish class inequality as used here."
+    },
+    {
+      "id": "labour_exploitation",
+      "name": "Labour exploitation",
+      "facet": "Themes",
+      "match_rule": "Workers are exploited through their labour, conditions or compensation.",
+      "not_sufficient": "Work or an employer's presence alone does not establish labour exploitation."
+    },
+    {
+      "id": "institutional_neglect",
+      "name": "Institutional neglect",
+      "facet": "Themes",
+      "match_rule": "An institution fails to provide protection or care to people for whom it has responsibility.",
+      "not_sufficient": "An unaffiliated person's failure alone does not establish institutional neglect."
+    },
+    {
+      "id": "distrust_of_authority",
+      "name": "Distrust of authority",
+      "facet": "Themes",
+      "match_rule": "Characters or the film's account question the legitimacy, honesty or reliability of an authority.",
+      "not_sufficient": "An authority figure's appearance alone does not establish distrust."
+    },
+    {
+      "id": "faith_and_doubt",
+      "name": "Faith and doubt",
+      "facet": "Themes",
+      "match_rule": "The film portrays uncertainty or conflict concerning religious or spiritual belief.",
+      "not_sufficient": "Distrust of another person's identity or honesty alone does not establish spiritual faith and doubt."
+    },
+    {
+      "id": "religious_guilt",
+      "name": "Religious guilt",
+      "facet": "Themes",
+      "match_rule": "A character experiences guilt connected to religious teaching or practice.",
+      "not_sufficient": "Religious affiliation or guilt without a religious connection does not establish religious guilt."
+    },
+    {
+      "id": "loss_of_self",
+      "name": "Loss of self",
+      "facet": "Themes",
+      "match_rule": "A person's identity is eroded, displaced or replaced.",
+      "not_sufficient": "Disguise or concealment of an otherwise intact identity alone does not establish loss of self."
+    },
+    {
+      "id": "bodily_autonomy",
+      "name": "Bodily autonomy",
+      "facet": "Themes",
+      "match_rule": "A person's control over their own body is threatened or contested.",
+      "not_sufficient": "A bodily injury without a question of control or consent does not alone establish bodily autonomy."
+    },
+    {
+      "id": "mortality_and_ageing",
+      "name": "Mortality and ageing",
+      "facet": "Themes",
+      "match_rule": "The film portrays ageing or characters confronting the inevitability of death.",
+      "not_sufficient": "A death alone does not establish reflection on mortality or ageing."
+    },
+    {
+      "id": "illness_and_vulnerability",
+      "name": "Illness and vulnerability",
+      "facet": "Themes",
+      "match_rule": "Illness creates vulnerability or affects a character's experience.",
+      "not_sufficient": "An illness label without effects on a character does not establish illness-related vulnerability."
+    },
+    {
+      "id": "addiction_and_dependency",
+      "name": "Addiction and dependency",
+      "facet": "Themes",
+      "match_rule": "A character's compulsive dependency produces effects on their choices, relationships or wellbeing.",
+      "not_sufficient": "Use of a substance or a habit without compulsive dependency does not establish addiction."
+    },
+    {
+      "id": "sexual_repression",
+      "name": "Sexual repression",
+      "facet": "Themes",
+      "match_rule": "Sexual desire is suppressed, denied or constrained.",
+      "not_sufficient": "Lack of sexual activity without suppression or denial does not establish sexual repression."
+    },
+    {
+      "id": "gender_expectations",
+      "name": "Gender expectations",
+      "facet": "Themes",
+      "match_rule": "Expectations about gender roles shape how characters are treated or expected to behave.",
+      "not_sufficient": "A character's gender alone does not establish gender-role expectations."
+    },
+    {
+      "id": "queer_identity",
+      "name": "Queer identity",
+      "facet": "Themes",
+      "match_rule": "The film portrays queer identity or its social treatment.",
+      "not_sufficient": "A performer or filmmaker's identity, or later queer-icon status, alone does not establish queer identity within the story."
+    },
+    {
+      "id": "racial_othering",
+      "name": "Racial othering",
+      "facet": "Themes",
+      "match_rule": "People are excluded, stereotyped or dehumanised on racial grounds.",
+      "not_sufficient": "Different racial identities alone do not establish racial othering."
+    },
+    {
+      "id": "colonial_violence",
+      "name": "Colonial violence",
+      "facet": "Themes",
+      "match_rule": "The film portrays colonial domination or effects of its legacy.",
+      "not_sufficient": "A period setting alone does not establish colonial violence or its legacy."
+    },
+    {
+      "id": "guilt_and_responsibility",
+      "name": "Guilt and responsibility",
+      "facet": "Themes",
+      "match_rule": "Characters confront responsibility or guilt for harm they have caused or allowed.",
+      "not_sufficient": "Distress without guilt or responsibility for harm does not establish this quality."
+    },
+    {
+      "id": "complicity",
+      "name": "Complicity",
+      "facet": "Themes",
+      "match_rule": "Characters participate in, enable or benefit from others' wrongdoing.",
+      "not_sufficient": "Witnessing harm without participation, enabling or benefit does not establish complicity."
+    },
+    {
+      "id": "inherited_harm",
+      "name": "Inherited harm",
+      "facet": "Themes",
+      "match_rule": "Earlier generations' harmful actions have consequences for later generations.",
+      "not_sufficient": "A family resemblance or inherited property alone does not establish inherited harm."
+    },
+    {
+      "id": "family_secrets",
+      "name": "Family secrets",
+      "facet": "Themes",
+      "match_rule": "Concealed family history affects relationships, choices or conflict.",
+      "not_sufficient": "An unrelated secret or openly known family history does not establish a family secret."
+    },
+    {
+      "id": "conformity_and_dissent",
+      "name": "Conformity and dissent",
+      "facet": "Themes",
+      "match_rule": "Characters face pressure to conform or consequences for resisting group expectations.",
+      "not_sufficient": "Simple agreement without pressure or dissent does not establish conformity and dissent."
+    },
+    {
+      "id": "social_alienation",
+      "name": "Social alienation",
+      "facet": "Themes",
+      "match_rule": "A character experiences estrangement from a social group or society.",
+      "not_sufficient": "Physical distance alone does not establish social alienation."
+    },
+    {
+      "id": "nature_resisting_exploitation",
+      "name": "Nature resisting exploitation",
+      "facet": "Themes",
+      "match_rule": "The natural world is represented as reacting against human exploitation.",
+      "not_sufficient": "Environmental danger without a connection to human exploitation does not establish nature resisting exploitation."
+    },
+    {
+      "id": "scientific_ethics",
+      "name": "Scientific ethics",
+      "facet": "Themes",
+      "match_rule": "The film raises ethical questions about scientific inquiry or experimentation.",
+      "not_sufficient": "A laboratory or scientist without an ethical conflict does not establish scientific ethics."
+    },
+    {
+      "id": "technological_anxiety",
+      "name": "Technological anxiety",
+      "facet": "Themes",
+      "match_rule": "Technology is associated with fear, loss of control or danger in the film.",
+      "not_sufficient": "A device's presence without a threatening or anxious connection does not establish technological anxiety."
+    },
+    {
+      "id": "uncertain_reality",
+      "name": "Uncertain reality",
+      "facet": "Themes",
+      "match_rule": "The film questions whether experienced reality is false or unstable.",
+      "not_sufficient": "An unknown motive or concealed identity alone does not establish unstable reality."
+    },
+    {
+      "id": "consumer_culture",
+      "name": "Consumer culture",
+      "facet": "Themes",
+      "match_rule": "The film examines consumption, commodification or consumer values.",
+      "not_sufficient": "Shopping, products or wealth appearing without commentary on consumption or commodification does not establish this quality."
+    },
+    {
+      "id": "destructive_ambition",
+      "name": "Destructive ambition",
+      "facet": "Themes",
+      "match_rule": "Pursuit of status or achievement causes moral or personal damage.",
+      "not_sufficient": "Having an ambition without damage caused by its pursuit does not establish destructive ambition."
+    },
+    {
+      "id": "free_will_and_control",
+      "name": "Free will and control",
+      "facet": "Themes",
+      "match_rule": "The film questions whether characters can choose or control their actions.",
+      "not_sufficient": "An obstacle to a goal without a question of choice or control does not establish free will and control."
+    },
+    {
+      "id": "dehumanisation",
+      "name": "Dehumanisation",
+      "facet": "Themes",
+      "match_rule": "People are treated or represented as less than human.",
+      "not_sufficient": "A nonhuman character's presence alone does not establish dehumanisation of people."
+    },
+    {
+      "id": "protector_becomes_threat",
+      "name": "Protector becomes threat",
+      "facet": "Ironies and reversals",
+      "match_rule": "A person or force expected to protect someone instead becomes a source of danger to them.",
+      "not_sufficient": "An unrelated attacker with no prior protective role does not establish protector becomes threat."
+    },
+    {
+      "id": "sanctuary_becomes_trap",
+      "name": "Sanctuary becomes trap",
+      "facet": "Ironies and reversals",
+      "match_rule": "A place sought as protection instead confines people with a threat.",
+      "not_sufficient": "A dangerous location never sought as refuge does not establish sanctuary becomes trap."
+    },
+    {
+      "id": "survival_spreads_danger",
+      "name": "Survival spreads danger",
+      "facet": "Ironies and reversals",
+      "match_rule": "An action that preserves someone's life spreads a threat to others.",
+      "not_sufficient": "Survival followed by unrelated harm does not establish survival spreading danger."
+    },
+    {
+      "id": "defeating_evil_creates_evil",
+      "name": "Defeating evil creates evil",
+      "facet": "Ironies and reversals",
+      "match_rule": "An attempt to defeat a threat creates a new threatening evil.",
+      "not_sufficient": "A later unrelated threat or the original threat surviving does not establish this causal creation."
+    },
+    {
+      "id": "desired_reward_causes_ruin",
+      "name": "Desired reward causes ruin",
+      "facet": "Ironies and reversals",
+      "match_rule": "Obtaining or pursuing a desired reward brings about a character's downfall.",
+      "not_sufficient": "A reward and later misfortune without a causal link do not establish this reversal."
+    },
+    {
+      "id": "knowledge_increases_vulnerability",
+      "name": "Knowledge increases vulnerability",
+      "facet": "Ironies and reversals",
+      "match_rule": "Learning sought information makes the learner more vulnerable.",
+      "not_sufficient": "Learning about existing danger without increasing vulnerability does not establish this reversal."
+    },
+    {
+      "id": "denial_enables_harm",
+      "name": "Denial enables harm",
+      "facet": "Ironies and reversals",
+      "match_rule": "Refusal to acknowledge danger enables further harm.",
+      "not_sufficient": "A mistaken belief without refusal or a connection to further harm does not establish denial enabling harm."
+    },
+    {
+      "id": "loyalty_protects_the_predator",
+      "name": "Loyalty protects the predator",
+      "facet": "Ironies and reversals",
+      "match_rule": "Loyalty to an apparent ally shields a threatening antagonist.",
+      "not_sufficient": "An antagonist escaping without protection arising from loyalty does not establish this reversal."
+    },
+    {
+      "id": "suspicion_harms_the_innocent",
+      "name": "Suspicion harms the innocent",
+      "facet": "Ironies and reversals",
+      "match_rule": "Suspicion of a threat causes harm to someone not established as that threat.",
+      "not_sufficient": "Suspicion without harm or harm to an established threat does not establish this quality."
+    },
+    {
+      "id": "cruelty_undermines_survival",
+      "name": "Cruelty undermines survival",
+      "facet": "Ironies and reversals",
+      "match_rule": "Cruel treatment of others damages the cruel character's or group's ability to survive.",
+      "not_sufficient": "Cruelty and later danger without a causal relation do not establish this reversal."
+    },
+    {
+      "id": "compassion_breaks_the_threat_s_hold",
+      "name": "Compassion breaks the threat's hold",
+      "facet": "Ironies and reversals",
+      "match_rule": "Care or compassion weakens a threat's hold over someone.",
+      "not_sufficient": "Compassion accompanying a rescue without weakening the threat does not establish this mechanism."
+    },
+    {
+      "id": "monster_shows_greater_humanity",
+      "name": "Monster shows greater humanity",
+      "facet": "Ironies and reversals",
+      "match_rule": "A monster demonstrates more compassion or moral consideration than a human counterpart.",
+      "not_sufficient": "A sympathetic monster without a comparison in treatment does not establish greater humanity than a human counterpart."
+    },
+    {
+      "id": "respectability_conceals_evil",
+      "name": "Respectability conceals evil",
+      "facet": "Ironies and reversals",
+      "match_rule": "A socially respectable appearance or role conceals wrongdoing or monstrosity.",
+      "not_sufficient": "A respectable character who is openly known as dangerous does not establish concealment by respectability."
+    },
+    {
+      "id": "innocence_conceals_malice",
+      "name": "Innocence conceals malice",
+      "facet": "Ironies and reversals",
+      "match_rule": "An apparently innocent person is revealed as deliberately malicious.",
+      "not_sufficient": "A person causing accidental harm or being falsely accused does not establish concealed malice."
+    },
+    {
+      "id": "cure_worsens_the_affliction",
+      "name": "Cure worsens the affliction",
+      "facet": "Ironies and reversals",
+      "match_rule": "An intended cure makes the underlying affliction worse.",
+      "not_sufficient": "A failed cure leaving the condition unchanged does not establish worsening."
+    },
+    {
+      "id": "repression_strengthens_the_threat",
+      "name": "Repression strengthens the threat",
+      "facet": "Ironies and reversals",
+      "match_rule": "Suppressing an experience or feeling strengthens the threat.",
+      "not_sufficient": "Repression and a growing threat without a causal link do not establish this mechanism."
+    },
+    {
+      "id": "control_produces_chaos",
+      "name": "Control produces chaos",
+      "facet": "Ironies and reversals",
+      "match_rule": "An effort to establish control makes events more uncontrollable.",
+      "not_sufficient": "An unsuccessful attempt at control without increased disorder does not establish this reversal."
+    },
+    {
+      "id": "victory_conceals_defeat",
+      "name": "Victory conceals defeat",
+      "facet": "Ironies and reversals",
+      "match_rule": "An apparent victory is revealed to include a defeat or loss.",
+      "not_sufficient": "An openly partial victory without a concealed defeat does not establish this reversal."
+    },
+    {
+      "id": "selfish_character_makes_a_sacrifice",
+      "name": "Selfish character makes a sacrifice",
+      "facet": "Ironies and reversals",
+      "match_rule": "A character established as selfish later makes a self-sacrifice.",
+      "not_sufficient": "A helpful act without personal sacrifice or an earlier selfish portrayal does not establish this reversal."
+    },
+    {
+      "id": "escape_perpetuates_the_cycle",
+      "name": "Escape perpetuates the cycle",
+      "facet": "Ironies and reversals",
+      "match_rule": "Escape from immediate danger continues a harmful cycle for others.",
+      "not_sufficient": "A threat merely remaining alive under containment does not establish that escape perpetuates a cycle."
+    },
+    {
+      "id": "mistrust_within_a_group",
+      "name": "Mistrust within a group",
+      "facet": "Character and social dynamics",
+      "match_rule": "Apparent allies suspect or distrust each other in their interactions.",
+      "not_sufficient": "Lack of knowledge without suspicion among allies does not establish group mistrust."
+    },
+    {
+      "id": "caretaker_dependency",
+      "name": "Caretaker dependency",
+      "facet": "Character and social dynamics",
+      "match_rule": "A dependent person's needs constrain a caregiver's choices or relationship.",
+      "not_sufficient": "A caregiver title without a depicted dependency affecting choices does not establish caretaker dependency."
+    },
+    {
+      "id": "strained_parent_child_relationship",
+      "name": "Strained parent-child relationship",
+      "facet": "Character and social dynamics",
+      "match_rule": "Conflict or resentment strains a parent-child relationship.",
+      "not_sufficient": "A parent and child appearing together without relationship strain does not establish this quality."
+    },
+    {
+      "id": "overprotective_care",
+      "name": "Overprotective care",
+      "facet": "Character and social dynamics",
+      "match_rule": "A caregiver's excessive protection constrains or harms the person being protected.",
+      "not_sufficient": "Protection without restrictive or harmful excess does not establish overprotective care."
+    },
+    {
+      "id": "intimate_betrayal",
+      "name": "Intimate betrayal",
+      "facet": "Character and social dynamics",
+      "match_rule": "A trusted intimate partner or close confidant betrays that trust.",
+      "not_sufficient": "An enemy's attack without an intimate or confiding bond does not establish intimate betrayal."
+    },
+    {
+      "id": "coercive_partnership",
+      "name": "Coercive partnership",
+      "facet": "Character and social dynamics",
+      "match_rule": "A partner uses coercion or abuse to control the other person's choices.",
+      "not_sufficient": "Ordinary disagreement without coercion or abuse does not establish a coercive partnership."
+    },
+    {
+      "id": "sibling_rivalry",
+      "name": "Sibling rivalry",
+      "facet": "Character and social dynamics",
+      "match_rule": "Siblings compete with or resent each other.",
+      "not_sufficient": "Sibling presence or disagreement unrelated to rivalry does not establish sibling rivalry."
+    },
+    {
+      "id": "divided_loyalty",
+      "name": "Divided loyalty",
+      "facet": "Character and social dynamics",
+      "match_rule": "A character faces conflicting loyalties to different people or groups.",
+      "not_sufficient": "Several loyalties without a conflict between them do not establish divided loyalty."
+    },
+    {
+      "id": "chosen_family_solidarity",
+      "name": "Chosen-family solidarity",
+      "facet": "Character and social dynamics",
+      "match_rule": "A non-biological group develops family-like mutual care under pressure.",
+      "not_sufficient": "Temporary tactical cooperation without family-like attachment does not establish chosen-family solidarity."
+    },
+    {
+      "id": "reluctant_alliance",
+      "name": "Reluctant alliance",
+      "facet": "Character and social dynamics",
+      "match_rule": "People who distrust or oppose each other cooperate against a shared threat.",
+      "not_sufficient": "Cooperation among willing allies without reluctance does not establish a reluctant alliance."
+    },
+    {
+      "id": "contested_leadership",
+      "name": "Contested leadership",
+      "facet": "Character and social dynamics",
+      "match_rule": "People disagree over who should lead and this affects the group's actions.",
+      "not_sufficient": "A named leader without a challenge to their leadership does not establish contested leadership."
+    },
+    {
+      "id": "charismatic_coercion",
+      "name": "Charismatic coercion",
+      "facet": "Character and social dynamics",
+      "match_rule": "A persuasive leader uses personal influence to secure harmful obedience.",
+      "not_sufficient": "A leader giving orders without persuasion through personal influence does not establish charismatic coercion."
+    },
+    {
+      "id": "group_conformity_pressure",
+      "name": "Group conformity pressure",
+      "facet": "Character and social dynamics",
+      "match_rule": "A group pressures individuals to follow its beliefs or actions.",
+      "not_sufficient": "Shared behaviour without pressure on individuals does not establish conformity pressure."
+    },
+    {
+      "id": "scapegoating",
+      "name": "Scapegoating",
+      "facet": "Character and social dynamics",
+      "match_rule": "A group assigns blame to a person to avoid or simplify its own responsibility.",
+      "not_sufficient": "Accurate blame without displacement of group responsibility does not establish scapegoating."
+    },
+    {
+      "id": "outsider_exclusion",
+      "name": "Outsider exclusion",
+      "facet": "Character and social dynamics",
+      "match_rule": "A person is excluded because they are treated as outside the group.",
+      "not_sufficient": "Being alone by choice without group exclusion does not establish outsider exclusion."
+    },
+    {
+      "id": "corrupting_mentorship",
+      "name": "Corrupting mentorship",
+      "facet": "Character and social dynamics",
+      "match_rule": "A mentor teaches or recruits a learner into harmful conduct.",
+      "not_sufficient": "A learner acting badly without mentorship causing or teaching the conduct does not establish corrupting mentorship."
+    },
+    {
+      "id": "competition_for_survival_resources",
+      "name": "Competition for survival resources",
+      "facet": "Character and social dynamics",
+      "match_rule": "Characters compete over limited resources needed to survive.",
+      "not_sufficient": "Ordinary rivalry over a reward not needed for survival does not establish this competition."
+    },
+    {
+      "id": "mutual_destruction_pact",
+      "name": "Mutual destruction pact",
+      "facet": "Character and social dynamics",
+      "match_rule": "Characters contemplate or pursue an agreement to destroy themselves along with a threat.",
+      "not_sufficient": "An individual sacrifice without an agreement or shared plan does not establish a mutual destruction pact."
+    },
+    {
+      "id": "morally_compromised_protagonist",
+      "name": "Morally compromised protagonist",
+      "facet": "Character and social dynamics",
+      "match_rule": "A protagonist engages in wrongdoing that compromises their moral position.",
+      "not_sufficient": "Being endangered, flawed or disliked without depicted wrongdoing does not establish moral compromise."
+    },
+    {
+      "id": "socially_isolated_protagonist",
+      "name": "Socially isolated protagonist",
+      "facet": "Character and social dynamics",
+      "match_rule": "A protagonist lacks social support while facing the story's conflict.",
+      "not_sufficient": "Geographic remoteness with supportive companions does not establish social isolation."
+    },
+    {
+      "id": "contested_female_agency",
+      "name": "Contested female agency",
+      "facet": "Character and social dynamics",
+      "match_rule": "A female character's ability to choose or act is challenged by another person or social structure.",
+      "not_sufficient": "A practical obstacle without a challenge to her agency does not establish contested female agency."
+    },
+    {
+      "id": "children_protecting_each_other",
+      "name": "Children protecting each other",
+      "facet": "Character and social dynamics",
+      "match_rule": "Children cooperate to protect one another from a threat.",
+      "not_sufficient": "An adult protecting a child or children merely present together does not establish reciprocal child protection."
+    },
+    {
+      "id": "cooperative_problem_solving",
+      "name": "Cooperative problem-solving",
+      "facet": "Character and social dynamics",
+      "match_rule": "People collaborate to understand and respond to a threat.",
+      "not_sufficient": "Merely occupying the same place without shared reasoning or coordinated response does not establish cooperative problem-solving."
+    },
+    {
+      "id": "intimacy_with_a_monster",
+      "name": "Intimacy with a monster",
+      "facet": "Character and social dynamics",
+      "match_rule": "A person has an emotionally or physically intimate bond with a monstrous being.",
+      "not_sufficient": "An encounter or attack without an intimate bond does not establish intimacy with a monster."
+    },
+    {
+      "id": "practical_creature_effects",
+      "name": "Practical creature effects",
+      "facet": "Presentation and intensity",
+      "match_rule": "Physical materials or practical mechanisms are used to realise creatures in the completed film.",
+      "not_sufficient": "A release decade, effects budget, praise or an unused practical-effects plan does not establish the technique's use."
+    },
+    {
+      "id": "prosthetic_bodily_transformation",
+      "name": "Prosthetic bodily transformation",
+      "facet": "Presentation and intensity",
+      "match_rule": "Prosthetics or makeup are used to realise bodily transformations in the completed film.",
+      "not_sufficient": "Ordinary makeup or an injury in a synopsis without transformation effects does not establish prosthetic transformation."
+    },
+    {
+      "id": "digitally_created_creatures",
+      "name": "Digitally created creatures",
+      "facet": "Presentation and intensity",
+      "match_rule": "Digital effects are used to realise creatures in the completed film.",
+      "not_sufficient": "Digital editing or colour grading without digitally realised creatures does not establish this quality."
+    },
+    {
+      "id": "puppetry_or_animatronics",
+      "name": "Puppetry or animatronics",
+      "facet": "Presentation and intensity",
+      "match_rule": "Puppets or animatronics are used to realise a character or creature in the completed film.",
+      "not_sufficient": "A prop with no puppet or animatronic performance, or an unused plan, does not establish this technique."
+    },
+    {
+      "id": "stop_motion_horror_imagery",
+      "name": "Stop-motion horror imagery",
+      "facet": "Presentation and intensity",
+      "match_rule": "Stop-motion animation is used in the completed film's horror imagery.",
+      "not_sufficient": "A model or a claim that animation was considered does not establish completed stop-motion imagery."
+    },
+    {
+      "id": "animated_horror_presentation",
+      "name": "Animated horror presentation",
+      "facet": "Presentation and intensity",
+      "match_rule": "Animation is used as a medium for presenting the film's horror narrative.",
+      "not_sufficient": "A drawn object appearing in a live-action scene does not alone establish animated narrative presentation."
+    },
+    {
+      "id": "black_and_white_imagery",
+      "name": "Black-and-white imagery",
+      "facet": "Presentation and intensity",
+      "match_rule": "The completed film uses black-and-white imagery.",
+      "not_sufficient": "A monochrome poster, still photograph or unmade release plan does not establish black-and-white film imagery."
+    },
+    {
+      "id": "expressionist_production_design",
+      "name": "Expressionist production design",
+      "facet": "Presentation and intensity",
+      "match_rule": "Distorted sets or visual spaces create an expressionist presentation.",
+      "not_sufficient": "A strange location without supported visual distortion or expressionist treatment does not establish expressionist design."
+    },
+    {
+      "id": "concealment_in_shadow",
+      "name": "Concealment in shadow",
+      "facet": "Presentation and intensity",
+      "match_rule": "Shadow conceals a threat or visual information from the audience.",
+      "not_sufficient": "A dark scene without concealment of the threat or information does not establish this device."
+    },
+    {
+      "id": "extended_takes",
+      "name": "Extended takes",
+      "facet": "Presentation and intensity",
+      "match_rule": "The completed film uses shots described as unusually long and uninterrupted.",
+      "not_sufficient": "A long scene, long story duration or a long rough cut does not establish extended takes."
+    },
+    {
+      "id": "handheld_camerawork",
+      "name": "Handheld camerawork",
+      "facet": "Presentation and intensity",
+      "match_rule": "The completed film uses handheld camerawork.",
+      "not_sufficient": "A camera carried by a character in the story or an abandoned filming plan does not establish actual handheld cinematography."
+    },
+    {
+      "id": "degraded_recording_texture",
+      "name": "Degraded recording texture",
+      "facet": "Presentation and intensity",
+      "match_rule": "The image or recording is presented with degraded or low-fidelity texture.",
+      "not_sufficient": "A damaged viewing copy or low-budget production alone does not establish a texture used in the film's presentation."
+    },
+    {
+      "id": "first_person_camera_perspective",
+      "name": "First-person camera perspective",
+      "facet": "Presentation and intensity",
+      "match_rule": "The camera presents events as a character's direct visual perspective.",
+      "not_sufficient": "A film following one character without optical point-of-view shots does not establish first-person camera perspective."
+    },
+    {
+      "id": "minimal_dialogue",
+      "name": "Minimal dialogue",
+      "facet": "Presentation and intensity",
+      "match_rule": "The completed film is described as using little dialogue.",
+      "not_sufficient": "A synopsis with little quoted dialogue does not establish that the film uses little dialogue."
+    },
+    {
+      "id": "sound_driven_unease",
+      "name": "Sound-driven unease",
+      "facet": "Presentation and intensity",
+      "match_rule": "Specific sound design is described or reported as producing unease or dread.",
+      "not_sufficient": "A frightening plot event without sound-design evidence does not establish sound-driven unease."
+    },
+    {
+      "id": "dissonant_musical_tension",
+      "name": "Dissonant musical tension",
+      "facet": "Presentation and intensity",
+      "match_rule": "Dissonance in the score is linked in the supplied account to tension or unease.",
+      "not_sufficient": "Music being present or loud without dissonance linked to tension does not establish this quality."
+    },
+    {
+      "id": "expressive_silence",
+      "name": "Expressive silence",
+      "facet": "Presentation and intensity",
+      "match_rule": "Silence in the completed film is described as shaping suspense or emotional effect.",
+      "not_sufficient": "Characters not speaking without evidence of silence in the soundtrack does not establish expressive silence."
+    },
+    {
+      "id": "sudden_startle_effects",
+      "name": "Sudden startle effects",
+      "facet": "Presentation and intensity",
+      "match_rule": "Abrupt sensory changes are used for startling scares.",
+      "not_sufficient": "A sudden narrative revelation alone does not establish a sensory startle effect."
+    },
+    {
+      "id": "graphic_bodily_injury",
+      "name": "Graphic bodily injury",
+      "facet": "Presentation and intensity",
+      "match_rule": "The completed film presents bodily injury or gore explicitly.",
+      "not_sufficient": "An injury occurring in the story without presentation detail does not establish on-screen graphicness."
+    },
+    {
+      "id": "implied_violence",
+      "name": "Implied violence",
+      "facet": "Presentation and intensity",
+      "match_rule": "Violence is suggested through sound, reactions or other cues rather than directly shown.",
+      "not_sufficient": "A synopsis omitting an act does not establish that the film leaves it off screen."
+    },
+    {
+      "id": "prolonged_suffering",
+      "name": "Prolonged suffering",
+      "facet": "Presentation and intensity",
+      "match_rule": "The presentation dwells on suffering or torture over an extended interval.",
+      "not_sufficient": "A character suffering for years in story time without extended presentation does not establish prolonged on-screen suffering."
+    },
+    {
+      "id": "sexual_violence",
+      "name": "Sexual violence",
+      "facet": "Presentation and intensity",
+      "match_rule": "Sexual assault or coercive sexual harm occurs in the story.",
+      "not_sufficient": "Consensual sex or nonsexual violence alone does not establish sexual violence."
+    },
+    {
+      "id": "harm_to_animals",
+      "name": "Harm to animals",
+      "facet": "Presentation and intensity",
+      "match_rule": "An animal is harmed or killed within the story's events.",
+      "not_sufficient": "A dangerous animal or a threat not carried out does not establish harm to animals."
+    },
+    {
+      "id": "children_in_danger",
+      "name": "Children in danger",
+      "facet": "Presentation and intensity",
+      "match_rule": "A child faces a threat of physical harm within the story.",
+      "not_sufficient": "Concern for a child actor during production or an adult described as childlike does not establish a child character in danger."
+    },
+    {
+      "id": "physical_action_spectacle",
+      "name": "Physical action spectacle",
+      "facet": "Presentation and intensity",
+      "match_rule": "Chases, stunts or physical combat are presented as kinetic spectacle.",
+      "not_sufficient": "A fight mentioned in a synopsis without action-presentation detail does not establish action spectacle."
+    },
+    {
+      "id": "sustained_dread",
+      "name": "Sustained dread",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's tone or an attributed response is described as an ongoing feeling of impending danger.",
+      "not_sufficient": "One frightening event without a continuing apprehensive tone does not establish sustained dread."
+    },
+    {
+      "id": "abrupt_shock",
+      "name": "Abrupt shock",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's presentation or an attributed response involves a sudden shocking disruption.",
+      "not_sufficient": "A rapid event without a shocking presentation or attributed response does not establish abrupt shock."
+    },
+    {
+      "id": "disgust_and_revulsion",
+      "name": "Disgust and revulsion",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's presentation or an attributed response is described in terms of disgust or revulsion.",
+      "not_sufficient": "A disgusting object in a synopsis without presentation or response evidence does not establish a disgust register."
+    },
+    {
+      "id": "bleakness_and_nihilism",
+      "name": "Bleakness and nihilism",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's tone or outlook is described as bleak, nihilistic or despairing.",
+      "not_sufficient": "A character suffering without evidence of a bleak tone or nihilistic outlook does not establish this quality."
+    },
+    {
+      "id": "melancholy",
+      "name": "Melancholy",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's emotional register is described as sorrowful or wistful.",
+      "not_sufficient": "A sad event alone without tonal description does not establish melancholy."
+    },
+    {
+      "id": "anxious_uncertainty",
+      "name": "Anxious uncertainty",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Uncertainty about events or identities creates anxious tension in the supplied account.",
+      "not_sufficient": "Missing source information without described uncertainty or tension in the film does not establish anxious uncertainty."
+    },
+    {
+      "id": "oppressive_claustrophobia",
+      "name": "Oppressive claustrophobia",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Confinement is described as creating an oppressive or claustrophobic experience.",
+      "not_sufficient": "Enclosed rooms without an oppressive presentation or attributed response do not establish this effect."
+    },
+    {
+      "id": "uncanny_familiarity",
+      "name": "Uncanny familiarity",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Something recognisably familiar is presented as disturbingly strange.",
+      "not_sufficient": "An unfamiliar creature or ordinary familiar object without estrangement does not establish uncanny familiarity."
+    },
+    {
+      "id": "dreamlike_atmosphere",
+      "name": "Dreamlike atmosphere",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's atmosphere is described as dreamlike or unreal.",
+      "not_sufficient": "A character sleeping or a dream mentioned in a synopsis alone does not establish a dreamlike atmosphere."
+    },
+    {
+      "id": "hallucinatory_intensity",
+      "name": "Hallucinatory intensity",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's sensory presentation is described as hallucinatory or perceptually overwhelming.",
+      "not_sufficient": "A character hallucinating in the story without sensory-presentation evidence does not establish hallucinatory intensity."
+    },
+    {
+      "id": "dread_of_inevitability",
+      "name": "Dread of inevitability",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film presents or evokes a sense that a feared outcome cannot be prevented.",
+      "not_sufficient": "An adverse event occurring without a sense of inevitability does not establish dread of inevitability."
+    },
+    {
+      "id": "playful_camp",
+      "name": "Playful camp",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's tone uses theatrical excess or knowingly artificial playfulness.",
+      "not_sufficient": "Visible artifice or an audience laughing unintentionally alone does not establish playful camp."
+    },
+    {
+      "id": "absurd_humour",
+      "name": "Absurd humour",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Illogical or absurd situations are treated as humour.",
+      "not_sufficient": "Unexplained events without comic treatment do not establish absurd humour."
+    },
+    {
+      "id": "black_comedy",
+      "name": "Black comedy",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Death, suffering or taboo subjects receive darkly comic treatment.",
+      "not_sufficient": "Death or a taboo appearing without comic treatment does not establish black comedy."
+    },
+    {
+      "id": "satirical_ridicule",
+      "name": "Satirical ridicule",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film uses ridicule to criticise a social target or institution.",
+      "not_sufficient": "Comedy without a target of criticism does not establish satirical ridicule."
+    },
+    {
+      "id": "exuberant_splatter",
+      "name": "Exuberant splatter",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Graphic bodily destruction is presented or reported as exuberant spectacle.",
+      "not_sufficient": "Gore without exuberant presentation or an attributed exuberant response does not establish this tone."
+    },
+    {
+      "id": "action_exhilaration",
+      "name": "Action exhilaration",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Physical action is presented or reported as exciting or exhilarating.",
+      "not_sufficient": "Action events without presentation or attributed excitement do not establish action exhilaration."
+    },
+    {
+      "id": "contemplative_quiet",
+      "name": "Contemplative quiet",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Quiet scenes or presentation invite reflection or are described as contemplative.",
+      "not_sufficient": "Little dialogue without reflective presentation does not establish contemplative quiet."
+    },
+    {
+      "id": "dark_fairy_tale_atmosphere",
+      "name": "Dark fairy-tale atmosphere",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Fairy-tale-like wonder, logic or imagery is combined with menace.",
+      "not_sufficient": "A fairy-tale reference without a menacing fairy-tale treatment does not establish this atmosphere."
+    },
+    {
+      "id": "tragic_pathos",
+      "name": "Tragic pathos",
+      "facet": "Emotional tone and experience",
+      "match_rule": "A character's downfall is framed or described in a way that invites sorrow.",
+      "not_sufficient": "A death without sympathetic or sorrowful framing does not establish tragic pathos."
+    },
+    {
+      "id": "tenderness_amid_horror",
+      "name": "Tenderness amid horror",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Emotional gentleness or care is portrayed alongside horror.",
+      "not_sufficient": "A character helping for purely instrumental reasons without tenderness does not establish this tone."
+    },
+    {
+      "id": "moral_discomfort",
+      "name": "Moral discomfort",
+      "facet": "Emotional tone and experience",
+      "match_rule": "Compromised choices or complicity are presented or reported as morally unsettling.",
+      "not_sufficient": "Wrongdoing without morally unsettling framing or an attributed response does not establish moral discomfort."
+    },
+    {
+      "id": "deliberate_provocation",
+      "name": "Deliberate provocation",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film confronts taboos or boundaries in a way described as deliberately provocative.",
+      "not_sufficient": "A taboo topic's presence alone or an unused intention does not establish provocative treatment."
+    },
+    {
+      "id": "otherworldly_awe",
+      "name": "Otherworldly awe",
+      "facet": "Emotional tone and experience",
+      "match_rule": "An encounter beyond ordinary experience is linked to awe or wonder.",
+      "not_sufficient": "A supernatural encounter without awe or wonder in its presentation or attributed response does not establish this quality."
+    },
+    {
+      "id": "cynical_outlook",
+      "name": "Cynical outlook",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film's outlook presents human motives or institutions through distrust or disillusionment.",
+      "not_sufficient": "One dishonest character without cynical framing does not establish a cynical outlook."
+    },
+    {
+      "id": "unresolved_identity_at_the_ending",
+      "name": "Unresolved identity at the ending",
+      "facet": "Resolution and aftermath",
+      "match_rule": "A character's identity or nature remains unresolved at the film's conclusion.",
+      "not_sufficient": "An incomplete source account or unknown background detail does not establish an unresolved character identity at the ending."
+    },
+    {
+      "id": "unresolved_threat_at_the_ending",
+      "name": "Unresolved threat at the ending",
+      "facet": "Resolution and aftermath",
+      "match_rule": "Whether a threat has ended remains unresolved at the film's conclusion.",
+      "not_sufficient": "A source omitting the outcome does not establish that the film leaves the threat unresolved."
+    },
+    {
+      "id": "bittersweet_survival",
+      "name": "Bittersweet survival",
+      "facet": "Resolution and aftermath",
+      "match_rule": "Survival is achieved alongside loss that qualifies the outcome as bittersweet.",
+      "not_sufficient": "Survival or loss alone without a mixed positive and sorrowful outcome does not establish bittersweet survival."
+    },
+    {
+      "id": "costly_self_sacrifice",
+      "name": "Costly self-sacrifice",
+      "facet": "Resolution and aftermath",
+      "match_rule": "A character deliberately incurs grave personal cost to protect another or contain danger in the resolution.",
+      "not_sufficient": "Accidental loss or help without self-incurred grave cost does not establish costly self-sacrifice."
+    },
+    {
+      "id": "catastrophic_defeat",
+      "name": "Catastrophic defeat",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution establishes a major victory for the threat or destruction of the protagonists' aims.",
+      "not_sufficient": "A setback before the resolution or a limited loss without catastrophic defeat does not establish this outcome."
+    },
+    {
+      "id": "decisive_victory",
+      "name": "Decisive victory",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution clearly establishes defeat of the threat.",
+      "not_sufficient": "Apparent destruction with explicitly unresolved survival of the threat does not establish decisive victory."
+    },
+    {
+      "id": "temporary_containment",
+      "name": "Temporary containment",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The ending limits the threat without establishing its permanent elimination.",
+      "not_sufficient": "Merely not knowing whether the threat survives does not establish containment."
+    },
+    {
+      "id": "coexistence_with_the_threat",
+      "name": "Coexistence with the threat",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The ending establishes ongoing accommodation with a remaining threat.",
+      "not_sufficient": "A threat's survival without accommodation does not establish coexistence."
+    },
+    {
+      "id": "breaking_an_inherited_cycle",
+      "name": "Breaking an inherited cycle",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution refuses or interrupts a harmful pattern passed between generations.",
+      "not_sufficient": "A one-off danger ending without an inherited pattern does not establish breaking an inherited cycle."
+    },
+    {
+      "id": "continuation_of_the_cycle",
+      "name": "Continuation of the cycle",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution establishes that a harmful pattern continues or begins again.",
+      "not_sufficient": "A surviving entity without an established continuation of harmful behaviour does not establish a continuing cycle."
+    },
+    {
+      "id": "moral_refusal",
+      "name": "Moral refusal",
+      "facet": "Resolution and aftermath",
+      "match_rule": "In the resolution a character refuses a tempting choice that would harm others or violate their commitments.",
+      "not_sufficient": "Avoiding an unwanted option without temptation or moral conflict does not establish moral refusal."
+    },
+    {
+      "id": "ironic_punishment",
+      "name": "Ironic punishment",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution links a character's downfall to the desire or wrongdoing that motivated them.",
+      "not_sufficient": "A character's misfortune without a connection to their desire or wrongdoing does not establish ironic punishment."
+    },
+    {
+      "id": "relationship_reconciliation",
+      "name": "Relationship reconciliation",
+      "facet": "Resolution and aftermath",
+      "match_rule": "A damaged relationship is repaired in the resolution.",
+      "not_sufficient": "People surviving together without repair of their relationship does not establish reconciliation."
+    },
+    {
+      "id": "hopeful_renewal",
+      "name": "Hopeful renewal",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The ending presents recovery or a positive new beginning after the threat.",
+      "not_sufficient": "The ending merely stopping without a supported prospect of renewal does not establish hopeful renewal."
+    },
+    {
+      "id": "morally_ambiguous_outcome",
+      "name": "Morally ambiguous outcome",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The ending leaves competing moral evaluations of characters' choices unresolved.",
+      "not_sufficient": "Uncertainty only about events or identity without competing moral readings does not establish moral ambiguity."
+    },
+    {
+      "id": "humans_are_the_real_monsters",
+      "name": "Humans are the real monsters",
+      "facet": "Themes",
+      "match_rule": "Human cruelty is framed as more monstrous than, or as the horror underlying, an apparent nonhuman threat.",
+      "not_sufficient": "A human antagonist or cruel act without this comparative moral framing does not establish humans as the real monsters."
+    },
+    {
+      "id": "sympathy_for_the_monster",
+      "name": "Sympathy for the monster",
+      "facet": "Character and social dynamics",
+      "match_rule": "The film frames its monstrous figure with understanding or compassion.",
+      "not_sufficient": "A tragic origin without sympathetic framing does not establish sympathy for the monster."
+    },
+    {
+      "id": "innocence_offers_no_protection",
+      "name": "Innocence offers no protection",
+      "facet": "Themes",
+      "match_rule": "The narrative presents moral innocence as failing to protect people against horrific harm.",
+      "not_sufficient": "An innocent victim without a connection between innocence and the lack of protection does not establish this outlook."
+    },
+    {
+      "id": "victim_agency_and_resistance",
+      "name": "Victim agency and resistance",
+      "facet": "Character and social dynamics",
+      "match_rule": "Threatened characters make choices and act to resist the danger they face.",
+      "not_sufficient": "Suffering without choices or actions resisting the threat does not establish victim agency and resistance."
+    },
+    {
+      "id": "competent_people_overwhelmed",
+      "name": "Competent people overwhelmed",
+      "facet": "Ironies and reversals",
+      "match_rule": "Characters are defeated or gravely endangered despite demonstrably capable responses.",
+      "not_sufficient": "Job titles or claimed expertise without capable action do not establish competence under threat."
+    },
+    {
+      "id": "avoidable_foolishness_drives_disaster",
+      "name": "Avoidable foolishness drives disaster",
+      "facet": "Narrative devices",
+      "match_rule": "Repeatedly avoidable choices cause disaster or increase danger.",
+      "not_sufficient": "One hindsight mistake, missing information or unavoidable panic alone does not establish this recurring pattern."
+    },
+    {
+      "id": "villain_centred_identification",
+      "name": "Villain-centred identification",
+      "facet": "Narrative devices",
+      "match_rule": "The narrative gives intimate access to or alignment with a perpetrator's experience.",
+      "not_sufficient": "Showing an antagonist or revealing a plan alone does not establish narrative identification with them."
+    },
+    {
+      "id": "violence_with_lasting_consequences",
+      "name": "Violence with lasting consequences",
+      "facet": "Themes",
+      "match_rule": "The film depicts continuing physical, psychological or relational effects of violence.",
+      "not_sufficient": "An injury or death without subsequent effects being portrayed does not establish attention to lasting consequences."
+    },
+    {
+      "id": "everyday_cruelty",
+      "name": "Everyday cruelty",
+      "facet": "Themes",
+      "match_rule": "Ordinary recognisable abuse or humiliation is presented as a source of horror independent of extraordinary threats.",
+      "not_sufficient": "A rude remark without abusive, humiliating or horrific framing does not establish everyday cruelty as used here."
+    },
+    {
+      "id": "inescapable_institutional_power",
+      "name": "Inescapable institutional power",
+      "facet": "Character and social dynamics",
+      "match_rule": "A harmful institution constrains escape, redress and individual resistance.",
+      "not_sufficient": "One ineffective official without institutional constraints does not establish inescapable institutional power."
+    },
+    {
+      "id": "conditional_family_belonging",
+      "name": "Conditional family belonging",
+      "facet": "Character and social dynamics",
+      "match_rule": "A family makes belonging or acceptance conditional on obedience, identity or conformity.",
+      "not_sufficient": "Family conflict without a condition on acceptance does not establish conditional belonging."
+    },
+    {
+      "id": "rational_explanation_for_apparent_supernatural_events",
+      "name": "Rational explanation for apparent supernatural events",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution explains apparently supernatural events through ordinary human or natural causes.",
+      "not_sufficient": "One suggested natural explanation with a competing supernatural explanation left viable does not establish a resolved rational explanation."
+    },
+    {
+      "id": "unresolved_psychological_or_supernatural_reading",
+      "name": "Unresolved psychological or supernatural reading",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The film leaves both psychological and supernatural explanations of events viable.",
+      "not_sufficient": "An unexplained creature or an incomplete source account without two viable readings does not establish this ambiguity."
+    },
+    {
+      "id": "supernatural_evil_treated_as_real",
+      "name": "Supernatural evil treated as real",
+      "facet": "Themes",
+      "match_rule": "Supernatural evil is established as an actual force within the story's world.",
+      "not_sufficient": "A character's belief, metaphor or unresolved apparition alone does not establish supernatural evil as real in the story."
+    },
+    {
+      "id": "religion_as_protection",
+      "name": "Religion as protection",
+      "facet": "Themes",
+      "match_rule": "Faith or religious practice provides protection or resistance against the threat.",
+      "not_sufficient": "Religious imagery or belief without a protective effect does not establish religion as protection."
+    },
+    {
+      "id": "religion_as_an_instrument_of_abuse",
+      "name": "Religion as an instrument of abuse",
+      "facet": "Themes",
+      "match_rule": "Religious authority or doctrine enables coercion, exploitation or abuse.",
+      "not_sufficient": "A villain's religious identity or a dangerous god alone does not establish religion being used as an instrument of abuse."
+    },
+    {
+      "id": "monstrosity_as_liberation",
+      "name": "Monstrosity as liberation",
+      "facet": "Themes",
+      "match_rule": "Becoming or embracing the monstrous is presented as release from oppressive constraints.",
+      "not_sufficient": "Transformation or increased power without liberatory framing does not establish monstrosity as liberation."
+    },
+    {
+      "id": "revenge_corrupts_the_avenger",
+      "name": "Revenge corrupts the avenger",
+      "facet": "Ironies and reversals",
+      "match_rule": "Pursuing revenge erodes an avenger's moral commitments or harms those they sought to protect.",
+      "not_sufficient": "Violent retaliation without erosion of commitments or harm to protected people does not establish corruption of the avenger."
+    },
+    {
+      "id": "forgiveness_with_responsibility",
+      "name": "Forgiveness with responsibility",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution offers forgiveness while acknowledging wrongdoing or its consequences.",
+      "not_sufficient": "Forgetting or denying harm without acknowledgment does not establish forgiveness with responsibility."
+    },
+    {
+      "id": "restoration_over_retribution",
+      "name": "Restoration over retribution",
+      "facet": "Resolution and aftermath",
+      "match_rule": "The resolution chooses repairing harm over inflicting punishment.",
+      "not_sufficient": "A nonviolent ending without a choice favouring repair over punishment does not establish restoration over retribution."
+    },
+    {
+      "id": "redemption_through_action",
+      "name": "Redemption through action",
+      "facet": "Character and social dynamics",
+      "match_rule": "A morally compromised character acts to repair harm they previously caused.",
+      "not_sufficient": "An apology, sympathetic biography or unrelated heroic act without repair does not establish redemption through action."
+    },
+    {
+      "id": "hope_through_solidarity",
+      "name": "Hope through solidarity",
+      "facet": "Themes",
+      "match_rule": "Mutual support is presented as a source of hope against the horror.",
+      "not_sufficient": "Tactical cooperation without hopeful framing does not establish hope through solidarity."
+    },
+    {
+      "id": "self_aware_horror_conventions",
+      "name": "Self-aware horror conventions",
+      "facet": "Narrative devices",
+      "match_rule": "The narrative recognises and plays with horror storytelling conventions as conventions.",
+      "not_sufficient": "A familiar trope or audience recognition without in-film self-awareness does not establish this quality."
+    },
+    {
+      "id": "affectionate_genre_play",
+      "name": "Affectionate genre play",
+      "facet": "Emotional tone and experience",
+      "match_rule": "The film treats recognisable horror traditions with playful affection.",
+      "not_sufficient": "References or parody without affectionate treatment do not establish affectionate genre play."
+    },
+    {
+      "id": "fear_of_being_disbelieved",
+      "name": "Fear of being disbelieved",
+      "facet": "Character and social dynamics",
+      "match_rule": "Others' failure to believe a threatened character increases that character's danger or isolation.",
+      "not_sufficient": "An ignored statement without an effect on danger or isolation does not establish this dynamic."
+    },
+    {
+      "id": "exploitation_of_vulnerability",
+      "name": "Exploitation of vulnerability",
+      "facet": "Themes",
+      "match_rule": "Someone exploits another person's dependency, illness or diminished capacity.",
+      "not_sufficient": "A vulnerable person being present or harmed without their vulnerability being exploited does not establish this mechanism."
+    }
+  ]
+}
