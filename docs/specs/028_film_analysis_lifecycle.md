@@ -1,5 +1,8 @@
 # 028 — Persist film analysis drafts and publish quality associations
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Merged via PR #42  
 Owner: Film knowledge
 
@@ -7,7 +10,7 @@ Owner: Film knowledge
 
 An existing catalogue film can have an editable analysis draft and quality candidates, then atomically publish them as its current knowledge while preserving previous analyses and associations. Human and AI authors use the same persistence lifecycle. This task supplies domain operations and storage, not an authoring interface or AI integration.
 
-Prerequisites: existing Film catalogue persistence and the agreed [V1 workflow](../film_analysis_requirements.md#v1-draft-and-quality-workflow). OpenAI/Langfuse configuration and managed prompt setup are merged via PR #41; Langfuse owns prompt revisions. This task accepts supplied analysis content and quality proposals without making API calls. The completed pilots inform content examples; production publication does not require another pilot. No new cross-domain behavioural contract is consumed.
+Prerequisites: existing Film catalogue persistence and the agreed [V1 workflow](../film_quality_requirements.md). OpenAI/Langfuse configuration and managed prompt setup are merged via PR #41; Langfuse owns prompt revisions. This task accepts supplied analysis content and quality proposals without making API calls. The completed pilots inform content examples; production publication does not require another pilot. No new cross-domain behavioural contract is consumed.
 
 ## Approved Film editing and publishing boundary
 

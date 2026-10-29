@@ -1,5 +1,8 @@
 # 027a — Record a reproducible film analysis prompt
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Merged via PR #41  
 Owner: Film knowledge / analysis design
 

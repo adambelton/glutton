@@ -1,5 +1,8 @@
 # 029 — Generate an analysis from an imported TMDB film
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Merged via PR #43  
 Owner: Film knowledge
 
@@ -7,7 +10,7 @@ Owner: Film knowledge
 
 Import a film from TMDB, then generate and save its initial analysis and quality candidates using the imported film data. OpenAI is used only for the initial seed; all revisions are manual. The workflow requires no manually prepared evidence packet, additional source collection, enrichment stage or manual application of generated output. Generated changes remain unpublished until the existing `film.publish_analysis!` operation is invoked.
 
-Prerequisites: task 008 TMDB import, task 028 Film-owned editing/publication, task 027b managed prompt retrieval/linkage, and task 001m configured OpenAI client/tracing. Read the [analysis requirements](../film_analysis_requirements.md), [generation protocol](../prompts/film_analysis/README.md), and [configuration guide](../ai_configuration.md). All application behaviour in this task belongs to Film knowledge; no new cross-domain contract.
+Prerequisites: task 008 TMDB import, task 028 Film-owned editing/publication, task 027b managed prompt retrieval/linkage, and task 001m configured OpenAI client/tracing. Read the [analysis requirements](../film_quality_requirements.md), [generation protocol](../prompts/film_analysis/README.md), and [configuration guide](../ai_configuration.md). All application behaviour in this task belongs to Film knowledge; no new cross-domain contract.
 
 ## Scope
 

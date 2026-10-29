@@ -1,5 +1,7 @@
 # Glutton implementation workflow
 
+- Use the installed [TypeSafe skill](.agents/skills/typesafe-ai/SKILL.md) for TypeSafe/JEV questions, state design, API integration, debugging and evaluation in this project. Read its current guidance and relevant official documentation; preserve agreed experiment budgets and domain ownership.
+
 Read `docs/implementation_plan.md`, the current task spec and relevant brief sections before implementing.
 
 - Create a tightly scoped spec before every task, using `docs/task_template.md`. Define scope and scope restrictions, including constraints that prevent in-scope work from inflating. Put verification methods and actual evidence directly under the acceptance criteria.

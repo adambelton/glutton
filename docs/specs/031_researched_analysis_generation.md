@@ -1,5 +1,8 @@
 # 031 — Research and analyse an imported film in one operation
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Accepted — owner authorized merge after hosted CI, 27 October 2026  
 Owner: Film knowledge
 
@@ -60,7 +63,7 @@ RAILS_ENV=test bin/rails zeitwerk:check
 git diff --check
 ```
 
-Managed prompt retrieval: use `FilmKnowledge::AnalysisPrompt.call(version: 4)` and `.call(label: "development")` in `bin/rails runner`; compare returned text/config/hash with the final publication snapshot in `tmp/film_analysis_runs/task031-prompt-published-final.json`. Historical v2 is unchanged. Provider documentation: [web search](https://developers.openai.com/api/docs/guides/tools-web-search). [Protocol](../prompts/film_analysis/README.md) describes request settings, evidence schema and admission limits. The [OpenSubtitles review](../research/generated_analysis_verification/opensubtitles.md) records the owner's linked endpoint and the precise API discovery/download distinction. The Stoplight page yielded only a JavaScript shell; a provider-maintained readable reference and official guide supplied the details. No subtitle API request or quota-bearing download occurred.
+Managed prompt retrieval: use `FilmKnowledge::AnalysisPrompt.call(version: 4)` and `.call(label: "development")` in `bin/rails runner`; compare returned text/config/hash with the final publication snapshot in `tmp/film_analysis_runs/task031-prompt-published-final.json`. Historical v2 is unchanged. Provider documentation: [web search](https://developers.openai.com/api/docs/guides/tools-web-search). [Protocol](../prompts/film_analysis/README.md) describes request settings, evidence schema and admission limits. The OpenSubtitles review (obsolete research removed) records the owner's linked endpoint and the precise API discovery/download distinction. The Stoplight page yielded only a JavaScript shell; a provider-maintained readable reference and official guide supplied the details. No subtitle API request or quota-bearing download occurred.
 
 An initial sandboxed focused run could not access PostgreSQL. It succeeded with local database access. A standalone RuboCop attempt could not write its external cache; running with `--cache false` exposed one array-spacing offense, which was fixed before the successful full CI. No failing check is represented as a pass.
 

@@ -1,5 +1,8 @@
 # 035 — Make narrative coverage drive research completion
 
+Historical implementation/design record. Current direction is in [film-quality requirements](../film_quality_requirements.md); fixed dimensions are superseded by planned task 043, and independent analysis-model retention is under review. Removed experiment reports are not prerequisites or active product requirements.
+
+
 Status: Accepted — owner authorized merge after hosted CI, 27 October 2026  
 Owner: Film knowledge
 
