@@ -1,6 +1,6 @@
 # Library event publication
 
-Task 012a publishes facts from the five supported Library operations. The source change and events commit together; a publication failure rolls back the operation. Task 016 adds Library consumption of completed Ratings facts; task 017 adds Ratings consumption of watched, not-interested and watchlist facts. Raw SQL, fixture creation and direct Active Record writes are not supported Library action APIs.
+Library publishes facts from the five supported Library operations. The source change and events commit together; a publication failure rolls back the operation. Library consumes completed Ratings facts; Ratings consumes watched, not-interested and watchlist facts. Raw SQL, fixture creation and direct Active Record writes are not supported Library action APIs.
 
 ## Version 1 contract
 
@@ -28,4 +28,4 @@ Guest claim preserves stream ownership; physical owner cleanup cascades events w
 
 `library.completed_ratings` consumes RatingSubmitted v1 through normal durable delivery. A missing, ToWatch or NotInterested entry becomes watched; already watched is ignored without publication. Derived FilmMarkedWatched facts have the same v1 payload, retain the source correlation ID and identify the source event as causation. The transition, derived event and successful delivery receipt commit together. Public RecordWatched permissions and duplicate failures are unchanged. See [operations](domain_event_operations.md) for retained-event catch-up and failure recovery.
 
-Ratings task 017 consumes these facts into its own RatingFilm held/dismissed states. FilmDismissalRemoved has no Ratings subscriber. Ratings does not copy Library classification or query Library records; it consumes only event identity and user/film identifiers. Hold release preserves indefinite dismissal and original queue position. See [operations](domain_event_operations.md).
+Ratings consumes these facts into its own RatingFilm held/dismissed states. FilmDismissalRemoved has no Ratings subscriber. Ratings does not copy Library classification or query Library records; it consumes only event identity and user/film identifiers. Hold release preserves indefinite dismissal and original queue position. See [operations](domain_event_operations.md).

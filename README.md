@@ -2,7 +2,7 @@
 
 Source: [adambelton/glutton](https://github.com/adambelton/glutton).
 
-A horror discovery app built with Rails, PostgreSQL and server-rendered Hotwire views. Implemented capabilities include guest and registered identity, registration and password recovery, TMDB film search/import, and the Library watched operation. Film and Library operations currently have programmatic interfaces; rating, recommendation and Library browsing flows remain planned. See the [current implementation status](docs/implementation_plan.md#current-implementation-status) for merged work and changes awaiting review.
+A horror discovery app built with Rails, PostgreSQL and server-rendered Hotwire views. Implemented capabilities include guest and registered identity, registration and password recovery, TMDB film search/import, and the Library watched operation. Film and Library operations currently have programmatic interfaces; rating, recommendation and Library browsing flows remain planned. See the [current implementation status](docs/implementation_plan.md#current-progress) for merged work and changes awaiting review.
 
 ## Prerequisites
 
@@ -67,8 +67,8 @@ curl --fail http://localhost:3000/up
 - [Product brief](docs/product_brief.md)
 - [Architecture brief](docs/architecture_brief.md)
 - [Implementation plan](docs/implementation_plan.md)
-- [Initial scaffold spec and verification evidence](docs/specs/001_initial_scaffold.md)
-- [Task spec template](docs/task_template.md)
+- [Initial scaffold spec and verification evidence](README.md)
+- [Working-record template](docs/task_template.md)
 
 Read root `AGENTS.md` before implementation. Each subsequent task needs its own scoped spec. See the implementation plan for completed Identity work and remaining product workflows.
 
@@ -278,11 +278,11 @@ bin/rails db:seed
 
 The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import, Wikipedia enrichment and initial assignment remain subsequent seed tasks.
 
-Qualities use immutable names and database IDs; there is no separate quality key. Categories also use names and database IDs; their names remain editable. Both seed files are plain YAML lists, with vocabulary entries referring to category names during the one-time initial load. Existing name-only qualities remain valid; when a definition or exclusion is supplied, both must be nonblank. Definitions and exclusions remain editable within the same concept. See [task 062](docs/specs/062_consistent_catalogue_seed_data.md) for verification.
+Qualities use immutable names and database IDs; there is no separate quality key. Categories also use names and database IDs; their names remain editable. Both seed files are plain YAML lists, with vocabulary entries referring to category names during the one-time initial load. Existing name-only qualities remain valid; when a definition or exclusion is supplied, both must be nonblank. Definitions and exclusions remain editable within the same concept. 
 
 ## Development film sample
 
-Task 007 provides minimal film identities, not analyses or a validated production seed. After applying migrations, explicitly load the three-film sample in development:
+The development sample provides minimal film identities, not analyses or a validated production seed. After applying migrations, explicitly load the three-film sample in development:
 
 ```sh
 bin/rails db:migrate
@@ -291,7 +291,7 @@ bin/rails film_knowledge:load_sample
 
 The command creates Alien, The Thing and Get Out only when their TMDB IDs are absent. Re-running preserves internal IDs, existing metadata and unrelated films. It reports `sample_films=3`; this is the sample size, not a count of new inserts. The command rejects environments other than development before writing. It runs no API requests and is not called by application boot or `db:seed`. Failure rolls back the sample transaction; fix the cause and rerun.
 
-Sample identity sources and verification limits are recorded in [task 007](docs/specs/007_film_catalogue.md). The films table stores one nullable release date, with year queries derived from date ranges; original titles and other descriptive values live in JSONB metadata. Sample release dates remain unknown until primary release dates are verified. The full 50-film catalogue, analyses, qualities and TMDB API import are separate work.
+Sample identity sources and verification limits are recorded in minimal film catalogue. The films table stores one nullable release date, with year queries derived from date ranges; original titles and other descriptive values live in JSONB metadata. Sample release dates remain unknown until primary release dates are verified. The full 50-film catalogue, analyses, qualities and TMDB API import are separate work.
 
 ## Import a selected TMDB film
 
@@ -313,7 +313,7 @@ Use a positive Integer, not a title, string ID or URL. An existing TMDB identity
 
 The client uses 5-second connect and 10-second read/write timeouts, with no automatic retries or redirects. Expected errors are `FilmKnowledge::InvalidTmdbId`, `TmdbConfigurationError`, `TmdbNotFound`, `InvalidTmdbResponse`, or `TmdbUnavailable` (all under FilmKnowledge). The latter exposes `reason`, including `authentication`, `rate_limited`, `timeout`, `transport` or `http_error`. Errors omit credentials and provider response bodies. Fix the cause before explicitly retrying; 429 is surfaced without a retry loop. Unexpected validation/database failures propagate. Concurrent imports reuse the same Film; failed inserts leave no partial record.
 
-This operation is not called during boot or seeding. Automated tests use fake HTTP and isolated test records; no live request or development import was performed for task 008 verification. Live end-to-end verification remains outstanding. Search belongs to task 009.
+This operation is not called during boot or seeding. Automated tests use fake HTTP and isolated test records; live end-to-end import verification remains outstanding.
 
 ## Search TMDB for a film
 
@@ -335,11 +335,11 @@ After explicitly choosing a candidate, pass its integer TMDB ID to the existing 
 film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
 ```
 
-Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Provider/configuration failures use task 008's sanitized errors and timeout/retry policy; search 404 is `TmdbUnavailable` with reason `http_error`, while movie-details 404 remains `TmdbNotFound`. Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Task 009 verification used fake HTTP only; live search compatibility remains unverified.
+Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Provider/configuration failures use the importer’s sanitized errors and timeout/retry policy; search 404 is `TmdbUnavailable` with reason `http_error`, while movie-details 404 remains `TmdbNotFound`. Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP; live search compatibility remains unverified.
 
 ## Library watched state
 
-Task 010 provides `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` and a minimal `LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist management, dismissal and other transitions remain separate tasks.
+Library uses `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` and a minimal `LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist and dismissal actions use the same canonical relationship.
 
 After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing film ID:
 
@@ -352,4 +352,4 @@ Recording a to-watch entry as watched preserves its ID, ownership, film and crea
 
 Deleting a user physically removes only their dependent Library rows through the Library-owned foreign key; shared films are not cascaded. Existing guest cleanup and in-place registration are unchanged. A restrictive dependent preventing deletion still rolls back Identity/Library changes for that guest. Registered-account deletion and retention for future activity remain separate decisions.
 
-Task 010 verification uses isolated test data only; development/production migrations and watched writes were not performed. Apply `bin/rails db:migrate` before local use. There is no new UI, watchlist/dismissal flow or automatic guest creation in this task.
+Apply the database migrations before local use. Library browsing and watchlist/dismissal actions use the existing identity and owned-entry contracts.

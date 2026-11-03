@@ -16,11 +16,9 @@ Quality categories organise the vocabulary but are not sent as ranking instructi
 
 The example match/uncertain bands were inspection settings only. No top-20 truncation has been applied to these examples. Each review refers to paragraph IDs in that same example's `source_paragraphs`, with source revision and attribution/licence retained alongside them. Interpretive reviewer judgments are not independent ground truth.
 
-## Next work
+## Current use
 
-Design how candidates become a reviewed set of at most 20 accepted qualities, and how community contributors inspect evidence, add/remove qualities and publish accepted changes. Known ambiguity is review work; perfecting these six films is not a prerequisite. Definitions can evolve later with explicit reassessment of affected associations and derived scores, while preserving original user input and historical contribution records.
-
-[Task 043](../specs/043_editable_quality_categories.md) remains the separately scoped replacement of fixed dimensions with editable categories. Selection policy, publishing permissions and other workflow details remain open; these files do not implement or pre-authorise them.
+The runtime YAML seed loads the retained names/definitions into an empty catalogue. Initial film source enrichment/assignment remains to build, followed by admin inspection, editing, source refresh and explicit change evaluation. Selection uses the agreed >=60% support threshold and persisted category-specific ceilings, not a global 20 limit or category quota. Source refresh alone changes no accepted associations or historical score contributions. Community editing is deferred.
 
 ## Langfuse
 

@@ -1,8 +1,8 @@
 # OpenAI and Langfuse configuration
 
-Owner: Foundation / observability. Task [001m](specs/001m_langfuse_tracing.md).
+Owner: Foundation / observability.
 
-Rails configures the official OpenAI Ruby client and an isolated OpenTelemetry provider for Langfuse. No requests run at boot. The legacy generated-analysis runner exists, but further generative research/testing is not the current direction; its replacement or retirement is separately scoped. Only explicitly instrumented operations are exported, not Rails requests, SQL or arbitrary HTTP traffic.
+Rails configures the official OpenAI Ruby client and an isolated OpenTelemetry provider for Langfuse. No requests run at boot. The former generated-analysis runner is retired; current quality matching uses supplied source context and JEV. Only explicitly instrumented operations are exported, not Rails requests, SQL or arbitrary HTTP traffic.
 
 ## Environment
 
@@ -25,6 +25,6 @@ Dependencies locked for this implementation: `openai` 0.113.0, `opentelemetry-sd
 
 ## Existing legacy integration
 
-The configured OpenAI client/tracer supports the currently implemented generated-analysis path. JEV is the chosen engine for the new quality direction; question design and request packing remain open. See [film-quality requirements](film_quality_requirements.md). No provider request is needed to edit these documents or plan category persistence.
+The shared OpenAI client/tracer remains configured, but no film-analysis generator is retained. JEV is the chosen engine for the new quality direction; question design and request packing remain open. See [film-quality requirements](film_quality_requirements.md). No provider request is needed to edit these documents or plan category persistence.
 
-Former live diagnostic results, trial reports and test-running instructions have been removed. Existing configuration, secrets and remote traces remain untouched. Later code removal or provider adaptation requires its own scoped task; this cleanup does not disable the current runner.
+Former live diagnostic results, trial reports and test-running instructions have been removed. Existing configuration, secrets and remote traces remain available; they are not a requirement to restore the retired runner.

@@ -1,15 +1,15 @@
 # Film-quality research: retained findings
 
-Consolidated 29 October 2026 after the owner chose to stop fine tuning as a prerequisite and move toward selection/community review. Superseded tuning reports, matrices, duplicated inputs, local raw dumps and replay scripts have been removed. The [working baseline](../film_qualities/README.md) retains the vocabulary, question contract and reusable examples.
+Consolidated 29 October 2026 after the owner chose to stop fine tuning as a prerequisite and move toward initial seeding and admin improvement. Superseded tuning reports, matrices, duplicated inputs, local raw dumps and replay scripts have been removed. The [working baseline](../film_qualities/README.md) retains the vocabulary, question contract and reusable examples.
 
 ## Decisions carried forward
 
 - Wikipedia's maintained articles provide a useful initial source; BFI may supplement gaps. JEV judges supplied context rather than doing heavy research.
-- Start with 235 provisional qualities, aiming for roughly 250 without padding. Quality/category meanings remain editable product data; categories replace hard-coded dimensions through separately planned task 043.
+- Start with 235 provisional qualities, aiming for roughly 250 without padding. Quality/category meanings remain editable product data; categories are persisted editable records rather than hard-coded dimensions.
 - Qualities and categories begin with equal base treatment. Do not ask JEV to favour important, central, defining or personally influential qualities. Confidence/support probability is not a scoring weight.
 - Assess coexisting qualities independently. Shared-state requests were inexpensive in these tests; one question per quality need not mean one HTTP request per quality.
-- Keep matching separate from the eventual maximum of 20 accepted qualities and from each user's preference contributions. Source updates, candidate assessments and accepted film-quality changes are different actions.
-- Imperfect matches are expected in a community-improved seed. Known semantic issues are diagnostics, not blockers or justification for endlessly fitting six films.
+- Keep support matching separate from category-specific selection limits and each user’s preference contributions. Source updates, candidate assessments and accepted film-quality changes are different actions.
+- Imperfect matches are expected in a admin-improved seed. Known semantic issues are diagnostics, not blockers or justification for endlessly fitting six films.
 
 ## Latest six-film evidence
 
@@ -33,8 +33,8 @@ Examples of remaining limitations: Babadook's protector reversal stayed below th
 
 Earlier experiments established feasibility and explored presence, importance, prominence and relative choice. Importance did not demonstrate a clear gain, and relative choice forced coexisting qualities to compete. Those superseded comparisons are no longer a work queue. The tested neutral definitions, rather than the earlier importance-guided variants, form the retained baseline.
 
-## Receipt and next step
+## Current use and limits
 
-The former experiment-only specs 044, 045, 048 and 049 and their detailed research trees were retired in [cleanup task 050](../specs/050_jev_research_cleanup.md). Removing artifacts is not retrospective owner acceptance or merge of those tasks. Existing remote Langfuse traces remain untouched; no remote dataset or prompt migration was performed.
+Superseded tuning reports and local raw artifacts are not a work queue. The retained examples above are inspection evidence, not independent accuracy measurements or accepted film associations. Existing remote Langfuse traces remain untouched. No historical budget authorises another model run.
 
-The next design work is candidate selection and source-backed community review/publishing, with at most 20 accepted qualities and unchanged historical rating/recommendation contributions. Controller permissions, selection criteria, publishing mechanics and downstream event contracts still need agreement. [Current requirements](../film_quality_requirements.md) hold the authoritative lifecycle decisions.
+Current work follows seed loading, admin inspection, manual editing, source refresh and explicit change evaluation. Initial assignment uses the agreed >=60% support/category-cap baseline; the historical >=0.7 table above is an inspection setting, not the production rule. [Current requirements](../film_quality_requirements.md) hold the lifecycle and release decisions.

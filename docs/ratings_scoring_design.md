@@ -4,16 +4,16 @@ Status: Agreed conceptual design; scoring implementation deferred.
 Owner: Ratings  
 Decision dates: 22, 27 and 28 October 2026
 
-This records the owner discussion preceding task 015. It supersedes earlier brief terminology about separate implicit/explicit scores and mandatory pre-submission profile capture. It does not authorize scoring implementation or prescribe processing infrastructure.
+This records the agreed scoring direction; original-expression capture is already implemented. It supersedes earlier brief terminology about separate implicit/explicit scores and mandatory pre-submission profile capture. It does not authorize scoring implementation or prescribe processing infrastructure.
 
 ## Recorded evidence and relationships
 
-- RatingFilm has many ratings. Tasks 023/023a implemented replacement reviews while preserving previous submissions and expressions.
+- RatingFilm has many ratings. Rating replacement preserves previous submissions and expressions.
 - Rating has many rating_expressions: original user-authored text about what they liked or disliked. Preserve the text independently of its interpretation.
 - Rating has many rating_qualities: derived scores for the qualities associated with the film.
 - RatingQuality belongs to Rating and references a quality. Expressions and rating qualities can have a many-to-many evidence relationship: several expressions can support one rating quality, and one expression can address several rating qualities. Supporting expressions must belong to the same rating. Settle join storage when implementing rating qualities.
 
-Explicit expression links identify direct evidence. Their absence does not distinguish unexpressed from implicitly expressed. Classification is an attribute on RatingQuality, with named constants, not STI: these are changing evidence states with the same behaviour and a straightforward score computation. Do not add these fields or evidence joins in task 015.
+Explicit expression links identify direct evidence. Their absence does not distinguish unexpressed from implicitly expressed. Classification is an attribute on RatingQuality, with named constants, not STI: these are changing evidence states with the same behaviour and a straightforward score computation. These fields/evidence joins belong to the deferred scoring implementation, not raw-expression capture.
 
 ## Evidence classifications
 
@@ -37,7 +37,7 @@ The expression profile derives exclusively from explicit expressions. Rating val
 
 Profile changes trigger recomputation of eligible rating qualities: only unexpressed and implicitly expressed qualities. They may move between those classifications as applicability changes. Explicitly expressed qualities retain their expression provenance and are unaffected by profile-only changes. Changes to their own rating or expressions are a separate reassessment concern.
 
-Implicitly expressed qualities are interpreted against the user's current expression profile, rather than belonging to an individual expression. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile in task 015. Later processing must prevent stale work from replacing newer results and distinguish pending recomputation from completed current results; the minimal freshness mechanism belongs in that task's spec.
+Implicitly expressed qualities are interpreted against the user's current expression profile, rather than belonging to an individual expression. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during raw-expression capture. Later processing must prevent stale work from replacing newer results and distinguish pending recomputation from completed current results; the minimal freshness mechanism belongs in that task's spec.
 
 ## Recommendation scoring
 
@@ -47,7 +47,7 @@ Owner clarification, 28 October 2026: qualities and categories have equal **base
 
 System- or user-controlled category weighting is a possible later capability, not an implemented rule or approved control scheme. It must not introduce an assumed subgenre/theme priority now. Film-quality admission and the max-20 selection remain Film knowledge decisions; category weights cannot restore a relevant quality excluded upstream. See [current requirements](film_quality_requirements.md#equal-starting-weights-and-personal-preference).
 
-Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Only current applicable scores contribute to current preferences; late processing of superseded inputs must not restore their contributions. The timestamped lifecycle below replaces the earlier conceptual decision to rely solely on highest-ID currentness; task 023 remains an accurate record of what was implemented, not evidence that these new fields exist.
+Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Only current applicable scores contribute to current preferences; late processing of superseded inputs must not restore their contributions. The timestamped lifecycle below replaces the earlier conceptual decision to rely solely on highest-ID currentness; current rating replacement derives currentness from the highest rating ID; these proposed lifecycle fields are not implemented.
 
 Evaluate common-quality frequency and unequal numbers of film qualities before deciding on normalization. Normalization, complete weights and ranking evaluation remain future scoring work, not requirements for original-expression persistence.
 
@@ -74,8 +74,8 @@ Ratings owns replacing its affected current derived contributions and retains pr
 
 Historical rating/recommendation quality records capture which qualities contributed and how. They should remain intelligible without independently reconstructing a historical film analysis or association set. Whether Film knowledge needs edit review, rollback or audit history is a separate open decision in [film-quality requirements](film_quality_requirements.md#historical-score-records-and-the-open-model-decision).
 
-## Effect on task 015
+## Raw-expression capture boundary
 
-Task 015 adds RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. It adds no RatingQuality, score/classification columns, profile association, interpretation, processing jobs or new event payload fields. Those require separately scoped work. Original expressions can be saved before any film qualities or scoring process exist.
+The current implementation provides RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. It adds no RatingQuality, score/classification columns, profile association, interpretation, processing jobs or new event payload fields. Those require separately scoped work. Original expressions can be saved before any film qualities or scoring process exist.
 
-Documentation verification: reviewed against the owner discussion and task 015 scope; no runtime behaviour or numeric scoring implementation is claimed.
+Documentation verification: reviewed against the owner decisions and raw-expression capture boundary; no runtime behaviour or numeric scoring implementation is claimed.
