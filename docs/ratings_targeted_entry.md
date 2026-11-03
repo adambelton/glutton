@@ -1,6 +1,6 @@
 # Targeted rating browser destination
 
-Ratings provides the destination for a future Library “Rate this film” link. Library UI wiring belongs to task 020. No catalogue-browsing screen is added.
+Library links to the Ratings-owned destination below for first rating and replacement. The shared Film ID identifies the film; the current session identifies the owner.
 
 ## Link contract
 
@@ -37,4 +37,4 @@ The shared form submits `PATCH /rating` with `rating_film_id`, `previous_rating_
 
 Validation failures return 422 with safe submitted values and the original expected previous ID preserved. A malformed/missing/stale previous ID or replay returns 409 with a link to reload the current rating. Reload is explicit; neither error redisplay nor resubmission silently adopts a newer revision. Missing/foreign/deleted candidates remain 404. The caller cannot select a different owner or arbitrary redirect destination. Responses remain no-store and all application copy is localized.
 
-This full-replacement flow also edits expressions. Planned task 024 should be reconsidered before implementation; no separate in-place expression editing mechanism is needed for this outcome.
+This full-replacement flow also edits expressions. No separate in-place expression editor is needed.

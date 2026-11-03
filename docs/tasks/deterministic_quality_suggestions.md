@@ -1,4 +1,4 @@
-# 058 — Build deterministic film-quality suggestions
+# Build deterministic film-quality suggestions
 
 Status: Draft — prepared, not started; lower priority  
 Owner: Film knowledge
@@ -7,7 +7,7 @@ Owner: Film knowledge
 
 Priority clarification, 29 October: the owner places initial seeding and admin inspection ahead of standalone quality-change suggestions. Do not start this as the next product feature. Selection arithmetic can be reused within the initial-assignment task when needed; revisit this spec's refresh-diff scope only after seed loading, read-only canonical content inspection, manual editing and manual TMDB/Wikipedia refresh are usable. Expression-led vocabulary discovery comes after this stage and is deferred until after initial release.
 
-Turn one complete set of recorded per-quality support probabilities into an inspectable proposed film-quality set under the 60% baseline and persisted category ceilings. Return a comparison with current accepted qualities without changing them. Prerequisites: merged tasks 043/054–056, current requirements, task-053 findings, direct Quality/QualityCategory/Film/FilmQuality roles and the baseline category configuration.
+Turn one complete set of recorded per-quality support probabilities into an inspectable proposed film-quality set under the 60% baseline and persisted category ceilings. Return a comparison with current accepted qualities without changing them. Prerequisites: the implemented direct quality catalogue and category settings, current requirements and retained selection-policy findings.
 
 ## Scope
 

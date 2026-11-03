@@ -1,23 +1,24 @@
-# Glutton — Initial implementation plan
+# Glutton — Implementation progress
 
-Status: See current implementation status below for merged work, changes awaiting review and planned capabilities.  
-Date: 20 October 2026
+Updated: 3 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
-## Current implementation status
+## Current progress
 
-**064 — In progress**, Foundation / [publish initial vocabulary seed](specs/064_publish_initial_quality_seed.md). Owner accepted the final seed implementation and requested PR, merge after CI and next-task preparation on 3 November 2026.
+- Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
+- Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented.
+- Film knowledge: canonical film storage, TMDB search/import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Wikipedia enrichment, initial quality assignment and bulk/on-demand pipeline wiring remain to build.
+- Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
+- Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
+- Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
-**063 — Accepted**, Film knowledge / [plain YAML seed lists](specs/063_flat_catalogue_seed_lists.md). Removed vocabulary version/wrapper metadata; both runtime seed files are plain YAML lists. Loader/test access updated; all 235 vocabulary entries exactly match the retained baseline. Full CI passed 487 tests / 6,109 assertions, style/security and eager loading clean. No database changes; owner accepted on 3 November 2026; merge pending.
+## Current work
 
-**062 — Accepted**, Film knowledge / [consistent YAML seed and category-key removal](specs/062_consistent_catalogue_seed_data.md). Both runtime seed files use YAML, and vocabulary entries reference category names. Category keys removed from model/schema/original migration/fixtures/locales; names remain editable, IDs retain associations. Local data preserved; all 11 original migrations replay cleanly and no obsolete tables remain. Full CI passed 487 tests / 6,109 assertions, style/security and eager loading clean. Owner accepted on 3 November 2026; merge pending.
+- [Initial Wikipedia source context](tasks/initial_wikipedia_source_context.md): next draft, not implemented. Attach revision-specific paragraphs/provenance to an existing canonical Film using an explicitly identified page. Preparing the draft does not authorise implementation or live imports.
+- [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
-**061 — Accepted**, Film knowledge / [simplify initial seed](specs/061_simplify_initial_quality_seed.md). Removed quality keys and idempotent-seed handling at the owner's request. One-time transactional insertion; definitions live in the original catalogue creation migration, with no follow-up migration. Existing development definitions/IDs preserved. Development/test each have exactly 20 expected application tables; no obsolete tables remained. All 11 original migrations replayed cleanly into an isolated schema. Full local CI passed 487 tests / 6,110 assertions, style/security and eager loading clean. Owner accepted on 3 November 2026; merge pending.
+## Delivery order
 
-**060 — Accepted, revised by 061**, Film knowledge / [quality vocabulary seed](specs/060_seed_quality_vocabulary.md). Original vocabulary-loading implementation and its verification are recorded in the spec. Task 061 supersedes its quality-key and safe-rerun design; current seeding is a one-time initial load. Development retains the 235 definitions and nine categories. Film enrichment and initial assignment remain subsequent seed tasks.
-
-**059 — Accepted**, Film knowledge / [seed-first documentation alignment](specs/059_seed_first_delivery_order.md). Recorded the owner's ordered delivery plan; active requirements/brief/workflow and task-058 priority aligned. Link/whitespace and preservation checks passed; documentation only. Owner accepted on 3 November 2026; not merged.
-
-**Owner delivery order, 29 October — seed first:**
+The agreed order is seed first:
 
 1. **Load the initial seed:** persist/load the quality vocabulary and definitions, retain category defaults, import canonical films from TMDB, enrich with Wikipedia context and assign initial qualities under the chosen 60%/category-cap baseline. Initial assignment is part of making seed data usable; it does not depend on a refresh-suggestion product or per-film human approval.
 2. **View canonical content:** admin-only film, quality-category and quality lists/detail pages, including source context, associations and navigation between related records. Admin authorisation must protect these screens. Viewing comes before editing.
@@ -26,59 +27,17 @@ Date: 20 October 2026
 5. **Evaluate potential changes:** wire JEV quality checks into the manual-refresh flow, show suggested differences and allow explicit application using the manual-editing operations. Suggestions can remain transient; no suggestion queue/history model is required initially.
 6. **After initial release:** inspect user expressions to discover missing qualities/category preferences and test vocabulary improvements. This admin discovery tool is deferred; ordinary expression interpretation/scoring for viewer preferences remains in release scope.
 
-This order is implemented through small owned tasks, not one cross-domain task. Bulk seed and on-demand missing-film imports reuse the same enrichment/initial-assignment path. Scheduled syncing is separate later work, not a prerequisite for seed loading, viewing, editing or manual refresh. No further policy/taxonomy research is needed to start. [Documentation alignment](specs/059_seed_first_delivery_order.md).
+Bulk seed and ordinary missing-film imports will share canonical enrichment/initial-assignment behaviour. Scheduled sync is later work, not a prerequisite. Core expression interpretation/scoring stays in release scope; expression-led vocabulary discovery is post-release.
 
-**058 — Draft, lower priority**, Film knowledge / [deterministic film-quality suggestions](specs/058_deterministic_quality_suggestions.md). Consume complete recorded support probabilities, filter at >=60%, apply independent category maxima and return proposed-set/current-set comparisons. No automatic application, model calls, scoring weights, event publication or admin UI. Implementation has not started; standalone refresh-suggestion work belongs to stage 5, after seed loading, content viewing, manual editing and manual source refresh.
+## Working-record lifecycle
 
-**057 — Merged**, Foundation / [publication evidence](specs/057_publish_quality_catalogue.md). [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed on exact head `5218996`: 483 tests / 5,353 assertions, style/security clean. Local main fast-forwarded to the verified merge. Status/evidence updates and task-058 preparation below are local post-merge handoff changes, outside that PR.
+Use the [task template](task_template.md) to constrain scope and verify an independently testable outcome before/during implementation. Amend the same record for review corrections and implementation refinements. Preserve each domain's mutation ownership and original experiment limits.
 
-**056 — Merged**, Foundation / [correction migration consolidation](specs/056_consolidate_correction_migrations.md). Fold final user credentials/type rules, confirmation delivery, Ratings history/held state and Film source context into creation migrations; remove cancelled publisher-allowlist changes. Schema comparison preserves 17 non-catalogue table contracts and 11 foreign keys, ignoring ordering/redundant text casts. Both fresh builds passed; 483 tests / 5,353 assertions, style/security/eager loading clean. No domain behaviour changes.
+When preparing a PR, use the record to write the PR description: final behaviour/scope, checks actually run, outcomes and material limitations. Update maintained documentation to reflect current progress/decisions and remove the task record as part of the PR. Continue review, CI, approval and merge evidence on GitHub. Do not create a completed-task archive, retired-ID map, PR ledger or duplicated CI history.
 
-**055 — Merged**, Film knowledge / [direct catalogue migration and development reset](specs/055_simplify_catalogue_migrations.md). Owner authorised discarding local development data and removing original analysis/intermediate migrations. Development/test now rebuild from 11 remaining migrations; development seeded with nine category defaults (weights 1), empty films/qualities/links. All 11 migrations replayed from empty databases, final defaults/version state verified, and full checks passed. Existing development data intentionally cleared; no production environment exists.
-
-**054 — Merged**, Film knowledge / [direct film qualities and analysis retirement](specs/054_direct_film_qualities.md). Runtime roles are Quality, QualityCategory, Film and FilmQuality (the join). Preserved current accepted evidence/source context and vocabulary IDs through migration; removed FilmAnalysis/AnalysisQuality and generated-analysis code. Intermediate conversion was superseded by the owner-authorised fresh development reset and direct schema under tasks 055/056. Full suite 485 tests / 5,374 assertions, style/security/eager loading and migration checks passed. Original test-only conversion evidence retained; current installation/rebuild evidence is in tasks 055/056. Shipped in PR #46.
-
-**053 — Merged**, Film knowledge / [category selection policy experiment](specs/053_category_selection_policy_experiment.md), [findings](research/quality_selection_policy_053.md). Replayed six retained films and made 12 fresh JEV calls (2,820 judgments), calculated cost US$0.012344052 under US$1 approval. Compared >=60%/70% with global20 and category ceilings 2/3/4. Category-3 at 60% selects 24–27 qualities with 8–9 categories across fresh rounds; exposes sparse-category ambiguity and same-input selection churn. Owner agreed individually configurable category ceilings and separate admin category-weight tuning (initially all 1); uniform experimental caps are not product defaults. Subgenres 2 / tropes 4–5 remain illustrative candidates. Configuration fields/defaults are implemented in task 043; selection and score application remain pending. Unequal totals and fair scoring remain separate questions. Original baseline and production state unchanged.
-
-**052 — Merged, scope revised 29 October**, Film knowledge / [initial enrichment and admin improvement](specs/052_film_quality_review_workflow.md). Owner deferred community editing. Revised the [proposal](film_quality_review_workflow.md) around bulk seed and user TMDB imports, Wikipedia enrichment, initial assignment (now refined to category-specific ceilings by task 053), periodic source syncing, admin manual TMDB/Wikipedia sync followed by an inspectable quality comparison with explicit application, and three admin tools: quality library, canonical film corrections and expression investigation/testing. Quality names are immutable; definition tuning stays within the concept. Documentation links/whitespace, retained-example consistency and preservation checks passed. No runtime changes or calls. Assignment policy, storage, sync/access details and implementation remain separately scoped.
-
-**051 — Merged**, Film knowledge / [publication evidence](specs/051_publish_film_quality_baseline.md). [PR #45](https://github.com/adambelton/glutton/pull/45) merged the current documentation/skill/data bundle on 29 October 2026 at `a03be7d43cb7c8f3755765c42af76bb2a8cdee4a` after [CI](https://github.com/adambelton/glutton/actions/runs/40834619291) passed on exact head `7445d23`: 534 tests / 5,665 assertions; style/security clean. Local main fast-forwarded to the verified merge. Those status updates and task-052 preparation were post-merge handoff changes outside PR #45, subsequently delivered in PR #46.
-
-**050 — Merged**, Film knowledge / [research cleanup](specs/050_jev_research_cleanup.md). Retain the [235-quality baseline and matching contract](film_qualities/README.md), six uncapped source-backed examples and [concise findings](research/film_quality_findings.md). Remove superseded tuning reports, duplicated inputs, replay scripts and local raw dumps. Next design work is max-20 selection and community evidence/review/publishing; fine tuning is not a prerequisite. No Langfuse prompt migration is required. Exact retained-data comparisons, removal allowlist, local links/anchors, protected-file checks and whitespace passed. No provider/runtime changes; shipped in PR #45 after CI.
-
-**046 and 047 — Merged**, Film knowledge / [equal baseline](specs/046_equal_quality_weight_baseline.md) and [neutral matching](specs/047_neutral_jev_matching_baseline.md). Current decisions are consolidated in [film-quality requirements](film_quality_requirements.md): equal base qualities/categories; source-context support without importance guidance. Retained specs are historical documentation records. Experiment-only tasks 044, 045, 048 and 049 and their obsolete artifacts were retired by task 050; outcomes survive in the findings summary, without turning historical research judgments into validated accuracy. Current retained deliverables shipped in PR #45.
-
-**042 — Merged**, Film knowledge / [documentation cleanup and current direction](specs/042_quality_direction_documentation_cleanup.md). Removed obsolete generative-analysis research/pilots and test-only specs; retained current vocabulary/JEV material and legacy implementation records. [Film-quality requirements](film_quality_requirements.md) now distinguish source refresh, accepted film-quality changes and historical score contributions. Wikipedia edits do not automatically rescore. Independent FilmAnalysis/association-history retention and JEV request packing remain open; no models/schema were changed.
-
-**043 — Merged**, Film knowledge / [editable quality categories](specs/043_editable_quality_categories.md). Implemented persisted categories with individual max-quality/weight settings, nine-category seed defaults, immutable quality names, safe recategorisation/removal and dynamic legacy generator compatibility. Migrates seven old dimensions without changing quality IDs, published links or draft JSON. Full suite 543 tests / 5,721 assertions, style/security clean; single-worker execution avoids a local pg fork crash. Test database migrated only; admin UI, JEV selection and scoring application remain later slices. Shipped in PR #46.
-
-**041 — Merged**, Film knowledge / [master vocabulary record](specs/041_master_quality_vocabulary.md), [235 working candidates](film_qualities/MASTER_LIST.md). Current meanings and neutral matching contract live in the working baseline. At most 20 accepted qualities per film, not a quota. JEV is selected; editable categories and reviewed assignments remain separate work. The original test artifacts were retired during task 050.
-
-**040 — Merged**, Foundation / [TypeSafe skill installation](specs/040_typesafe_skill_installation.md). Project-local skill installed and usage recorded in AGENTS.md. No additional provider requests in task 042.
-
-This section summarizes current delivery status; task tables and linked specs retain detailed outcomes and historical verification.
-
-| Area | Current status |
-| --- | --- |
-| Foundation | Tasks 001b–001e merged; original scaffold tasks 001/001a retain their recorded Ready for review status. Audit 001f and documentation follow-up 001g merged via PR #22. Async design 001h and durable delivery 001i merged via PR #25. Publisher ownership follow-up 001j merged via PR #26; delivery status follow-up 001k merged via PR #28. |
-| Identity | Tasks 002–006 and their delivered follow-ups through 006n merged. Authentication serialization 006o, confirmation simplification 006p, explicit confirmation paths 006q and current-guest confirmation 006r merged via PR #22. Explicit guest-expiry errors 006s merged via PR #23. |
-| Film knowledge | Catalogue/import/search are implemented. Task 054 retires the former FilmAnalysis/publication/generator path and uses direct FilmQuality links to Quality, with current source context on Film (merged via PR #46). Current direction is maintained source context plus accepted qualities, editable categories (043 merged via PR #46), and source-context JEV assessment. Revised initial enrichment/admin improvement scope is documented in task 052; individual-quality tuning is not a blocker. Obsolete LLM/JEV tuning artifacts were removed in tasks 042/050. Downstream scoring remains pending. |
-| Library | Watched operation 010 and guest-duration tests 010a merged. Watchlist task 011 merged via PR #23; dismissal task 012 merged via PR #24. Event publication task 012a merged via PR #26; Library browsing task 020 merged via PR #34; Library film details/watchlist actions task 021 merged via PR #35; dismissal actions task 022 and existing-entry action consolidation 022a merged via PR #36. |
-| Ratings and Recommendations | Ratings candidate task 013 merged via PR #27; task 014 first rating submission merged via PR #28; task 015 expressions merged via PR #29; task 016 Library rating-event consumer merged via PR #30; task 017 Ratings Library-event consumer and follow-ups 016a/012b merged via PR #31; task 018 browser flow merged via PR #32; task 019 targeted entry merged via PR #33; task 020 Library browsing and supporting follow-ups 020b/020c merged via PR #34; duplicated rating-status proposal 020a is withdrawn. |
-
-## Task rules
-
-Each task has **one owning domain, one small outcome, and independent verification**. Before implementation, write its spec from [the template](task_template.md), with scope restrictions and acceptance criteria including verification methods/results. Specs exist for tasks 001, 001a, 001b, 002, 003, 004, 004a, 005, 005a, 005b and 006. Tasks 001b, 002 and 003 were accepted by the owner and merged via PRs #3, #1 and #2 respectively. Task 004 was accepted by the owner and merged via PR #4. Task 004a was accepted by the owner and merged via PR #5. Task 005 was accepted by the owner and merged via PR #6 without waiting for queued hosted CI, as explicitly authorized. Tasks 005a and 005b were accepted by the owner and merged via PRs #8 and #7. Task 006 and Foundation follow-up 001c were accepted and merged via PR #9 after hosted CI passed; both live mail templates were received.
-
-If work appears to require changes in multiple domains, **review the boundary first**. Ask whether ownership is wrong, an invariant needs one owner, or responsibilities are too tightly coupled. Do not mechanically split a poor boundary into provider/consumer tasks. Agree cross-domain contracts before implementation, including inputs, results and failure behaviour. Implement and test each side in its own task: the provider first, then the consumer against the established contract. Reading another domain’s shared data is allowed and does not require a separate contract or provider task. Changing its implementation or mutating its data remains subject to its ownership. Review ownership when a contract exposes misplaced rules or unnecessary coupling.
-
-Use statuses `Draft`, `In progress`, `Ready for review`, `Accepted`, `Merged`; note blockers explicitly. Record actual changes and evidence in the spec. Owner acceptance and merge are separate from checks passing. Spec creation alone does not start implementation, and this plan does not authorise the whole list.
-
-Tasks 001d/006e were accepted and merged via PR #10 after hosted CI passed. Task 006a was accepted and merged via PR #11 after hosted CI passed; task 006b was accepted and merged via PR #12 after hosted CI passed: registration now proceeds through pending persistence, confirmation/claim capability (006b), then HTTP wiring (006f). Task 006f was accepted and merged via PR #13 after hosted CI passed. Task 006c password recovery was accepted and merged via PR #14 after hosted CI passed; owner confirmed browser completion. Task 006d bounded Identity retention cleanup was merged via [PR #15](https://github.com/adambelton/glutton/pull/15) on 19 October 2026; merge commit `74d0cfbc859d7cf6d7b05c5cf61ef776df32d7d6` was verified against GitHub on 20 October 2026. Local verification evidence remains in its spec.
+Routine progress needs no task or PR citation. Only cite a PR when a specific piece of evidence or decision actually needs its origin explained. Prefer a current domain/design document when explaining current behaviour. A new record needs a distinct owned outcome, not another review round or publication step.
 
 ## Domain ownership
-
-Owner clarification, 26 October 2026: domain boundaries are ownership boundaries, not read-access barriers. All domains may read the shared database, including another domain’s models/scopes, while respecting session/user access controls. Each domain owns its mutations, invariants and lifecycle. Read-only presentation queries do not require event-derived copies or new provider/consumer tasks. Durable events remain the agreed mechanism for existing cross-domain state-changing reactions; this clarification does not replace those workflows. For example, Library derives rated/awaiting-rating display from Ratings-owned records without storing its own rated flag.
 
 | Owner | Responsibilities | Boundary |
 | --- | --- | --- |
@@ -100,289 +59,9 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 - Ratings does not require a Library watched record to accept a rating. Confirming seen alone stays in Ratings; a completed rating publishes viewing evidence for Library to consume asynchronously.
 - Ratings selects the next film from its own queue/presentation state. Library publishes watched facts; Ratings consumes them as known-seen evidence and prioritizes unrated films without another seen question. Explicit rating dismissal remains in place even after new viewing evidence; already-rated films remain rated.
 - Product domains communicate through durable asynchronous events with independent transactions and eventual consistency. See [domain events](domain_events.md). Agree publisher/subscriber contracts and implement them in separate owned tasks. Shared-data reads and internal domain operations may remain synchronous; AI processing retains separate rules.
-- Source-backed film information/qualities are directly accessible with spoiler-labelled navigation normally from watched Library; access does not require watched status. Independent analysis models are under review.
+- Source-backed film information/qualities are directly accessible with spoiler-labelled navigation normally from watched Library; access does not require watched status. Film owns current source context and direct quality associations; the former analysis models are retired.
 
-## Initial scaffold
-
-| Task | Owner | Outcome | Depends on | Status |
-| --- | --- | --- | --- | --- |
-| 001 | Foundation | Minimal Rails app boots against local PostgreSQL, with setup and smoke checks | None | Ready for review — [spec](specs/001_initial_scaffold.md) |
-
-Cleanup/repository follow-up: **001a — Ready for review**, Foundation; [spec](specs/001a_scaffold_cleanup.md). Remove unused scaffold examples and publish the initial public GitHub repository, as authorised by the owner.
-
-CI follow-up: **001b — Merged**, Foundation; [spec](specs/001b_github_ci.md). Run the existing repository checks on GitHub pull requests and main pushes.
-
-Foundation follow-up: **001c — Merged**, [parallel database smoke test spec](specs/001c_parallel_database_smoke_test.md); correct the serial-only database-name assertion exposed by hosted CI for task 006.
-
-i18n follow-ups: **001d — Merged**, Foundation [spec](specs/001d_i18n_foundation.md), provides Rails locale conventions; **006e — Merged**, Identity [spec](specs/006e_identity_i18n.md), migrates its existing UI/mail/validation copy using that contract.
-
-Foundation follow-up: **001e — Merged**, [object-role conventions spec](specs/001e_object_role_conventions.md); record agreed role trust, behaviour ownership/naming and independent freshness rules and outcome/contract-focused testing in repository instructions. Documentation only.
-
-## First rating and library slice
-
-Candidate task boundaries; write each detailed spec just before starting, splitting further if needed. IDs 002 onward replace the earlier unimplemented sequence.
-
-| Task | Owner / capability | Independently verifiable outcome | Depends on | Status |
-| --- | --- | --- | --- | --- |
-| 002 | Identity / accounts | Email-free guest identity with fixed 24-hour expiry | 001 | Merged — [spec](specs/002_identity_accounts.md), [PR #1](https://github.com/adambelton/glutton/pull/1) |
-| 003 | Identity / guest sessions | Browser-session guest access with server-enforced expiry and identity isolation | 002 | Merged — [spec](specs/003_guest_sessions.md), [PR #2](https://github.com/adambelton/glutton/pull/2) |
-| 004 | Identity / credentials | Confirmed registered-account credential persistence, normalization and password authentication invariants | 002 | Merged — [spec](specs/004_registered_credentials.md), [PR #4](https://github.com/adambelton/glutton/pull/4) |
-| 004a | Identity / model organisation | Group the User model family without changing STI identity | 004 | Merged — [spec](specs/004a_user_model_layout.md), [PR #5](https://github.com/adambelton/glutton/pull/5) |
-| 005 | Identity / sessions | Shared guest/registered session lifecycle and password-authenticated registered issuance, without HTTP wiring | 004, 004a | Merged — [spec](specs/005_registered_sessions.md), [PR #6](https://github.com/adambelton/glutton/pull/6) |
-| 005b | Identity / model organisation | Keep root models at default paths and group only subclasses | 004a, 005 | Merged — [spec](specs/005b_simplify_model_layout.md), [PR #7](https://github.com/adambelton/glutton/pull/7) |
-| 005a | Identity / sign-in flow | Move guest access to shared Session records; sign-in/out UI, protected cookies, rotation, request limits and current identity; no automatic guest merge | 003, 005 | Merged — [spec](specs/005a_sign_in_flow.md), [PR #8](https://github.com/adambelton/glutton/pull/8) |
-| 006 | Identity / delivery | Resend configuration and local verification/reset mail previews; no real mail by default | 004 | Merged — [spec](specs/006_identity_mail_delivery.md), [PR #9](https://github.com/adambelton/glutton/pull/9) |
-| 006a | Identity / registration | Validated pending credentials for direct signup or an active guest, without user creation, account transition or UI | 004, 005 | Merged — [spec](specs/006a_pending_registration.md), [PR #11](https://github.com/adambelton/glutton/pull/11) |
-| 006b | Identity / verification | Confirmation tokens and atomic registered creation or in-place guest claim with fresh session; expiry, replay/conflict rejection and rollback | 004, 005, 006a | Merged — [spec](specs/006b_registration_confirmation.md), [PR #12](https://github.com/adambelton/glutton/pull/12) |
-| 006f | Identity / registration UI | Wire registration/confirmation HTTP flow, mail delivery/resend, pending-to-guest continuity, visible verification/expiry, session binding, CSRF, limits, duplicate-email rejection and localized responses | 005a, 006, 006a, 006b | Merged — [spec](specs/006f_registration_browser_flow.md), [PR #13](https://github.com/adambelton/glutton/pull/13) |
-| 006c | Identity / recovery | Expiring password-reset browser flow; request limits, atomic credential change/all-session revocation and fresh sign-in | 004, 005a, 006, 006f | Merged — [spec](specs/006c_password_recovery.md), [PR #14](https://github.com/adambelton/glutton/pull/14) |
-| 006d | Identity / retention | Bounded expired guest/session/pending cleanup command, claim-race protection and documented cadence; scheduler deployment and future domain activity excluded | 002, 005, 006a, 006b, 006f | Merged — [spec](specs/006d_guest_retention.md), [PR #15](https://github.com/adambelton/glutton/pull/15); future activity deletion policy must be agreed before guest activity persistence |
-| 006g | Identity / model organisation | Top-level UserRegistered/UserGuest/UserDeleted lifecycle classes and matching STI values; reversible existing-row migration | 006d | Merged — [spec](specs/006g_user_type_names.md), [PR #16](https://github.com/adambelton/glutton/pull/16) |
-| 007 | Film knowledge / catalogue | Minimal film identity/metadata persistence and local sample | 001 | Merged — [spec](specs/007_film_catalogue.md), [PR #17](https://github.com/adambelton/glutton/pull/17) |
-| 008 | Film knowledge / import | Import one selected TMDB identity with deduplication | 007 | Merged — [spec](specs/008_tmdb_film_import.md), [PR #18](https://github.com/adambelton/glutton/pull/18) |
-| 009 | Film knowledge / search | TMDB search returns disambiguated selection data | 008 | Merged — [spec](specs/009_tmdb_film_search.md), [PR #19](https://github.com/adambelton/glutton/pull/19) |
-| 010 | Library / viewing | LibraryFilm watched creation and permitted ToWatch-to-Watched transition returning the entry | 005a, 007 | Merged — [spec](specs/010_library_watched.md), [PR #20](https://github.com/adambelton/glutton/pull/20); commit 82d9b83, hosted CI passed |
-| 011 | Library / intent | Watchlist creation, NotInterested-to-ToWatch transition and removal without changing watched entries | 010 | Merged — [spec](specs/011_library_watchlist.md), [PR #23](https://github.com/adambelton/glutton/pull/23); commit 4817bbe, hosted CI passed |
-| 012 | Library / dismissal | NotInterested creation, ToWatch-to-NotInterested transition and dismissal removal | 011 | Merged — [spec](specs/012_library_dismissal.md), [PR #24](https://github.com/adambelton/glutton/pull/24); commit 78aba75, hosted CI passed; classification reads deferred to a consumer-driven spec |
-| 001i | Foundation / event delivery | Durable outbox and jobs, independent subscriber receipts, ordering, retries, retention and operational visibility | 001h | Merged via PR #25 — [spec](specs/001i_durable_event_delivery.md) |
-| 012a | Library / event publication | Publish versioned Library facts; retain stream versions through row deletion/recreation | 001i, 012 | Merged via PR #26 — [spec](specs/012a_library_event_publication.md) |
-| 013 | Ratings / presentations | Own oldest-first candidate batches and boolean dismissal; catalogue admission and event consumption remain separate | 005a, 007 | Merged via PR #27 — [spec](specs/013_rating_presentations.md) |
-| 014 | Ratings / ratings | First rating submission, rated/unrated/pending scopes and atomic RatingSubmitted publication | 013, 001i | Merged via PR #28 — [spec](specs/014_first_rating_submission.md) |
-| 015 | Ratings / expressions | Save multiple optional original expressions atomically with a rating submission | 014 | Merged via PR #29 — [spec](specs/015_rating_expressions.md) |
-| 016 | Library / rating-event consumer | Consume completed-rating events; reconcile watched evidence including NotInterested, explicitly handle duplicate deliveries and publish actual Library changes | 012a, 015 | Merged via PR #30 — [spec](specs/016_library_rating_consumer.md) |
-| 017 | Ratings / Library-event consumer | Admit watched films, hold/release watchlist films and dismiss not-interested films; preserve evidence and oldest-first ordering | 012a, 013, 014, 016 | Merged via PR #31 — [spec](specs/017_ratings_library_consumer.md) |
-| 017a | Ratings / action publication | Record explicit Library choices from the rating flow and publish requests | 013, 001i | Deferred — Ratings flow has no Library-action choices |
-| 017b | Library / action consumption | Apply Ratings action requests and publish applied/rejected outcomes; preserve public transition failures | 012a, 017a | Deferred — Ratings flow has no Library-action choices |
-| 017c | Ratings / action outcomes | Consume Library outcomes into recorded request status | 017a, 017b | Deferred — Ratings flow has no Library-action choices |
-| 018 | Ratings / rating flow | Rating/dismissal UI over the single-record queue | 016, 017 | Merged via PR #32 — [spec](specs/018_ratings_browser_flow.md) |
-| 019 | Ratings / targeted entry | Explicitly open a film for rating from Library, bypassing automatic-rotation dismissal; no Library watched-record prerequisite | 017, 018 | Merged via PR #33 — [spec](specs/019_ratings_targeted_entry.md) |
-| 020a | Library / rating-event consumption | Withdrawn: duplicate rated flag is unnecessary with shared reads | — | Withdrawn — [decision](specs/020a_library_rating_status.md) |
-| 020 | Library / browsing | One Library page with Watchlist/Watched/Not interested dropdown; watched rating status and entry | 010, 011, 012, 019 | Merged via PR #34 — [spec](specs/020_library_watched_view.md) |
-| 020b | Supporting UI / controller organisation | Top-level domain controllers and singular Library/rating workflow routes | 019, 020 | Merged via PR #34 — [spec](specs/020b_controller_organisation.md) |
-| 020c | Supporting UI / request access | Shared opt-in controller identity requirement with unchanged public access and domain responses | 020b | Merged via PR #34 — [spec](specs/020c_shared_identity_guard.md) |
-| 021 | Library / film details and watchlist actions | Polymorphic Library film detail pages; remove ToWatch entries or transition to Watched and use existing rating entry | 010, 011, 012a, 019, 020, 020b, 020c | Merged via PR #35 — [spec](specs/021_library_watchlist_actions.md) |
-| 022 | Library / dismissal actions | Compose details from content-named partials guarded by model permissions; add dismissal/reconsideration actions | 011, 012, 012a, 021 | Merged via PR #36 — [spec](specs/022_library_dismissal_actions.md) |
-| 022a | Library / action boundary | Consolidate user actions on existing LibraryFilm IDs; retain event-owned creation and remove wrappers | 022 | Merged via PR #36 — [spec](specs/022a_library_action_boundary.md) |
-| 023 | Ratings / revisions | Replace a rating and expressions, preserve superseded history without revision events; qualities remain deferred | 014, 015, 019 | Merged via PR #37 — [spec](specs/023_rating_revisions.md) |
-| 023a | Ratings / revision browser flow | Edit the current rating through the existing Ratings interface using the established replacement operation | 023 | Merged via PR #38 — [spec](specs/023a_rating_revision_browser.md) |
-| 023b | Library / rating navigation | Open current rating editing from rated watched films in collection/detail pages | 020–022a, 023a | Merged via PR #39 — [spec](specs/023b_library_rating_edit_links.md) |
-| 024 | Ratings / expression revisions | Edit/remove expressions with clear retention and revision semantics | 023, 023a | Covered by 023/023a; no separate implementation |
-| 025 | Film knowledge / legacy analysis design | Historical requirements superseded by current film-quality direction | 008 | Historical record — [spec](specs/025_film_analysis_requirements.md) |
-| 028 | Film knowledge / analysis lifecycle | Editable drafts, atomic publication and retained historical analyses | 007, 025–027 | Merged via PR #42 — [spec](specs/028_film_analysis_lifecycle.md) |
-| 028a | Film knowledge / lifecycle simplification | Remove nested locks, lifecycle flags and duplicate publication checks | 028 | Merged via PR #43 — [spec](specs/028a_simplify_analysis_lifecycle.md) |
-| 028b | Film knowledge / model boundaries | Models own publication, revision copying and metadata filling | 028a, 029 | Merged via PR #43 — [spec](specs/028b_model_behaviour_boundaries.md) |
-| 029 | Film knowledge / analysis generation | Import a TMDB film, generate and save unpublished analysis | 028, 027b, 001m | Merged via PR #43 — [spec](specs/029_film_analysis_generation.md) |
-| 042 | Film knowledge / documentation | Remove obsolete LLM research; consolidate current source/quality/history direction | 041 | Merged via PR #45 — [spec](specs/042_quality_direction_documentation_cleanup.md) |
-| 043 | Film knowledge / quality categories | Replace fixed dimensions with editable records, preserving identities and associations | 042; bounded legacy compatibility decision | Draft — [spec](specs/043_editable_quality_categories.md) |
-
-The revised Identity sequence replaces magic-link tasks. Guest expiry is fixed at creation plus 24 hours; browser closure is not a reliable expiry signal. Registered sessions follow Rails authentication conventions with no application-imposed TTL. Task 002 provides STI `User`/`GuestUser` persistence, an inactive `DeletedUser` subtype and polymorphic `active?`, deriving the deadline from `created_at` without a stored expiry. Registered subclass, deletion transitions and domain capability modules arrive with their own behaviour; admin permissions remain separate. Task 003 establishes session-bound guest access; task 004 introduces registered credential invariants; task 006b owns the confirmed claim transition; task 005 supplies shared guest/registered session lifecycle and registered authentication and task 005a exposes both identity modes through HTTP. Registered sessions end through sign-out/revocation or inactive-account rejection, not a custom age deadline. The ratings-first entry and first-save guest creation belong in the later Ratings UI task using the established Identity contract. No product UI is added by task 002.
-
-Guest cleanup must remove associated activity as well as the identity. Task 010 covers Library activity through its approved scoped user foreign-key cascade, with existing Identity cleanup/claim compatibility verified; other domains require their own retention decisions before persistence. Task 006d is not authorization to modify other domains or invent deletion contracts mechanically: review ownership and define domain-owned deletion work as those records are introduced. Cleanup must not delete a concurrently registered account. Treat complete guest retention behaviour as a release requirement; do not claim it is implemented by the expiry predicate.
-
-Tasks 010–012 retain their merged local operation contracts. Their old synchronous integration proposals are superseded by the owner-approved [event design](domain_events.md), not by retroactively changing historical verification. Task 001i supplies durable delivery; 012a publishes Library facts from creation onward. Task 014 owns rating-event publication. Task 016 is now Library-owned consumption of completed ratings, including the explicitly scoped system reconciliation of NotInterested to watched that current RecordWatched does not support. Task 017 is now Ratings-owned consumption of Library facts. Task 013 owns local queue/current selection and persistent rating dismissal; it no longer supplies MakeAvailableForRating across domains.
-
-Task 017a publishes Ratings UI Library-action requests, 017b applies them in Library and emits outcomes, and 017c consumes those outcomes in Ratings. Recommendations follows the same separate publication, Library consumption and outcome-consumption steps in its later milestone tasks. No originating screen may claim a Library transition completed solely because its response was recorded. Consumer retries do not turn distinct duplicate user actions into silent successes.
-
-Watched-but-unrated films take priority and skip the seen question. NotInterested means unseen/unwanted and suppresses rating and recommendation presentation. Removal retains unseen evidence. TMDB recognition inputs and the initial unknown-film selection policy remain to be specified; add a Film knowledge provider task before Ratings consumes new metadata. No live TMDB requests belong in presentation selection.
-
-All private operations include checks against accessing another user's records, including other guests, and reject expired guest access. Early domain operations can be verified with representative records and existing contracts; they need not wait for every user interface.
-
-## Later milestones — not implementation tasks
-
-Break down only when approaching each milestone. Domain/capability ownership below replaces the former Taste/Discovery split.
-
-- **Film knowledge:** media enrichment, reviewed trailer data, sourced context, editable quality categories/vocabulary and accepted film associations. Analysis pages are directly accessible with clear spoiler labelling; normal navigation is from the watched Library view. No watched authorization contract is needed.
-- **Ratings / analysis:** benchmark JEV scoring contracts and cost against labelled expressions and ratings.
-- **Foundation:** task 001i configures durable jobs and outbox delivery now required by product-domain events; domain-specific processing rules remain with their domain.
-- **Ratings / scoring:** implement the [agreed scoring design](ratings_scoring_design.md): unexpressed, implicitly expressed and explicitly expressed rating qualities; current-profile interpretation only for qualities without direct expressions; handle stale/duplicate assessments.
-- **Ratings / profile building:** explicit-only synthesis and assessment of meaningful changes; evaluate JEV gate and Claude usage.
-- **Ratings / preferences:** aggregate completed evidence and expose a preference result for recommendation consumption.
-- **Ratings / reassessment:** historical reinterpretation, scheduling and freshness, divided into small tasks. Original input and inference remain distinct inside the domain.
-- **Recommendations / eligibility:** consume Library classification and completed-rating events into owned eligibility projections; do not infer exclusion merely from presentation history. Bootstrap and stale/duplicate handling require a dedicated consumer spec.
-- **Recommendations / ranking:** consume published completed Ratings preference versions and rank eligible films; define bootstrap, refresh and version handling in its own task.
-- **Recommendations / presentation:** record each presented suggestion and explanation, with film media from Film knowledge.
-- **Recommendations / responses:** retain response history and publish user choices; a separate Library-owned task consumes requests and publishes applied/rejected outcomes. A Recommendations-owned task consumes outcomes. Define version/conflict and pending UI behaviour before implementation.
-- **Recommendations / evaluation:** compare rating-only and expression-informed results from fixed inputs; required Ratings changes become separate work after boundary review.
-
-The first complete loop still requires rating-only usefulness, explicit evidence, historical reinterpretation, media, spoiler-safe explanations and feedback. Boundary changes do not reduce product scope. User-requested TMDB imports with source/quality enrichment and admin improvement tools are now initial-release scope (29 October clarification); conversations and custom artwork production remain later features. Implement these capabilities in bounded Film knowledge tasks, not as one cross-domain release task.
-
-## Before public release
-
-Plan deletion/retention, security/accessibility, seed/media validation, operating-cost controls, deployment/backups and attribution. Review ownership for account deletion before slicing it; do not mechanically invent distributed coordination. Paid data/media licences remain excluded. Provider follow-up adds no gate beyond the agreed TMDB direction.
-
-Film knowledge sequencing clarification, 20 October 2026: task 007 starts with minimal catalogue persistence and a small local sample. JEV work remains deferred. The initial quality vocabulary is provisional and expected to evolve; validating that starting set is not a prerequisite for catalogue implementation. This does not make draft film analyses fact-checked or authorize publishing unverified claims.
-
-Post-merge Identity role/transition fixes in tasks 006h–006k were subsequently accepted and merged with the other convention fixes recorded below. They are separate from task 010.
-
-
-## Conventions fixes authorized after task 010
-
-| Task | Owner | Independently verifiable outcome | Status |
-| --- | --- | --- | --- |
-| 006h | Identity / registration | User-owned registration permission and lifetime; transition service retains destination/persistence ownership | Merged — [spec](specs/006h_registration_roles.md) |
-| 006i | Identity / browser sessions | Session binding and presentation delegate real user behaviour without subtype dispatch | Merged — [spec](specs/006i_session_roles.md) |
-| 006j | Identity / credentials | User-owned credential actions and recovery permission with unchanged security outcomes | Merged — [spec](specs/006j_credential_roles.md) |
-| 006k | Identity / model construction | Prevent direct User construction without subtype enumeration; preserve legacy-row loading | Merged — [spec](specs/006k_user_construction.md) |
-| 009a | Film knowledge / verification | Test import/sample outcomes rather than incidental whole-row snapshots | Merged — [spec](specs/009a_film_outcome_tests.md) |
-
-For the earlier convention-fix work, the owner requested fixes rather than an audit deliverable; that work has no separate results document. Each task keeps its own verification evidence; the owner subsequently authorized a PR for online review. Owner accepted and authorized merge; PR #21 merged on 20 October 2026 at `0fa54269df0140451ab19ac5b665fb64d6cc3c50` after GitHub Repository checks passed.
-
-Guest-duration follow-ups authorized during PR #21 review: **006l — Merged**, Identity [spec](specs/006l_guest_duration.md), owns the policy constant and lifecycle tests; **010a — Merged**, Library [spec](specs/010a_guest_duration_tests.md), updates only Library tests against that established policy.
-
-Pending-registration duration follow-up: **006m — Merged**, Identity [spec](specs/006m_pending_duration.md); one-hour model-owned registration and confirmation-link deadline with expiry tests, authorized during PR #21 review.
-
-Explicit anonymous registration access: **006n — Merged**, Identity [spec](specs/006n_registration_availability.md).
-
-## Repository audit — 20 October 2026
-
-**001f — Merged**, Foundation / repository review; [spec](specs/001f_codebase_audit.md), [audit report](audits/2026-10-20_codebase_audit.md). Audited freshly pulled main at `3cd3034e0e48fe04648c8a36c4e1d0028a622270`. The audit recorded one reproduced Identity sign-in/password-reset race and three maintainability/documentation observations; task 001f itself made no application changes. Existing tests, style, application eager loading and Brakeman passed. The separately scoped remediation tasks below were accepted and merged via PR #22.
-
-## Audit remediation and confirmation simplification — 20 October 2026
-
-The owner authorized implementation after reviewing audit 001f and discussing Identity complexity. Each task has one owner; no cross-domain contract changes are needed.
-
-| Task | Owner | Outcome | Status |
-| --- | --- | --- | --- |
-| [006o](specs/006o_authentication_reset_serialization.md) | Identity / sessions | Serialize sign-in with password recovery (A1) | Merged via PR #22 |
-| [006p](specs/006p_confirmation_orchestration.md) | Identity / registration | One confirmation coordinator and shared access rule (A2) | Merged via PR #22 |
-| [009b](specs/009b_tmdb_boundary_consistency.md) | Film knowledge / provider boundary | Shared date parsing and search parameter rules (A3) | Merged via PR #22 |
-| [001g](specs/001g_current_documentation.md) | Foundation / documentation | Consistent current summaries and open decisions (A4) | Merged via PR #22 |
-
-Submission/delivery orchestration, broad Identity rewrites and release infrastructure remain outside this change. Owner accepted and merged this work via PR #22; see merge evidence below.
-
-Verification for 006o/006p/009b/001g: full local CI passed 232 tests / 2,633 assertions, zero failures/errors/skips; RuboCop 127 files clean; dependency audits clean; Brakeman zero warnings/errors. Application eager loading and whitespace checks passed. Individual specs record commands, initial regression failure and limitations. No hosted CI or merge performed.
-
-Confirmation readability follow-up: **006q — Merged**, Identity / registration; [spec](specs/006q_confirmation_paths.md). The owner requested an explicit top-level current-user versus anonymous branch while reviewing PR #22. Full local CI passed 232 tests / 2,633 assertions, style and security checks. Existing contracts and lock order are preserved; accepted and merged via PR #22.
-
-Current-guest confirmation: **006r — Merged**, Identity / registration; [spec](specs/006r_confirmation_guest_attachment.md). A valid token for an unattached registration can upgrade the current active guest without a browser-held pending ID, supporting signup and confirmation in different browser sessions. Conflicting linked guests/requests remain rejected. Full local CI passed 235 tests / 2,662 assertions, style and security checks; the new cross-browser regression failed before the fix and passed after. Accepted and merged via PR #22; see merge evidence below.
-
-## PR #22 merge and next task
-
-Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge. Local main was fast-forwarded to that commit. No additional application changes were made while preparing the next spec.
-
-**011 — Merged via PR #23**, Library / intent; [watchlist spec](specs/011_library_watchlist.md). Implements watchlist creation, permitted NotInterested-to-ToWatch transitions and explicit removal outcomes, preserves watched entries, and retains existing identity, lock and retention contracts. Rewatch, UI, Ratings and Recommendations changes are excluded. Focused verification: 39 tests/207 assertions; full CI: 253 tests/2,772 assertions, style and security checks passed. Owner approved merge; merged 21 October 2026, commit 4817bbe, after hosted CI passed.
-
-**006s — Merged via PR #23**, Identity / guest lifecycle; [spec](specs/006s_expired_guest_error.md). UserGuest supplies GuestExpired after expiry; browser session resolution handles it while preserving cookie clearing and guest restart behaviour. Focused checks: 27 tests/139 assertions; full CI: 252 tests/2,769 assertions, style and security checks passed. Owner approved merge; merged 21 October 2026, commit 4817bbe, after hosted CI passed.
-
-**012 — Merged via PR #24**, Library / dismissal; [spec](specs/012_library_dismissal.md). Implements creation/transition into NotInterested and explicit dismissal removal. Task 011 already supplies reconsideration into ToWatch. Watched entries remain protected; classification read contracts await a concrete consumer. Focused Library checks passed: 58 tests/330 assertions. Full CI passed: 272 tests/2,895 assertions, style and security checks clean. Owner approved merge; merged 21 October 2026, commit 78aba75, after hosted CI passed.
-
-**013 — Merged via PR #27**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Owns one RatingFilm per user/film, oldest-first batches and viewing-neutral dismissal. Library event consumption is task 017. Local ordering and retention approved; catalogue recognition/admission remains separate.
-
-**001h — Merged via PR #25**, Foundation / architecture documentation; [spec](specs/001h_async_domain_design.md). Replaces synchronous-only coordination with asynchronous events across Library, Ratings and Recommendations. Delivery infrastructure is implemented in 001i; domain publishers/subscribers remain unimplemented.
-
-
-**001i — Merged via PR #25**, Foundation / event delivery; [spec](specs/001i_durable_event_delivery.md). Implements durable outbox events and ordered subscriber receipts with GoodJob 4.22, after-commit notification wakeups and a recurring recovery sweep. Full local CI passed 292 tests / 3,020 assertions, style and security checks; process-kill recovery and concurrent delivery are covered. [Operations](domain_event_operations.md) documents connections, retry/status and retention. No domain subscriptions or deployment. Merge evidence below.
-
-PR #25 review follow-up puts publishing-domain constants and inclusion validation on DomainEventStream and uses them in delivery tests. Full CI passed 294 tests / 3,027 assertions, style and security checks; 001i was subsequently merged via PR #25.
-
-The subsequent database safeguard adds a publisher check constraint and validation-bypass coverage. Full CI passed 295 tests / 3,030 assertions, style and security checks. Publisher/subscriber specs must settle stream granularity, historical schema handling and bootstrap; compaction remains deferred pending usage evidence.
-
-Dispatch discovery now fetches event/owner IDs together and checks event existence after locking the user. Concurrent cleanup coverage and full CI passed: 296 tests / 3,036 assertions, style and security checks. Task 001i was subsequently merged via PR #25.
-
-
-## PR #25 merge and next task
-
-Approved by the owner and merged via [PR #25](https://github.com/adambelton/glutton/pull/25) on 21 October 2026 at 16:16:38 UTC; squash commit `4a0943bcbc94573d6048c534a857388fdc416ff2`. Hosted Repository checks passed on head `cbb297642c092ec712d99574eadd3324e7955791` before merge. Local main was fast-forwarded to the merge commit. Final local CI passed 296 tests / 3,036 assertions, style and security checks.
-
-**012a — Scope revised by owner**, Library / event publication; [spec](specs/012a_library_event_publication.md). The project has no existing entries, so baseline/bootstrap work was removed. Operations publish one v1 fact using shared event-name constants and explicit classifications.
-
-Task **012a — Merged via PR #26**: Library operations publish versioned facts atomically; each operation supplies its resulting classification and uses shared event-name constants. [Spec and verification](specs/012a_library_event_publication.md); [publication contract](library_event_publication.md). Owner acceptance and merge are recorded below.
-
-Foundation **001j — Merged via PR #26**: remove the product-domain allowlist from event streams, retain structural constraints and accept domain-owned publisher names. [Spec](specs/001j_domain_owned_publisher_names.md). Library task 012a adopts its own identifier after independent provider verification.
-
-## PR #26 merge and next task
-
-Accepted by the owner and merged via [PR #26](https://github.com/adambelton/glutton/pull/26) on 21 October 2026 at 16:49:30 UTC; squash commit `f4d911344a830b413fba9ea85aa2b44ce5b07a3e`. Hosted Repository checks passed on head `a703a329ec21302e2e57f8741f1e55e512715f73` before merge. Local main was fast-forwarded. Final local CI passed 301 tests / 3,175 assertions, style and security checks.
-
-**013 — Merged via PR #27**, Ratings / presentations; [spec](specs/013_rating_presentations.md). Implements minimal candidate storage, oldest-first batch selection, boolean dismissal, concurrency and guest retention. Catalogue admission/recognition policy remains a separate prerequisite for the complete discovery feed; no global popularity ordering is assumed. Spec approved by the owner on 21 October 2026; implemented on `codex/ratings-presentations`. Owner review simplified this to one record and no seen/unseen question or presentation history. Revised verification is recorded in the spec. Owner accepted and merged via PR #27; see merge evidence below.
-
-## Ratings simplification — 21 October 2026
-
-Owner decision: offer rating or dismissal, without a separate seen/unseen question, dismissal reasons or presentation history. Dismissal only excludes automatic rating rotation and says nothing about viewing or recommendation interest. Library events must preserve it. Explicit rating initiated from Library is handled by targeted-entry task 019. Task 013 now uses one RatingFilm per user/film. This supersedes earlier unseen-response and presentation-history descriptions in this plan and the briefs.
-
-Ratings-flow watchlist/not-interested actions (017a–017c) are deferred; they are not required for task 018. Those choices remain in Recommendations and Library. Task 018 owns rating/dismissal UI after rating persistence and Library-event projection; task 019 supplies explicit entry, including for dismissed films. No implementation of those later tasks is authorized here.
-
-### Candidate batches — superseding queue policy
-
-Owner approved one oldest-first queue for all persisted candidates, including future Library watched-event admissions and unfinished candidates from earlier sessions. Order by created_at then ID, excluding dismissal and (once task 014 exists) rows with ratings. Newly watched films do not jump ahead of older candidates. Task 013 stores only user, film, dismissed and standard timestamps; NextCandidates returns a read-only bounded batch. Task 014 owns has_many ratings, rated/unrated scopes and extending the existing pending scope to exclude rated rows. Catalogue replenishment will fill batch shortfalls under its separately agreed selection policy; existing user/film records are not recreated or reordered. Task 017 preserves existing dismissal and creation time on repeated admissions. Earlier watched-first/current-selection descriptions are superseded by this decision.
-
-## PR #27 merge and next task
-
-Owner accepted and merged [PR #27](https://github.com/adambelton/glutton/pull/27) on 21 October 2026 at 18:04:00 UTC (19:04 BST). Squash commit `69bfe2e5862bcd5cca65c77bb2e465e153a6c4e1`; hosted Repository checks passed on head `98598fb808229e10bf46ac98ac5f2ba1f9a8b371` before merge. Final local CI passed 320 tests / 3,270 assertions with clean style/security checks. Local main was fast-forwarded.
-
-**014 — Merged via PR #28**, Ratings / ratings; [spec](specs/014_first_rating_submission.md). Implements first rating persistence, the has_many ratings relationship, rated/unrated/pending scopes and atomic v1 RatingSubmitted publication. Revision history/RatingRevised belongs to task 023; expressions remain 015. Spec approved on 21 October 2026; implemented on `codex/first-rating-submission`. Focused checks passed 37 tests / 319 assertions; full local CI passed 338 tests / 3,494 assertions with clean style/security checks. Application eager loading and whitespace checks passed. [Publication contract](ratings_event_publication.md). Owner accepted and merged via PR #28; see merge evidence below.
-
-**001k — Merged via PR #28**, Foundation / event delivery; [spec](specs/001k_delivery_status_constants.md). Owner authorized named delivery-status constants and status-selection scopes alongside task 014, preserving storage and delivery contracts. Implemented and verified: focused delivery checks 25 tests / 158 assertions; combined full CI 339 tests / 3,497 assertions with clean style/security checks. Owner accepted and merged via PR #28; see merge evidence below.
-
-## PR #28 merge and next task
-
-Owner approved and merged [PR #28](https://github.com/adambelton/glutton/pull/28) on 21 October 2026 at 19:18:59 UTC (20:18:59 BST), squash commit `18454ac916f3f208eb2a113a674b0664fee1b278`. GitHub Repository checks passed on exact head `01201d1f10704bcfe2b5800938ea68fb36fbfea2` before merge. Local main was fast-forwarded.
-
-**015 — Draft**, Ratings / expressions; [spec](specs/015_rating_expressions.md). Proposes optional original expressions saved atomically with the first rating and its unchanged v1 event. Review the proposed input bounds and blank/malformed-input handling. UI, editing and AI processing remain separate. Prepared on `codex/rating-expressions`; implementation has not started.
-
-22 October 2026: recorded the [scoring design](ratings_scoring_design.md). Task 015 names the association `Rating#rating_expressions` and preserves original evidence for future scoring. RatingQuality and expression-profile processing remain later work; this documentation update does not start implementation.
-
-**015 — Ready for review**, 22 October 2026. Owner approved the spec; implemented original RatingExpression persistence and atomic submission with unchanged v1 publication. Focused checks passed 46 tests / 429 assertions; full CI passed 348 tests / 3,607 assertions with clean style/security checks. Application eager loading and whitespace checks passed. Only the test database was migrated. [Spec and evidence](specs/015_rating_expressions.md). Owner acceptance and merge remain pending.
-
-## PR #29 merge and next task
-
-Owner approved and merged [PR #29](https://github.com/adambelton/glutton/pull/29) on 22 October 2026 at 10:25:39 UTC (11:25:39 BST), squash commit `a85db3d4f39f92dddfcadb34bda088fd496862ba`. Hosted Repository checks passed on exact head `94c426f4e1e3fe474aa7d1758b3947291bddafef` before merge. Local main was fast-forwarded.
-
-**016 — Draft**, Library / rating-event consumer; [spec](specs/016_library_rating_consumer.md). Consume retained and new completed-rating facts, reconcile to watched, and publish actual changes atomically with delivery. No implementation started.
-
-Task 023 owner clarification: replacement creates a new Rating with its own expressions and derived qualities, and atomically makes it current; currentness is derived from the highest Rating ID per RatingFilm without a stored flag. Preserve original evidence; enforce one current rating per RatingFilm and exclude superseded contributions from current preferences, including stale asynchronous work. Task 023 defines storage; revision events are deferred until a demonstrated consumer need.
-
-**016 — Ready for review**, 22 October 2026. Owner-approved Library consumer establishes watched from completed-rating v1 facts, reconciles NotInterested, preserves public action failures and emits causal watched events only for actual changes. Existing delivery handles catch-up, retries and inactive-owner skips. Focused checks passed 96 tests / 714 assertions; full CI passed 364 tests / 3,740 assertions with clean style/security checks. Application eager loading and whitespace checks passed. No schema changes or deployment. [Spec and verification](specs/016_library_rating_consumer.md). Owner acceptance and merge remain pending.
-
-## PR #30 merge and next task
-
-Owner authorized merge after CI. [PR #30](https://github.com/adambelton/glutton/pull/30) merged on 22 October 2026 at 10:46:23 UTC (11:46:23 BST), squash commit `8aa83001b91187ce6af892246f65be5754f24624`. Hosted Repository checks passed on exact head `9e52547dc2e0597e248d135e145982ae1673fc9b` before merge. Local main was fast-forwarded.
-
-**017 — Draft**, Ratings / Library-event consumer; [spec](specs/017_ratings_library_consumer.md). Revised after owner discussion: watched events find/create RatingFilm; not-interested events find/create and dismiss it using the existing dismissed attribute. No separate suppression storage, copied Library state or sequence watermark. Only these two events are subscribed to; later Library activity never clears dismissal. Explicit rating remains available through targeted entry. No implementation started.
-
-Task 017 hold clarification: add a Ratings-owned held boolean for temporary exclusion, independent of indefinite dismissed. Subscribe to watched, not-interested, watchlist addition and watchlist removal. Watched/removal release holds; not-interested dismisses and releases any hold; no event clears dismissal. Pending becomes unrated, not dismissed and not held. Source-stream ordering is supplied by Foundation; no separate projection or sequence column. Explicit snooze UI, expiry and hold provenance remain deferred. This supersedes the earlier two-event/no-schema-change draft; see the revised spec. Implementation has not started.
-
-**017 — Ready for review**, 22 October 2026. Owner-approved held state and four-event Ratings consumer implemented; watched/watchlist removal release holds, watchlist addition holds, and not-interested dismisses and releases. Original ratings, expressions, dismissal and queue position are preserved. Focused checks passed 151 tests / 1,345 assertions; full CI passed 384 tests / 4,010 assertions with clean style/security checks. Application eager loading and whitespace checks passed; existing-row migration verification passed. Only the test database migrated. [Spec and evidence](specs/017_ratings_library_consumer.md). Owner acceptance and merge remain pending.
-
-**016a — Ready for review**, Library / event consumption; [spec](specs/016a_library_event_handler_namespace.md). Owner requested consistent handler organization. Moved the existing Library reaction to Library::EventHandlers::Ratings::RatingSubmitted; unchanged behaviour/subscriber identity. Existing delivery regressions passed 148 tests / 1,329 assertions; application eager loading, targeted style and whitespace checks passed. Repository instructions now require receiving domain / EventHandlers / publishing domain / event name.
-
-**012b — Ready for review**, Library / event publication; [spec](specs/012b_library_event_payload.md). Removed classification from publish_event! and every Library event payload. Owner confirmed no historical data, so schema v1 is corrected in place without version compatibility or rewrites. Focused Library/Ratings/Foundation/job checks passed 148 tests / 1,329 assertions; targeted style and whitespace passed. No schema migration or deployment.
-
-## PR #31 merge and next task
-
-Owner authorized merge after CI. [PR #31](https://github.com/adambelton/glutton/pull/31) merged on 22 October 2026 at 12:06:57 UTC (13:06:57 BST), squash commit `4da49c223e974938f0a24bff10c89e6d65778b5f`. Hosted Repository checks passed on exact head `c0e7a0882d4ac1b90cf41e8505a7be66cbca678b` before merge. Final local CI passed 384 tests / 4,010 assertions with clean style/security checks. Local main was fast-forwarded.
-
-**018 — Ready for review**, 26 October 2026, Ratings / browser flow; [spec](specs/018_ratings_browser_flow.md). Owner approved the existing-queue scope. Implemented localized rating/expression/dismissal forms with session ownership, explicit failures, protected writes and a home link. Focused checks passed 59 tests / 793 assertions; full CI passed 392 tests / 4,190 assertions with clean style/security checks. Application eager loading, whitespace and real browser keyboard walkthrough passed. Catalogue replenishment, first-time anonymous discovery and targeted Library entry remain deferred. Owner acceptance and merge pending.
-
-**001l — Ready for review**, Foundation / dependency maintenance; [spec](specs/001l_crass_security_patch.md). PR #32 hosted CI detected GHSA-pq4g-8rxf-4g29 in crass 1.0.7. Updated only crass to 1.0.8. Refreshed advisory data and full local CI passed (392 tests / 4,190 assertions; style/security clean). Hosted verification and merge pending.
-
-## PR #32 merge and next task
-
-Owner authorized merge after CI. [PR #32](https://github.com/adambelton/glutton/pull/32) merged on 26 October 2026 at 08:57:13 UTC (GMT), squash commit `f2d8abbfbd2d3f2a335ba49c432904c804310b5a`. Hosted Repository checks passed on exact head `5340552cc874248a58bb84a5a0e2c97b678753bb` at 08:56:55 UTC. Local main was fast-forwarded. Final local CI passed 392 tests / 4,190 assertions with clean style/security checks after refreshing advisory data and patching crass.
-
-**001l — Merged via PR #32**, Foundation / dependency maintenance. The isolated crass update to 1.0.8 resolves the hosted dependency-audit failure; no CI checks were bypassed.
-
-**018 — Merged via PR #32**, Ratings / browser flow. Owner accepted the existing-queue UI and authorized merge after CI.
-
-**019 — Ready for review**, Ratings / targeted entry; [spec](specs/019_ratings_targeted_entry.md). Supplies the Ratings destination for a user choosing “Rate this film” from Library. Entry uses the shared Film ID, bypasses automatic queue holds/dismissal, and admits a missing Ratings candidate only when a first rating is successfully saved. No Library watched prerequisite or model access; Library UI links remain task 020. Owner approved implementation on 26 October 2026. Implemented read-only targeted entry and atomic first submission with shared form/input handling. Focused checks passed 78 tests / 1,050 assertions; full CI passed 411 tests / 4,447 assertions with clean style/security checks. Eager loading, whitespace and browser/keyboard walkthrough passed. [Destination contract](ratings_targeted_entry.md). Owner acceptance and merge pending.
-
-Task 019 owner review: consolidated rating entry into Ratings::RatingsController#new with optional film_id and one create action. Automatic selection retains queue eligibility; explicit selection bypasses holds/dismissal. Candidate dismissal remains separate. Updated provider destination documentation. Full local CI passed 412 tests / 4,451 assertions with clean style/security checks; application eager loading and whitespace checks passed. The earlier browser walkthrough predates the route consolidation; both modes were reverified through request tests. Ready for review.
-
-Task 019 final controller simplification: new, create and dismiss now share Ratings::RatingsController. Removed CandidatesController and the Ratings base controller; moved status/error views with the workflow. Full CI passed 412 tests / 4,451 assertions, style/security clean; eager loading and whitespace passed. Ready for review.
-
-Task 019 final admission decision: owner explicitly requested GET new(film_id:) to find/create RatingFilm before rendering. Unfinished candidates persist for the automatic queue. Create requires an existing owned rating_film_id and uses SubmitRating; removed SubmitFilmRating. Existing flags/timestamps and explicit duplicate failures remain. Focused tests passed 79 tests / 1,017 assertions; full CI passed 412 tests / 4,414 assertions, all style/security checks clean. Eager loading and whitespace passed. This supersedes prior read-only entry/submission-time admission descriptions. Ready for review.
-
-Task 019 controller/service boundary follow-up: controller validates HTTP params, services load/validate entities, models retain domain permissions. Added FindCandidate for safe validation-error rendering; PrepareCandidate owns already-rated rejection. No controller entity queries remain. Full CI passed 416 tests / 4,438 assertions with clean style/security checks; eager loading and whitespace passed. Ready for review.
-
-## PR #33 merge and next task
-
-Owner authorized merge after CI. [PR #33](https://github.com/adambelton/glutton/pull/33) merged on 26 October 2026 at 10:15:01 UTC (GMT), squash commit `ec279e23ed17312900fac7ea32d6ed1a9c08f8d5`. Hosted Repository checks passed on exact head `8f2197dca066b36584e35813707593cabc92ca50` at 10:14:26 UTC. Local main was fast-forwarded. Final local CI passed 416 tests / 4,438 assertions with clean style/security checks, including the owner’s final controller edit.
-
-**020a — Withdrawn after owner review**, Library / rating-event consumption; [spec](specs/020a_library_rating_status.md). Current Library consumption establishes watched but does not retain completed-rating status. The withdrawn draft proposed a Library-owned rated boolean maintained by the existing RatingSubmitted consumer. Owner rejected the premise that shared reads violate domain ownership. The proposal is withdrawn; task 020 reads authoritative Ratings data directly. No implementation was started.
-
-**020 — Draft**, Library / watched view; [spec](specs/020_library_watched_view.md). Build the Watched films page, its home link and pagination. Each row shows title/year, Rated or Awaiting rating, and a Rate this film link for unrated films. Read rating status from Ratings-owned data; reuse the existing rating form. No duplicate rated flag, new subscriber or event replay. Documentation/specification only; implementation awaits approval.
-
-## Mobile-first navigation — 26 October 2026
+## Agreed navigation
 
 Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. Ratings is the default landing destination; there is no separate product homepage.
 
@@ -391,58 +70,10 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with roomier film rows; keep the Library dropdown above the list. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Task 020 supplies the Library page and its three read-only views; task 021/022 can add their respective management actions.
+This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
 
-Task 020 draft revised to one Library page with three read-only dropdown selections. The previous separate watched page and homepage-link description is superseded. Shared responsive navigation/default-route wiring must be scoped as supporting UI work before implementation, without expanding Library ownership. No implementation started.
+## Release follow-up
 
-## PR #36 merge and next task
+Complete the seed-first sequence above before later admin improvements. Admin viewing requires authorisation before exposure; manual source refresh changes no accepted qualities. Source/association changes do not themselves authorise downstream score mutations. Community editing, scheduled syncing, streaming integrations and speculative extra event consumers are not prerequisites.
 
-Owner authorized merge after CI. [PR #36](https://github.com/adambelton/glutton/pull/36) merged on 26 October 2026 at 13:13:30 UTC; squash commit `79e2a4cc30e9c1a5f35d56d37c3619022bac333d`. Hosted Repository checks passed on exact head `6468b2baa2475d937762e69f775a25668c7caa21` at 13:10:57 UTC. Final local CI passed 436 tests / 4,752 assertions with clean style/security checks. Local main was fast-forwarded.
-
-**023 — Merged via PR #37**, Ratings / revisions; [spec](specs/023_rating_revisions.md). Implements full rating/expression replacement with preserved history, one current rating, stale-submission protection and no revision event publication. Revision events are deferred until a demonstrated consumer need. Owner approved the spec on 26 October 2026. Full local CI passed 452 tests / 4,930 assertions with clean style/security checks; migration, concurrency, retention and eager-loading checks passed. Browser editing is separately scoped as 023a; qualities and profile processing remain deferred. Implemented on `codex/rating-revisions`; accepted and merged via PR #37.
-
-## PR #37 merge and next task
-
-Owner authorized merge after CI. [PR #37](https://github.com/adambelton/glutton/pull/37) merged on 26 October 2026 at 14:26:22 UTC; squash commit `cbee7a2001a75fcbbc3bd4814d16b55529ab2cf5`. Hosted Repository checks passed at 14:25:37 UTC on exact head `a1bfa9ed6ccf41154e4e1f344287fb56edc83e33`. Final local CI passed 452 tests / 4,930 assertions with clean style/security checks. Local main was fast-forwarded.
-
-**023a — Merged via PR #38**, Ratings / revision browser flow; [spec](specs/023a_rating_revision_browser.md). Owner approved 26 October 2026. Implements edit/update in the existing RatingsController, prefilled current expressions, stale-form protection and an edit link after first submission. Library links remain separately owned. Implemented on `codex/rating-revision-browser`. Full CI passed 460 tests / 5,081 assertions with clean style/security checks; eager loading, whitespace and mobile/desktop browser walkthrough passed. Full replacement also edits expressions; task 024 is covered by 023/023a. Owner accepted and merged via PR #38.
-
-
-## PR #38 merge and next task
-
-Owner authorized merge after CI. [PR #38](https://github.com/adambelton/glutton/pull/38) merged on 26 October 2026 at 15:14:48 UTC; squash commit `c3b1ebf114d50eff1422dde4e5c36cce3ffc5b6a`. Hosted Repository checks passed at 15:14:32 UTC on exact head `3b08f8b2a1da635accc261bb79d5b53d1e9d192c`. Full local CI passed 460 tests / 5,081 assertions with clean style/security checks. Local main was fast-forwarded.
-
-**023b — Merged via PR #39**, Library / rating navigation; [spec](specs/023b_library_rating_edit_links.md). Add Edit rating links for rated watched films in the existing collection and detail pages using the established Ratings destination. Preserve unrated first-rating links, shared authoritative reads and model-owned action permissions. No Ratings changes or copied state. Implemented on `codex/library-rating-edit-links` after owner approval on 27 October 2026. Full CI passed 463 tests / 5,173 assertions with clean style/security checks; focused tests, eager loading, whitespace and mobile/desktop keyboard walkthrough passed. Owner accepted and merged via PR #39.
-
-Task 024's original edit/remove-expression outcome is covered by the full replacement flow in 023/023a: unchanged expressions copy to the new rating, edits produce new evidence and cleared fields omit expressions, while original evidence is retained. No additional in-place expression editor is planned.
-
-
-## Film knowledge implementation history and revised direction
-
-PRs #40 and #41 delivered the earlier analysis-design and prompt-management work. PR #42 delivered task 028 analysis editing/publication persistence. PR #43 delivered tasks 028a/028b model-boundary refinements and task 029 initial generated-analysis saving. Tasks 031/031a/034/035 record subsequent legacy implementation/prompt changes. Their implementation specs remain historical records; obsolete generated drafts, experiment reports, test scripts and test-only specs have been removed at the owner's request.
-
-The current code still has FilmAnalysis, AnalysisQuality and seven code-managed dimensions. This describes implementation history, not an obligation to retain those models. Current direction is in [film-quality requirements](film_quality_requirements.md), and the category replacement is planned in [task 043](specs/043_editable_quality_categories.md). Source refresh does not accept qualities or trigger scoring. A deliberate accepted film-quality change is the proposed reassessment boundary; domain-event details remain to be agreed. Historical Ratings/Recommendations quality contributions remain their own records of scoring.
-
-## Retained merge records
-
-### PR #39
-
-Owner authorized merge after CI. [PR #39](https://github.com/adambelton/glutton/pull/39) merged on 27 October 2026 at 08:09:56 UTC; squash commit `ead137008218a0baf988b98d799e4f9b46d9003a`. Hosted Repository checks passed at 08:09:37 UTC on exact head `95413ddb21966a19ef11e26ae4dfedd0a83f5434`. Local main was fast-forwarded. No further runtime changes were made after the verified implementation.
-
-### PR #40
-
-Owner authorised merge after CI. [PR #40](https://github.com/adambelton/glutton/pull/40) merged on 27 October 2026 at 11:58:21 UTC, squash commit `254a87d723244235a7c6894742b1939041761247`. Hosted Repository checks passed on exact head `46873e53c51a1aed48551f63d65dc09e384bbfce` at 11:57:44 UTC. Local main was fast-forwarded. Tasks 025, 026, 026a and 027 are merged documentation/research deliverables; no production analysis or scoring implementation is implied.
-
-### PR #41
-
-Owner authorised merge after CI. [PR #41](https://github.com/adambelton/glutton/pull/41) merged on 27 October 2026 at 12:41:52 UTC, squash commit `1eee2a13d4238b98dca39b5cbc7928626e0d59a6`. Hosted Repository checks passed on exact head `95968c58dd10d0169fd62d59859703c942d30ce4` at 12:41:31 UTC. Final local CI passed 469 tests / 5,225 assertions and all style/security checks. Local main was fast-forwarded. Tasks 001m, 027a and 027b are merged.
-
-### PR #42
-
-Owner authorized merge after CI. [PR #42](https://github.com/adambelton/glutton/pull/42) merged on 27 October 2026 at 14:27:17 UTC, squash commit `b67a2b922064e40230332868d34ffeadb9506c42`. Hosted Repository checks passed on exact head `6cbf59fe526338798701182cfe73223375b67ea4` at 14:26:20 UTC. Final local CI passed 503 tests / 5,456 assertions with clean style/security checks. Local main was fast-forwarded.
-
-### PR #43
-
-Owner authorized merge after CI. [PR #43](https://github.com/adambelton/glutton/pull/43) merged on 27 October 2026 at 16:38:40 UTC as squash commit `94758745f8b9d1c9a8cb6f7c7fcaa2fdf2cd2fd5`. Hosted [Repository checks](https://github.com/adambelton/glutton/actions/runs/40542518272) passed on exact head `641f6de76daae15c13c82a1fc47dbd0b2c22f6e5` at 16:37:26 UTC. Local main was fast-forwarded. Tasks 028a, 028b and 029 are merged. No paid film generation or analysis publication was performed.
-
-Foundation task [001m](specs/001m_langfuse_tracing.md) implemented the existing OpenAI client and isolated Langfuse tracing; that integration remains until separately changed. Its connectivity checks are not a film-quality pipeline contract.
+Final production hosting, scheduler installation and account/activity-retention decisions remain explicit follow-up work. Shared reads of authoritative records are allowed; cross-domain writes require the owning workflow and agreed durable events. Product/architecture briefs and domain contracts retain the detailed requirements.

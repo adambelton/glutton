@@ -1,7 +1,7 @@
 # Initial catalogue enrichment and admin quality improvement
 
 Status: Ready for review — release direction clarified by owner on 29 October 2026; implementation details remain proposed.  
-Owner: Film knowledge. [Task 052](specs/052_film_quality_review_workflow.md), [requirements](film_quality_requirements.md).
+Owner: Film knowledge. [clarify initial catalogue enrichment and admin quality improvement](film_quality_review_workflow.md), [requirements](film_quality_requirements.md).
 
 The initial release imports films from TMDB, enriches them with maintained Wikipedia plot/context and assigns qualities within **individually configured category ceilings**. This supersedes the former global-20 proposal. Admin category weights are a separate planned scoring control, initially 1 for every category; the current editable baseline caps are supplied by [category seed configuration](../config/quality_categories.yml), including subgenres 2 and tropes 5. Bulk seeding and user-requested missing-film imports use the same path. Admins improve the vocabulary and film associations; community editing is deferred. The previous contributor/submission/publisher proposal is superseded.
 
@@ -181,5 +181,5 @@ The delivery order is owner-directed. Each implementation task has one small own
 5. **Evaluate changes:** wire the JEV check into refresh, display suggestions/evidence and explicitly apply chosen edits through the manual operations. Suggestions can be transient; no independent analysis or persisted suggestion lifecycle is required.
 6. **After release:** add expression-led gap investigation/testing. Do not delay the initial release for this tool or automatically infer new vocabulary/weights from expressions.
 
-Task 058 is reserved for the later suggestion stage; seed selection may reuse its arithmetic without building its refresh-diff workflow. Scheduled syncing has its own later scope and is not a prerequisite for these first deliverables.
+Change suggestions belong to the later evaluation stage; seed selection may reuse its arithmetic without building its refresh-diff workflow. Scheduled syncing has its own later scope and is not a prerequisite for these first deliverables.
 Before association/meaning changes cause downstream work, agree the semantic event contract under the [existing delivery mechanism](domain_events.md); implement publishers and receiving-domain subscribers in separate tasks. Ratings and Recommendations retain their mutations and historical contributions. No independent permanent association archive or public community governance is assumed.

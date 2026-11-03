@@ -2,7 +2,7 @@
 
 Status: Merged  
 Owning supporting area: Foundation / repository review  
-Task: [001f](../specs/001f_codebase_audit.md)  
+Task: [codebase organisation and conventions audit](2026-10-20_codebase_audit.md)  
 Baseline: `main`, `3cd3034e0e48fe04648c8a36c4e1d0028a622270`
 
 `git pull --ff-only origin main` reported “Already up to date”; the initial working tree was clean. This review covers implemented Identity, Film knowledge and Library behaviour, their tests, persistence, configuration and maintained guidance. Ratings and Recommendations remain planned.
@@ -11,7 +11,7 @@ The organisation is sound for the current application size. Keep the Rails monol
 
 ## Subsequent remediation
 
-The findings and verification below describe the original audit baseline. The owner subsequently authorized fixes and confirmation simplification, implemented in [006o](../specs/006o_authentication_reset_serialization.md) (A1), [006p](../specs/006p_confirmation_orchestration.md) (A2), [009b](../specs/009b_tmdb_boundary_consistency.md) (A3), and [001g](../specs/001g_current_documentation.md) (A4). These fixes and subsequent confirmation follow-ups were accepted and merged via PR #22 on 20 October 2026. Final local CI passed 232 tests / 2,633 assertions, style and security checks; application eager loading passed. See the individual specs for reproduction commands, limitations and the initial failing authentication regression.
+The findings and verification below describe the original audit baseline. Authentication/reset serialization, confirmation orchestration and TMDB boundary issues were subsequently corrected; current behaviour is described in the maintained domain contracts. The original audit findings remain point-in-time evidence.
 
 ## Findings
 
@@ -53,7 +53,7 @@ Import and search duplicate the complete release-date parser and error policy. S
 
 ### A4 — Low: maintained guidance mixes current decisions with obsolete status (Foundation)
 
-Sources: `docs/architecture_brief.md:47–51,292–301`, `docs/implementation_plan.md` opening status and “Conventions fixes authorized after task 010”, `README.md:5`.
+Sources: `docs/architecture_brief.md:47–51,292–301`, `docs/implementation_plan.md` opening status and the then-current convention-fixes section, `README.md:5`.
 
 The architecture brief still lists confirmation of Rails/PostgreSQL and frontend selection as open, despite recording and implementing Rails/PostgreSQL/server-rendered Hotwire. The plan's opening summary omits later merged convention fixes, while an earlier paragraph says those fixes are implemented for review and the later table says Merged. README's introduction still describes only the initial home/health scaffold, although later sections document authentication and catalogue operations.
 
@@ -64,7 +64,7 @@ The architecture brief still lists confirmation of Rails/PostgreSQL and frontend
 | Area | Assessment and evidence |
 | --- | --- |
 | Rails organisation | Consistent default model paths; STI roots/subtypes use matching file and constant names. Operations and errors are grouped under Identity, FilmKnowledge and Library. No engines, generic repositories, empty capability modules or integration layer. Zeitwerk passes application eager loading. More namespaces would add ceremony at this size. |
-| Domain ownership | Film knowledge does not inspect viewers or Library. Library's RecordWatched owns its transition, uses fresh User/Film reads and delegates permission to `can_watch?`. Its user lock coordinates with Identity cleanup/claim through the established task 010 contract. The scoped Library foreign-key cascade is explicitly agreed and tested; it is not an accidental Identity ownership leak. No implemented Ratings/Recommendations behaviour to evaluate yet. |
+| Domain ownership | Film knowledge does not inspect viewers or Library. Library's RecordWatched owns its transition, uses fresh User/Film reads and delegates permission to `can_watch?`. Its user lock coordinates with Identity cleanup/claim through the Library retention contract. The scoped Library foreign-key cascade is explicitly agreed and tested; it is not an accidental Identity ownership leak. No implemented Ratings/Recommendations behaviour to evaluate yet. |
 | Roles and behaviour | User permissions and credential actions reside on models; STI transitions remain in services. Polymorphic user partials avoid controller subtype dispatch. Runtime class checks largely validate external inputs, JSON/schema shape, root construction or targeted persistence failures; removing them mechanically would weaken boundaries. A2 is the clearest remaining placement concern. |
 | Outcomes and persistence | AlreadyWatched is an explicit failure. Import deduplicates according to its agreed system contract. Unique indexes, foreign keys, credential constraints, transactional rollback and real PostgreSQL race tests provide substantial protection. A1 shows that individually transactional operations still need a shared concurrency invariant. |
 | UI and i18n | Inspected application templates, controller responses and mail use runtime locale lookups; custom validations use symbols. Development/test enable strict missing-translation errors. Domain exception diagnostics remain developer-only in current implemented flows. No broad hard-coded application-copy violation found. |
@@ -134,4 +134,4 @@ ensure
 end
 ```
 
-Owner acceptance / merge: Accepted by the owner and merged via [PR #22](https://github.com/adambelton/glutton/pull/22) on 20 October 2026 at 16:52:53 UTC. Squash commit `5c7279a349bfe187c2c60f6db6727b0171e6995f`; hosted Repository checks passed for head `50b937f9da7245b457f6fffc83b72ddd416a832e` before merge.
+This audit is historical. Its identified remediation was delivered in [PR #22](https://github.com/adambelton/glutton/pull/22); current behaviour is documented in the maintained domain contracts.

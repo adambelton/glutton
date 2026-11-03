@@ -1,6 +1,6 @@
 # Ratings event publication — version 1
 
-Task 014 publishes first rating submissions. Library task 016 consumes these facts through `library.completed_ratings`; Recommendations consumption remains separate.
+Ratings publishes first rating submissions. Library consumes these facts through `library.completed_ratings`; Recommendations consumption remains separate.
 
 ## Meaning and payload
 
@@ -33,7 +33,7 @@ Validation failure, publication failure or caller rollback leaves no rating, exp
 
 Stream identity is `(user_id, publisher: "ratings", stream_key: "film:<internal film ID>")`, independent of candidate/rating row IDs. Foundation allocates monotonic stream sequences and event UUIDs. `occurred_at` records publication time. Direct submissions start their own correlation (event ID) with no causation ID.
 
-Delivery is at least once, ordered within a subscriber's stream, with independent consumer transactions and receipts. There is no total ordering against Library streams. Future consumers must define supported schemas, retained-event bootstrap, duplicate handling and contradiction resolution before implementation. An event retry must not be treated as another user submission. Library task 016 installs its consumer independently; no synchronous fallback is installed.
+Delivery is at least once, ordered within a subscriber's stream, with independent consumer transactions and receipts. There is no total ordering against Library streams. Future consumers must define supported schemas, retained-event bootstrap, duplicate handling and contradiction resolution before implementation. An event retry must not be treated as another user submission. Library consumes in its own transaction; no synchronous fallback is installed.
 
 ## Ownership and retention
 
@@ -41,13 +41,13 @@ Guest claim keeps the owner, candidate, rating, expression and event/stream iden
 
 See [Foundation operations](domain_event_operations.md) for delivery recovery and [domain communication](domain_events.md) for consumer boundaries.
 
-## Rating replacement — task 023
+## Rating replacement
 
 `Ratings::ReviseRating.call(user_id:, rating_film_id:, previous_rating_id:, value:, expression_texts: [])` replaces an existing current rating. It locks the fresh active owner and exact owned candidate, then delegates replacement to RatingFilm. The result is a new Rating; the previous row retains its value and original expressions unchanged. Expressions are a complete replacement; omission supplies an empty set. Repeating the same value is permitted.
 
 `RatingFilm#ratings` retains history; `RatingFilm#current_rating` and `Rating.current` select the highest Rating ID for each candidate. This derives currentness without a stored flag, including when timestamps tie or are backdated. A nonunique (rating_film_id, id) index supports the relationship and latest-rating lookup. Existing single ratings remain current. Owner/candidate locking serializes writes; there is no database uniqueness constraint restricting rating history. The normal rating operation cannot be reused to bypass revision protection.
 
-Missing/inactive owners and missing/foreign candidates retain the submission failures above. An unrated candidate raises `Ratings::RevisionUnavailable`. A previous ID that is not the current rating for this candidate raises `Ratings::StaleRating`, including replay after successful replacement. Concurrent replacements of one previous rating have one winner. Validation, expression persistence failure or caller rollback retains the previous current rating and creates no revision event. Browser editing is not implemented by task 023.
+Missing/inactive owners and missing/foreign candidates retain the submission failures above. An unrated candidate raises `Ratings::RevisionUnavailable`. A previous ID that is not the current rating for this candidate raises `Ratings::StaleRating`, including replay after successful replacement. Concurrent replacements of one previous rating have one winner. Validation, expression persistence failure or caller rollback retains the previous current rating and creates no revision event. The browser editing destination uses this replacement operation.
 
 Replacement publishes no event and does not advance the existing Ratings stream. Revision events are deferred until a demonstrated consumer need establishes their meaning and payload. Existing RatingSubmitted publication and its Library consumer remain unchanged; there is no new subscriber or synchronous cross-domain mutation.
 

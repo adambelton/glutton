@@ -1,4 +1,6 @@
-# NNN — Task title
+This is a temporary working record for scope and validation before/during implementation, not a permanent delivery record. Amend it for review refinements; do not create another task for routine corrections, CI repair, PR publication or handoff. When preparing the PR, turn the final scope/behaviour/verification/limits into its description, update maintained progress/decisions, and delete this file as part of the PR. Track subsequent review/CI/merge on GitHub. Cite a PR in maintained docs only when specific evidence or a decision needs provenance; routine citations and history duplication are unnecessary.
+
+# Task title
 
 Status: Draft  
 Owner: One domain or supporting area
@@ -28,4 +30,4 @@ For each criterion, state the observable result and how to check it. After imple
 
 After implementation, briefly describe what changed, relevant decisions, deviations and remaining limitations. Until then: Not implemented.
 
-Owner acceptance / merge: Pending.
+Review handoff: Pending. After opening the PR, continue scope/evidence/review tracking there and remove this record.

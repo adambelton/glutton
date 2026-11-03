@@ -1,6 +1,6 @@
 # Quality selection: global cap versus category ceilings
 
-Status: Ready for review, 29 October 2026. Film knowledge / [task 053](../specs/053_category_selection_policy_experiment.md).
+Research comparison, 29 October 2026. Owner: Film knowledge.
 
 **Finding:** category ceilings address the observed concentration of global top-20 selection, but do not by themselves establish fair recommendation scores or correct assignments. Store any chosen ceiling as editable category data, not a code constant or a requirement to fill every category. A 60% minimum is a useful candidate for the next policy, not evidence that every admitted match is reliable.
 
@@ -67,7 +67,7 @@ Two separate decisions remain:
 1. **Selection:** whether to replace the global cap, which category ceilings to start with, and whether 60% is acceptable for automatic initial assignments as well as suggestions. Acceptance of a number does not settle source ambiguity or overlapping labels.
 2. **Comparison/scoring:** how to prevent variable totals and correlated qualities from inflating similarity or recommendation scores. Category ceilings reduce concentration but still allow unequal totals (24 versus 27 here); a broad category with many near-synonyms can have more chances to match. This experiment has no user outcomes and does not validate a normalisation rule. Preserve equal base treatment; do not introduce category weights under the guise of a fairness fix.
 
-If accepted, record ceiling/threshold policy revisions so results can be reproduced. Changing a cap or moving a quality between categories can change the *next proposed selection*, even where quality meaning is unchanged. Do not retroactively alter accepted sets or rescore merely because grouping/configuration changed; explicit association application remains the boundary. This qualifies the earlier category-only no-rescoring rule without changing it. Any future cap field should be separately scoped after task 043's bounded category replacement, not silently added to that task or hard-coded into fixed dimensions.
+If accepted, record ceiling/threshold policy revisions so results can be reproduced. Changing a cap or moving a quality between categories can change the *next proposed selection*, even where quality meaning is unchanged. Do not retroactively alter accepted sets or rescore merely because grouping/configuration changed; explicit association application remains the boundary. This qualifies the earlier category-only no-rescoring rule without changing it. Any future cap field should be separately scoped without hard-coding fixed dimensions or retroactively changing accepted associations.
 
 The six films are familiar and have relatively rich full Wikipedia packets, including reception/production context. They are neither a random seed sample nor plot-only evidence. These results support a concrete policy review, not confidence across obscure/sparse films or a claim of fair personalised recommendations. No production records, definitions or historical rating/recommendation contributions changed.
 
