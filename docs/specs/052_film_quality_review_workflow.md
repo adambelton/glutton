@@ -1,6 +1,6 @@
 # 052 — Clarify initial catalogue enrichment and admin quality improvement
 
-Status: Ready for review  
+Status: Merged
 Owner: Film knowledge
 
 ## Goal
@@ -49,3 +49,5 @@ Verification: run `python3 /tmp/glutton-052-check.py` and `git diff --check`. Th
 Remaining decisions: initial automated selection and insufficient-context outcomes, storage/legacy-model role, provider-specific sync policy, admin access to expression evidence and bounded test execution. These are implementation-spec decisions, not an approved community publishing process. No user-testing, selection-accuracy or bulk-cost claim is made.
 
 Owner acceptance / merge: Pending for revised proposal details; release direction supplied by owner.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.

@@ -267,6 +267,19 @@ back the current guest. The candidate batch limit does not bound the number of
 Library rows deleted for one guest. Scheduler installation and monitoring remain
 deployment work.
 
+## Quality vocabulary seed
+
+After applying migrations, load the 235 provisional quality definitions and nine category defaults:
+
+```sh
+bin/rails db:migrate
+bin/rails db:seed
+```
+
+The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import, Wikipedia enrichment and initial assignment remain subsequent seed tasks.
+
+Qualities use immutable names and database IDs; there is no separate quality key. Categories also use names and database IDs; their names remain editable. Both seed files are plain YAML lists, with vocabulary entries referring to category names during the one-time initial load. Existing name-only qualities remain valid; when a definition or exclusion is supplied, both must be nonblank. Definitions and exclusions remain editable within the same concept. See [task 062](docs/specs/062_consistent_catalogue_seed_data.md) for verification.
+
 ## Development film sample
 
 Task 007 provides minimal film identities, not analyses or a validated production seed. After applying migrations, explicitly load the three-film sample in development:

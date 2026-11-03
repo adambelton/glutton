@@ -1,6 +1,6 @@
 # 057 — Publish the direct quality catalogue and cleaned migrations
 
-Status: In progress  
+Status: Merged  
 Owner: Foundation (supporting delivery)
 
 ## Goal
@@ -26,13 +26,15 @@ Publish the authorised category/catalogue, analysis retirement, migration consol
   Result: Passed — reviewed staged allowlist of 75 code/config/migration/docs/script/test paths; no ignored environment, Obsidian, cache or raw-run files staged, no matching credential literals. Canonical five-file baseline and seven prior status diffs preserved; 216 local Markdown destinations/anchors and whitespace passed. Non-catalogue schema comparison preserved 17 table contracts and 11 foreign keys. Offline experiment replay reproduced the retained 12-call evidence (US$0.012344052 historical spend); no new calls made. Existing full local verification is 483 tests / 5,353 assertions with clean style/security/eager loading.
 - **AC2:** The current PR head passes required CI before merging.  
   Check: CI run/check URL, conclusion, exact head SHA re-read, merge with matching-head guard.  
-  Result: Not run.
+  Result: Passed — [CI](https://github.com/adambelton/glutton/actions/runs/40878015501) completed successfully on exact head `521899613dd44b2f1df8ae97b41e194fb504ac17`: 483 tests / 5,353 assertions, zero failures/errors/skips; 232 Ruby files clean, Gem/Importmap audits and Brakeman clean. Re-read PR head and all required check conclusions immediately before `gh pr merge --squash --match-head-commit`; no bypass or self-approval review.
 - **AC3:** Actual merge and next-task handoff are verifiable.  
   Check: merged PR state/commit, fetched origin/main matching local main, updated local evidence and bounded next Draft spec. No next-task implementation.  
-  Result: Not run.
+  Result: Passed — [PR #46](https://github.com/adambelton/glutton/pull/46) reports MERGED at 13:03:33 UTC on 29 October 2026, commit `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e`. Fetched origin/main, switched to main and fast-forwarded; HEAD matches remote main. Prepared task 058 Draft for deterministic category-limited suggestions, without starting implementation or making paid calls. Post-merge status/evidence/next-task files are local handoff changes outside this PR. Final handoff checker passed: 137 local links/anchors across nine changed Markdown files, canonical baseline unchanged, whitespace clean and no post-merge application/configuration/test diff.
 
 ## Implementation notes
 
 Existing local verification: 483 tests / 5,353 assertions, Ruby style/security/eager loading clean. Both disposable databases rebuilt from all 11 creation migrations; development seeded with nine category defaults. Prior migration errors were corrected and recorded in tasks 055/056. All result statuses below must reflect checks actually run for this delivery.
 
-Owner acceptance / merge: CI-conditional merge authorised; actual merge pending.
+Owner acceptance / merge: User authorised merge after CI; actually merged in [PR #46](https://github.com/adambelton/glutton/pull/46) on 29 October 2026.
+
+Publication used the authenticated gh CLI because the connected GitHub integration previously rejected PR creation with insufficient permission. Attached the created PR to this chat. Exact-head CI/readback evidence was retrieved with gh pr view and gh run view; no remote prompt/dataset/provider mutation occurred. Post-merge documentation and next-task preparation remain local for the following delivery.

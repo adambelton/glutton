@@ -236,13 +236,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "match_rule"
+    t.text "not_sufficient"
     t.index "quality_category_id, lower((name)::text)", name: "qualities_category_name", unique: true
     t.index ["quality_category_id"], name: "index_qualities_on_quality_category_id"
+    t.check_constraint "match_rule IS NULL AND not_sufficient IS NULL OR match_rule IS NOT NULL AND match_rule ~ '[^[:space:]]'::text AND not_sufficient IS NOT NULL AND not_sufficient ~ '[^[:space:]]'::text", name: "qualities_complete_definitions"
     t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "qualities_name_present"
   end
 
   create_table "quality_categories", force: :cascade do |t|
-    t.string "key", null: false
     t.string "name", null: false
     t.integer "maximum_qualities", default: 3, null: false
     t.decimal "weight", precision: 8, scale: 3, default: "1.0", null: false
@@ -250,8 +252,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index "lower((name)::text)", name: "quality_categories_name", unique: true
-    t.index ["key"], name: "index_quality_categories_on_key", unique: true
-    t.check_constraint "key::text ~ '^[a-z][a-z0-9_]*$'::text", name: "quality_categories_key"
     t.check_constraint "maximum_qualities >= 0", name: "quality_categories_maximum"
     t.check_constraint "name::text = btrim(name::text) AND name::text <> ''::text", name: "quality_categories_name_present"
     t.check_constraint "weight >= 0::numeric AND weight <> 'NaN'::numeric", name: "quality_categories_weight"

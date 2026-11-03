@@ -4,6 +4,7 @@ class Quality < ApplicationRecord
   has_many :films, through: :film_qualities
 
   normalizes :name, with: ->(name) { name.strip }
+  validates :match_rule, :not_sufficient, presence: true, unless: -> { match_rule.nil? && not_sufficient.nil? }
   validates :name, presence: true, uniqueness: { scope: :quality_category_id, case_sensitive: false, on: :update }
   validate :immutable_name
 

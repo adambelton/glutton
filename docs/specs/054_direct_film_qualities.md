@@ -1,6 +1,6 @@
 # 054 — Replace FilmAnalysis with direct current film qualities
 
-Status: Ready for review  
+Status: Merged
 Owner: Film knowledge
 
 ## Goal
@@ -47,6 +47,8 @@ Reproduce focused checks with PARALLEL_WORKERS=1 RAILS_ENV=test bin/rails test t
 
 Limitations: no admin editing/publication, JEV suggestion/selection, Wikipedia enrichment or scoring reassessment operation is added. Source-context versioning/sync must be specified before implementing refresh; a migration alone does not implement that behaviour. Migration deliberately blocks any environment with unpublished analysis drafts until explicit disposition/export. Only test data was migrated. The owner confirmed retaining Quality naming.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via PR #46 under the owner's explicit CI-conditional merge instruction.
 
 Follow-up supersession: owner confirmed development is the only application environment, existing development data may be discarded, and all local correction migrations should be cleaned up. Tasks 055/056 replace the intermediate preservation/rename migrations and transition tests with direct creation and fresh-schema checks. The prior draft guard, test-only migration limit and preservation results above are historical intermediate evidence, not the final installation procedure. Model roles/behaviour remain Quality, QualityCategory, Film and FilmQuality.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.

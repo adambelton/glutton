@@ -8,12 +8,13 @@ en:
       film:
         source_context: Source context
       quality_category:
-        key: Category key
         name: Category name
         maximum_qualities: Maximum qualities
         weight: Category weight
       quality:
         name: Quality name
+        match_rule: Definition
+        not_sufficient: Exclusion
         quality_category: Quality category
       film_quality:
         film: Film
@@ -21,10 +22,6 @@ en:
         evidence_references: Evidence references
     errors:
       models:
-        quality_category:
-          attributes:
-            key:
-              immutable: cannot be changed
         quality:
           attributes:
             quality_category:

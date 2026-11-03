@@ -1,6 +1,6 @@
 # 056 — Fold local schema corrections into creation migrations
 
-Status: Ready for review  
+Status: Merged
 Owner: Foundation (supporting database migration history)
 
 ## Goal
@@ -32,7 +32,7 @@ Simplify disposable local migration history without changing the final domain sc
 
 Authorised local history rewrite. A development reset attempt found one active database connection; the authorised reset may disconnect sessions only on glutton_development to complete the drop. No unrelated database/session will be targeted.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via PR #46 under the owner's explicit CI-conditional merge instruction.
 
 
 ### Verification notes
@@ -42,3 +42,5 @@ The first full-suite attempt referenced two deleted correction migrations. Updat
 Reproducible checks: PARALLEL_WORKERS=1 RAILS_ENV=test bin/rails test; RAILS_ENV=development bin/rails zeitwerk:check; RUBOCOP_CACHE_ROOT=/private/tmp/glutton-rubocop-056 bin/rubocop --no-server; standard Gem/Importmap/Brakeman audit commands. Temporary schema checker compares parsed table/foreign-key definitions against the captured pre-cleanup dump, excluding only task-055 catalogue tables and equivalent ordering/text casts. Rebuild commands and initial reset failures are recorded in task 055, not hidden as successful attempts.
 
 Final migration history contains independent creation migrations only, including unchanged generated GoodJob schema. Historic specs remain evidence of earlier delivery, not instructions to replay removed corrections. No PR/merge or deployment performed.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.

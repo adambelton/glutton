@@ -3,7 +3,11 @@
 Status: Ready for review — release direction clarified by owner on 29 October 2026; implementation details remain proposed.  
 Owner: Film knowledge. [Task 052](specs/052_film_quality_review_workflow.md), [requirements](film_quality_requirements.md).
 
-The initial release imports films from TMDB, enriches them with maintained Wikipedia plot/context and assigns qualities within **individually configured category ceilings**. This supersedes the former global-20 proposal. Admin category weights are a separate planned scoring control, initially 1 for every category; subgenres 2 and tropes 4–5 are illustrative ceiling candidates, not adopted defaults. Bulk seeding and user-requested missing-film imports use the same path. Admins improve the vocabulary and film associations; community editing is deferred. The previous contributor/submission/publisher proposal is superseded.
+The initial release imports films from TMDB, enriches them with maintained Wikipedia plot/context and assigns qualities within **individually configured category ceilings**. This supersedes the former global-20 proposal. Admin category weights are a separate planned scoring control, initially 1 for every category; the current editable baseline caps are supplied by [category seed configuration](../config/quality_categories.yml), including subgenres 2 and tropes 5. Bulk seeding and user-requested missing-film imports use the same path. Admins improve the vocabulary and film associations; community editing is deferred. The previous contributor/submission/publisher proposal is superseded.
+
+## Delivery order
+
+Owner clarification, 29 October: **seed -> view -> manually edit -> manually refresh sources -> evaluate JEV change suggestions**. The first content screens are admin-only canonical films, quality categories and qualities, with related-record navigation. Initial JEV assignment belongs to seed generation; later checks compare possible changes to an existing accepted set. Admin expression-led missing-quality discovery/testing is **post-release**, while core expression scoring remains in scope. No further research is required before implementing the seed/view path.
 
 ## Catalogue lifecycle
 
@@ -16,13 +20,13 @@ The initial selection rule is still undecided. Equal base treatment does not cho
 
 ## Scheduled and manual source maintenance
 
-Periodic syncing is the preferred initial direction for **both TMDB metadata and Wikipedia context**. Cadence, eligible records, change detection, retries and operating limits remain to be specified. A shared scheduling approach does not mean identical provider intervals or a generic workflow engine. No callback dependency is assumed or required by this proposal.
+Start with **manual TMDB and Wikipedia refresh**, after seed loading, read-only admin inspection and manual editing. Periodic syncing is later separately scoped maintenance; cadence, eligible records, change detection, retries and operating limits remain to be specified. A shared scheduling approach does not mean identical provider intervals or a generic workflow engine. No callback dependency is assumed or required by this proposal.
 
-Plot corrections happen on Wikipedia, then sync into Glutton. The canonical film screen can show the external page and sync status; it is not a second plot editor. Metadata and plot refresh update their own source information/provenance. Scheduled source refresh alone does not automatically replace accepted qualities or rescore ratings/recommendations; its quality-check policy remains to be specified. Admin manual sync explicitly includes the comparison described below. Preserve the evidence reference used by an existing assignment rather than silently substituting a newer paragraph under it; exact storage/retention remains to be specified.
+Plot corrections happen on Wikipedia, then sync into Glutton. The canonical film screen can show the external page and sync status; it is not a second plot editor. Metadata and plot refresh update their own source information/provenance. Scheduled source refresh alone does not automatically replace accepted qualities or rescore ratings/recommendations; its quality-check policy remains to be specified. Deliver manual source refresh first; add the comparison below in the following change-evaluation stage. Preserve the evidence reference used by an existing assignment rather than silently substituting a newer paragraph under it; exact storage/retention remains to be specified.
 
 ### Manual sync and quality check
 
-The admin canonical film screen offers manual syncing from TMDB, Wikipedia or both. After a successful sync, run a JEV quality check using the latest available context and current definitions, then use the same versioned selection policy as initial assignment to produce a proposed set within each category's configured maximum. Run the check even when the selected provider reports no source change: this is an explicit admin request to compare the current result. Missing/ambiguous context or a provider/check failure must be visible; do not label an old or incomplete result as a successful fresh check. A successful source update can remain saved if the subsequent quality check fails, with separate sync/check statuses and retry of the failed stage.
+The admin canonical film screen offers manual syncing from TMDB, Wikipedia or both. After manual source refresh is usable, wire a successful sync to a JEV quality check using the latest available context and current definitions, then use the same versioned selection policy as initial assignment to produce a proposed set within each category's configured maximum. Run the check even when the selected provider reports no source change: this is an explicit admin request to compare the current result. Missing/ambiguous context or a provider/check failure must be visible; do not label an old or incomplete result as a successful fresh check. A successful source update can remain saved if the subsequent quality check fails, with separate sync/check statuses and retry of the failed stage.
 
 Show two comparisons: the new proposal versus the film's current accepted set, and, when available, versus the previous machine-selected set. This distinguishes new model differences from existing manual corrections without requiring a permanent archive of every historical film-quality set. Compare quality IDs and meaning revisions, not just count or order; support estimates are diagnostic context, not preference weights.
 
@@ -34,7 +38,7 @@ Record the source/context, vocabulary, question/model and selection-policy versi
 
 ## Admin tools
 
-These three interfaces are admin-only in the initial release. Ordinary users can search TMDB and request a missing-film import; they cannot edit canonical metadata/quality associations, definitions or discovery cases. The canonical film catalogue belongs to Film knowledge and is distinct from each user's Library.
+The canonical-film and quality/category interfaces are admin-only: deliver viewing after the seed, then manual editing. The expression investigation interface is deferred until after initial release. Ordinary users can search TMDB and request a missing-film import; they cannot edit canonical metadata/quality associations, definitions or discovery cases. The canonical film catalogue belongs to Film knowledge and is distinct from each user's Library.
 
 | Interface | Inspect | Allowed improvement |
 | --- | --- | --- |
@@ -54,7 +58,9 @@ An admin can add an existing quality even if JEV did not match it, supplying sou
 
 Reject a set exceeding any configured category ceiling explicitly and preserve the edit; never silently trim it. Report stale, unauthorised, invalid and unchanged attempts honestly. Whether an admin may intentionally clear a set to zero and how coverage is displayed still need a bounded rule. A genuine accepted association change is the proposed downstream reassessment boundary, using agreed durable contracts and separately owned implementations. An evidence-only correction, unchanged set, test run or source refresh is not such a change.
 
-## Learning from user expressions
+## Learning from user expressions — post-release
+
+This admin gap-discovery/testing capability is not an initial-release dependency. It follows seed loading, content viewing, manual editing, manual source refresh and JEV change inspection. Core expression interpretation for viewer preferences is unchanged.
 
 Start with an admin examining an expression against its film, not an assumption that every unmatched phrase deserves a new label. Film knowledge may read relevant Ratings-owned evidence through authorised read paths; it does not edit original expressions, infer consent for public display, or take ownership of user profiles. The implementation must define appropriate admin access and minimal context before exposing real user text. No bulk export or live expression processing is performed by this design task.
 
@@ -166,12 +172,14 @@ Jonathan Barkan describes a focus on horror of human behaviour. Jacob Trussell i
 
 ## Bounded implementation handoff
 
-The release scope is owner-directed; this document does not implement it. The next specs should each have one small Film knowledge outcome:
+The delivery order is owner-directed. Each implementation task has one small owning-domain outcome:
 
-1. Use the decided roles: Quality, QualityCategory, Film and FilmQuality (the link), with direct current associations and Film-owned source context under task 054. Settle the initial category-limited assignment policy, missing-context handling and readiness outcomes. Task 043 supplies category configuration; neither it nor task 054 implements the import/assignment pipeline or admin UI.
-2. Deliver one-film Wikipedia enrichment, then initial quality assignment, as independently verified capabilities using existing TMDB identity/import operations. Bulk seed and user search/import wiring consume these same operations in separate bounded slices; keep user Library mutations out of canonical import.
-3. Specify provider-specific periodic refresh and admin manual sync with a follow-up quality comparison. Preserve manual corrections; keep source/check outcomes and explicit application separate. Set the scheduled quality-check policy independently.
-4. Add admin quality-library and canonical-film editing in separately scoped UI/operation tasks. Admin authorisation needs an explicit implemented policy; being signed in is insufficient.
-5. Add read-only expression investigation first, then a bounded comparison/testing capability. Explicitly scope any test execution/cost and subsequent application operation; no generic experimentation platform is required.
+1. **Load seed:** persist/load definitions and vocabulary, import canonical TMDB films, enrich with Wikipedia context and perform initial assignment using the existing category/60% baseline. Reuse the same path for bulk and on-demand imports. No per-film change-review workflow is required to seed.
+2. **View:** authorise admin access and expose read-only lists/details for films, quality categories and qualities, with source/evidence and related-record navigation. Identity owns access mutations; Film knowledge owns its screens/content. Shared reads need no projection/event.
+3. **Manually edit:** add bounded quality/category editing and film-quality add/remove operations. Keep immutable names, validation/freshness and explicit outcomes. Plot corrections remain on Wikipedia.
+4. **Manually refresh:** expose TMDB/Wikipedia source refresh and statuses without requiring JEV change evaluation yet. Preserve accepted associations and manual corrections.
+5. **Evaluate changes:** wire the JEV check into refresh, display suggestions/evidence and explicitly apply chosen edits through the manual operations. Suggestions can be transient; no independent analysis or persisted suggestion lifecycle is required.
+6. **After release:** add expression-led gap investigation/testing. Do not delay the initial release for this tool or automatically infer new vocabulary/weights from expressions.
 
+Task 058 is reserved for the later suggestion stage; seed selection may reuse its arithmetic without building its refresh-diff workflow. Scheduled syncing has its own later scope and is not a prerequisite for these first deliverables.
 Before association/meaning changes cause downstream work, agree the semantic event contract under the [existing delivery mechanism](domain_events.md); implement publishers and receiving-domain subscribers in separate tasks. Ratings and Recommendations retain their mutations and historical contributions. No independent permanent association archive or public community governance is assumed.
