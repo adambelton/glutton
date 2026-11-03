@@ -6,14 +6,14 @@ Updated: 3 November 2026. This document describes current progress, agreed order
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented.
-- Film knowledge: canonical film storage, TMDB search/import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Wikipedia enrichment, initial quality assignment and bulk/on-demand pipeline wiring remain to build.
+- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial quality assignment and bulk/on-demand entry-point wiring remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
 - Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
-- [Initial Wikipedia source context](tasks/initial_wikipedia_source_context.md): next draft, not implemented. Attach revision-specific paragraphs/provenance to an existing canonical Film using an explicitly identified page. Preparing the draft does not authorise implementation or live imports.
+- Next: initial film-quality assignment against the seeded vocabulary, using the agreed >=60% support threshold and configured category ceilings. Canonical source import is implemented; source refresh and multilingual fetching remain later work.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Delivery order

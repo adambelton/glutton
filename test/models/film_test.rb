@@ -1,26 +1,97 @@
 require "test_helper"
+require_relative "../support/film_import_sources"
 
 class FilmTest < ActiveSupport::TestCase
-  test "filling TMDB metadata preserves local fields and the first retained source snapshot" do
-    film = Film.create!(title: "Local title", tmdb_id: 348, metadata: { note: "Keep" })
-    assert_not film.tmdb_metadata?
-    film.fill_tmdb_metadata!(metadata: { "tmdb" => { "details" => { "overview" => "Original source" } } })
-    assert film.reload.tmdb_metadata?
-    assert_equal "Keep", film.metadata["note"]
-    film.fill_tmdb_metadata!(metadata: { "tmdb" => { "details" => { "overview" => "Replacement" } }, "note" => "Overwrite" })
-    assert_equal "Original source", film.reload.metadata.dig("tmdb", "details", "overview")
-    assert_equal "Keep", film.metadata["note"]
-    assert_equal "Local title", film.title
+  include FilmImportSources
+
+  test "import supplies matching article identity and ready source inputs" do
+    film = Film.new(tmdb_id: 348)
+    assert_not film.ready_for_quality_assessment?
+    film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: wikipedia_context)
+    assert film.reload.ready_for_quality_assessment?
+    assert_equal "Q1", film.wikidata_id
+    assert_equal wikipedia_context, film.wikipedia_context
+  end
+
+  test "import rejects invalid provenance and narrative through its input arguments" do
+    [ nil, {}, wikipedia_context.merge("tmdb_id" => 349), wikipedia_context.except("license"), wikipedia_context.except("language"), wikipedia_context.merge("language" => "fr"),
+      wikipedia_context.merge("revision_url" => "https://en.wikipedia.org/w/index.php?oldid=99"),
+      wikipedia_context.merge("source_paragraphs" => []),
+      wikipedia_context.merge("source_paragraphs" => [ { "id" => "P1", "section" => "Reception", "text" => "Critics praised the film." } ]) ].each do |context|
+      film = Film.new(tmdb_id: 348)
+      assert_no_difference "Film.count" do
+        error = assert_raises(FilmKnowledge::ImportIncomplete) do
+          film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
+        end
+        assert_equal [ :wikipedia, :invalid_response ], [ error.stage, error.reason ]
+      end
+    end
+  end
+
+  test "readiness rejects constructor state with mismatched article identity" do
+    film = Film.new(title: "Mismatched source", tmdb_id: 348, wikidata_id: "Q2",
+      tmdb_metadata: { details: {} }, wikipedia_context: wikipedia_context)
+    assert_not film.ready_for_quality_assessment?
+  end
+
+  test "provider content can be empty while identifiers remain available" do
+    film = Film.create!(title: "Purged content", tmdb_id: 348, wikidata_id: "Q1")
+    assert_equal({}, film.tmdb_metadata)
+    assert_equal({}, film.wikipedia_context)
+    assert_equal film.id, Film.find_by!(wikidata_id: "Q1").id
+    assert_equal 348, film.tmdb_id
+    assert_not film.ready_for_quality_assessment?
+  end
+
+  test "Wikidata identifier is nullable and uses the Q identifier format" do
+    assert Film.new(title: "Unlinked").valid?
+    [ "Q0", "Q-1", "bad", "Q1.5", "Q01", "Q1\n" ].each do |identifier|
+      film = Film.new(title: "Invalid", wikidata_id: identifier)
+      assert_not film.valid?
+      assert film.errors[:wikidata_id].any?
+    end
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Film.transaction(requires_new: true) do
+        Film.insert_all!([ { title: "Bypass", wikidata_id: "Q0" } ])
+      end
+    end
+    I18n.with_locale(:en) do
+      film = Film.new(title: "Invalid", wikidata_id: "Q-1")
+      film.valid?
+      assert_includes film.errors.full_messages, "Wikidata ID is invalid"
+    end
+  end
+
+  test "import refuses to change a persisted film" do
+    film = Film.create!(title: "Local title", tmdb_id: 348, tmdb_metadata: { note: "Keep" }, wikipedia_context: { note: "Keep source" })
+    timestamp = film.updated_at
+    error = assert_raises(FilmKnowledge::ImportIncomplete) do
+      film.import!(tmdb_data: {}, wikipedia_context: wikipedia_context)
+    end
+    assert_equal [ :persistence, :existing_film ], [ error.stage, error.reason ]
+    assert_equal "Local title", film.reload.title
+    assert_equal({ "note" => "Keep" }, film.tmdb_metadata)
+    assert_equal({ "note" => "Keep source" }, film.wikipedia_context)
+    assert_equal timestamp, film.updated_at
+  end
+
+  test "invalid context cannot create a partially imported film" do
+    film = Film.new(tmdb_id: 348)
+    assert_no_difference "Film.count" do
+      assert_raises(FilmKnowledge::ImportIncomplete) do
+        film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: {} }, wikipedia_context: {})
+      end
+    end
   end
 
   test "minimal and complete metadata retain their own identities" do
     minimal = Film.create!(title: "A film")
     assert_equal "A film", minimal.reload.title
-    assert_equal({}, minimal.metadata)
+    assert_equal({}, minimal.tmdb_metadata)
     assert_nil minimal.release_date
     assert_nil minimal.tmdb_id
 
-    attributes = { title: "A film", metadata: { "original_title" => "Original title" }, release_date: Date.new(1982, 6, 25), tmdb_id: 1091 }
+    attributes = { title: "A film", tmdb_metadata: { "original_title" => "Original title" }, release_date: Date.new(1982, 6, 25), tmdb_id: 1091 }
     complete = Film.create!(attributes)
     assert_equal attributes.stringify_keys, complete.reload.slice(*attributes.keys.map(&:to_s))
     assert_not_equal minimal.id, complete.id
@@ -35,26 +106,23 @@ class FilmTest < ActiveSupport::TestCase
       assert_not film.valid?
       assert film.errors.of_kind?(:title, :blank)
     end
-    film = Film.create!(title: "日本語 <title>", metadata: { original_title: " Original " })
+    film = Film.create!(title: "日本語 <title>", tmdb_metadata: { original_title: " Original " })
     assert_equal "日本語 <title>", film.reload.title
-    assert_equal " Original ", film.metadata.fetch("original_title")
+    assert_equal " Original ", film.tmdb_metadata.fetch("original_title")
   end
 
-  test "metadata is an independent JSON object and survives nested round trips" do
-    first = Film.new(title: "First")
-    second = Film.new(title: "Second")
-    first.metadata["original_title"] = "Local title"
-    assert_equal({}, second.metadata)
-    first.metadata["source"] = { "languages" => [ "en", "ja" ] }
-    first.save!
-    assert_equal({ "original_title" => "Local title", "source" => { "languages" => [ "en", "ja" ] } }, first.reload.metadata)
-    [ nil, [], "text", 42 ].each do |metadata|
-      film = Film.new(title: "Invalid metadata", metadata: metadata)
+  test "TMDB metadata is an independent JSON object and survives nested round trips" do
+    metadata = { "original_title" => "Local title", "source" => { "languages" => [ "en", "ja" ] } }
+    first = Film.create!(title: "First", tmdb_metadata: metadata)
+    assert_equal({}, Film.new(title: "Second").tmdb_metadata)
+    assert_equal metadata, first.reload.tmdb_metadata
+    [ nil, [], "text", 42 ].each do |tmdb_metadata|
+      film = Film.new(title: "Invalid metadata", tmdb_metadata: tmdb_metadata)
       assert_not film.valid?
-      assert film.errors.of_kind?(:metadata, :invalid)
+      assert film.errors.of_kind?(:tmdb_metadata, :invalid)
     end
     assert_raises ActiveRecord::StatementInvalid do
-      Film.transaction(requires_new: true) { Film.insert_all!([ { title: "Bypass", metadata: [] } ]) }
+      Film.transaction(requires_new: true) { Film.insert_all!([ { title: "Bypass", tmdb_metadata: [] } ]) }
     end
   end
 
@@ -100,11 +168,11 @@ class FilmTest < ActiveSupport::TestCase
       assert_not film.valid?
       assert_includes film.errors.full_messages, "Title can't be blank"
       assert_includes film.errors.full_messages, "TMDB ID must be greater than 0"
-      film.tmdb_id = "not an integer"
+      film = Film.new(title: "Invalid identity", tmdb_id: "not an integer")
       film.valid?
       assert_includes film.errors.full_messages, "TMDB ID is not a number"
       Film.create!(title: "First", tmdb_id: 348)
-      film.assign_attributes(title: "Second", tmdb_id: 348)
+      film = Film.new(title: "Second", tmdb_id: 348)
       film.valid?
       assert_includes film.errors.full_messages, "TMDB ID has already been taken"
     end

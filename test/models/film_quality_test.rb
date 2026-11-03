@@ -1,21 +1,25 @@
 require "test_helper"
+require_relative "../support/film_import_sources"
 
 class FilmQualityTest < ActiveSupport::TestCase
+  include FilmImportSources
+
   setup do
-    @film = Film.create!(title: "Sourced film", metadata: { tmdb: { details: { overview: "Metadata" } } },
-      source_context: { page_id: 123, revision_id: 456, source_paragraphs: [ { id: "P1", text: "Supported context" } ] })
+    @film = Film.new(tmdb_id: 348)
+    @film.import!(tmdb_data: { title: "Sourced film", release_date: nil, tmdb_metadata: { details: { overview: "Metadata" } } },
+      wikipedia_context: wikipedia_context)
     @quality = Quality.create!(name: "Sustained dread", quality_category: quality_categories(:tone))
   end
 
-  test "current qualities are associated directly with films and retain source references" do
+  test "current qualities and source references survive a rejected reimport" do
     film_quality = @film.film_qualities.create!(quality: @quality, evidence_references: [ "P1" ])
     assert_equal [ @quality ], @film.reload.qualities.to_a
     assert_equal [ @film ], @quality.films.to_a
-    assert_equal [ "P1" ], film_quality.reload.evidence_references
-    @film.update!(source_context: @film.source_context.merge("revision_id" => 457))
+    error = assert_raises(FilmKnowledge::ImportIncomplete) { @film.import!(tmdb_data: {}, wikipedia_context: {}) }
+    assert_equal :existing_film, error.reason
     assert_equal @quality, @film.reload.qualities.sole
     assert_equal [ "P1" ], film_quality.reload.evidence_references
-    assert_equal "Metadata", @film.metadata.dig("tmdb", "details", "overview")
+    assert_equal "Metadata", @film.tmdb_metadata.dig("details", "overview")
   end
 
   test "invalid evidence duplicate associations and dangling identities are rejected" do
@@ -46,17 +50,15 @@ class FilmQualityTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::DeleteRestrictionError) { @quality.destroy! }
   end
 
-  test "source context must remain an independent object in models and storage" do
-    other = Film.new(title: "Other")
-    other.source_context["page_id"] = 789
-    assert_equal({}, Film.new(title: "Empty").source_context)
+  test "Wikipedia context validates constructor input and database storage" do
     [ nil, [], "text" ].each do |context|
-      @film.source_context = context
-      assert_not @film.valid?
-      assert @film.errors.of_kind?(:source_context, :invalid)
+      film = Film.new(title: "Invalid source", wikipedia_context: context)
+      assert_not film.valid?
+      assert film.errors.of_kind?(:wikipedia_context, :invalid)
     end
     assert_raises(ActiveRecord::StatementInvalid) do
-      Film.transaction(requires_new: true) { @film.reload.update_columns(source_context: []) }
+      # Deliberately bypass the model to verify the database's JSON-object constraint.
+      Film.transaction(requires_new: true) { Film.insert_all!([ { title: "Bypass", wikipedia_context: [] } ]) }
     end
   end
 end

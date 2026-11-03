@@ -29,6 +29,7 @@ Read `docs/implementation_plan.md`, the current working task record and relevant
 
 ## Testing conventions
 
+- Tests obey model mutation ownership: exercise changes through explicit domain methods and arguments. Do not use attribute writers, generic `update!`/`assign_attributes`, or in-place changes to model-owned JSON to simulate domain behaviour. Constructor arguments may establish fixtures; deliberate database-constraint bypasses belong only in explicit storage-contract tests. Do not add production mutation APIs solely to support a test for behaviour that is not implemented.
 - Test observable outcomes and agreed contracts, including meaningful failures and persistence invariants, rather than internal state details, whole attribute snapshots, incidental query structure or implementation-specific collaborator types. Apply the same role trust and behaviour ownership rules in tests as in application code. Do not invent a production API solely to make tests assert internal classifications. Direct schema tests are appropriate when verifying an explicit storage contract.
 
 ## User-facing content
