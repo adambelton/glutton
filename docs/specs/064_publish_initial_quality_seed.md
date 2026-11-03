@@ -16,6 +16,8 @@ Publish the reviewed seed-first documentation and initial quality vocabulary see
 
 ## Scope restrictions
 
+CI repair amendment, 3 November: hosted run 41610156940 passed all 487 tests but failed the fresh gem audit on Loofah 2.25.2, Nokogiri 1.19.4, Rack 3.2.7 and rails-html-sanitizer 1.7.1. Scope permits only conservative patch updates of these four gems in Gemfile.lock and changing the gem-audit CI command to refresh advisories before checking, so local checks do not reuse stale security data. No advisory ignores or check bypasses. Re-run full CI and require successful hosted checks on the new exact head. Foundation owns this supporting delivery repair.
+
 - No provider calls, paid experiments, deployment, production upgrades, new film enrichment/assignment runtime, unrelated fixes or changes to research baseline/ignored environment/Obsidian files.
 - No self-approval review or CI bypass. User explicitly authorised conditional merge for this delivery; no further confirmation required once CI passes.
 - Scope any concrete CI repair before implementation; do not bundle speculative cleanup. Do not stage secrets, temporary reconciliation scripts, logs or scratch data.
@@ -37,3 +39,7 @@ Publish the reviewed seed-first documentation and initial quality vocabulary see
 Latest local product checks passed: 487 tests / 6,109 assertions, clean style/security/eager loading. Original migration replay and table audits passed; development retains 235 qualities/nine categories. Owner authorised original migration edits because no production data exists. Final seed is a one-time empty-catalogue operation, not idempotent.
 
 Owner acceptance / merge: Current implementation accepted and PR/merge after CI authorised on 3 November 2026; actual merge pending.
+
+Failure evidence: [initial hosted CI](https://github.com/adambelton/glutton/actions/runs/41610156940) passed tests/style/Importmap/Brakeman, but gem audit failed. Upstream patch advisories: [Loofah](https://github.com/flavorjones/loofah/security/advisories/GHSA-h6v6-rg66-fqj4), [Nokogiri](https://github.com/sparklemotion/nokogiri/security/advisories/GHSA-3w22-6jfg-527w), [Rack](https://github.com/rack/rack/security/advisories/GHSA-5v64-555j-wjxm), [rails-html-sanitizer](https://github.com/rails/rails-html-sanitizer/security/advisories/GHSA-h7wh-q2qr-458c). The original local clean-audit evidence used an older advisory checkout and is retained as historical evidence, not proof against the new advisories.
+
+CI repair verification: `bundle update --patch --conservative loofah nokogiri rack rails-html-sanitizer` changed only those four gems: Loofah 2.25.3, Nokogiri 1.19.7 (Darwin/Linux), Rack 3.2.8 and rails-html-sanitizer 1.7.2. `PARALLEL_WORKERS=1 bin/ci` then passed 487 tests / 6,109 assertions with no style/security issues; gem audit refreshed ruby-advisory-db to `a58f1d0a3343e85cef597970f2c5458dcfbaf909` and found no vulnerabilities. Eager loading and whitespace passed. Hosted retry is still required before merge.
