@@ -1,0 +1,942 @@
+# One-time initial quality definitions. No film-quality associations are seeded.
+---
+- name: Supernatural haunting
+  match_rule: A ghost or haunting causes danger, fear or disturbance in the story.
+  not_sufficient: A ghost costume, a title or a metaphor for a troubled past does not establish a haunting.
+  quality_category_name: Subgenres
+- name: Possession horror
+  match_rule: An invading entity takes control of a person's body or actions.
+  not_sufficient: Unusual behaviour, hallucination or replacement by a separate duplicate does not by itself establish invading control.
+  quality_category_name: Subgenres
+- name: Psychological horror
+  match_rule: Mental disturbance, unreliable perception or internal psychological conflict is a source of the film's horror.
+  not_sufficient: Fear caused by a known external danger alone does not establish a psychological horror mechanism.
+  quality_category_name: Subgenres
+- name: Body horror
+  match_rule: Bodily violation, mutation or loss of bodily integrity is presented as a source of horror.
+  not_sufficient: An injury mentioned in a synopsis or the mere appearance of a creature does not establish horror about bodily integrity.
+  quality_category_name: Subgenres
+- name: Folk horror
+  match_rule: Folk beliefs, local traditions or community rituals are a source of horror.
+  not_sufficient: A rural setting alone does not establish folk horror. Invented folklore need not be an authentic historical practice.
+  quality_category_name: Subgenres
+- name: Cosmic horror
+  match_rule: An incomprehensible nonhuman reality threatens human significance, knowledge or identity.
+  not_sufficient: A god, monster, alien or global danger alone does not establish incomprehensibility or human insignificance.
+  quality_category_name: Subgenres
+- name: Slasher horror
+  match_rule: A killer repeatedly stalks and attacks a succession of victims.
+  not_sufficient: One attack or a murder without stalking a succession of victims does not establish this pattern.
+  quality_category_name: Subgenres
+- name: Creature feature
+  match_rule: A nonhuman creature poses a physical threat in the story.
+  not_sufficient: A harmless creature, a metaphor or a creature mentioned only in a title does not establish the physical threat.
+  quality_category_name: Subgenres
+- name: Zombie horror
+  match_rule: Reanimated or zombie-like humans threaten people in the story.
+  not_sufficient: A dead body alone or a figurative description of someone as a zombie does not establish a zombie threat.
+  quality_category_name: Subgenres
+- name: Vampire horror
+  match_rule: Vampirism is a source of danger or horror in the story.
+  not_sufficient: Blood loss or a vampire reference alone does not establish a vampiric threat.
+  quality_category_name: Subgenres
+- name: Werewolf horror
+  match_rule: A human transforms into a wolf-like predator that is a source of danger or horror.
+  not_sufficient: A wolf attack or a comparison with a wolf does not establish human transformation.
+  quality_category_name: Subgenres
+- name: Witchcraft horror
+  match_rule: Witches or deliberate magical practice cause danger or horror.
+  not_sufficient: An accusation of witchcraft without supported magical practice or a witch threat does not establish this mechanism.
+  quality_category_name: Subgenres
+- name: Occult horror
+  match_rule: Hidden supernatural knowledge or esoteric practice is involved in the film's threat.
+  not_sufficient: A secret with no supernatural or esoteric connection does not establish occult horror.
+  quality_category_name: Subgenres
+- name: Religious horror
+  match_rule: Sacred beliefs, religious evil or spiritual conflict are a source of horror.
+  not_sufficient: Religious clothing, a building or a character's affiliation alone does not establish religious horror.
+  quality_category_name: Subgenres
+- name: Science-fiction horror
+  match_rule: A scientific or extraterrestrial premise produces danger or horror.
+  not_sufficient: A scientist's presence or ordinary technology alone does not establish a science-fiction premise.
+  quality_category_name: Subgenres
+- name: Ecological horror
+  match_rule: Ecological disturbance or a hostile natural world produces danger or horror.
+  not_sufficient: An outdoor setting alone does not establish ecological horror.
+  quality_category_name: Subgenres
+- name: Survival horror
+  match_rule: Characters struggle to stay alive against an immediate lethal threat.
+  not_sufficient: A reference to possible death without a depicted struggle to survive does not establish survival horror.
+  quality_category_name: Subgenres
+- name: Home-invasion horror
+  match_rule: Intruders enter a domestic refuge and threaten its occupants.
+  not_sufficient: A threat outside a home or an invited visitor with no threatening intrusion does not establish home invasion.
+  quality_category_name: Subgenres
+- name: Revenge horror
+  match_rule: Retaliation for an earlier wrong causes threatening or horrific actions.
+  not_sufficient: Unrelated violence after an earlier wrong does not establish retaliation.
+  quality_category_name: Subgenres
+- name: Horror comedy
+  match_rule: The film combines horror with comic treatment or situations.
+  not_sufficient: A character smiling or an isolated quoted joke without comic treatment of the film's events does not establish horror comedy.
+  quality_category_name: Subgenres
+- name: Gothic horror
+  match_rule: Decay, haunted histories or Gothic spaces and sensibilities contribute to the film's horror.
+  not_sufficient: An old building alone does not establish a Gothic treatment.
+  quality_category_name: Subgenres
+- name: Found-footage horror
+  match_rule: Recordings presented as recovered or discovered material form part of the film's storytelling.
+  not_sufficient: A recording played as an ordinary prop does not establish a recovered-footage presentation.
+  quality_category_name: Subgenres
+- name: Screenlife horror
+  match_rule: Events are presented to the audience through computer or phone interfaces.
+  not_sufficient: Characters using devices in ordinary camera shots does not establish interface-based presentation.
+  quality_category_name: Subgenres
+- name: Anthology horror
+  match_rule: The film is composed of several distinct horror stories.
+  not_sufficient: A backstory, flashback or change of viewpoint within one story does not alone establish an anthology.
+  quality_category_name: Subgenres
+- name: Backwoods horror
+  match_rule: An isolated rural or backcountry environment exposes characters to the film's threat.
+  not_sufficient: A brief journey through countryside without a connection to the threat does not establish this setting mechanism.
+  quality_category_name: Subgenres
+- name: Urban horror
+  match_rule: Conditions or social spaces of city life contribute to the film's horror.
+  not_sufficient: A city address alone does not establish a connection between urban life and the horror.
+  quality_category_name: Subgenres
+- name: Apocalyptic horror
+  match_rule: Societal collapse or a world-ending catastrophe is depicted or described within the story.
+  not_sufficient: A local disaster alone does not establish societal collapse or a world-ending threat.
+  quality_category_name: Subgenres
+- name: Epidemic horror
+  match_rule: Disease or infection spreads through a population and creates danger.
+  not_sufficient: One infected person without spread or an established outbreak does not establish an epidemic.
+  quality_category_name: Subgenres
+- name: Erotic horror
+  match_rule: Sexual desire is linked to the film's horror or danger.
+  not_sufficient: Nudity or an intimate relationship alone does not establish the desire-horror connection.
+  quality_category_name: Subgenres
+- name: Medical horror
+  match_rule: Medical treatment, institutions or experimentation produce danger or horror.
+  not_sufficient: A hospital location or a doctor's presence alone does not establish medical horror.
+  quality_category_name: Subgenres
+- name: Remote isolation
+  match_rule: Distance from assistance limits characters' ability to obtain help against danger.
+  not_sufficient: A remote place name alone does not establish difficulty obtaining help.
+  quality_category_name: Tropes and situations
+- name: Confining interiors
+  match_rule: Enclosed indoor spaces limit escape or action.
+  not_sufficient: An indoor scene alone does not establish restricted escape or movement.
+  quality_category_name: Tropes and situations
+- name: Ritual survival rules
+  match_rule: Following specified ritual rules enables characters to navigate or survive a threat.
+  not_sufficient: A ritual performed without survival conditions or consequences does not establish survival rules.
+  quality_category_name: Tropes and situations
+- name: Bargain with an entity
+  match_rule: A negotiated exchange with a supernatural being has terms that affect the participants.
+  not_sufficient: An offering without an exchange or agreement does not establish a bargain.
+  quality_category_name: Tropes and situations
+- name: Secret cult
+  match_rule: An organised hidden group serves a dangerous belief or entity.
+  not_sufficient: Secrecy or conspiracy alone does not establish a shared cultic belief or devotion.
+  quality_category_name: Tropes and situations
+- name: Doppelganger
+  match_rule: A double or imitation of a person creates danger or uncertainty.
+  not_sufficient: A resemblance with no identity-double role does not establish a doppelganger.
+  quality_category_name: Tropes and situations
+- name: Concealed infection
+  match_rule: An infected or assimilated person's condition is hidden from others.
+  not_sufficient: A known infection or an unrelated secret does not establish concealed infection.
+  quality_category_name: Tropes and situations
+- name: Corrupted child
+  match_rule: A child becomes a threatening agent through corruption or supernatural influence.
+  not_sufficient: A child in danger or a malicious adult described as childlike does not establish a corrupted child.
+  quality_category_name: Tropes and situations
+- name: Inherited curse
+  match_rule: A supernatural affliction passes through a family or lineage.
+  not_sufficient: A family misfortune without a supernatural transmission does not establish an inherited curse.
+  quality_category_name: Tropes and situations
+- name: Hostile landscape
+  match_rule: Terrain or environmental conditions increase the danger faced by characters.
+  not_sufficient: A landscape description without an adverse effect on characters does not establish a hostile landscape.
+  quality_category_name: Tropes and situations
+- name: Stalking pursuit
+  match_rule: A predator repeatedly follows or hunts a particular target.
+  not_sufficient: One unexpected attack without following or hunting does not establish stalking pursuit.
+  quality_category_name: Tropes and situations
+- name: Contagious curse
+  match_rule: A supernatural threat passes between people through a described mechanism.
+  not_sufficient: An ordinary infection or several unrelated supernatural attacks do not establish curse transmission.
+  quality_category_name: Tropes and situations
+- name: Last survivor
+  match_rule: Only one member of the threatened group is left alive in the story's stated outcome.
+  not_sufficient: A source mentioning one survivor without establishing the fate of the rest does not establish a last survivor.
+  quality_category_name: Tropes and situations
+- name: Siege
+  match_rule: An opposing force surrounds or contains people in a location they defend.
+  not_sufficient: Confinement without a besieging force or a defended position does not establish a siege.
+  quality_category_name: Tropes and situations
+- name: Grotesque transformation
+  match_rule: A body is shown or described changing into a grotesque form.
+  not_sufficient: A pre-existing unusual appearance without transformation does not establish grotesque transformation.
+  quality_category_name: Tropes and situations
+- name: Slow-burn pacing
+  match_rule: The completed film's pacing is described as gradual or slow-building.
+  not_sufficient: Chronological escalation, a decades-long plot or a long rough cut does not establish slow screen pacing.
+  quality_category_name: Narrative devices
+- name: Relentless pacing
+  match_rule: The completed film's pacing is described as rapid or unremitting.
+  not_sufficient: Many plot events or a high body count alone do not establish rapid or unremitting screen pacing.
+  quality_category_name: Narrative devices
+- name: Investigation-led narrative
+  match_rule: Characters' systematic investigation moves the story forward.
+  not_sufficient: A single question or accidental discovery without investigation does not establish an investigation-led narrative.
+  quality_category_name: Narrative devices
+- name: Whodunit structure
+  match_rule: The narrative presents a mystery about which person committed a crime.
+  not_sufficient: A known perpetrator or a mystery about a non-criminal event does not establish a whodunit.
+  quality_category_name: Narrative devices
+- name: Hidden-identity mystery
+  match_rule: Suspense concerns who or what a character really is.
+  not_sufficient: A hidden name without identity-related suspense does not establish a hidden-identity mystery.
+  quality_category_name: Narrative devices
+- name: Unreliable narration
+  match_rule: A narrator's account of events is misleading or unreliable.
+  not_sufficient: A character who lacks information without misleading narration does not establish an unreliable narrator.
+  quality_category_name: Narrative devices
+- name: Uncertain perception
+  match_rule: A viewpoint character sees or hears events whose occurrence or accuracy is called into question.
+  not_sufficient: Uncertainty about another person's identity, motive or danger without unreliable seeing or hearing does not establish uncertain perception.
+  quality_category_name: Narrative devices
+- name: Nonlinear chronology
+  match_rule: The film presents events out of chronological order.
+  not_sufficient: A synopsis retelling events out of order or a character recalling something without a presented time shift does not establish nonlinear chronology.
+  quality_category_name: Narrative devices
+- name: Time loop
+  match_rule: Characters experience a literal repeated period of time.
+  not_sufficient: Similar events on different days without literal temporal repetition do not establish a time loop.
+  quality_category_name: Narrative devices
+- name: Repeated ordeal
+  match_rule: A similar dangerous procedure or ordeal recurs with variations.
+  not_sufficient: Several unrelated dangers or one ordeal lasting a long time do not establish a repeated ordeal.
+  quality_category_name: Narrative devices
+- name: Dramatic irony
+  match_rule: The audience is given information relevant to a character's situation that the character lacks.
+  not_sufficient: Characters knowing different things does not establish that the audience knows more than the affected character.
+  quality_category_name: Narrative devices
+- name: Restricted viewpoint
+  match_rule: The audience's access to events and information is limited to one character's experience.
+  not_sufficient: Having one protagonist alone does not establish restricted presentation of information.
+  quality_category_name: Narrative devices
+- name: Alternating viewpoints
+  match_rule: The narrative alternates among different characters' perspectives.
+  not_sufficient: A conversation or a camera cut between speakers alone does not establish alternating narrative viewpoints.
+  quality_category_name: Narrative devices
+- name: Concealed monster
+  match_rule: The film withholds the threat's physical form before revealing it or keeping it unseen.
+  not_sufficient: A synopsis omitting the creature's appearance does not establish that the film conceals it.
+  quality_category_name: Narrative devices
+- name: Delayed explanation
+  match_rule: The narrative postpones an explanation of events that it has presented as unexplained.
+  not_sufficient: A synopsis explaining events late does not establish that the film delays the explanation.
+  quality_category_name: Narrative devices
+- name: Unexplained mechanism
+  match_rule: The mechanism of a threat is left unexplained by the film.
+  not_sufficient: A source omitting an explanation does not establish that the completed film leaves it unexplained.
+  quality_category_name: Narrative devices
+- name: Identity-revelation twist
+  match_rule: An identity revelation changes how earlier events are understood.
+  not_sufficient: An identity disclosed without revising the interpretation of earlier events does not establish an identity-revelation twist.
+  quality_category_name: Narrative devices
+- name: Perspective-reversal twist
+  match_rule: A revelation changes which account or perspective earlier events are understood through.
+  not_sufficient: New information that only continues the story without changing its earlier interpretation does not establish a perspective reversal.
+  quality_category_name: Narrative devices
+- name: False ending
+  match_rule: An apparent conclusion is followed by renewed threat or a reversal that reopens the story.
+  not_sufficient: A further scene after a conclusion without renewed threat or reversal does not establish a false ending.
+  quality_category_name: Narrative devices
+- name: Real-time structure
+  match_rule: The film's presented action unfolds approximately continuously in real time.
+  not_sufficient: A short story duration or a synopsis without time markers does not establish real-time presentation.
+  quality_category_name: Narrative devices
+- name: Grief and bereavement
+  match_rule: The film portrays mourning or other responses to the loss of a loved one.
+  not_sufficient: A death without a portrayed response to bereavement does not establish grief.
+  quality_category_name: Themes
+- name: Ambivalence about motherhood
+  match_rule: Motherhood is portrayed through conflicting feelings or demands.
+  not_sufficient: A mother facing danger without conflicting feelings or demands about motherhood does not establish ambivalence.
+  quality_category_name: Themes
+- name: Paternal legacy
+  match_rule: A father's values or actions influence the next generation's choices.
+  not_sufficient: A father's presence without an effect on the next generation does not establish paternal legacy.
+  quality_category_name: Themes
+- name: Trauma and its aftermath
+  match_rule: The film portrays continuing effects of a traumatic experience.
+  not_sufficient: A harmful event without its subsequent effects does not establish trauma's aftermath.
+  quality_category_name: Themes
+- name: Greed and corruption
+  match_rule: Desire for wealth or possessions leads to wrongdoing or moral compromise.
+  not_sufficient: Wealth, poverty or wanting something without acquisitive desire leading to corruption does not establish this quality.
+  quality_category_name: Themes
+- name: Class inequality
+  match_rule: Unequal social or economic position affects characters' opportunities, treatment or conflict.
+  not_sufficient: Different incomes alone without depicted consequences do not establish class inequality as used here.
+  quality_category_name: Themes
+- name: Labour exploitation
+  match_rule: Workers are exploited through their labour, conditions or compensation.
+  not_sufficient: Work or an employer's presence alone does not establish labour exploitation.
+  quality_category_name: Themes
+- name: Institutional neglect
+  match_rule: An institution fails to provide protection or care to people for whom it has responsibility.
+  not_sufficient: An unaffiliated person's failure alone does not establish institutional neglect.
+  quality_category_name: Themes
+- name: Distrust of authority
+  match_rule: Characters or the film's account question the legitimacy, honesty or reliability of an authority.
+  not_sufficient: An authority figure's appearance alone does not establish distrust.
+  quality_category_name: Themes
+- name: Faith and doubt
+  match_rule: The film portrays uncertainty or conflict concerning religious or spiritual belief.
+  not_sufficient: Distrust of another person's identity or honesty alone does not establish spiritual faith and doubt.
+  quality_category_name: Themes
+- name: Religious guilt
+  match_rule: A character experiences guilt connected to religious teaching or practice.
+  not_sufficient: Religious affiliation or guilt without a religious connection does not establish religious guilt.
+  quality_category_name: Themes
+- name: Loss of self
+  match_rule: A person's identity is eroded, displaced or replaced.
+  not_sufficient: Disguise or concealment of an otherwise intact identity alone does not establish loss of self.
+  quality_category_name: Themes
+- name: Bodily autonomy
+  match_rule: A person's control over their own body is threatened or contested.
+  not_sufficient: A bodily injury without a question of control or consent does not alone establish bodily autonomy.
+  quality_category_name: Themes
+- name: Mortality and ageing
+  match_rule: The film portrays ageing or characters confronting the inevitability of death.
+  not_sufficient: A death alone does not establish reflection on mortality or ageing.
+  quality_category_name: Themes
+- name: Illness and vulnerability
+  match_rule: Illness creates vulnerability or affects a character's experience.
+  not_sufficient: An illness label without effects on a character does not establish illness-related vulnerability.
+  quality_category_name: Themes
+- name: Addiction and dependency
+  match_rule: A character's compulsive dependency produces effects on their choices, relationships or wellbeing.
+  not_sufficient: Use of a substance or a habit without compulsive dependency does not establish addiction.
+  quality_category_name: Themes
+- name: Sexual repression
+  match_rule: Sexual desire is suppressed, denied or constrained.
+  not_sufficient: Lack of sexual activity without suppression or denial does not establish sexual repression.
+  quality_category_name: Themes
+- name: Gender expectations
+  match_rule: Expectations about gender roles shape how characters are treated or expected to behave.
+  not_sufficient: A character's gender alone does not establish gender-role expectations.
+  quality_category_name: Themes
+- name: Queer identity
+  match_rule: The film portrays queer identity or its social treatment.
+  not_sufficient: A performer or filmmaker's identity, or later queer-icon status, alone does not establish queer identity within the story.
+  quality_category_name: Themes
+- name: Racial othering
+  match_rule: People are excluded, stereotyped or dehumanised on racial grounds.
+  not_sufficient: Different racial identities alone do not establish racial othering.
+  quality_category_name: Themes
+- name: Colonial violence
+  match_rule: The film portrays colonial domination or effects of its legacy.
+  not_sufficient: A period setting alone does not establish colonial violence or its legacy.
+  quality_category_name: Themes
+- name: Guilt and responsibility
+  match_rule: Characters confront responsibility or guilt for harm they have caused or allowed.
+  not_sufficient: Distress without guilt or responsibility for harm does not establish this quality.
+  quality_category_name: Themes
+- name: Complicity
+  match_rule: Characters participate in, enable or benefit from others' wrongdoing.
+  not_sufficient: Witnessing harm without participation, enabling or benefit does not establish complicity.
+  quality_category_name: Themes
+- name: Inherited harm
+  match_rule: Earlier generations' harmful actions have consequences for later generations.
+  not_sufficient: A family resemblance or inherited property alone does not establish inherited harm.
+  quality_category_name: Themes
+- name: Family secrets
+  match_rule: Concealed family history affects relationships, choices or conflict.
+  not_sufficient: An unrelated secret or openly known family history does not establish a family secret.
+  quality_category_name: Themes
+- name: Conformity and dissent
+  match_rule: Characters face pressure to conform or consequences for resisting group expectations.
+  not_sufficient: Simple agreement without pressure or dissent does not establish conformity and dissent.
+  quality_category_name: Themes
+- name: Social alienation
+  match_rule: A character experiences estrangement from a social group or society.
+  not_sufficient: Physical distance alone does not establish social alienation.
+  quality_category_name: Themes
+- name: Nature resisting exploitation
+  match_rule: The natural world is represented as reacting against human exploitation.
+  not_sufficient: Environmental danger without a connection to human exploitation does not establish nature resisting exploitation.
+  quality_category_name: Themes
+- name: Scientific ethics
+  match_rule: The film raises ethical questions about scientific inquiry or experimentation.
+  not_sufficient: A laboratory or scientist without an ethical conflict does not establish scientific ethics.
+  quality_category_name: Themes
+- name: Technological anxiety
+  match_rule: Technology is associated with fear, loss of control or danger in the film.
+  not_sufficient: A device's presence without a threatening or anxious connection does not establish technological anxiety.
+  quality_category_name: Themes
+- name: Uncertain reality
+  match_rule: The film questions whether experienced reality is false or unstable.
+  not_sufficient: An unknown motive or concealed identity alone does not establish unstable reality.
+  quality_category_name: Themes
+- name: Consumer culture
+  match_rule: The film examines consumption, commodification or consumer values.
+  not_sufficient: Shopping, products or wealth appearing without commentary on consumption or commodification does not establish this quality.
+  quality_category_name: Themes
+- name: Destructive ambition
+  match_rule: Pursuit of status or achievement causes moral or personal damage.
+  not_sufficient: Having an ambition without damage caused by its pursuit does not establish destructive ambition.
+  quality_category_name: Themes
+- name: Free will and control
+  match_rule: The film questions whether characters can choose or control their actions.
+  not_sufficient: An obstacle to a goal without a question of choice or control does not establish free will and control.
+  quality_category_name: Themes
+- name: Dehumanisation
+  match_rule: People are treated or represented as less than human.
+  not_sufficient: A nonhuman character's presence alone does not establish dehumanisation of people.
+  quality_category_name: Themes
+- name: Protector becomes threat
+  match_rule: A person or force expected to protect someone instead becomes a source of danger to them.
+  not_sufficient: An unrelated attacker with no prior protective role does not establish protector becomes threat.
+  quality_category_name: Ironies and reversals
+- name: Sanctuary becomes trap
+  match_rule: A place sought as protection instead confines people with a threat.
+  not_sufficient: A dangerous location never sought as refuge does not establish sanctuary becomes trap.
+  quality_category_name: Ironies and reversals
+- name: Survival spreads danger
+  match_rule: An action that preserves someone's life spreads a threat to others.
+  not_sufficient: Survival followed by unrelated harm does not establish survival spreading danger.
+  quality_category_name: Ironies and reversals
+- name: Defeating evil creates evil
+  match_rule: An attempt to defeat a threat creates a new threatening evil.
+  not_sufficient: A later unrelated threat or the original threat surviving does not establish this causal creation.
+  quality_category_name: Ironies and reversals
+- name: Desired reward causes ruin
+  match_rule: Obtaining or pursuing a desired reward brings about a character's downfall.
+  not_sufficient: A reward and later misfortune without a causal link do not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Knowledge increases vulnerability
+  match_rule: Learning sought information makes the learner more vulnerable.
+  not_sufficient: Learning about existing danger without increasing vulnerability does not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Denial enables harm
+  match_rule: Refusal to acknowledge danger enables further harm.
+  not_sufficient: A mistaken belief without refusal or a connection to further harm does not establish denial enabling harm.
+  quality_category_name: Ironies and reversals
+- name: Loyalty protects the predator
+  match_rule: Loyalty to an apparent ally shields a threatening antagonist.
+  not_sufficient: An antagonist escaping without protection arising from loyalty does not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Suspicion harms the innocent
+  match_rule: Suspicion of a threat causes harm to someone not established as that threat.
+  not_sufficient: Suspicion without harm or harm to an established threat does not establish this quality.
+  quality_category_name: Ironies and reversals
+- name: Cruelty undermines survival
+  match_rule: Cruel treatment of others damages the cruel character's or group's ability to survive.
+  not_sufficient: Cruelty and later danger without a causal relation do not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Compassion breaks the threat's hold
+  match_rule: Care or compassion weakens a threat's hold over someone.
+  not_sufficient: Compassion accompanying a rescue without weakening the threat does not establish this mechanism.
+  quality_category_name: Ironies and reversals
+- name: Monster shows greater humanity
+  match_rule: A monster demonstrates more compassion or moral consideration than a human counterpart.
+  not_sufficient: A sympathetic monster without a comparison in treatment does not establish greater humanity than a human counterpart.
+  quality_category_name: Ironies and reversals
+- name: Respectability conceals evil
+  match_rule: A socially respectable appearance or role conceals wrongdoing or monstrosity.
+  not_sufficient: A respectable character who is openly known as dangerous does not establish concealment by respectability.
+  quality_category_name: Ironies and reversals
+- name: Innocence conceals malice
+  match_rule: An apparently innocent person is revealed as deliberately malicious.
+  not_sufficient: A person causing accidental harm or being falsely accused does not establish concealed malice.
+  quality_category_name: Ironies and reversals
+- name: Cure worsens the affliction
+  match_rule: An intended cure makes the underlying affliction worse.
+  not_sufficient: A failed cure leaving the condition unchanged does not establish worsening.
+  quality_category_name: Ironies and reversals
+- name: Repression strengthens the threat
+  match_rule: Suppressing an experience or feeling strengthens the threat.
+  not_sufficient: Repression and a growing threat without a causal link do not establish this mechanism.
+  quality_category_name: Ironies and reversals
+- name: Control produces chaos
+  match_rule: An effort to establish control makes events more uncontrollable.
+  not_sufficient: An unsuccessful attempt at control without increased disorder does not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Victory conceals defeat
+  match_rule: An apparent victory is revealed to include a defeat or loss.
+  not_sufficient: An openly partial victory without a concealed defeat does not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Selfish character makes a sacrifice
+  match_rule: A character established as selfish later makes a self-sacrifice.
+  not_sufficient: A helpful act without personal sacrifice or an earlier selfish portrayal does not establish this reversal.
+  quality_category_name: Ironies and reversals
+- name: Escape perpetuates the cycle
+  match_rule: Escape from immediate danger continues a harmful cycle for others.
+  not_sufficient: A threat merely remaining alive under containment does not establish that escape perpetuates a cycle.
+  quality_category_name: Ironies and reversals
+- name: Mistrust within a group
+  match_rule: Apparent allies suspect or distrust each other in their interactions.
+  not_sufficient: Lack of knowledge without suspicion among allies does not establish group mistrust.
+  quality_category_name: Character and social dynamics
+- name: Caretaker dependency
+  match_rule: A dependent person's needs constrain a caregiver's choices or relationship.
+  not_sufficient: A caregiver title without a depicted dependency affecting choices does not establish caretaker dependency.
+  quality_category_name: Character and social dynamics
+- name: Strained parent-child relationship
+  match_rule: Conflict or resentment strains a parent-child relationship.
+  not_sufficient: A parent and child appearing together without relationship strain does not establish this quality.
+  quality_category_name: Character and social dynamics
+- name: Overprotective care
+  match_rule: A caregiver's excessive protection constrains or harms the person being protected.
+  not_sufficient: Protection without restrictive or harmful excess does not establish overprotective care.
+  quality_category_name: Character and social dynamics
+- name: Intimate betrayal
+  match_rule: A trusted intimate partner or close confidant betrays that trust.
+  not_sufficient: An enemy's attack without an intimate or confiding bond does not establish intimate betrayal.
+  quality_category_name: Character and social dynamics
+- name: Coercive partnership
+  match_rule: A partner uses coercion or abuse to control the other person's choices.
+  not_sufficient: Ordinary disagreement without coercion or abuse does not establish a coercive partnership.
+  quality_category_name: Character and social dynamics
+- name: Sibling rivalry
+  match_rule: Siblings compete with or resent each other.
+  not_sufficient: Sibling presence or disagreement unrelated to rivalry does not establish sibling rivalry.
+  quality_category_name: Character and social dynamics
+- name: Divided loyalty
+  match_rule: A character faces conflicting loyalties to different people or groups.
+  not_sufficient: Several loyalties without a conflict between them do not establish divided loyalty.
+  quality_category_name: Character and social dynamics
+- name: Chosen-family solidarity
+  match_rule: A non-biological group develops family-like mutual care under pressure.
+  not_sufficient: Temporary tactical cooperation without family-like attachment does not establish chosen-family solidarity.
+  quality_category_name: Character and social dynamics
+- name: Reluctant alliance
+  match_rule: People who distrust or oppose each other cooperate against a shared threat.
+  not_sufficient: Cooperation among willing allies without reluctance does not establish a reluctant alliance.
+  quality_category_name: Character and social dynamics
+- name: Contested leadership
+  match_rule: People disagree over who should lead and this affects the group's actions.
+  not_sufficient: A named leader without a challenge to their leadership does not establish contested leadership.
+  quality_category_name: Character and social dynamics
+- name: Charismatic coercion
+  match_rule: A persuasive leader uses personal influence to secure harmful obedience.
+  not_sufficient: A leader giving orders without persuasion through personal influence does not establish charismatic coercion.
+  quality_category_name: Character and social dynamics
+- name: Group conformity pressure
+  match_rule: A group pressures individuals to follow its beliefs or actions.
+  not_sufficient: Shared behaviour without pressure on individuals does not establish conformity pressure.
+  quality_category_name: Character and social dynamics
+- name: Scapegoating
+  match_rule: A group assigns blame to a person to avoid or simplify its own responsibility.
+  not_sufficient: Accurate blame without displacement of group responsibility does not establish scapegoating.
+  quality_category_name: Character and social dynamics
+- name: Outsider exclusion
+  match_rule: A person is excluded because they are treated as outside the group.
+  not_sufficient: Being alone by choice without group exclusion does not establish outsider exclusion.
+  quality_category_name: Character and social dynamics
+- name: Corrupting mentorship
+  match_rule: A mentor teaches or recruits a learner into harmful conduct.
+  not_sufficient: A learner acting badly without mentorship causing or teaching the conduct does not establish corrupting mentorship.
+  quality_category_name: Character and social dynamics
+- name: Competition for survival resources
+  match_rule: Characters compete over limited resources needed to survive.
+  not_sufficient: Ordinary rivalry over a reward not needed for survival does not establish this competition.
+  quality_category_name: Character and social dynamics
+- name: Mutual destruction pact
+  match_rule: Characters contemplate or pursue an agreement to destroy themselves along with a threat.
+  not_sufficient: An individual sacrifice without an agreement or shared plan does not establish a mutual destruction pact.
+  quality_category_name: Character and social dynamics
+- name: Morally compromised protagonist
+  match_rule: A protagonist engages in wrongdoing that compromises their moral position.
+  not_sufficient: Being endangered, flawed or disliked without depicted wrongdoing does not establish moral compromise.
+  quality_category_name: Character and social dynamics
+- name: Socially isolated protagonist
+  match_rule: A protagonist lacks social support while facing the story's conflict.
+  not_sufficient: Geographic remoteness with supportive companions does not establish social isolation.
+  quality_category_name: Character and social dynamics
+- name: Contested female agency
+  match_rule: A female character's ability to choose or act is challenged by another person or social structure.
+  not_sufficient: A practical obstacle without a challenge to her agency does not establish contested female agency.
+  quality_category_name: Character and social dynamics
+- name: Children protecting each other
+  match_rule: Children cooperate to protect one another from a threat.
+  not_sufficient: An adult protecting a child or children merely present together does not establish reciprocal child protection.
+  quality_category_name: Character and social dynamics
+- name: Cooperative problem-solving
+  match_rule: People collaborate to understand and respond to a threat.
+  not_sufficient: Merely occupying the same place without shared reasoning or coordinated response does not establish cooperative problem-solving.
+  quality_category_name: Character and social dynamics
+- name: Intimacy with a monster
+  match_rule: A person has an emotionally or physically intimate bond with a monstrous being.
+  not_sufficient: An encounter or attack without an intimate bond does not establish intimacy with a monster.
+  quality_category_name: Character and social dynamics
+- name: Practical creature effects
+  match_rule: Physical materials or practical mechanisms are used to realise creatures in the completed film.
+  not_sufficient: A release decade, effects budget, praise or an unused practical-effects plan does not establish the technique's use.
+  quality_category_name: Presentation and intensity
+- name: Prosthetic bodily transformation
+  match_rule: Prosthetics or makeup are used to realise bodily transformations in the completed film.
+  not_sufficient: Ordinary makeup or an injury in a synopsis without transformation effects does not establish prosthetic transformation.
+  quality_category_name: Presentation and intensity
+- name: Digitally created creatures
+  match_rule: Digital effects are used to realise creatures in the completed film.
+  not_sufficient: Digital editing or colour grading without digitally realised creatures does not establish this quality.
+  quality_category_name: Presentation and intensity
+- name: Puppetry or animatronics
+  match_rule: Puppets or animatronics are used to realise a character or creature in the completed film.
+  not_sufficient: A prop with no puppet or animatronic performance, or an unused plan, does not establish this technique.
+  quality_category_name: Presentation and intensity
+- name: Stop-motion horror imagery
+  match_rule: Stop-motion animation is used in the completed film's horror imagery.
+  not_sufficient: A model or a claim that animation was considered does not establish completed stop-motion imagery.
+  quality_category_name: Presentation and intensity
+- name: Animated horror presentation
+  match_rule: Animation is used as a medium for presenting the film's horror narrative.
+  not_sufficient: A drawn object appearing in a live-action scene does not alone establish animated narrative presentation.
+  quality_category_name: Presentation and intensity
+- name: Black-and-white imagery
+  match_rule: The completed film uses black-and-white imagery.
+  not_sufficient: A monochrome poster, still photograph or unmade release plan does not establish black-and-white film imagery.
+  quality_category_name: Presentation and intensity
+- name: Expressionist production design
+  match_rule: Distorted sets or visual spaces create an expressionist presentation.
+  not_sufficient: A strange location without supported visual distortion or expressionist treatment does not establish expressionist design.
+  quality_category_name: Presentation and intensity
+- name: Concealment in shadow
+  match_rule: Shadow conceals a threat or visual information from the audience.
+  not_sufficient: A dark scene without concealment of the threat or information does not establish this device.
+  quality_category_name: Presentation and intensity
+- name: Extended takes
+  match_rule: The completed film uses shots described as unusually long and uninterrupted.
+  not_sufficient: A long scene, long story duration or a long rough cut does not establish extended takes.
+  quality_category_name: Presentation and intensity
+- name: Handheld camerawork
+  match_rule: The completed film uses handheld camerawork.
+  not_sufficient: A camera carried by a character in the story or an abandoned filming plan does not establish actual handheld cinematography.
+  quality_category_name: Presentation and intensity
+- name: Degraded recording texture
+  match_rule: The image or recording is presented with degraded or low-fidelity texture.
+  not_sufficient: A damaged viewing copy or low-budget production alone does not establish a texture used in the film's presentation.
+  quality_category_name: Presentation and intensity
+- name: First-person camera perspective
+  match_rule: The camera presents events as a character's direct visual perspective.
+  not_sufficient: A film following one character without optical point-of-view shots does not establish first-person camera perspective.
+  quality_category_name: Presentation and intensity
+- name: Minimal dialogue
+  match_rule: The completed film is described as using little dialogue.
+  not_sufficient: A synopsis with little quoted dialogue does not establish that the film uses little dialogue.
+  quality_category_name: Presentation and intensity
+- name: Sound-driven unease
+  match_rule: Specific sound design is described or reported as producing unease or dread.
+  not_sufficient: A frightening plot event without sound-design evidence does not establish sound-driven unease.
+  quality_category_name: Presentation and intensity
+- name: Dissonant musical tension
+  match_rule: Dissonance in the score is linked in the supplied account to tension or unease.
+  not_sufficient: Music being present or loud without dissonance linked to tension does not establish this quality.
+  quality_category_name: Presentation and intensity
+- name: Expressive silence
+  match_rule: Silence in the completed film is described as shaping suspense or emotional effect.
+  not_sufficient: Characters not speaking without evidence of silence in the soundtrack does not establish expressive silence.
+  quality_category_name: Presentation and intensity
+- name: Sudden startle effects
+  match_rule: Abrupt sensory changes are used for startling scares.
+  not_sufficient: A sudden narrative revelation alone does not establish a sensory startle effect.
+  quality_category_name: Presentation and intensity
+- name: Graphic bodily injury
+  match_rule: The completed film presents bodily injury or gore explicitly.
+  not_sufficient: An injury occurring in the story without presentation detail does not establish on-screen graphicness.
+  quality_category_name: Presentation and intensity
+- name: Implied violence
+  match_rule: Violence is suggested through sound, reactions or other cues rather than directly shown.
+  not_sufficient: A synopsis omitting an act does not establish that the film leaves it off screen.
+  quality_category_name: Presentation and intensity
+- name: Prolonged suffering
+  match_rule: The presentation dwells on suffering or torture over an extended interval.
+  not_sufficient: A character suffering for years in story time without extended presentation does not establish prolonged on-screen suffering.
+  quality_category_name: Presentation and intensity
+- name: Sexual violence
+  match_rule: Sexual assault or coercive sexual harm occurs in the story.
+  not_sufficient: Consensual sex or nonsexual violence alone does not establish sexual violence.
+  quality_category_name: Presentation and intensity
+- name: Harm to animals
+  match_rule: An animal is harmed or killed within the story's events.
+  not_sufficient: A dangerous animal or a threat not carried out does not establish harm to animals.
+  quality_category_name: Presentation and intensity
+- name: Children in danger
+  match_rule: A child faces a threat of physical harm within the story.
+  not_sufficient: Concern for a child actor during production or an adult described as childlike does not establish a child character in danger.
+  quality_category_name: Presentation and intensity
+- name: Physical action spectacle
+  match_rule: Chases, stunts or physical combat are presented as kinetic spectacle.
+  not_sufficient: A fight mentioned in a synopsis without action-presentation detail does not establish action spectacle.
+  quality_category_name: Presentation and intensity
+- name: Sustained dread
+  match_rule: The film's tone or an attributed response is described as an ongoing feeling of impending danger.
+  not_sufficient: One frightening event without a continuing apprehensive tone does not establish sustained dread.
+  quality_category_name: Emotional tone and experience
+- name: Abrupt shock
+  match_rule: The film's presentation or an attributed response involves a sudden shocking disruption.
+  not_sufficient: A rapid event without a shocking presentation or attributed response does not establish abrupt shock.
+  quality_category_name: Emotional tone and experience
+- name: Disgust and revulsion
+  match_rule: The film's presentation or an attributed response is described in terms of disgust or revulsion.
+  not_sufficient: A disgusting object in a synopsis without presentation or response evidence does not establish a disgust register.
+  quality_category_name: Emotional tone and experience
+- name: Bleakness and nihilism
+  match_rule: The film's tone or outlook is described as bleak, nihilistic or despairing.
+  not_sufficient: A character suffering without evidence of a bleak tone or nihilistic outlook does not establish this quality.
+  quality_category_name: Emotional tone and experience
+- name: Melancholy
+  match_rule: The film's emotional register is described as sorrowful or wistful.
+  not_sufficient: A sad event alone without tonal description does not establish melancholy.
+  quality_category_name: Emotional tone and experience
+- name: Anxious uncertainty
+  match_rule: Uncertainty about events or identities creates anxious tension in the supplied account.
+  not_sufficient: Missing source information without described uncertainty or tension in the film does not establish anxious uncertainty.
+  quality_category_name: Emotional tone and experience
+- name: Oppressive claustrophobia
+  match_rule: Confinement is described as creating an oppressive or claustrophobic experience.
+  not_sufficient: Enclosed rooms without an oppressive presentation or attributed response do not establish this effect.
+  quality_category_name: Emotional tone and experience
+- name: Uncanny familiarity
+  match_rule: Something recognisably familiar is presented as disturbingly strange.
+  not_sufficient: An unfamiliar creature or ordinary familiar object without estrangement does not establish uncanny familiarity.
+  quality_category_name: Emotional tone and experience
+- name: Dreamlike atmosphere
+  match_rule: The film's atmosphere is described as dreamlike or unreal.
+  not_sufficient: A character sleeping or a dream mentioned in a synopsis alone does not establish a dreamlike atmosphere.
+  quality_category_name: Emotional tone and experience
+- name: Hallucinatory intensity
+  match_rule: The film's sensory presentation is described as hallucinatory or perceptually overwhelming.
+  not_sufficient: A character hallucinating in the story without sensory-presentation evidence does not establish hallucinatory intensity.
+  quality_category_name: Emotional tone and experience
+- name: Dread of inevitability
+  match_rule: The film presents or evokes a sense that a feared outcome cannot be prevented.
+  not_sufficient: An adverse event occurring without a sense of inevitability does not establish dread of inevitability.
+  quality_category_name: Emotional tone and experience
+- name: Playful camp
+  match_rule: The film's tone uses theatrical excess or knowingly artificial playfulness.
+  not_sufficient: Visible artifice or an audience laughing unintentionally alone does not establish playful camp.
+  quality_category_name: Emotional tone and experience
+- name: Absurd humour
+  match_rule: Illogical or absurd situations are treated as humour.
+  not_sufficient: Unexplained events without comic treatment do not establish absurd humour.
+  quality_category_name: Emotional tone and experience
+- name: Black comedy
+  match_rule: Death, suffering or taboo subjects receive darkly comic treatment.
+  not_sufficient: Death or a taboo appearing without comic treatment does not establish black comedy.
+  quality_category_name: Emotional tone and experience
+- name: Satirical ridicule
+  match_rule: The film uses ridicule to criticise a social target or institution.
+  not_sufficient: Comedy without a target of criticism does not establish satirical ridicule.
+  quality_category_name: Emotional tone and experience
+- name: Exuberant splatter
+  match_rule: Graphic bodily destruction is presented or reported as exuberant spectacle.
+  not_sufficient: Gore without exuberant presentation or an attributed exuberant response does not establish this tone.
+  quality_category_name: Emotional tone and experience
+- name: Action exhilaration
+  match_rule: Physical action is presented or reported as exciting or exhilarating.
+  not_sufficient: Action events without presentation or attributed excitement do not establish action exhilaration.
+  quality_category_name: Emotional tone and experience
+- name: Contemplative quiet
+  match_rule: Quiet scenes or presentation invite reflection or are described as contemplative.
+  not_sufficient: Little dialogue without reflective presentation does not establish contemplative quiet.
+  quality_category_name: Emotional tone and experience
+- name: Dark fairy-tale atmosphere
+  match_rule: Fairy-tale-like wonder, logic or imagery is combined with menace.
+  not_sufficient: A fairy-tale reference without a menacing fairy-tale treatment does not establish this atmosphere.
+  quality_category_name: Emotional tone and experience
+- name: Tragic pathos
+  match_rule: A character's downfall is framed or described in a way that invites sorrow.
+  not_sufficient: A death without sympathetic or sorrowful framing does not establish tragic pathos.
+  quality_category_name: Emotional tone and experience
+- name: Tenderness amid horror
+  match_rule: Emotional gentleness or care is portrayed alongside horror.
+  not_sufficient: A character helping for purely instrumental reasons without tenderness does not establish this tone.
+  quality_category_name: Emotional tone and experience
+- name: Moral discomfort
+  match_rule: Compromised choices or complicity are presented or reported as morally unsettling.
+  not_sufficient: Wrongdoing without morally unsettling framing or an attributed response does not establish moral discomfort.
+  quality_category_name: Emotional tone and experience
+- name: Deliberate provocation
+  match_rule: The film confronts taboos or boundaries in a way described as deliberately provocative.
+  not_sufficient: A taboo topic's presence alone or an unused intention does not establish provocative treatment.
+  quality_category_name: Emotional tone and experience
+- name: Otherworldly awe
+  match_rule: An encounter beyond ordinary experience is linked to awe or wonder.
+  not_sufficient: A supernatural encounter without awe or wonder in its presentation or attributed response does not establish this quality.
+  quality_category_name: Emotional tone and experience
+- name: Cynical outlook
+  match_rule: The film's outlook presents human motives or institutions through distrust or disillusionment.
+  not_sufficient: One dishonest character without cynical framing does not establish a cynical outlook.
+  quality_category_name: Emotional tone and experience
+- name: Unresolved identity at the ending
+  match_rule: A character's identity or nature remains unresolved at the film's conclusion.
+  not_sufficient: An incomplete source account or unknown background detail does not establish an unresolved character identity at the ending.
+  quality_category_name: Resolution and aftermath
+- name: Unresolved threat at the ending
+  match_rule: Whether a threat has ended remains unresolved at the film's conclusion.
+  not_sufficient: A source omitting the outcome does not establish that the film leaves the threat unresolved.
+  quality_category_name: Resolution and aftermath
+- name: Bittersweet survival
+  match_rule: Survival is achieved alongside loss that qualifies the outcome as bittersweet.
+  not_sufficient: Survival or loss alone without a mixed positive and sorrowful outcome does not establish bittersweet survival.
+  quality_category_name: Resolution and aftermath
+- name: Costly self-sacrifice
+  match_rule: A character deliberately incurs grave personal cost to protect another or contain danger in the resolution.
+  not_sufficient: Accidental loss or help without self-incurred grave cost does not establish costly self-sacrifice.
+  quality_category_name: Resolution and aftermath
+- name: Catastrophic defeat
+  match_rule: The resolution establishes a major victory for the threat or destruction of the protagonists' aims.
+  not_sufficient: A setback before the resolution or a limited loss without catastrophic defeat does not establish this outcome.
+  quality_category_name: Resolution and aftermath
+- name: Decisive victory
+  match_rule: The resolution clearly establishes defeat of the threat.
+  not_sufficient: Apparent destruction with explicitly unresolved survival of the threat does not establish decisive victory.
+  quality_category_name: Resolution and aftermath
+- name: Temporary containment
+  match_rule: The ending limits the threat without establishing its permanent elimination.
+  not_sufficient: Merely not knowing whether the threat survives does not establish containment.
+  quality_category_name: Resolution and aftermath
+- name: Coexistence with the threat
+  match_rule: The ending establishes ongoing accommodation with a remaining threat.
+  not_sufficient: A threat's survival without accommodation does not establish coexistence.
+  quality_category_name: Resolution and aftermath
+- name: Breaking an inherited cycle
+  match_rule: The resolution refuses or interrupts a harmful pattern passed between generations.
+  not_sufficient: A one-off danger ending without an inherited pattern does not establish breaking an inherited cycle.
+  quality_category_name: Resolution and aftermath
+- name: Continuation of the cycle
+  match_rule: The resolution establishes that a harmful pattern continues or begins again.
+  not_sufficient: A surviving entity without an established continuation of harmful behaviour does not establish a continuing cycle.
+  quality_category_name: Resolution and aftermath
+- name: Moral refusal
+  match_rule: In the resolution a character refuses a tempting choice that would harm others or violate their commitments.
+  not_sufficient: Avoiding an unwanted option without temptation or moral conflict does not establish moral refusal.
+  quality_category_name: Resolution and aftermath
+- name: Ironic punishment
+  match_rule: The resolution links a character's downfall to the desire or wrongdoing that motivated them.
+  not_sufficient: A character's misfortune without a connection to their desire or wrongdoing does not establish ironic punishment.
+  quality_category_name: Resolution and aftermath
+- name: Relationship reconciliation
+  match_rule: A damaged relationship is repaired in the resolution.
+  not_sufficient: People surviving together without repair of their relationship does not establish reconciliation.
+  quality_category_name: Resolution and aftermath
+- name: Hopeful renewal
+  match_rule: The ending presents recovery or a positive new beginning after the threat.
+  not_sufficient: The ending merely stopping without a supported prospect of renewal does not establish hopeful renewal.
+  quality_category_name: Resolution and aftermath
+- name: Morally ambiguous outcome
+  match_rule: The ending leaves competing moral evaluations of characters' choices unresolved.
+  not_sufficient: Uncertainty only about events or identity without competing moral readings does not establish moral ambiguity.
+  quality_category_name: Resolution and aftermath
+- name: Humans are the real monsters
+  match_rule: Human cruelty is framed as more monstrous than, or as the horror underlying, an apparent nonhuman threat.
+  not_sufficient: A human antagonist or cruel act without this comparative moral framing does not establish humans as the real monsters.
+  quality_category_name: Themes
+- name: Sympathy for the monster
+  match_rule: The film frames its monstrous figure with understanding or compassion.
+  not_sufficient: A tragic origin without sympathetic framing does not establish sympathy for the monster.
+  quality_category_name: Character and social dynamics
+- name: Innocence offers no protection
+  match_rule: The narrative presents moral innocence as failing to protect people against horrific harm.
+  not_sufficient: An innocent victim without a connection between innocence and the lack of protection does not establish this outlook.
+  quality_category_name: Themes
+- name: Victim agency and resistance
+  match_rule: Threatened characters make choices and act to resist the danger they face.
+  not_sufficient: Suffering without choices or actions resisting the threat does not establish victim agency and resistance.
+  quality_category_name: Character and social dynamics
+- name: Competent people overwhelmed
+  match_rule: Characters are defeated or gravely endangered despite demonstrably capable responses.
+  not_sufficient: Job titles or claimed expertise without capable action do not establish competence under threat.
+  quality_category_name: Ironies and reversals
+- name: Avoidable foolishness drives disaster
+  match_rule: Repeatedly avoidable choices cause disaster or increase danger.
+  not_sufficient: One hindsight mistake, missing information or unavoidable panic alone does not establish this recurring pattern.
+  quality_category_name: Narrative devices
+- name: Villain-centred identification
+  match_rule: The narrative gives intimate access to or alignment with a perpetrator's experience.
+  not_sufficient: Showing an antagonist or revealing a plan alone does not establish narrative identification with them.
+  quality_category_name: Narrative devices
+- name: Violence with lasting consequences
+  match_rule: The film depicts continuing physical, psychological or relational effects of violence.
+  not_sufficient: An injury or death without subsequent effects being portrayed does not establish attention to lasting consequences.
+  quality_category_name: Themes
+- name: Everyday cruelty
+  match_rule: Ordinary recognisable abuse or humiliation is presented as a source of horror independent of extraordinary threats.
+  not_sufficient: A rude remark without abusive, humiliating or horrific framing does not establish everyday cruelty as used here.
+  quality_category_name: Themes
+- name: Inescapable institutional power
+  match_rule: A harmful institution constrains escape, redress and individual resistance.
+  not_sufficient: One ineffective official without institutional constraints does not establish inescapable institutional power.
+  quality_category_name: Character and social dynamics
+- name: Conditional family belonging
+  match_rule: A family makes belonging or acceptance conditional on obedience, identity or conformity.
+  not_sufficient: Family conflict without a condition on acceptance does not establish conditional belonging.
+  quality_category_name: Character and social dynamics
+- name: Rational explanation for apparent supernatural events
+  match_rule: The resolution explains apparently supernatural events through ordinary human or natural causes.
+  not_sufficient: One suggested natural explanation with a competing supernatural explanation left viable does not establish a resolved rational explanation.
+  quality_category_name: Resolution and aftermath
+- name: Unresolved psychological or supernatural reading
+  match_rule: The film leaves both psychological and supernatural explanations of events viable.
+  not_sufficient: An unexplained creature or an incomplete source account without two viable readings does not establish this ambiguity.
+  quality_category_name: Resolution and aftermath
+- name: Supernatural evil treated as real
+  match_rule: Supernatural evil is established as an actual force within the story's world.
+  not_sufficient: A character's belief, metaphor or unresolved apparition alone does not establish supernatural evil as real in the story.
+  quality_category_name: Themes
+- name: Religion as protection
+  match_rule: Faith or religious practice provides protection or resistance against the threat.
+  not_sufficient: Religious imagery or belief without a protective effect does not establish religion as protection.
+  quality_category_name: Themes
+- name: Religion as an instrument of abuse
+  match_rule: Religious authority or doctrine enables coercion, exploitation or abuse.
+  not_sufficient: A villain's religious identity or a dangerous god alone does not establish religion being used as an instrument of abuse.
+  quality_category_name: Themes
+- name: Monstrosity as liberation
+  match_rule: Becoming or embracing the monstrous is presented as release from oppressive constraints.
+  not_sufficient: Transformation or increased power without liberatory framing does not establish monstrosity as liberation.
+  quality_category_name: Themes
+- name: Revenge corrupts the avenger
+  match_rule: Pursuing revenge erodes an avenger's moral commitments or harms those they sought to protect.
+  not_sufficient: Violent retaliation without erosion of commitments or harm to protected people does not establish corruption of the avenger.
+  quality_category_name: Ironies and reversals
+- name: Forgiveness with responsibility
+  match_rule: The resolution offers forgiveness while acknowledging wrongdoing or its consequences.
+  not_sufficient: Forgetting or denying harm without acknowledgment does not establish forgiveness with responsibility.
+  quality_category_name: Resolution and aftermath
+- name: Restoration over retribution
+  match_rule: The resolution chooses repairing harm over inflicting punishment.
+  not_sufficient: A nonviolent ending without a choice favouring repair over punishment does not establish restoration over retribution.
+  quality_category_name: Resolution and aftermath
+- name: Redemption through action
+  match_rule: A morally compromised character acts to repair harm they previously caused.
+  not_sufficient: An apology, sympathetic biography or unrelated heroic act without repair does not establish redemption through action.
+  quality_category_name: Character and social dynamics
+- name: Hope through solidarity
+  match_rule: Mutual support is presented as a source of hope against the horror.
+  not_sufficient: Tactical cooperation without hopeful framing does not establish hope through solidarity.
+  quality_category_name: Themes
+- name: Self-aware horror conventions
+  match_rule: The narrative recognises and plays with horror storytelling conventions as conventions.
+  not_sufficient: A familiar trope or audience recognition without in-film self-awareness does not establish this quality.
+  quality_category_name: Narrative devices
+- name: Affectionate genre play
+  match_rule: The film treats recognisable horror traditions with playful affection.
+  not_sufficient: References or parody without affectionate treatment do not establish affectionate genre play.
+  quality_category_name: Emotional tone and experience
+- name: Fear of being disbelieved
+  match_rule: Others' failure to believe a threatened character increases that character's danger or isolation.
+  not_sufficient: An ignored statement without an effect on danger or isolation does not establish this dynamic.
+  quality_category_name: Character and social dynamics
+- name: Exploitation of vulnerability
+  match_rule: Someone exploits another person's dependency, illness or diminished capacity.
+  not_sufficient: A vulnerable person being present or harmed without their vulnerability being exploited does not establish this mechanism.
+  quality_category_name: Themes

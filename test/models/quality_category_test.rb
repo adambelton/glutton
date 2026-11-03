@@ -2,7 +2,7 @@ require "test_helper"
 
 class QualityCategoryTest < ActiveSupport::TestCase
   test "category configuration is editable with explicit stale update and removal outcomes" do
-    category = QualityCategory.create!(key: "new_kind", name: "New kind", maximum_qualities: 5)
+    category = QualityCategory.create!(name: "New kind", maximum_qualities: 5)
     stale = QualityCategory.find(category.id)
     category.update!(name: "Revised kind", maximum_qualities: 2, weight: "0.75")
     assert_equal [ "Revised kind", 2, BigDecimal("0.75") ], [ category.reload.name, category.maximum_qualities, category.weight ]
@@ -13,29 +13,31 @@ class QualityCategoryTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::StaleObjectError) { removed.update!(name: "Gone") }
   end
 
-  test "keys remain stable while names and zero limits can be edited" do
+  test "names and zero limits can be edited without changing associated qualities" do
     category = quality_categories(:tone)
-    assert_raises(ActiveRecord::RecordInvalid) { category.update!(key: "replacement") }
-    assert category.errors.of_kind?(:key, :immutable)
+    quality = category.qualities.create!(name: "Retained quality")
+    assert_raises(ActiveModel::UnknownAttributeError) { QualityCategory.new(name: "No key", key: "unneeded") }
     category.reload.update!(maximum_qualities: 0, weight: 0, name: "Retuned tone")
     assert_equal 0, category.reload.maximum_qualities
     assert_equal 0, category.weight
-    duplicate = QualityCategory.new(key: "other", name: "retuned tone")
+    assert_equal category.id, quality.reload.quality_category_id
+    assert_equal "Retuned tone", quality.quality_category.name
+    duplicate = QualityCategory.new(name: "retuned tone")
     assert_not duplicate.valid?
     assert duplicate.errors.of_kind?(:name, :taken)
   end
 
   test "invalid configuration is rejected by model and storage boundaries" do
     [ { maximum_qualities: -1 }, { maximum_qualities: 1.5 }, { maximum_qualities: nil },
-      { weight: -0.1 }, { weight: "NaN" }, { weight: nil }, { name: " " }, { key: "UPPER CASE" } ].each do |attributes|
-      category = QualityCategory.new({ key: "test", name: "Test" }.merge(attributes))
+      { weight: -0.1 }, { weight: "NaN" }, { weight: nil }, { name: " " } ].each do |attributes|
+      category = QualityCategory.new({ name: "Test" }.merge(attributes))
       assert_not category.valid?, attributes.inspect
       assert category.errors.full_messages.none? { |message| message.include?("Translation missing") }
     end
-    [ { maximum_qualities: -1 }, { weight: -1 }, { weight: "NaN" }, { key: "invalid key" }, { name: " " } ].each do |attributes|
+    [ { maximum_qualities: -1 }, { weight: -1 }, { weight: "NaN" }, { name: " " } ].each do |attributes|
       assert_raises(ActiveRecord::StatementInvalid) do
         QualityCategory.transaction(requires_new: true) do
-          QualityCategory.insert_all!([ { key: "invalid", name: "Invalid", **attributes } ])
+          QualityCategory.insert_all!([ { name: "Invalid", **attributes } ])
         end
       end
     end
@@ -61,7 +63,7 @@ class QualityCategoryTest < ActiveSupport::TestCase
     target.qualities.create!(name: "DREAD")
     assert_raises(ActiveRecord::RecordInvalid) { quality.recategorise!(quality_category: target) }
     assert_equal source, quality.reload.quality_category
-    category = QualityCategory.create!(key: "new", name: "New")
+    category = QualityCategory.create!(name: "New")
     @film = Film.create!(title: "Quality move")
     link = @film.film_qualities.create!(quality: quality, evidence_references: [ "M1" ])
     quality.recategorise!(quality_category: category)
@@ -76,15 +78,12 @@ class QualityCategoryTest < ActiveSupport::TestCase
     end
   end
 
-  test "baseline seed is category-specific and reruns preserve tuning and do not seed qualities" do
-    assert_no_difference("Quality.count") { load Rails.root.join("db/seeds.rb") }
-    categories = QualityCategory.where(key: %w[subgenres tropes_and_situations themes]).index_by(&:key)
-    assert_equal 2, categories.fetch("subgenres").maximum_qualities
-    assert_equal 5, categories.fetch("tropes_and_situations").maximum_qualities
-    assert_equal 4, categories.fetch("themes").maximum_qualities
-    category = categories.fetch("themes")
-    category.update!(name: "Tuned themes", maximum_qualities: 1, weight: "0.5")
-    assert_no_difference([ "QualityCategory.count", "Quality.count" ]) { load Rails.root.join("db/seeds.rb") }
-    assert_equal [ "Tuned themes", 1, BigDecimal("0.5") ], [ category.reload.name, category.maximum_qualities, category.weight ]
+  test "initial seed uses category-specific defaults" do
+    QualityCategory.delete_all
+    load Rails.root.join("db/seeds.rb")
+    categories = QualityCategory.all.index_by(&:name)
+    assert_equal 2, categories.fetch("Subgenres").maximum_qualities
+    assert_equal 5, categories.fetch("Tropes and situations").maximum_qualities
+    assert_equal 4, categories.fetch("Themes").maximum_qualities
   end
 end

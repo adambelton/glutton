@@ -1,6 +1,6 @@
 # 043 — Replace hard-coded dimensions with editable quality categories
 
-Status: Ready for review  
+Status: Merged
 Owner: Film knowledge
 
 ## Goal
@@ -52,7 +52,7 @@ Implementation authorised. Compatibility decision: retain the existing generator
 
 Rollback is intentionally irreversible after category creation/moves: new category keys cannot safely become the former closed enum. Verification will migrate representative pre-change rows in an isolated test schema, preserving IDs and draft/published links. Only the test database may be migrated during this task. No public/admin HTTP entry points added; access policy remains the later admin-interface task.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via PR #46 under the owner's explicit CI-conditional merge instruction.
 
 
 ### Delivered and verification limitations — 29 October 2026
@@ -68,3 +68,5 @@ Final checks: RAILS_ENV=test bin/rails zeitwerk:check passed (standard mailer-pr
 Follow-up: owner confirmed removal of FilmAnalysis and corrected model roles to Quality, QualityCategory, Film and FilmQuality. Task 054 supersedes this task's temporary generator/dimension compatibility and draft-reference handling. The category configuration and its historical verification remain useful; task-054 results verify the new runtime separately.
 
 Final installation follow-up: tasks 055/056 replace the temporary category-conversion migration with direct catalogue creation and owner-authorised local database rebuilds. Earlier transition-test evidence is historical; no old dimensions or analysis tables are installed by the final migrations.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.

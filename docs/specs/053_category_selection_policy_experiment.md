@@ -1,6 +1,6 @@
 # 053 — Compare global and category quality-selection caps
 
-Status: Ready for review  
+Status: Merged
 Owner: Film knowledge
 
 ## Goal
@@ -49,4 +49,6 @@ Reproduce without paid calls: run python3 script/experiments/quality_selection_p
 
 Limitations: six familiar, relatively rich full-context articles; no sparse-film holdout or user-outcome test, no owner-adjudicated accuracy labels, no proof that 3 or 60% is optimal. Follow-up should decide the selection policy and fair-comparison rule explicitly rather than adding automatic category weights or re-entering general prompt tuning.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via PR #46 under the owner's explicit CI-conditional merge instruction.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.

@@ -15,6 +15,11 @@ class FilmQualityCatalogueMigrationTest < ActiveSupport::TestCase
       CreateFilms.new.migrate(:up)
       CreateFilmQualityCatalogue.new.migrate(:up)
       assert_equal %w[film_qualities films qualities quality_categories], connection.tables.sort
+      assert_not connection.column_exists?(:qualities, :key)
+      assert_not connection.column_exists?(:quality_categories, :key)
+      assert connection.column_exists?(:qualities, :match_rule, :text)
+      assert connection.column_exists?(:qualities, :not_sufficient, :text)
+      assert connection.check_constraint_exists?(:qualities, name: "qualities_complete_definitions")
       assert connection.foreign_key_exists?(:qualities, :quality_categories, column: :quality_category_id)
       assert connection.foreign_key_exists?(:film_qualities, :qualities, column: :quality_id)
       assert connection.foreign_key_exists?(:film_qualities, :films, column: :film_id)

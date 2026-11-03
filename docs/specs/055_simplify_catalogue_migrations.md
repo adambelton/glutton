@@ -1,6 +1,6 @@
 # 055 — Simplify catalogue migrations and rebuild development
 
-Status: Ready for review  
+Status: Merged
 Owner: Film knowledge
 
 ## Goal
@@ -33,7 +33,7 @@ Remove the original analysis migration and collapse the category/direct-quality 
 
 Read-only inventory confirmed glutton_development had two films and two unpublished analyses, with no quality/analysis links. The owner then explicitly authorised discarding all development data and rebuilding, superseding earlier backup/export/preservation plans. No migration compatibility bridge or old analysis lifecycle is needed.
 
-Owner acceptance / merge: Pending.
+Owner acceptance / merge: Merged via PR #46 under the owner's explicit CI-conditional merge instruction.
 
 
 ### Actual execution and reproducibility
@@ -48,3 +48,5 @@ The initial db:drop encountered an active local development session. After autho
 Migration logs are /private/tmp/glutton-055-dev-rebuild.log and /private/tmp/glutton-055-test-rebuild.log; both contain all 11 completed versions. SCHEMA paths were absent before execution; use new absent paths to reproduce a true migration replay. Temporary local verification script tmp/catalogue-migration-055/verify.rb checks database identity, versions, category defaults, empty catalogue and absence of analysis tables. These temporary files are not application dependencies. Owner explicitly waived data preservation; no backup/export was created or needed.
 
 Final application checks: PARALLEL_WORKERS=1 RAILS_ENV=test bin/rails test; RAILS_ENV=development bin/rails zeitwerk:check; RUBOCOP_CACHE_ROOT=/private/tmp/glutton-rubocop-056 bin/rubocop --no-server; bin/bundler-audit check; bin/importmap audit; bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error. Supporting correction consolidation is recorded in task 056. Source syncing/selection/scoring/admin UI remain unimplemented by these migration tasks.
+
+Delivery: [PR #46](https://github.com/adambelton/glutton/pull/46) merged on 29 October 2026 at `4e25aa1621b4b7d1631de8ca3a6ffb3d3e19406e` after [exact-head CI](https://github.com/adambelton/glutton/actions/runs/40878015501) passed (483 tests / 5,353 assertions, style/security clean). Historical intermediate checks and unresolved design/accuracy limitations above remain distinct from delivery.
