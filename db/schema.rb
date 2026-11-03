@@ -78,14 +78,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
   create_table "films", force: :cascade do |t|
     t.string "title", null: false
     t.date "release_date"
-    t.jsonb "metadata", default: {}, null: false
     t.bigint "tmdb_id"
-    t.jsonb "source_context", default: {}, null: false
+    t.jsonb "tmdb_metadata", default: {}, null: false
+    t.string "wikidata_id"
+    t.jsonb "wikipedia_context", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["tmdb_id"], name: "index_films_on_tmdb_id", unique: true
-    t.check_constraint "jsonb_typeof(metadata) = 'object'::text", name: "films_metadata_is_object"
-    t.check_constraint "jsonb_typeof(source_context) = 'object'::text", name: "films_source_context_object"
+    t.index ["wikidata_id"], name: "index_films_on_wikidata_id"
+    t.check_constraint "jsonb_typeof(tmdb_metadata) = 'object'::text", name: "films_tmdb_metadata_is_object"
+    t.check_constraint "jsonb_typeof(wikipedia_context) = 'object'::text", name: "films_wikipedia_context_object"
+    t.check_constraint "wikidata_id IS NULL OR wikidata_id::text ~ '^Q[1-9][0-9]*$'::text", name: "films_wikidata_id_format"
   end
 
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

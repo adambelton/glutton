@@ -1,12 +1,33 @@
 en:
+  film_knowledge:
+    import:
+      incomplete: "Could not complete film import from %{stage}: %{reason}."
+      stages:
+        tmdb: TMDB
+        wikidata: Wikidata
+        wikipedia: Wikipedia
+        persistence: Film storage
+      reasons:
+        existing_film: a film with this TMDB identity already exists
+        invalid_response: the source returned invalid data
+        too_large: the source response exceeded the size limit
+        not_found: the requested source was not found
+        missing_identity: no valid Wikidata identity is available
+        missing_article: no English Wikipedia article is available
+        identity_mismatch: the source identity did not match the selected film
+        insufficient_context: no usable narrative context is available
+        authentication: the source rejected access
+        configuration: source access is not configured
+        rate_limited: the source rate limit was reached
+        timeout: the source request timed out
+        transport: the source could not be reached
+        http_error: the source request failed
   activerecord:
     models:
       quality: Quality
       film_quality: Film quality
       quality_category: Quality category
     attributes:
-      film:
-        source_context: Source context
       quality_category:
         name: Category name
         maximum_qualities: Maximum qualities

@@ -6,6 +6,8 @@ gem "rails", "~> 8.1.4"
 gem "propshaft"
 # Use postgresql as the database for Active Record
 gem "pg", "~> 1.1"
+# Parse source article HTML without generating or rewriting its prose.
+gem "nokogiri"
 # Durable Active Job backend for domain-event polling.
 gem "good_job", "~> 4.22"
 # Explicit AI-workflow tracing to Langfuse via OTLP (no automatic request capture).

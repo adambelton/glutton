@@ -337,6 +337,7 @@ DEPENDENCIES
   dotenv-rails
   good_job (~> 4.22)
   importmap-rails
+  nokogiri
   openai
   opentelemetry-exporter-otlp
   opentelemetry-sdk

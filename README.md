@@ -276,22 +276,9 @@ bin/rails db:migrate
 bin/rails db:seed
 ```
 
-The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import, Wikipedia enrichment and initial assignment remain subsequent seed tasks.
+The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import with Wikipedia context is available separately; initial quality assignment and bulk catalogue execution remain to build.
 
 Qualities use immutable names and database IDs; there is no separate quality key. Categories also use names and database IDs; their names remain editable. Both seed files are plain YAML lists, with vocabulary entries referring to category names during the one-time initial load. Existing name-only qualities remain valid; when a definition or exclusion is supplied, both must be nonblank. Definitions and exclusions remain editable within the same concept. 
-
-## Development film sample
-
-The development sample provides minimal film identities, not analyses or a validated production seed. After applying migrations, explicitly load the three-film sample in development:
-
-```sh
-bin/rails db:migrate
-bin/rails film_knowledge:load_sample
-```
-
-The command creates Alien, The Thing and Get Out only when their TMDB IDs are absent. Re-running preserves internal IDs, existing metadata and unrelated films. It reports `sample_films=3`; this is the sample size, not a count of new inserts. The command rejects environments other than development before writing. It runs no API requests and is not called by application boot or `db:seed`. Failure rolls back the sample transaction; fix the cause and rerun.
-
-Sample identity sources and verification limits are recorded in minimal film catalogue. The films table stores one nullable release date, with year queries derived from date ranges; original titles and other descriptive values live in JSONB metadata. Sample release dates remain unknown until primary release dates are verified. The full 50-film catalogue, analyses, qualities and TMDB API import are separate work.
 
 ## Import a selected TMDB film
 
@@ -306,14 +293,26 @@ The separate TMDB API key is not used. Restart Rails/console after changing deve
 After applying migrations, explicitly import one already-selected movie ID from `bin/rails console`:
 
 ```ruby
-film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: 348)
+film = FilmKnowledge::ImportFilm.call(tmdb_id: 348)
 ```
 
-Use a positive Integer, not a title, string ID or URL. An existing TMDB identity returns its current Film without a request or credential lookup, preserving local metadata and unknown dates. New identities use one HTTPS movie-details request in en-US; no search, refresh, media or analysis is fetched. The operation stores title, source primary release date (nullable), TMDB ID and metadata containing optional original_title and tmdb provenance (fetched_at/language). Year filtering uses the release date; no separate year is stored.
+Use the real import for development data as well.
 
-The client uses 5-second connect and 10-second read/write timeouts, with no automatic retries or redirects. Expected errors are `FilmKnowledge::InvalidTmdbId`, `TmdbConfigurationError`, `TmdbNotFound`, `InvalidTmdbResponse`, or `TmdbUnavailable` (all under FilmKnowledge). The latter exposes `reason`, including `authentication`, `rate_limited`, `timeout`, `transport` or `http_error`. Errors omit credentials and provider response bodies. Fix the cause before explicitly retrying; 429 is surfaced without a retry loop. Unexpected validation/database failures propagate. Concurrent imports reuse the same Film; failed inserts leave no partial record.
+Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. It returns only when `film.ready_for_quality_assessment?` is true. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
 
-This operation is not called during boot or seeding. Automated tests use fake HTTP and isolated test records; live end-to-end import verification remains outstanding.
+`ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Film#import!(tmdb_data:, wikipedia_context:)` for one complete save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
+
+Physical column order is `id`, `title`, `release_date`, `tmdb_id`, `tmdb_metadata`, `wikidata_id`, `wikipedia_context`, `created_at`, `updated_at`.
+
+The film retains title, nullable source release date, TMDB metadata/provenance in `tmdb_metadata`, a nullable indexed `wikidata_id`, and source material in `wikipedia_context`. That packet contains TMDB/Wikidata/page identity, language, title, revision ID/timestamp/URL, article/history URLs, retrieval time, licence name/URL and ordered `source_paragraphs` (`id`, `section`, `text`). The provider-specific JSON columns store their packets directly, without redundant `tmdb`/`wikipedia` wrappers. The Wikipedia packet retains its language-specific page/revision identity as provenance and its entity identity matches `wikidata_id`; the language-independent Wikidata identity can remain when context is purged. The current importer fetches English Wikipedia only; other languages can later resolve their articles through the same entity. Paragraph references P1… belong to that revision. Extraction preserves prose/order, normalises HTML entities/whitespace and removes citations, tables, navigation, reference/cast sections and standalone blockquotes. Readiness requires complete provenance and narrative under Plot, Synopsis, Story or Premise; it does not certify semantic completeness.
+
+Import creates a new film only. An existing TMDB identity raises `FilmKnowledge::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
+
+Invalid selected IDs raise `FilmKnowledge::InvalidTmdbId`. Known provider/coverage failures raise `FilmKnowledge::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
+
+Each client configures its fixed HTTPS host and response-size limit on the provider-agnostic `ProviderRequest`. The transport accepts host/path/parameters/headers, parses JSON and raises sanitized transport errors; clients own response shape, API error interpretation and import-stage translation. Adding a provider requires no transport registry or provider-specific branch. Requests use a descriptive User-Agent, 5-second connect and 10-second read/write timeouts, a 30-second total request limit, streamed body caps (TMDB 2 MiB, Wikimedia 8 MiB), and no automatic retries or HTTP redirects. API-level article redirects are accepted only with matching Wikidata identity and revision/page checks. Errors omit credentials and provider bodies.
+
+This operation serves both future bulk catalogue loading and on-demand import. It is not called during boot or vocabulary seeding and creates no Library entry, rating or quality assignment. Automated tests cover fake-HTTP search/selection/import, parsing, atomic creation, failures and explicit duplicate conflicts. A live development smoke test passed for five horror films through TMDB, Wikidata and Wikipedia; wider coverage and operational throughput remain unverified.
 
 ## Search TMDB for a film
 
@@ -332,10 +331,10 @@ Queries must be nonblank Strings of at most 200 characters after outer whitespac
 After explicitly choosing a candidate, pass its integer TMDB ID to the existing import operation; import still retrieves and validates details independently:
 
 ```ruby
-film = FilmKnowledge::ImportTmdbFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
+film = FilmKnowledge::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
 ```
 
-Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Provider/configuration failures use the importer’s sanitized errors and timeout/retry policy; search 404 is `TmdbUnavailable` with reason `http_error`, while movie-details 404 remains `TmdbNotFound`. Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP; live search compatibility remains unverified.
+Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
 
 ## Library watched state
 
