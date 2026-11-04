@@ -22,9 +22,9 @@ module Identity
     teardown do
       AccountMailer.singleton_class.remove_method(:confirmation) if AccountMailer.singleton_class.instance_methods(false).include?(:confirmation)
       @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-      PendingRegistration.where(id: @pending_ids).delete_all
-      Session.where(user_id: @user_ids).delete_all
-      User.where(id: @user_ids).delete_all
+      Identity::PendingRegistration.where(id: @pending_ids).delete_all
+      Identity::Session.where(user_id: @user_ids).delete_all
+      Identity::User.where(id: @user_ids).delete_all
       ENV["APP_ORIGIN"] = @origin
     end
 
@@ -64,7 +64,7 @@ module Identity
         Transport.new(-> { raise "transport inside transaction" if ActiveRecord::Base.connection.transaction_open?; deliveries << arguments; :sent })
       end
       record = prepare
-      contenders = PendingRegistration.transaction do
+      contenders = Identity::PendingRegistration.transaction do
         record.lock!
         2.times.map { blocked { DeliverRegistrationConfirmation.call(pending_registration_id: record.id) } }
       end
@@ -85,7 +85,7 @@ module Identity
       assert_nil error.cause
       refute_includes error.full_message, "private-provider-marker"
       assert_equal 1, record.reload.confirmation_delivery_attempts
-      assert_equal 0, User.count
+      assert_equal 0, Identity::User.count
     end
 
     test "unexpected transport programming failure propagates" do
@@ -96,11 +96,11 @@ module Identity
     end
 
     test "attachment waiting behind replacement rejects the old request" do
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
       record = prepare(guest:)
       contender = nil
-      replacement = PendingRegistration.transaction do
+      replacement = Identity::PendingRegistration.transaction do
         guest.lock!
         contender = blocked { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: guest.id) }
         prepare(guest:)
@@ -108,16 +108,16 @@ module Identity
       result = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, result
       assert_equal guest.id, replacement.reload.guest_user_id
-      assert_not PendingRegistration.exists?(record.id)
+      assert_not Identity::PendingRegistration.exists?(record.id)
     end
 
     test "attachment after committed confirmation cannot resurrect pending credentials" do
       record = prepare
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       contender = nil
-      new_session = PendingRegistration.transaction do
+      new_session = Identity::PendingRegistration.transaction do
         record.lock!
         contender = blocked { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: guest.id) }
         CompleteRegistration.call(token:)
@@ -125,8 +125,8 @@ module Identity
       @user_ids << new_session.user_id
       result = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, result
-      assert_not PendingRegistration.exists?(record.id)
-      assert_not (User.find(guest.id)).can_reset_password?
+      assert_not Identity::PendingRegistration.exists?(record.id)
+      assert_not (Identity::User.find(guest.id)).can_reset_password?
       assert new_session.active?
     end
   end

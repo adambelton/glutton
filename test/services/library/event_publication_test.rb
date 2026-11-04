@@ -3,7 +3,7 @@ require "test_helper"
 class Library::EventPublicationTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Published film")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
   end
@@ -58,7 +58,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
 
   test "independent owners and films keep independent event streams" do
     entries = [ @entry,
-      LibraryFilmToWatch.create!(user: UserGuest.create!, film: @film),
+      LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film),
       LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
     entries.each { |entry| Library::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
     assert_equal [ 1, 1, 1 ], DomainEvent.pluck(:sequence)

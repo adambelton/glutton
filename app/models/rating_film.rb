@@ -1,5 +1,5 @@
 class RatingFilm < ApplicationRecord
-  belongs_to :user
+  belongs_to :user, class_name: "Identity::User"
   belongs_to :film, class_name: "Registry::Film"
   has_many :ratings
   has_one :current_rating, -> { order(id: :desc) }, class_name: "Rating"

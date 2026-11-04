@@ -6,7 +6,7 @@ class RegistrationsController < ApplicationController
   before_action :reject_registered_registration
 
   def new
-    @registration = PendingRegistration.new
+    @registration = Identity::PendingRegistration.new
   end
 
   def create

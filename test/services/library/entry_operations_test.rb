@@ -11,13 +11,13 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
 
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Existing Library film")
   end
 
   OPERATIONS.each do |operation, source, permission, rejection|
     test "#{operation} requires the exact owned existing entry and never creates" do
-      foreign = source.create!(user: UserGuest.create!, film: @film)
+      foreign = source.create!(user: Identity::UserGuest.create!, film: @film)
       assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
         [ nil, -1, foreign.id ].each do |id|
           assert_raises(Library::FilmUnavailable) { operation.call(user_id: @user.id, library_film_id: id) }
@@ -55,18 +55,18 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
 
     test "#{operation} validates fresh identity and permits registered users beyond guest expiry" do
       entry = source.create!(user: @user, film: @film)
-      [ nil, -1, UserDeleted.create!.id ].each do |id|
+      [ nil, -1, Identity::UserDeleted.create!.id ].each do |id|
         assert_raises(Library::IdentityUnavailable) { operation.call(user_id: id, library_film_id: entry.id) }
       end
-      travel_to @user.created_at + UserGuest::EXPIRY_DURATION do
+      travel_to @user.created_at + Identity::UserGuest::EXPIRY_DURATION do
         assert_raises(Library::IdentityUnavailable) { operation.call(user_id: @user.id, library_film_id: entry.id) }
       end
-      registered = UserRegistered.create!(email_address: "entry@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current)
+      registered = Identity::UserRegistered.create!(email_address: "entry@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current)
       owned = source.create!(user: registered, film: @film)
       travel 2.days do
         assert_equal owned.id, operation.call(user_id: registered.id, library_film_id: owned.id).id
       end
-      @user.becomes!(UserDeleted).save!
+      @user.becomes!(Identity::UserDeleted).save!
       assert_raises(Library::IdentityUnavailable) { operation.call(user_id: @user.id, library_film_id: entry.id) }
     end
 
@@ -94,7 +94,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
 
   test "guest can act just before expiry and NotInterested cannot be marked watched by a user" do
     entry = LibraryFilmToWatch.create!(user: @user, film: @film)
-    travel_to @user.created_at + UserGuest::EXPIRY_DURATION - 1.second do
+    travel_to @user.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
       assert_equal entry.id, Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id).id
       assert_raises(Library::AlreadyWatched) { Library::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
     end

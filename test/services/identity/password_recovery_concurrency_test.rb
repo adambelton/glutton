@@ -6,21 +6,21 @@ module Identity
     self.use_transactional_tests = false
 
     setup do
-      @user = UserRegistered.create!(email_address: "recovery-concurrency@example.test", password: "original password phrase",
+      @user = Identity::UserRegistered.create!(email_address: "recovery-concurrency@example.test", password: "original password phrase",
         password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     end
 
     teardown do
       @thread&.kill if @thread&.alive?
       @thread&.join
-      Session.where(user_id: @user.id).delete_all
+      Identity::Session.where(user_id: @user.id).delete_all
       @user.delete
     end
 
     test "waiting duplicate redemption revalidates digest after locking" do
       token = @user.password_reset_token
       ready = Queue.new
-      UserRegistered.transaction do
+      Identity::UserRegistered.transaction do
         @user.lock!
         @thread = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do |connection|
@@ -49,7 +49,7 @@ module Identity
     test "reset committed before waiting sign-in rejects the old password" do
       token = @user.password_reset_token
       contender = nil
-      UserRegistered.transaction do
+      Identity::UserRegistered.transaction do
         @user.lock!
         contender = blocked_operation do
           Authenticate.call(email_address: @user.email_address, password: "original password phrase")
@@ -58,14 +58,14 @@ module Identity
       end
 
       assert_nil Timeout.timeout(5) { contender.value }
-      assert_not Session.exists?(user_id: @user.id)
+      assert_not Identity::Session.exists?(user_id: @user.id)
       assert Authenticate.call(email_address: @user.email_address, password: "replacement password phrase").active?
     end
 
     test "reset waiting for a successful sign-in revokes the issued session" do
       token = @user.password_reset_token
       contender = nil
-      authentication = UserRegistered.transaction do
+      authentication = Identity::UserRegistered.transaction do
         session = Authenticate.call(email_address: @user.email_address, password: "original password phrase")
         contender = blocked_operation do
           ResetPassword.call(token:, password: "replacement password phrase", password_confirmation: "replacement password phrase")
@@ -75,7 +75,7 @@ module Identity
 
       Timeout.timeout(5) { contender.value }
       assert_not authentication.active?
-      assert_not Session.exists?(user_id: @user.id)
+      assert_not Identity::Session.exists?(user_id: @user.id)
       assert_nil Authenticate.call(email_address: @user.email_address, password: "original password phrase")
     end
 
@@ -90,8 +90,8 @@ module Identity
         raise "SMTP inside transaction" if ActiveRecord::Base.connection.transaction_open?
         Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
-            UserRegistered.transaction do
-              UserRegistered.lock("FOR UPDATE NOWAIT").find(user_id)
+            Identity::UserRegistered.transaction do
+              Identity::UserRegistered.lock("FOR UPDATE NOWAIT").find(user_id)
             end
           end
         end.value

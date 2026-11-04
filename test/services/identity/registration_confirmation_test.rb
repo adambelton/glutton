@@ -13,10 +13,10 @@ module Identity
 
     test "issuance changes no identity or delivery and exposes no credentials" do
       record = prepare
-      assert_no_difference [ "User.count", "Session.count", "ActionMailer::Base.deliveries.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
         token = token_for(record)
-        assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
-        definition = PendingRegistration.token_definitions.fetch(:email_confirmation)
+        assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+        definition = Identity::PendingRegistration.token_definitions.fetch(:email_confirmation)
         payload = definition.message_verifier.verified(token, purpose: definition.full_purpose).to_json
         [ record.email_address, record.password_digest, "a long password phrase" ].each { |marker| refute_includes payload, marker }
       end
@@ -31,13 +31,13 @@ module Identity
       reissued = token_for(record)
       assert_equal deadline, record.reload.expires_at
       [ first, reissued ].each do |token|
-        assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
+        assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
       end
       travel_to deadline
       assert_not record.active?
       assert_raises(RegistrationUnavailable) { token_for(record) }
       [ first, reissued ].each do |token|
-        assert_nil PendingRegistration.find_by_token_for(:email_confirmation, token)
+        assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
         assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       end
     end
@@ -51,11 +51,11 @@ module Identity
       assert_not direct.active?
       assert_raises(RegistrationUnavailable) { token_for(direct) }
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
-      guest = UserGuest.create!
-      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second
+      guest = Identity::UserGuest.create!
+      travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second
       linked = prepare(guest_user_id: guest.id)
       token = token_for(linked)
-      travel_to guest.created_at + UserGuest::EXPIRY_DURATION
+      travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       assert_raises(RegistrationUnavailable) { token_for(linked) }
     end
@@ -64,16 +64,16 @@ module Identity
       record = prepare
       token = token_for(record)
       record.update!(email_address: "changed@example.test")
-      assert_nil PendingRegistration.find_by_token_for(:email_confirmation, token)
+      assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
       token = token_for(record)
       record.update!(password: "a replacement password", password_confirmation: "a replacement password")
-      assert_nil PendingRegistration.find_by_token_for(:email_confirmation, token)
+      assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token: record.signed_id(purpose: :other)) }
       token = token_for(record)
       record.destroy!
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token:) }
       assert_raises(RegistrationUnavailable) { token_for(record) }
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       linked = prepare(guest_user_id: guest.id)
       token = token_for(linked)
       prepare(guest_user_id: guest.id)
@@ -84,8 +84,8 @@ module Identity
       record = prepare
       first = token_for(record)
       second = travel(1.second) { token_for(record) }
-      assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, first)
-      assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, second)
+      assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, first)
+      assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, second)
       CompleteRegistration.call(token: second)
       assert_raises(RegistrationUnavailable) { CompleteRegistration.call(token: first) }
     end

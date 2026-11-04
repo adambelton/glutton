@@ -2,7 +2,7 @@ require "test_helper"
 
 class RatingHoldTest < ActiveSupport::TestCase
   setup do
-    @row = RatingFilm.create!(user: UserGuest.create!, film: Registry::Film.create!(title: "Hold"))
+    @row = RatingFilm.create!(user: Identity::UserGuest.create!, film: Registry::Film.create!(title: "Hold"))
   end
 
   test "hold and release are explicit model actions independent of dismissal" do

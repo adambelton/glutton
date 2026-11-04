@@ -4,7 +4,7 @@ end
 module DomainEventHelpers
   def prepare_events
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     EventEffect.connection.create_table(:event_effects) do |t|
       t.uuid :event_id, null: false
       t.string :subscriber, null: false
@@ -13,7 +13,7 @@ module DomainEventHelpers
   end
 
   def publish(stream_key: "film:1", user_id: @user.id, **attributes)
-    User.transaction do
+    Identity::User.transaction do
       DomainEvents::Publish.call(user_id:, publisher: "test_domain", stream_key:,
         name: "Changed", payload: { value: 1 }, **attributes)
     end

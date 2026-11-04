@@ -45,9 +45,9 @@ module Identity
 
     teardown do
       @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-      PendingRegistration.where(id: @pending_ids).delete_all
-      Session.where(user_id: @user_ids).delete_all
-      User.where(id: @user_ids).delete_all
+      Identity::PendingRegistration.where(id: @pending_ids).delete_all
+      Identity::Session.where(user_id: @user_ids).delete_all
+      Identity::User.where(id: @user_ids).delete_all
     end
 
     test "duplicate direct redemption creates only one account and session" do
@@ -55,7 +55,7 @@ module Identity
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
-      winner = PendingRegistration.transaction do
+      winner = Identity::PendingRegistration.transaction do
         record.lock!
         contender = blocked_operation(-> { CompleteRegistration.call(token:) })
         CompleteRegistration.call(token:)
@@ -63,20 +63,20 @@ module Identity
       @user_ids << winner.user_id
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
-      assert_equal 1, User.where(id: winner.user_id).count
-      assert_equal 1, Session.where(user_id: winner.user_id).count
-      assert_not PendingRegistration.exists?(record.id)
+      assert_equal 1, Identity::User.where(id: winner.user_id).count
+      assert_equal 1, Identity::Session.where(user_id: winner.user_id).count
+      assert_not Identity::PendingRegistration.exists?(record.id)
     end
 
     test "concurrent browser completion attaches once and issues one surviving session" do
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
       record = prepare(email: "browser-confirmation-race@example.test")
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
       operation = -> { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
-      winner = User.transaction do
+      winner = Identity::User.transaction do
         guest.lock!
         contender = blocked_operation(operation)
         operation.call
@@ -85,19 +85,19 @@ module Identity
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
       assert_equal guest.id, winner.user_id
       assert winner.active?
-      assert_equal [ winner.id ], Session.where(user_id: guest.id).pluck(:id)
-      assert_not PendingRegistration.exists?(record.id)
+      assert_equal [ winner.id ], Identity::Session.where(user_id: guest.id).pluck(:id)
+      assert_not Identity::PendingRegistration.exists?(record.id)
     end
 
     test "different guests cannot both claim an unattached registration" do
-      first_guest = UserGuest.create!
-      second_guest = UserGuest.create!
+      first_guest = Identity::UserGuest.create!
+      second_guest = Identity::UserGuest.create!
       @user_ids.concat [ first_guest.id, second_guest.id ]
       record = prepare(email: "different-guests-confirmation@example.test")
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
-      winner = User.transaction do
+      winner = Identity::User.transaction do
         completed = CompleteBrowserRegistration.call(token:, current_user_id: first_guest.id)
         contender = blocked_operation(-> { CompleteBrowserRegistration.call(token:, current_user_id: second_guest.id) })
         completed
@@ -106,19 +106,19 @@ module Identity
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
       assert_equal first_guest.id, winner.user_id
       assert winner.active?
-      assert_not User.find(second_guest.id).can_reset_password?
-      assert_not Session.exists?(user_id: second_guest.id)
-      assert_not PendingRegistration.exists?(record.id)
+      assert_not Identity::User.find(second_guest.id).can_reset_password?
+      assert_not Identity::Session.exists?(user_id: second_guest.id)
+      assert_not Identity::PendingRegistration.exists?(record.id)
     end
 
     test "committed guest replacement wins over waiting confirmation" do
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
       original = prepare(email: "replacement-confirmation@example.test", guest:)
       @pending_ids << original.id
       token = token_for(original)
       contender = nil
-      replacement = PendingRegistration.transaction do
+      replacement = Identity::PendingRegistration.transaction do
         guest.lock!
         contender = blocked_operation(-> { CompleteRegistration.call(token:) })
         prepare(email: "replacement-confirmation@example.test", guest:)
@@ -126,47 +126,47 @@ module Identity
       @pending_ids << replacement.id
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
-      assert_not (User.find(guest.id)).can_reset_password?
-      assert PendingRegistration.exists?(replacement.id)
-      assert_not Session.exists?(user_id: guest.id)
+      assert_not (Identity::User.find(guest.id)).can_reset_password?
+      assert Identity::PendingRegistration.exists?(replacement.id)
+      assert_not Identity::Session.exists?(user_id: guest.id)
     end
 
     test "guest confirmation prevents a waiting preparation from recreating pending credentials" do
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
       record = prepare(email: "confirmation-wins@example.test", guest:)
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
-      session = PendingRegistration.transaction do
+      session = Identity::PendingRegistration.transaction do
         guest.lock!
         contender = blocked_operation(-> { prepare(email: "confirmation-wins@example.test", guest:) })
         CompleteRegistration.call(token:)
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert (User.find(guest.id)).can_reset_password?
+      assert (Identity::User.find(guest.id)).can_reset_password?
       assert session.active?
-      assert_not PendingRegistration.exists?(guest_user_id: guest.id)
+      assert_not Identity::PendingRegistration.exists?(guest_user_id: guest.id)
     end
 
     test "waiting across the guest expiry deadline cannot complete registration" do
       freeze_time
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       @user_ids << guest.id
-      travel_to guest.created_at + UserGuest::EXPIRY_DURATION - 1.second
+      travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second
       record = prepare(email: "waiting-expiry@example.test", guest:)
       @pending_ids << record.id
       token = token_for(record)
       contender = nil
-      PendingRegistration.transaction do
+      Identity::PendingRegistration.transaction do
         guest.lock!
         contender = blocked_operation(-> { CompleteRegistration.call(token:) })
         travel 2.seconds
       end
       assert_instance_of RegistrationUnavailable, Timeout.timeout(5) { contender.value }
-      assert_not (User.find(guest.id)).can_reset_password?
-      assert PendingRegistration.exists?(record.id)
-      assert_not Session.exists?(user_id: guest.id)
+      assert_not (Identity::User.find(guest.id)).can_reset_password?
+      assert Identity::PendingRegistration.exists?(record.id)
+      assert_not Identity::Session.exists?(user_id: guest.id)
     end
 
     test "two direct requests for one email cannot complete into duplicate accounts" do
@@ -176,7 +176,7 @@ module Identity
       first_token = token_for(first)
       second_token = token_for(second)
       contender = nil
-      winner = PendingRegistration.transaction do
+      winner = Identity::PendingRegistration.transaction do
         session = CompleteRegistration.call(token: first_token)
         @user_ids << session.user_id
         # The first account is not committed: the second passes model uniqueness
@@ -187,9 +187,9 @@ module Identity
       loser = Timeout.timeout(5) { contender.value }
       assert_instance_of RegistrationUnavailable, loser
       assert_nil loser.cause
-      assert_equal 1, UserRegistered.where(email_address: "email-race@example.test").count
-      assert_equal 1, Session.where(user_id: winner.user_id).count
-      assert PendingRegistration.exists?(second.id)
+      assert_equal 1, Identity::UserRegistered.where(email_address: "email-race@example.test").count
+      assert_equal 1, Identity::Session.where(user_id: winner.user_id).count
+      assert Identity::PendingRegistration.exists?(second.id)
     end
   end
 end

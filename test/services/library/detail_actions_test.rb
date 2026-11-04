@@ -2,7 +2,7 @@ require "test_helper"
 
 class Library::DetailActionsTest < ActiveSupport::TestCase
   setup do
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Detail film")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
   end
@@ -10,7 +10,7 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
   test "missing and inactive owners and foreign entries cannot be used" do
     [ Library::FindFilm, Library::RecordWatched, Library::RemoveFromWatchlist, Library::MarkNotInterested, Library::AddToWatchlist, Library::RemoveNotInterested ].each do |operation|
       assert_raises(Library::IdentityUnavailable) { operation.call(user_id: -1, library_film_id: @entry.id) }
-      assert_raises(Library::FilmUnavailable) { operation.call(user_id: UserGuest.create!.id, library_film_id: @entry.id) }
+      assert_raises(Library::FilmUnavailable) { operation.call(user_id: Identity::UserGuest.create!.id, library_film_id: @entry.id) }
       travel 25.hours do
         assert_raises(Library::IdentityUnavailable) { operation.call(user_id: @user.id, library_film_id: @entry.id) }
       end

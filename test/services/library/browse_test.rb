@@ -5,8 +5,8 @@ class Library::BrowseTest < ActiveSupport::TestCase
     assert_raises(Library::IdentityUnavailable) do
       Library::Browse.call(user_id: -1, view: Library::Browse::Views::WATCHLIST, page: 1)
     end
-    user = UserGuest.create!
-    travel UserGuest::EXPIRY_DURATION + 1.second do
+    user = Identity::UserGuest.create!
+    travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
       assert_raises(Library::IdentityUnavailable) do
         Library::Browse.call(user_id: user.id, view: Library::Browse::Views::WATCHLIST, page: 1)
       end
@@ -14,7 +14,7 @@ class Library::BrowseTest < ActiveSupport::TestCase
   end
 
   test "query count stays bounded as the watched list grows and film data is preloaded" do
-    user = UserGuest.create!
+    user = Identity::UserGuest.create!
     create_entry = -> { LibraryFilmWatched.create!(user:, film: Registry::Film.create!(title: "Film")) }
     create_entry.call
     count_queries = lambda do

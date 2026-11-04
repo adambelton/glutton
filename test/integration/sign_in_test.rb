@@ -5,7 +5,7 @@ class SignInTest < ActionDispatch::IntegrationTest
     @forgery_protection = SessionsController.allow_forgery_protection
     SessionsController.allow_forgery_protection = true
     SessionsController::RATE_LIMIT_STORE.clear
-    @user = UserRegistered.create!(email_address: "login@example.test", password: "a long password phrase",
+    @user = Identity::UserRegistered.create!(email_address: "login@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
   end
 
@@ -27,7 +27,7 @@ class SignInTest < ActionDispatch::IntegrationTest
   test "sign in issues a persistent cookie and sign out revokes only that browser" do
     sign_in
     assert_response :see_other
-    first = Session.last
+    first = Identity::Session.last
     old_cookie = cookies[:session_id]
     header = Array(response.headers["set-cookie"]).join("\n").downcase
     assert_includes header, "expires="
@@ -39,17 +39,17 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Signed in."
     other = open_session
     sign_in(other)
-    second = Session.last
+    second = Identity::Session.last
     delete session_path, params: { authenticity_token: token }
     assert_response :see_other
-    assert_nil Session.find_by(id: first.id)
+    assert_nil Identity::Session.find_by(id: first.id)
     assert second.active?
     cookies[:session_id] = old_cookie
     get root_path
     assert_select "p", text: "Signed in", count: 0
     delete session_path, params: { authenticity_token: token }
     assert_response :see_other
-    assert_equal 1, Session.count
+    assert_equal 1, Identity::Session.count
   end
 
   test "registered cookie is secure through production SSL middleware" do
@@ -62,9 +62,9 @@ class SignInTest < ActionDispatch::IntegrationTest
 
   test "invalid credentials have a generic error and preserve current identity" do
     sign_in
-    existing = Session.last
+    existing = Identity::Session.last
     cookie = cookies[:session_id]
-    assert_no_difference [ "Session.count", "User.count" ] do
+    assert_no_difference [ "Identity::Session.count", "Identity::User.count" ] do
       sign_in(password: "wrong password")
     end
     assert_response :unprocessable_entity
@@ -77,20 +77,20 @@ class SignInTest < ActionDispatch::IntegrationTest
 
   test "sign in switches this browser and does not revoke another browser" do
     sign_in
-    previous = Session.last
+    previous = Identity::Session.last
     other = open_session
     sign_in(other)
-    independent = Session.last
+    independent = Identity::Session.last
     sign_in
     assert_response :see_other
     assert_not previous.active?
     assert independent.active?
-    assert Session.last.active?
-    assert_equal 2, Session.count
+    assert Identity::Session.last.active?
+    assert_equal 2, Identity::Session.count
   end
 
   test "sign in and sign out require CSRF and GET does not change sessions" do
-    assert_no_difference "Session.count" do
+    assert_no_difference "Identity::Session.count" do
       get new_session_path
       post session_path, params: { email_address: @user.email_address, password: "a long password phrase" }
       assert_response :unprocessable_entity
@@ -116,11 +116,11 @@ class SignInTest < ActionDispatch::IntegrationTest
 
   test "deleted revoked binding still reports deletion but can explicitly sign out or sign in" do
     sign_in
-    authentication = Session.last
+    authentication = Identity::Session.last
     other = open_session
     other.cookies[:session_id] = cookies[:session_id]
     @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
-    Session.revoke(id: authentication.id)
+    Identity::Session.revoke(id: authentication.id)
     [ self, other ].each do |client|
       2.times do
         client.get root_path
@@ -132,7 +132,7 @@ class SignInTest < ActionDispatch::IntegrationTest
     delete session_path, params: { authenticity_token: token }
     get root_path
     assert_response :success
-    replacement = UserRegistered.create!(email_address: "other@example.test", password: "a long password phrase",
+    replacement = Identity::UserRegistered.create!(email_address: "other@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     other.post session_path, params: { email_address: replacement.email_address, password: "a long password phrase", authenticity_token: token(other) }
     assert_equal 303, other.response.status
@@ -142,15 +142,15 @@ class SignInTest < ActionDispatch::IntegrationTest
 
   test "failed prior-session revocation rolls back the issued replacement" do
     sign_in
-    previous = Session.last
+    previous = Identity::Session.last
     cookie = cookies[:session_id]
     authenticity_token = token
-    original = Session.method(:revoke)
-    Session.define_singleton_method(:revoke) do |id:|
+    original = Identity::Session.method(:revoke)
+    Identity::Session.define_singleton_method(:revoke) do |id:|
       original.call(id: id)
       raise ActiveRecord::ConnectionNotEstablished
     end
-    assert_no_difference "Session.count" do
+    assert_no_difference "Identity::Session.count" do
       assert_raises ActiveRecord::ConnectionNotEstablished do
         post session_path, params: { email_address: @user.email_address, password: "a long password phrase", authenticity_token: authenticity_token }
       end
@@ -158,6 +158,6 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert_equal cookie, cookies[:session_id]
     assert previous.active?
   ensure
-    Session.define_singleton_method(:revoke, original) if original
+    Identity::Session.define_singleton_method(:revoke, original) if original
   end
 end

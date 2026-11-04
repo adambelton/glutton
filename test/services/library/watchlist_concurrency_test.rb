@@ -7,16 +7,16 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
-    @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
+    @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
   end
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
     LibraryFilm.where(user_id: @user_ids).delete_all
-    PendingRegistration.where(guest_user_id: @user_ids).delete_all
-    Session.where(user_id: @user_ids).delete_all
-    User.where(id: @user_ids).delete_all
+    Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
+    Identity::Session.where(user_id: @user_ids).delete_all
+    Identity::User.where(id: @user_ids).delete_all
     Registry::Film.where(id: @film_ids).delete_all
   end
 
@@ -30,7 +30,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     end
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
-    connection = User.connection
+    connection = Identity::User.connection
     Timeout.timeout(5) do
       until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
@@ -62,7 +62,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     test "#{first} before #{second} serializes on the existing relationship" do
       @entry = source.create!(user: @guest, film: @film)
       contender = result = nil
-      User.transaction do
+      Identity::User.transaction do
         result = call(first)
         contender = blocked do
           begin

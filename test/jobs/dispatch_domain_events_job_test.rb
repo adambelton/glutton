@@ -20,7 +20,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
   teardown do
     DomainEvents::Subscriptions.define_singleton_method(:all, @old_subscriptions)
     DispatchDomainEventsJob.queue_adapter = @old_adapter
-    User.where(id: @user.id).delete_all
+    Identity::User.where(id: @user.id).delete_all
     EventEffect.connection.drop_table(:event_effects)
     jobs = GoodJob::Job.where.not(id: @job_ids)
     GoodJob::Execution.where(active_job_id: jobs.select(:active_job_id)).delete_all
@@ -30,7 +30,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
   test "after-commit wakeup creates a durable job and GoodJob delivers committed events" do
     event = nil
     before = GoodJob::Job.count
-    User.transaction do
+    Identity::User.transaction do
       event = publish
       assert_equal before, GoodJob::Job.count
     end
@@ -46,7 +46,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
 
   test "source rollback produces neither an event nor a wakeup job" do
     assert_no_difference [ "DomainEvent.count", "GoodJob::Job.count" ] do
-      User.transaction do
+      Identity::User.transaction do
         publish
         raise ActiveRecord::Rollback
       end

@@ -3,7 +3,7 @@ require "test_helper"
 class Ratings::RevisionTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Revised rating")
     @rating_film = RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
     @original = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
@@ -59,7 +59,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "missing foreign removed and unrated candidates cannot be revised" do
-    other = UserGuest.create!
+    other = Identity::UserGuest.create!
     unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
     removed = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Removed"))
     removed.destroy!
@@ -87,8 +87,8 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "inactive and missing owners are rejected using fresh state" do
-    deleted = UserDeleted.create!
-    travel UserGuest::EXPIRY_DURATION
+    deleted = Identity::UserDeleted.create!
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
       [ @user.id, deleted.id, -1 ].each do |user_id|
         assert_raises(Ratings::IdentityUnavailable) { revise(user_id:) }

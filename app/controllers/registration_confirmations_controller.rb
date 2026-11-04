@@ -7,7 +7,7 @@ class RegistrationConfirmationsController < ApplicationController
   def show
     user = current_user
     @token = params[:token]
-    registration = PendingRegistration.resolve_confirmation!(token: @token)
+    registration = Identity::PendingRegistration.resolve_confirmation!(token: @token)
     registration.authorize_confirmation!(user:) if user
   end
 

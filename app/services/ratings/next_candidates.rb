@@ -6,7 +6,7 @@ module Ratings
       end
 
       RatingFilm.transaction(requires_new: true) do
-        user = User.lock.find_by(id: user_id)
+        user = Identity::User.lock.find_by(id: user_id)
         raise IdentityUnavailable unless user&.active?
 
         RatingFilm.where(user_id: user.id).pending.order(:created_at, :id).limit(limit).to_a

@@ -1,22 +1,22 @@
 require "test_helper"
 
-class UserRegisteredTest < ActiveSupport::TestCase
+class Identity::UserRegisteredTest < ActiveSupport::TestCase
   def account(**attributes)
-    UserRegistered.new(email_address: "viewer@example.test", password: "a long password phrase",
+    Identity::UserRegistered.new(email_address: "viewer@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current, **attributes)
   end
 
   test "confirmed credentials persist and authenticate without a guest deadline" do
     user = account
     user.save!
-    loaded = User.find(user.id)
-    assert_instance_of UserRegistered, loaded
+    loaded = Identity::User.find(user.id)
+    assert_instance_of Identity::UserRegistered, loaded
     assert_equal loaded, loaded.authenticate("a long password phrase")
     assert_not loaded.authenticate("incorrect password")
     assert_not_equal "a long password phrase", loaded.password_digest
     assert_not loaded.has_attribute?(:password)
     assert_not loaded.has_attribute?(:password_confirmation)
-    assert_equal loaded, UserRegistered.find_by_password_reset_token(loaded.password_reset_token)
+    assert_equal loaded, Identity::UserRegistered.find_by_password_reset_token(loaded.password_reset_token)
     travel 48.hours do
       assert loaded.active?
     end
@@ -53,23 +53,23 @@ class UserRegisteredTest < ActiveSupport::TestCase
     user = account(email_address: " Viewer@Example.test \t")
     user.save!
     assert_equal "viewer@example.test", user.reload.email_address
-    assert_no_difference "User.count" do
-      assert_equal user, UserRegistered.find_by_email(" VIEWER@example.TEST ")
+    assert_no_difference "Identity::User.count" do
+      assert_equal user, Identity::UserRegistered.find_by_email(" VIEWER@example.TEST ")
       [ nil, "", "bad-address", "unknown@example.test", 42 ].each do |input|
-        assert_nil UserRegistered.find_by_email(input)
+        assert_nil Identity::UserRegistered.find_by_email(input)
       end
     end
     assert_not account(email_address: "VIEWER@example.test").valid?
     assert account(email_address: "viewer+extra@example.test").save!
-    assert_not_equal user, UserRegistered.find_by_email("viewer+extra@example.test")
-    assert_nil UserRegistered.find_by_email(nil)
-    UserGuest.create!
-    UserDeleted.create!
-    assert_equal user, UserRegistered.find_by_email(user.email_address)
+    assert_not_equal user, Identity::UserRegistered.find_by_email("viewer+extra@example.test")
+    assert_nil Identity::UserRegistered.find_by_email(nil)
+    Identity::UserGuest.create!
+    Identity::UserDeleted.create!
+    assert_equal user, Identity::UserRegistered.find_by_email(user.email_address)
   end
 
   test "guests and deleted users reject any credential field" do
-    [ UserGuest, UserDeleted ].each do |model|
+    [ Identity::UserGuest, Identity::UserDeleted ].each do |model|
       { email_address: "viewer@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
         assert_not model.new(field => value).valid?
         assert model.new.valid?
@@ -85,9 +85,9 @@ class UserRegisteredTest < ActiveSupport::TestCase
       { password_digest: " \t" }, { email_confirmed_at: nil } ].each do |invalid|
       assert_constraint_rejects(row.merge(invalid), "registered_users_require_credentials")
     end
-    User.insert_all!([ row ])
+    Identity::User.insert_all!([ row ])
     assert_raises ActiveRecord::RecordNotUnique do
-      User.transaction(requires_new: true) { User.insert_all!([ row ]) }
+      Identity::User.transaction(requires_new: true) { Identity::User.insert_all!([ row ]) }
     end
   end
 
@@ -112,7 +112,7 @@ class UserRegisteredTest < ActiveSupport::TestCase
 
   def assert_constraint_rejects(attributes, constraint)
     error = assert_raises ActiveRecord::StatementInvalid do
-      User.transaction(requires_new: true) { User.insert_all!([ attributes ]) }
+      Identity::User.transaction(requires_new: true) { Identity::User.insert_all!([ attributes ]) }
     end
     assert_includes error.message, constraint
   end

@@ -2,7 +2,7 @@ require "test_helper"
 
 class RatingExpressionTest < ActiveSupport::TestCase
   setup do
-    candidate = RatingFilm.create!(user: UserGuest.create!, film: Registry::Film.create!(title: "Expression storage"))
+    candidate = RatingFilm.create!(user: Identity::UserGuest.create!, film: Registry::Film.create!(title: "Expression storage"))
     @rating = candidate.submit_rating!(value: Rating::Values::BRILLIANT)
   end
 

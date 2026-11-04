@@ -49,7 +49,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "scaffold visits do not create users" do
-    assert_no_difference [ "User.count", "Session.count" ] do
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       get "/"
       assert_response :success
     end
@@ -76,16 +76,16 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "deadline is enforced between requests and replacement does not renew old guest" do
-    user = freeze_time { User.find(create_guest["id"]) }
+    user = freeze_time { Identity::User.find(create_guest["id"]) }
     original_time = user.created_at
-    travel_to user.created_at + UserGuest::EXPIRY_DURATION - 1.second do
+    travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
       assert_equal user.id, lookup["id"]
     end
-    travel_to user.created_at + UserGuest::EXPIRY_DURATION do
+    travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION do
       assert_nil lookup["id"]
       assert_nil lookup["stored_id"]
     end
-    travel_to user.created_at + UserGuest::EXPIRY_DURATION + 1.second do
+    travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION + 1.second do
       assert_nil lookup["id"]
       assert_not_equal user.id, create_guest["id"]
     end
@@ -93,15 +93,15 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "deleted account fails explicitly across browsers without guest replacement" do
-    user = User.find(create_guest["id"])
+    user = Identity::User.find(create_guest["id"])
     other = open_session
     key = :session_id
     other.cookies[key] = cookies[key]
     tokens = [ lookup["token"], lookup(other)["token"] ]
     user.update_column(:type, "UserDeleted")
-    Session.where(user_id: user.id).delete_all
+    Identity::Session.where(user_id: user.id).delete_all
 
-    assert_no_difference "User.count" do
+    assert_no_difference "Identity::User.count" do
       [ self, other ].zip(tokens).each do |client, token|
         2.times do
           client.get "/identity-probe"
@@ -116,10 +116,10 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "registered sign in replaces guest binding without moving guest activity" do
-    guest = User.find(create_guest["id"])
+    guest = Identity::User.find(create_guest["id"])
     attributes = guest.slice(:id, :created_at, :email_address, :password_digest)
-    old_session = Session.find_by!(user: guest)
-    user = UserRegistered.create!(email_address: "switch@example.test", password: "a long password phrase",
+    old_session = Identity::Session.find_by!(user: guest)
+    user = Identity::UserRegistered.create!(email_address: "switch@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     post session_path, params: { email_address: user.email_address, password: "incorrect", authenticity_token: lookup["token"] }
     assert_response :unprocessable_entity
@@ -149,7 +149,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
   end
 
   test "guest creation retains CSRF protection" do
-    assert_no_difference "User.count" do
+    assert_no_difference "Identity::User.count" do
       post "/identity-probe"
       assert_response :unprocessable_entity
     end

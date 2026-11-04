@@ -6,8 +6,8 @@ module DomainEvents
       raise ArgumentError, "Event payload must be a JSON object" unless payload.is_a?(Hash)
 
       json_payload = JSON.parse(JSON.generate(payload))
-      event = User.transaction(requires_new: true) do
-        user = User.lock.find_by(id: user_id)
+      event = Identity::User.transaction(requires_new: true) do
+        user = Identity::User.lock.find_by(id: user_id)
         raise OwnerUnavailable, "An active event owner is required" unless user&.active?
 
         stream = DomainEventStream.find_or_create_by!(user:, publisher:, stream_key:)

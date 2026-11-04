@@ -5,7 +5,7 @@ module Identity
     setup do
       @origin = ENV["APP_ORIGIN"]
       ENV["APP_ORIGIN"] = "https://glutton.example.test"
-      @user = UserRegistered.create!(email_address: "mail-reset@example.test", password: "original password phrase",
+      @user = Identity::UserRegistered.create!(email_address: "mail-reset@example.test", password: "original password phrase",
         password_confirmation: "original password phrase", email_confirmed_at: Time.current)
       ActionMailer::Base.deliveries.clear
     end
@@ -14,7 +14,7 @@ module Identity
 
     test "normalized lookup sends exact recipient and trusted reset link without identity changes" do
       digest = @user.password_digest
-      assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Identity::PendingRegistration.count" ] do
         assert_nil RequestPasswordReset.call(email_address: " MAIL-RESET@example.test ")
       end
       mail = ActionMailer::Base.deliveries.last
@@ -24,7 +24,7 @@ module Identity
       assert_equal "glutton.example.test", uri.host
       assert_equal "/password_reset/edit", uri.path
       token = URI.decode_www_form(uri.query).to_h.fetch("token")
-      assert_equal @user, UserRegistered.find_by_password_reset_token(token)
+      assert_equal @user, Identity::UserRegistered.find_by_password_reset_token(token)
       assert_equal digest, @user.reload.password_digest
     end
 
@@ -32,7 +32,7 @@ module Identity
       PrepareRegistration.call(email_address: "pending@example.test", password: "original password phrase",
         password_confirmation: "original password phrase")
       @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
-      assert_no_difference [ "User.count", "Session.count", "ActionMailer::Base.deliveries.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
         [ "unknown@example.test", "pending@example.test", "mail-reset@example.test", nil, [], "invalid" ].each do |email|
           assert_nil RequestPasswordReset.call(email_address: email)
         end

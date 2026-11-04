@@ -2,7 +2,7 @@ require "test_helper"
 
 class RatingRevisionPersistenceTest < ActiveSupport::TestCase
   setup do
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Revision storage")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
     @rating = @rating_film.submit_rating!(value: Rating::Values::BRILLIANT)

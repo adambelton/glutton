@@ -13,7 +13,7 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
-- Registry domain/model namespacing is implemented. Next: separately owned Identity, Library, Ratings and Foundation model-namespace tasks; catalogue inspection stays deferred.
+- Registry domain/model namespacing is implemented. Identity model namespacing is ready for review; Library, Ratings and Foundation follow as separately owned tasks; catalogue inspection stays deferred.
 - [Catalogue inspection](tasks/catalogue_inspection.md): prepared draft, deferred until the remaining domain model namespaces are complete. Registry will own superuser-only, read-only film/category/quality lists and details, related-record navigation and stored source/evidence display. Identity's superuser prerequisite is implemented. Editing, imports, source refresh and provider execution remain excluded; bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 

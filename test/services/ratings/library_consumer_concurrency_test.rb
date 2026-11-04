@@ -7,10 +7,10 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
-    @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
+    @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
-    event = User.transaction do
+    event = Identity::User.transaction do
       DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Library::Events::FILM_ADDED_TO_WATCHLIST,
         payload: { user_id: @guest.id, film_id: @film.id })
@@ -21,9 +21,9 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
     LibraryFilm.where(user_id: @user_ids).delete_all
-    PendingRegistration.where(guest_user_id: @user_ids).delete_all
-    Session.where(user_id: @user_ids).delete_all
-    User.where(id: @user_ids).delete_all
+    Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
+    Identity::Session.where(user_id: @user_ids).delete_all
+    Identity::User.where(id: @user_ids).delete_all
     Registry::Film.where(id: @film_ids).delete_all
   end
 
@@ -37,7 +37,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     end
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
-    connection = User.connection
+    connection = Identity::User.connection
     Timeout.timeout(5) do
       until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
@@ -63,7 +63,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "duplicate delivery creates one held candidate" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       assert_equal :processed, deliver
       contender = blocked { deliver }
     end
@@ -75,7 +75,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   test "submission before waiting hold preserves saved evidence" do
     row = RatingFilm.create!(user: @guest, film: @film)
     contender = rating = nil
-    User.transaction do
+    Identity::User.transaction do
       rating = Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
         value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
       contender = blocked { deliver }
@@ -88,7 +88,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "hold before waiting dismissal preserves both states" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       deliver
       row = candidate
       contender = blocked { Ratings::Dismiss.call(user_id: @guest.id, rating_film_id: row.id) }
@@ -101,7 +101,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   test "dismissal before waiting hold preserves both states" do
     row = RatingFilm.create!(user: @guest, film: @film)
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       Ratings::Dismiss.call(user_id: @guest.id, rating_film_id: row.id)
       contender = blocked { deliver }
     end
@@ -112,10 +112,10 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "expiry while delivery waits skips candidate creation" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       contender = blocked { deliver }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :skipped, Timeout.timeout(5) { contender.value }
     assert_nil candidate
@@ -123,8 +123,8 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "cleanup before waiting delivery cannot resurrect activity" do
     contender = nil
-    travel UserGuest::EXPIRY_DURATION
-    User.transaction do
+    travel Identity::UserGuest::EXPIRY_DURATION
+    Identity::User.transaction do
       @guest.lock!
       contender = blocked { deliver }
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
@@ -138,11 +138,11 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   test "claim preserves held candidate while later delivery succeeds past guest deadline" do
     row = RatingFilm.create!(user: @guest, film: @film, dismissed: true)
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       claim
       contender = blocked { deliver }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
     assert_equal row.id, candidate.id
@@ -154,7 +154,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   test "cleanup removes held activity after completed delivery" do
     deliver
     row = candidate
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not RatingFilm.exists?(row.id)
     assert_not EventDelivery.exists?(@delivery.id)
@@ -169,7 +169,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "targeted admission before waiting Library delivery preserves one candidate and evidence" do
     contender = rating = nil
-    User.transaction do
+    Identity::User.transaction do
       rating = submit_selected_film
       contender = blocked { deliver }
     end
@@ -184,7 +184,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "Library admission before waiting targeted submission preserves its hold" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       deliver
       contender = blocked { submit_selected_film }
     end
