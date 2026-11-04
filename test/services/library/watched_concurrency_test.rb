@@ -9,12 +9,12 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     @threads, @user_ids, @film_ids = [], [], []
     @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
-    @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @guest, film: @film)
   end
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    LibraryFilm.where(user_id: @user_ids).delete_all
+    Library::LibraryFilm.where(user_id: @user_ids).delete_all
     Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Identity::Session.where(user_id: @user_ids).delete_all
     Identity::User.where(id: @user_ids).delete_all
@@ -66,8 +66,8 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       end
     end
     assert_equal :already_watched, Timeout.timeout(5) { contender.value }
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id, film: @film).count
-    row = LibraryFilm.find_by!(user_id: @guest.id)
+    assert_equal 1, Library::LibraryFilm.where(user_id: @guest.id, film: @film).count
+    row = Library::LibraryFilm.find_by!(user_id: @guest.id)
     assert_equal attributes, [ row.id, row.created_at, row.updated_at ]
   end
 
@@ -82,7 +82,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
-    assert_equal original.id, LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
+    assert_equal original.id, Library::LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
     assert_raises(Library::AlreadyWatched) { record }
   end
 
@@ -104,7 +104,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
     assert_not Identity::User.exists?(@guest.id)
-    assert_not LibraryFilm.exists?(user_id: @guest.id)
+    assert_not Library::LibraryFilm.exists?(user_id: @guest.id)
     assert Registry::Film.exists?(@film.id)
   end
 
@@ -118,6 +118,6 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { record }
     end
     assert Timeout.timeout(5) { contender.value }.persisted?
-    assert_equal 1, LibraryFilm.where(user_id: @guest.id).count
+    assert_equal 1, Library::LibraryFilm.where(user_id: @guest.id).count
   end
 end

@@ -5,7 +5,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     freeze_time
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Published film")
-    @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
   end
 
   def act(operation)
@@ -24,10 +24,10 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     act(Library::AddToWatchlist)
     act(Library::MarkNotInterested)
     assert act(Library::RemoveNotInterested).destroyed?
-    @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
     assert_not_equal original.id, @entry.id
     assert act(Library::RemoveFromWatchlist).destroyed?
-    @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
     act(Library::RecordWatched)
     assert_equal [ Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_ADDED_TO_WATCHLIST,
       Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_DISMISSAL_REMOVED,
@@ -45,11 +45,11 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
 
   test "outer rollback restores the entry and existing stream sequence" do
     act(Library::MarkNotInterested)
-    LibraryFilm.transaction(requires_new: true) do
+    Library::LibraryFilm.transaction(requires_new: true) do
       act(Library::AddToWatchlist)
       raise ActiveRecord::Rollback
     end
-    assert LibraryFilm.find(@entry.id).can_add_to_watchlist?
+    assert Library::LibraryFilm.find(@entry.id).can_add_to_watchlist?
     assert_equal [ 1 ], events.pluck(:sequence)
     assert_equal 1, events.first.domain_event_stream.sequence
     act(Library::AddToWatchlist)
@@ -58,8 +58,8 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
 
   test "independent owners and films keep independent event streams" do
     entries = [ @entry,
-      LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film),
-      LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
+      Library::LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film),
+      Library::LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
     entries.each { |entry| Library::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
     assert_equal [ 1, 1, 1 ], DomainEvent.pluck(:sequence)
     assert_equal 3, DomainEvent.distinct.count(:domain_event_stream_id)

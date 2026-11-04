@@ -12,7 +12,7 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
 
   test "admission persists an unfinished candidate without a rating or event" do
     row = nil
-    assert_no_difference [ "Rating.count", "DomainEvent.count", "LibraryFilm.count" ] do
+    assert_no_difference [ "Rating.count", "DomainEvent.count", "Library::LibraryFilm.count" ] do
       assert_difference "RatingFilm.count", 1 do
         row = prepare
       end

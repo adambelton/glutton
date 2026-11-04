@@ -458,7 +458,7 @@ The job logs localized structured warnings for each film with zero qualities, an
 
 ## Library watched state
 
-Library uses `LibraryFilm` backed by `library_films`, with `LibraryFilmWatched` and a minimal `LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist and dismissal actions use the same canonical relationship.
+Library uses `Library::LibraryFilm` backed by `library_films`, with `Library::LibraryFilmWatched` and a minimal `Library::LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist and dismissal actions use the same canonical relationship.
 
 After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing film ID:
 

@@ -16,7 +16,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
     Rating::Values::ALL.each_with_index do |value, index|
       candidate = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Choice #{index}"))
       rating = nil
-      assert_no_difference "LibraryFilm.count" do
+      assert_no_difference "Library::LibraryFilm.count" do
         assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
           rating = submit(rating_film_id: candidate.id, value:)
         end

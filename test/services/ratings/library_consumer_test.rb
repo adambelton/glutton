@@ -161,7 +161,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   test "real cross domain delivery in either order preserves rating and dismissal without loops" do
     [ true, false ].each do |library_first|
       @film = Registry::Film.create!(title: "Both domains")
-      entry = LibraryFilmNotInterested.create!(user: @user, film: @film)
+      entry = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
       Library::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id)
       Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id)
       2.times { dispatch } if library_first
@@ -169,7 +169,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
         value: Rating::Values::BRILLIANT, expression_texts: [ "Still original" ])
       5.times { DomainEvents::Dispatch.call }
-      assert LibraryFilmWatched.exists?(user: @user, film: @film)
+      assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
       assert row.reload.dismissed?
       assert_not row.held?
       assert_equal [ "Still original" ], rating.rating_expressions.pluck(:text)

@@ -38,7 +38,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     end
     assert_equal [ "Atmosphere" ], rating.reload.rating_expressions.pluck(:text)
     assert_equal Rating::Values::BRILLIANT, rating.value
-    assert LibraryFilmWatched.exists?(user: @user, film: @film)
+    assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
     event = derived.sole
     assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
     assert_equal 1, event.schema_version
@@ -50,12 +50,12 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "watchlist and not interested are reconciled preserving identity and public failures" do
-    [ LibraryFilmToWatch, LibraryFilmNotInterested ].each do |model|
+    [ Library::LibraryFilmToWatch, Library::LibraryFilmNotInterested ].each do |model|
       @film = Registry::Film.create!(title: "Intent")
       entry = model.create!(user: @user, film: @film)
       publish
       assert_equal({ processed: 1 }, dispatch)
-      watched = LibraryFilmWatched.find_by!(user: @user, film: @film)
+      watched = Library::LibraryFilmWatched.find_by!(user: @user, film: @film)
       assert_equal entry.id, watched.id
       assert_equal entry.created_at, watched.created_at
       assert_raises(Library::AlreadyWatched) { Library::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
@@ -65,7 +65,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "already watched and repeated viewing evidence are ignored without timestamp or event changes" do
-    entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
     entry = Library::RecordWatched.call(user_id: @user.id, library_film_id: entry.id)
     updated_at = entry.updated_at
     travel 1.hour
@@ -81,19 +81,19 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "publication failure rolls back transition and receipt then retry commits once" do
-    entry = LibraryFilmNotInterested.create!(user: @user, film: @film)
+    entry = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
     event = publish
     connection = DomainEvent.connection
     connection.execute("ALTER TABLE domain_events ADD CONSTRAINT consumer_test_block_watched CHECK (name <> 'FilmMarkedWatched')")
     assert_equal({ retrying: 1 }, dispatch)
-    assert LibraryFilmNotInterested.exists?(entry.id)
+    assert Library::LibraryFilmNotInterested.exists?(entry.id)
     assert_empty derived
     assert_equal EventDelivery::Statuses::PENDING, receipt(event).status
     assert_nil receipt(event).completed_at
     connection.execute("ALTER TABLE domain_events DROP CONSTRAINT consumer_test_block_watched")
     travel 5.seconds
     assert_equal({ processed: 1 }, dispatch)
-    assert LibraryFilmWatched.exists?(entry.id)
+    assert Library::LibraryFilmWatched.exists?(entry.id)
     assert_equal 1, derived.count
   ensure
     connection&.execute("ALTER TABLE domain_events DROP CONSTRAINT IF EXISTS consumer_test_block_watched")
@@ -102,7 +102,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   test "invalid contracts retry and reach terminal failure without acknowledging success" do
     event = publish(schema_version: 2)
     EventDelivery::MAX_ATTEMPTS.times do
-      assert_no_difference "LibraryFilm.count" do
+      assert_no_difference "Library::LibraryFilm.count" do
         dispatch
       end
       travel 5.minutes
@@ -123,7 +123,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
       # Clear the failed predecessor for the next independent malformed-contract case.
       delivery.complete!(:skipped)
     end
-    assert_empty LibraryFilm.where(user: @user)
+    assert_empty Library::LibraryFilm.where(user: @user)
   end
 
   test "rating specific fields are not interpreted by Library" do
@@ -131,7 +131,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
       @film = Registry::Film.create!(title: "Viewing evidence")
       publish(payload: { user_id: @user.id, film_id: @film.id }.merge(fields))
       assert_equal({ processed: 1 }, dispatch)
-      assert LibraryFilmWatched.exists?(user: @user, film: @film)
+      assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
     end
   end
 
@@ -140,7 +140,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     @film.delete
     assert_equal({ retrying: 1 }, dispatch)
     assert_equal "Library::FilmUnavailable", receipt(event).last_error_class
-    assert_empty LibraryFilm.where(user: @user)
+    assert_empty Library::LibraryFilm.where(user: @user)
   end
 
   test "bounded catch up filters publisher and name and observes stream order" do
@@ -169,6 +169,6 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     @user.becomes!(Identity::UserDeleted).save!
     assert_equal({ skipped: 1 }, dispatch)
     assert_equal EventDelivery::Statuses::SKIPPED, receipt(event).status
-    assert_empty LibraryFilm.all
+    assert_empty Library::LibraryFilm.all
   end
 end

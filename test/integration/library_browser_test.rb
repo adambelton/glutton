@@ -13,16 +13,16 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     cookies[:session_id] = jar[:session_id]
   end
 
-  def entry(model = LibraryFilmWatched, user: @user, title: "A film", **attributes)
+  def entry(model = Library::LibraryFilmWatched, user: @user, title: "A film", **attributes)
     model.create!(user:, film: Registry::Film.create!(title:, **attributes))
   end
 
   test "three views isolate membership and owner and default to watchlist without writes" do
-    watchlist = entry(LibraryFilmToWatch, title: "Watchlist film")
+    watchlist = entry(Library::LibraryFilmToWatch, title: "Watchlist film")
     watched = entry(title: "Watched film")
-    uninterested = entry(LibraryFilmNotInterested, title: "Not interested film")
+    uninterested = entry(Library::LibraryFilmNotInterested, title: "Not interested film")
     entry(user: Identity::UserGuest.create!, title: "Private film")
-    assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
       get library_path(user_id: Identity::UserGuest.last.id)
       assert_response :success
       assert_select "h3", text: watchlist.film.title, count: 1
@@ -167,7 +167,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
         previous_rating_id: original.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
       edit_link = edit_rating_path(film_id: watched.film_id)
-      assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
         [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
           get path
           assert_response :success
@@ -200,8 +200,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "unwatched library pages do not offer editing even when ratings exist" do
-    { Library::Browse::Views::WATCHLIST => LibraryFilmToWatch,
-      Library::Browse::Views::NOT_INTERESTED => LibraryFilmNotInterested }.each do |view, model|
+    { Library::Browse::Views::WATCHLIST => Library::LibraryFilmToWatch,
+      Library::Browse::Views::NOT_INTERESTED => Library::LibraryFilmNotInterested }.each do |view, model|
       row = entry(model)
       RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Rating::Values::BRILLIANT)
       [ library_path(view:), library_film_path(row) ].each do |path|

@@ -19,9 +19,9 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   end
 
   test "empty queue does not admit catalogue or library films" do
-    LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Library only"))
+    Library::LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Library only"))
     Registry::Film.create!(title: "Catalogue only")
-    assert_no_difference [ "RatingFilm.count", "LibraryFilm.count" ] do
+    assert_no_difference [ "RatingFilm.count", "Library::LibraryFilm.count" ] do
       assert_empty candidates
     end
   end
@@ -62,7 +62,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "dismissal requires no prior presentation and affects only Ratings" do
     film = candidate
-    assert_no_difference [ "LibraryFilm.count", "DomainEvent.count", "RatingFilm.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "RatingFilm.count" ] do
       assert_equal film.id, dismiss(film).id
     end
     assert film.reload.dismissed?

@@ -49,7 +49,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "p", "Released in 1982"
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
-      assert_no_difference "LibraryFilm.count" do
+      assert_no_difference "Library::LibraryFilm.count" do
         rate(expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "", " \t", "The ending" ], user_id: next_candidate.user_id, held: true)
       end
     end

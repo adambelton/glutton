@@ -11,7 +11,7 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     below = assessment_quality(name: "Below")
     client = Client.new(support: { "quality_#{first.id}" => 0.6, "quality_#{second.id}" => 0.8, "quality_#{below.id}" => 0.59 })
     result = nil
-    assert_no_difference [ "LibraryFilm.count", "Rating.count", "DomainEvent.count", "Registry::Quality.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "Rating.count", "DomainEvent.count", "Registry::Quality.count" ] do
       result = Registry::AssignInitialFilmQualities.call(film_id: film.id, client:)
       assert_equal film, result.fetch(:film)
     end

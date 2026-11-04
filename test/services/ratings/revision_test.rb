@@ -17,13 +17,13 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "successive replacements retain evidence without publishing events" do
-    library_film = LibraryFilmWatched.create!(user: @user, film: @film)
+    library_film = Library::LibraryFilmWatched.create!(user: @user, film: @film)
     previous = @original
     original_expression_id = @original.rating_expressions.sole.id
     created_at = @rating_film.created_at
     Rating::Values::ALL.each do |value|
       replacement = nil
-      assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
         assert_difference [ "Rating.count", "RatingExpression.count" ], 1 do
           replacement = revise(previous_rating_id: previous.id, value:)
         end
@@ -38,7 +38,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     assert_equal Rating::Values::I_ENJOYED_THAT, @original.reload.value
     assert_equal original_expression_id, @original.rating_expressions.sole.id
     assert_equal "Original evidence", @original.rating_expressions.sole.text
-    assert_equal LibraryFilm::RatingStatuses::RATED, library_film.rating_status
+    assert_equal Library::LibraryFilm::RatingStatuses::RATED, library_film.rating_status
     assert_not library_film.can_rate?
     assert_equal 5, @rating_film.ratings.count
     assert @rating_film.reload.dismissed?
