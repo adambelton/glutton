@@ -148,7 +148,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def rating_events
-    DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
+    DomainEvents::DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
       user_id: @user.id, publisher: Ratings::Events::PUBLISHING_DOMAIN
     })
   end
@@ -292,7 +292,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       assert_equal expected, @rating_film.ratings.sole.rating_expressions.pluck(:text)
       assert_equal 1, rating_events.count
       Ratings::Rating.where(rating_film: @rating_film).delete_all
-      DomainEventStream.where(user: @user).delete_all
+      DomainEvents::DomainEventStream.where(user: @user).delete_all
     end
   end
 

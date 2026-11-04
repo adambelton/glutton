@@ -32,6 +32,6 @@ module DomainEventHelpers
   end
 
   def delivery(event, subscriber: "projection")
-    EventDelivery.find_by!(domain_event: event, subscriber:)
+    DomainEvents::EventDelivery.find_by!(domain_event: event, subscriber:)
   end
 end

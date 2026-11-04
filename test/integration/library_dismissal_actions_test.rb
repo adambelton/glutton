@@ -40,7 +40,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       assert_select "form[action=?]", mark_not_interested_library_film_path(@entry)
       assert_select "form[action=?]", remove_from_watchlist_library_film_path(@entry)
       assert_select "form[action=?]", add_to_watchlist_library_film_path(@entry), count: 0
-      assert_difference "DomainEvent.count", 1 do
+      assert_difference "DomainEvents::DomainEvent.count", 1 do
         assert_no_difference([ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count" ]) { dismiss }
       end
       assert_response :see_other
@@ -52,7 +52,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       assert_select "form[action=?]", add_to_watchlist_library_film_path(@entry)
       assert_select "form[action=?]", remove_from_not_interested_library_film_path(@entry)
       assert_equal created_at, Library::LibraryFilm.find(@entry.id).created_at
-      assert_difference "DomainEvent.count", 1 do
+      assert_difference "DomainEvents::DomainEvent.count", 1 do
         post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: token, user_id: -1, film_id: -1, type: "LibraryFilmWatched" }
       end
       assert_redirected_to library_film_path(@entry)
@@ -61,7 +61,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       assert_select "form[action=?]", mark_watched_library_film_path(@entry)
       assert_equal created_at, Library::LibraryFilm.find(@entry.id).created_at
       assert_equal [ Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_ADDED_TO_WATCHLIST ].sort,
-        DomainEvent.joins(:domain_event_stream).where(domain_event_streams: { user_id: @user.id }).pluck(:name).sort
+        DomainEvents::DomainEvent.joins(:domain_event_stream).where(domain_event_streams: { user_id: @user.id }).pluck(:name).sort
     end
   end
 
@@ -70,7 +70,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
     csrf = token
     assert_difference "Library::LibraryFilm.count", -1 do
-      assert_difference "DomainEvent.count", 1 do
+      assert_difference "DomainEvents::DomainEvent.count", 1 do
         delete remove_from_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       end
     end
@@ -80,7 +80,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     assert rating_film.reload.held?
     assert rating_film.dismissed?
     replacement = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
-    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       get library_film_path(@entry)
       assert_response :not_found
       post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
@@ -95,14 +95,14 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
 
   test "unsupported actions fail explicitly including repeats and watched entries" do
     csrf = token
-    assert_no_difference "DomainEvent.count" do
+    assert_no_difference "DomainEvents::DomainEvent.count" do
       post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict
       delete remove_from_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict
     end
     dismiss
-    assert_no_difference "DomainEvent.count" do
+    assert_no_difference "DomainEvents::DomainEvent.count" do
       dismiss
       assert_response :conflict
     end
@@ -111,7 +111,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     get library_film_path(@entry)
     assert_select "form", count: 0
     assert_select "p", "Awaiting rating"
-    assert_no_difference "DomainEvent.count" do
+    assert_no_difference "DomainEvents::DomainEvent.count" do
       post mark_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict
       post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
@@ -125,7 +125,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     csrf = token
     foreign = Library::LibraryFilmNotInterested.create!(user: Identity::UserGuest.create!, film: @film)
     actions = [ [ :post, :mark_not_interested_library_film_path ], [ :post, :add_to_watchlist_library_film_path ], [ :delete, :remove_from_not_interested_library_film_path ] ]
-    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "Identity::User.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count", "Identity::User.count" ] do
       actions.each do |verb, helper|
         [ foreign.id, "invalid", "0", "999999999" ].each do |id|
           public_send(verb, public_send(helper, id), params: { authenticity_token: csrf })

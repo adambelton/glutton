@@ -35,7 +35,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   test "edit reads latest rating and exact escaped expressions without any writes" do
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
       previous_rating_id: @original.id, value: Ratings::Rating::Values::NOT_FOR_ME, expression_texts: [ "  <script>new</script>\n  " ])
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
       edit
       assert_response :success
       assert_select 'input[name="_method"][value="patch"]'
@@ -49,7 +49,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "replacement preserves original and candidate state without publishing and allows clearing expressions" do
-    assert_no_difference [ "DomainEvent.count", "DomainEventStream.count", "Ratings::RatingFilm.count" ] do
+    assert_no_difference [ "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count", "Ratings::RatingFilm.count" ] do
       assert_difference "Ratings::Rating.count", 1 do
         revise(expression_texts: [ "  Updated\n👻 ", "", "  " ], user_id: Identity::UserGuest.create!.id, held: false)
       end
@@ -73,7 +73,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   test "validation retains original expected id and cannot retarget an intervening revision" do
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
       previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE)
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
       revise(expression_texts: { bad: "shape" })
       assert_response :unprocessable_entity
       assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
@@ -87,7 +87,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid values and expressions preserve safe input without writing" do
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
       [ nil, "unknown", [], { bad: "value" } ].each do |value|
         revise(value:, expression_texts: [ "  Keep <script>this</script>  " ])
         assert_response :unprocessable_entity

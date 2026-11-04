@@ -22,7 +22,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     watched = entry(title: "Watched film")
     uninterested = entry(Library::LibraryFilmNotInterested, title: "Not interested film")
     entry(user: Identity::UserGuest.create!, title: "Private film")
-    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
       get library_path(user_id: Identity::UserGuest.last.id)
       assert_response :success
       assert_select "h3", text: watchlist.film.title, count: 1
@@ -167,7 +167,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
         previous_rating_id: original.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
       edit_link = edit_rating_path(film_id: watched.film_id)
-      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
         [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
           get path
           assert_response :success

@@ -15,7 +15,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
         stream_key: "film:#{@film.id}", name: Library::Events::FILM_ADDED_TO_WATCHLIST,
         payload: { user_id: @guest.id, film_id: @film.id })
     end
-    @delivery = EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
+    @delivery = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
   end
 
   teardown do
@@ -131,7 +131,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :missing, Timeout.timeout(5) { contender.value }
     assert_nil candidate
-    assert_not EventDelivery.exists?(@delivery.id)
+    assert_not DomainEvents::EventDelivery.exists?(@delivery.id)
     assert Registry::Film.exists?(@film.id)
   end
 
@@ -157,7 +157,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not Ratings::RatingFilm.exists?(row.id)
-    assert_not EventDelivery.exists?(@delivery.id)
+    assert_not DomainEvents::EventDelivery.exists?(@delivery.id)
     assert Registry::Film.exists?(@film.id)
   end
 
@@ -178,7 +178,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal rating.rating_film_id, candidate.id
     assert candidate.held?
     assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
-    assert_equal 1, DomainEvent.where(name: Ratings::Events::RATING_SUBMITTED).joins(:domain_event_stream)
+    assert_equal 1, DomainEvents::DomainEvent.where(name: Ratings::Events::RATING_SUBMITTED).joins(:domain_event_stream)
       .where(domain_event_streams: { user_id: @guest.id }).count
   end
 

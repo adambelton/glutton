@@ -18,7 +18,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
   OPERATIONS.each do |operation, source, permission, rejection|
     test "#{operation} requires the exact owned existing entry and never creates" do
       foreign = source.create!(user: Identity::UserGuest.create!, film: @film)
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         [ nil, -1, foreign.id ].each do |id|
           assert_raises(Library::FilmUnavailable) { operation.call(user_id: @user.id, library_film_id: id) }
         end
@@ -26,7 +26,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       removed = source.create!(user: @user, film: @film)
       removed.destroy!
       replacement = source.create!(user: @user, film: @film)
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(Library::FilmUnavailable) { operation.call(user_id: @user.id, library_film_id: removed.id) }
       end
       assert replacement.reload.public_send(permission)
@@ -45,7 +45,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
         assert_not result.public_send(permission)
         error = rejection
       end
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(error) { operation.call(user_id: @user.id, library_film_id: entry.id) }
         watched = Library::LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Watched"))
         assert_raises(rejection) { operation.call(user_id: @user.id, library_film_id: watched.id) }
@@ -72,7 +72,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
 
     test "#{operation} rolls back with caller and publication failure and permits explicit retry" do
       entry = source.create!(user: @user, film: @film)
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
         Library::LibraryFilm.transaction(requires_new: true) do
           operation.call(user_id: @user.id, library_film_id: entry.id)
           raise ActiveRecord::Rollback
@@ -80,15 +80,15 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       end
       assert Library::LibraryFilm.find(entry.id).public_send(permission)
       callback = -> { raise ActiveRecord::StatementInvalid, "injected publication failure" }
-      DomainEvent.set_callback(:create, :before, callback)
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
+      DomainEvents::DomainEvent.set_callback(:create, :before, callback)
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: entry.id) }
       end
       assert Library::LibraryFilm.find(entry.id).public_send(permission)
-      DomainEvent.skip_callback(:create, :before, callback)
+      DomainEvents::DomainEvent.skip_callback(:create, :before, callback)
       assert_equal entry.id, operation.call(user_id: @user.id, library_film_id: entry.id).id
     ensure
-      DomainEvent.skip_callback(:create, :before, callback, raise: false) if callback
+      DomainEvents::DomainEvent.skip_callback(:create, :before, callback, raise: false) if callback
     end
   end
 
@@ -109,7 +109,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       entry = source.create!(user: @user, film: @film)
       callback = -> { raise ActiveRecord::StatementInvalid, "injected persistence failure" }
       destination.set_callback(action, :after, callback)
-      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: entry.id) }
       end
       assert Library::LibraryFilm.find(entry.id).public_send(permission)

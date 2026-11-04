@@ -12,7 +12,7 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
 
   test "admission persists an unfinished candidate without a rating or event" do
     row = nil
-    assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count", "Library::LibraryFilm.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Library::LibraryFilm.count" ] do
       assert_difference "Ratings::RatingFilm.count", 1 do
         row = prepare
       end
@@ -46,7 +46,7 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
 
   test "failed submission preserves admitted candidate while never creating another" do
     row = prepare
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_raises(ActiveRecord::RecordInvalid) do
         Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: "invalid")
       end
@@ -60,7 +60,7 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
   test "already rated entry is rejected by preparation without changing evidence" do
     row = prepare
     rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_raises(Ratings::AlreadyRated) { prepare }
     end
     assert_equal rating.id, row.ratings.sole.id

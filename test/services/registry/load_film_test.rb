@@ -31,7 +31,7 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
 
   test "one load persists complete sources an evaluation and its accepted qualities independently" do
     result = nil
-    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       result = load_film
     end
     film, evaluation = result.values_at(:film, :film_quality_eval)

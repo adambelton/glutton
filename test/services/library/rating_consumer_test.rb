@@ -20,18 +20,18 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   def derived
-    DomainEvent.where(name: Library::Events::FILM_MARKED_WATCHED)
+    DomainEvents::DomainEvent.where(name: Library::Events::FILM_MARKED_WATCHED)
   end
 
   def receipt(event)
-    EventDelivery.find_by!(subscriber: @subscription.name, domain_event_id: event.id)
+    DomainEvents::EventDelivery.find_by!(subscriber: @subscription.name, domain_event_id: event.id)
   end
 
   test "retained rating creates watched with exact causal event and preserves original evidence" do
     candidate = Ratings::RatingFilm.create!(user: @user, film: @film)
     rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
       value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Atmosphere" ])
-    source = DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED)
+    source = DomainEvents::DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED)
     assert_equal 1, DomainEvents::Status.call(subscriptions: [ @subscription ])[:undiscovered].sole[:count]
     assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count" ] do
       assert_equal({ processed: 1 }, dispatch)
@@ -44,7 +44,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal 1, event.schema_version
     assert_equal source.id, event.causation_id
     assert_equal source.correlation_id, event.correlation_id
-    assert_equal EventDelivery::Statuses::PROCESSED, receipt(source).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, receipt(source).status
     assert_empty dispatch
     assert_equal 1, derived.count
   end
@@ -70,7 +70,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     updated_at = entry.updated_at
     travel 1.hour
     event = publish
-    assert_no_difference "DomainEvent.count" do
+    assert_no_difference "DomainEvents::DomainEvent.count" do
       assert_equal({ ignored: 1 }, dispatch)
       assert_equal :not_due, DomainEvents::Deliver.call(delivery_id: receipt(event).id, subscription: @subscription)
     end
@@ -83,12 +83,12 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   test "publication failure rolls back transition and receipt then retry commits once" do
     entry = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
     event = publish
-    connection = DomainEvent.connection
+    connection = DomainEvents::DomainEvent.connection
     connection.execute("ALTER TABLE domain_events ADD CONSTRAINT consumer_test_block_watched CHECK (name <> 'FilmMarkedWatched')")
     assert_equal({ retrying: 1 }, dispatch)
     assert Library::LibraryFilmNotInterested.exists?(entry.id)
     assert_empty derived
-    assert_equal EventDelivery::Statuses::PENDING, receipt(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PENDING, receipt(event).status
     assert_nil receipt(event).completed_at
     connection.execute("ALTER TABLE domain_events DROP CONSTRAINT consumer_test_block_watched")
     travel 5.seconds
@@ -101,13 +101,13 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
 
   test "invalid contracts retry and reach terminal failure without acknowledging success" do
     event = publish(schema_version: 2)
-    EventDelivery::MAX_ATTEMPTS.times do
+    DomainEvents::EventDelivery::MAX_ATTEMPTS.times do
       assert_no_difference "Library::LibraryFilm.count" do
         dispatch
       end
       travel 5.minutes
     end
-    assert_equal EventDelivery::Statuses::FAILED, receipt(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::FAILED, receipt(event).status
     assert_equal "ArgumentError", receipt(event).last_error_class
     assert_empty derived
   end
@@ -117,7 +117,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     [ {}, valid.merge(user_id: @user.id + 1), valid.merge(film_id: @film.id.to_s),
       valid.merge(film_id: @film.id + 1), valid.merge(film_id: nil), valid.merge(film_id: -1) ].each do |payload|
       event = publish(payload:)
-      delivery = EventDelivery.create!(subscriber: @subscription.name, domain_event: event, next_attempt_at: Time.current)
+      delivery = DomainEvents::EventDelivery.create!(subscriber: @subscription.name, domain_event: event, next_attempt_at: Time.current)
       assert_equal :retrying, DomainEvents::Deliver.call(delivery_id: delivery.id, subscription: @subscription)
       assert_equal "ArgumentError", delivery.reload.last_error_class
       # Clear the failed predecessor for the next independent malformed-contract case.
@@ -151,11 +151,11 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     publish(name: "Unsubscribed")
     publish(publisher: "unsubscribed")
     assert_equal({ processed: 1 }, dispatch(limit: 1))
-    assert_equal EventDelivery::Statuses::PROCESSED, receipt(first).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, receipt(first).status
     assert_equal({ ignored: 1 }, dispatch(limit: 1))
-    assert_equal EventDelivery::Statuses::IGNORED, receipt(second).status
+    assert_equal DomainEvents::EventDelivery::Statuses::IGNORED, receipt(second).status
     assert_empty dispatch(limit: 1)
-    assert_equal 2, EventDelivery.where(subscriber: @subscription.name).count
+    assert_equal 2, DomainEvents::EventDelivery.where(subscriber: @subscription.name).count
     assert_equal 1, derived.count
   end
 
@@ -163,12 +163,12 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     event = publish
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal({ skipped: 1 }, dispatch)
-    assert_equal EventDelivery::Statuses::SKIPPED, receipt(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
     @user = Identity::UserGuest.create!
     event = publish
     @user.becomes!(Identity::UserDeleted).save!
     assert_equal({ skipped: 1 }, dispatch)
-    assert_equal EventDelivery::Statuses::SKIPPED, receipt(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
     assert_empty Library::LibraryFilm.all
   end
 end

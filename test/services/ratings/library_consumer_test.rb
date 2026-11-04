@@ -24,7 +24,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   end
 
   def deliver(event)
-    receipt = EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
+    receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
     [ DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: @subscription), receipt.reload ]
   end
 
@@ -37,7 +37,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
           value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
         created_at = row.created_at
         event = publish(name)
-        assert_no_difference([ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ]) { deliver(event) }
+        assert_no_difference([ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ]) { deliver(event) }
         row.reload
         assert_equal name == Library::Events::FILM_ADDED_TO_WATCHLIST, row.held?
         assert_equal dismissed || name == Library::Events::FILM_MARKED_NOT_INTERESTED, row.dismissed?
@@ -97,7 +97,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       assert_equal held, candidate.held?
     end
     updated_at = candidate.updated_at
-    receipt = EventDelivery.find_by!(domain_event: events.first, subscriber: @subscription.name)
+    receipt = DomainEvents::EventDelivery.find_by!(domain_event: events.first, subscriber: @subscription.name)
     assert_equal :not_due, DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: @subscription)
     assert_empty dispatch
     assert_equal updated_at, candidate.updated_at
@@ -120,7 +120,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     assert candidate.held?
     assert_equal({ processed: 1 }, dispatch)
     assert_not candidate.held?
-    assert_equal EventDelivery::Statuses::PROCESSED, EventDelivery.find_by!(domain_event: first).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, DomainEvents::EventDelivery.find_by!(domain_event: first).status
   ensure
     connection&.execute("ALTER TABLE rating_films DROP CONSTRAINT IF EXISTS consumer_test_no_hold")
   end
@@ -174,7 +174,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       assert_not row.held?
       assert_equal [ "Still original" ], rating.rating_expressions.pluck(:text)
       assert_empty Ratings::NextCandidates.call(user_id: @user.id)
-      assert_no_difference "DomainEvent.count" do
+      assert_no_difference "DomainEvents::DomainEvent.count" do
         assert_empty DomainEvents::Dispatch.call
       end
     end

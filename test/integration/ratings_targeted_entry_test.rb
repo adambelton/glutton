@@ -36,7 +36,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do
     assert_difference "Ratings::RatingFilm.count", 1 do
-      assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
         2.times { get new_rating_path(film_id: @film.id); assert_response :success }
       end
     end
@@ -64,7 +64,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
-    assert_difference [ "Ratings::Rating.count", "DomainEvent.count" ], 1 do
+    assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       rate(expression_texts: [ "  <script>Private</script>  ", "", "Ending" ], user_id: foreign.user_id,
         film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
     end
@@ -83,7 +83,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   test "validation retains selected film choice and escaped exact expressions without admitting candidate" do
     csrf
     text = "  <script>alert('expression')</script>  "
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       rate(expression_texts: [ text, "x" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
       assert_response :unprocessable_entity
     end
@@ -102,7 +102,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     csrf
     [ { value: nil }, { value: [ "brilliant" ] }, { expression_texts: "text" }, { expression_texts: { text: "text" } },
       { expression_texts: [ { text: "text" } ] }, { expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") } ].each do |attributes|
-      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         rate(**attributes)
         assert_response :unprocessable_entity
       end
@@ -116,7 +116,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: @film.id)
     assert_response :conflict
     assert_select '[role="alert"]', I18n.t("ratings.errors.already_rated")
-    assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :conflict
     end
@@ -189,7 +189,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ nil, foreign.id, foreign.id + 1, "#{foreign.id}junk" ].each do |rating_film_id|
-      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         post rating_path, params: { film_id: @film.id, rating_film_id:, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
         assert_response :not_found
       end
