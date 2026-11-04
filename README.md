@@ -336,6 +336,43 @@ film = FilmKnowledge::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id
 
 Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
 
+## Load canonical films with initial qualities
+
+Seed the quality vocabulary first and configure the existing TMDB, Wikipedia/Wikidata and TypeSafe credentials. `LoadFilm` coordinates the create-only source import and initial assignment in one call:
+
+```ruby
+result = FilmKnowledge::LoadFilm.call(
+  tmdb_id: selected_candidate.fetch(:tmdb_id),
+  maximum_requests: 8,
+  maximum_cost_usd: 0.02
+)
+result.fetch(:film)
+result.fetch(:film_quality_eval).output
+result.fetch(:film_qualities)
+result.fetch(:warnings)
+```
+
+Request and cost limits apply to TypeSafe. They are required positive integer/finite decimal bounds; decimal amounts can be Integer, Float or BigDecimal values. Loading must start outside a database transaction. Both sources are acquired before Film creation, and import commits before quality evaluation. A source failure creates no Film. An assessment/application failure propagates while retaining the imported Film and any recorded evaluation. Zero supported qualities return a localized warning with the completed evaluation and empty quality list. Existing identities are explicit conflicts, including concurrent loads. Assess an already imported film through the separate assignment operation below.
+
+For an explicit batch, supply the complete TMDB ID list and its limits:
+
+```ruby
+summary = FilmKnowledge::LoadFilms.call(
+  tmdb_ids: selected_tmdb_ids,
+  maximum_films: 10,
+  maximum_requests_per_film: 8,
+  maximum_cost_usd_per_film: 0.02,
+  maximum_cost_usd: 0.20
+)
+summary.fetch(:loaded_film_ids)
+summary.fetch(:warnings)
+summary.fetch(:limits)
+```
+
+The entire list is validated and copied before work starts. The batch rejects more than `maximum_films` or a worst-case allocation (`list size × per-film cost limit`) above the total cost ceiling, using exact decimal arithmetic. Duplicate IDs remain explicit attempts/conflicts and count toward that envelope. Unused allocations are not borrowed across films. `limits` reports the film count and maximum TypeSafe requests/cost for the validated list, rather than actual billed usage.
+
+The batch runs films independently in list order, reports each import/assessment/unexpected failure or zero-quality warning, and continues. `loaded_film_ids` contains only films that finished with qualities. Warnings identify the TMDB ID and the persisted Film ID when available, without raw private exception text. `Film.without_qualities` finds imported films requiring assessment or intervention. Independent workers can call `LoadFilm` with their own explicit bounds; no scheduler, automatic catalogue execution or process pool is installed.
+
 ## Assign initial film qualities
 
 Configure `TYPESAFE_API_KEY` in the ignored development environment and use the existing Langfuse configuration for tracing. The quality vocabulary must already be seeded and the film must have usable imported source data. From Rails console:
