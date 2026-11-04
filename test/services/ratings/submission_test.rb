@@ -29,7 +29,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
       })
       stream = event.domain_event_stream
       assert_equal @user.id, stream.user_id
-      assert_equal Ratings::EVENTS_PUBLISHING_DOMAIN, stream.publisher
+      assert_equal Ratings::Events::PUBLISHING_DOMAIN, stream.publisher
       assert_equal "film:#{candidate.film_id}", stream.stream_key
       assert_equal 1, event.schema_version
       assert_equal 1, event.sequence

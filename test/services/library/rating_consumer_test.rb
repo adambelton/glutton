@@ -10,7 +10,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
 
   def publish(payload: { user_id: @user.id, film_id: @film.id }, **options)
     Identity::User.transaction do
-      DomainEvents::Publish.call(user_id: @user.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
+      DomainEvents::Publish.call(user_id: @user.id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Ratings::Events::RATING_SUBMITTED, payload:, **options)
     end
   end

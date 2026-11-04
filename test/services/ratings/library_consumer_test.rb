@@ -10,7 +10,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
 
   def publish(name, **options)
     Identity::User.transaction do
-      DomainEvents::Publish.call(user_id: @user.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
+      DomainEvents::Publish.call(user_id: @user.id, publisher: Library::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name:, payload: { user_id: @user.id, film_id: @film.id }, **options)
     end
   end

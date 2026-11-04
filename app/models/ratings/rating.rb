@@ -21,7 +21,7 @@ module Ratings
     validate :recognized_value
 
     def publish_event!
-      DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
+      DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{rating_film.film_id}", name: Ratings::Events::RATING_SUBMITTED, schema_version: 1,
         payload: { user_id: rating_film.user_id, film_id: rating_film.film_id, rating_id: id, value: })
     end

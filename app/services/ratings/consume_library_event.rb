@@ -23,7 +23,7 @@ module Ratings
       payload = event.payload
       # Validate only the external event fields Ratings needs, not Library classification.
       valid = event.schema_version == 1 && EVENT_NAMES.include?(event.name) &&
-        stream.publisher == Library::EVENTS_PUBLISHING_DOMAIN && payload.is_a?(Hash) &&
+        stream.publisher == Library::Events::PUBLISHING_DOMAIN && payload.is_a?(Hash) &&
         %w[user_id film_id].all? { |key| payload[key].is_a?(Integer) && payload[key].positive? } &&
         payload["user_id"] == user.id && stream.user_id == user.id &&
         stream.stream_key == "film:#{payload['film_id']}"

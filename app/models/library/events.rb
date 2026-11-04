@@ -1,7 +1,7 @@
 module Library
-  EVENTS_PUBLISHING_DOMAIN = "library".freeze
-
   module Events
+    PUBLISHING_DOMAIN = "library".freeze
+
     FILM_MARKED_WATCHED = "FilmMarkedWatched".freeze
     FILM_ADDED_TO_WATCHLIST = "FilmAddedToWatchlist".freeze
     FILM_MARKED_NOT_INTERESTED = "FilmMarkedNotInterested".freeze

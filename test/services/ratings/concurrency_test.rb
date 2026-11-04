@@ -149,7 +149,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   def rating_events
     DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
-      user_id: @user.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN
+      user_id: @user.id, publisher: Ratings::Events::PUBLISHING_DOMAIN
     })
   end
 

@@ -11,7 +11,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
     event = Identity::User.transaction do
-      DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
+      DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Library::Events::FILM_ADDED_TO_WATCHLIST,
         payload: { user_id: @guest.id, film_id: @film.id })
     end

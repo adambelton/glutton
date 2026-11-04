@@ -4,7 +4,7 @@ Library publishes facts from the five supported Library operations. The source c
 
 ## Version 1 contract
 
-Publisher: `Library::EVENTS_PUBLISHING_DOMAIN` (`library`). Stream key: `film:<internal film ID>`, scoped to the internal user ID. A stream survives entry removal/recreation. Its envelope sequence is the ordering authority, not the LibraryFilm ID or timestamp.
+Publisher: `Library::Events::PUBLISHING_DOMAIN` (`library`). Stream key: `film:<internal film ID>`, scoped to the internal user ID. A stream survives entry removal/recreation. Its envelope sequence is the ordering authority, not the LibraryFilm ID or timestamp.
 
 Each payload contains exactly `user_id` and `film_id`. Identifiers are internal IDs and the user matches the stream owner. The envelope supplies event ID, schema version (`1`), sequence, occurrence time, correlation and causation. Direct actions each start their own correlation and have no causation ID.
 
