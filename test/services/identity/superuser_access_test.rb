@@ -1,0 +1,121 @@
+require "test_helper"
+
+module Identity
+  class SuperuserAccessTest < ActiveSupport::TestCase
+    setup do
+      @actor = UserRegistered.create!(email_address: "operator@example.test", password: "a long password phrase",
+        password_confirmation: "a long password phrase", email_confirmed_at: Time.current, superuser: true)
+    end
+
+    def account
+      UserRegistered.create!(email_address: "superuser@example.test", password: "a long password phrase",
+        password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
+    end
+
+    test "explicit grant and revoke preserve credentials and sessions and reject repeats" do
+      user = account
+      authentication = Session.create!(user: user)
+      assert_not user.superuser?
+      assert_raises(SuperuserAlreadyRevoked) { RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+      assert_equal user, GrantSuperuser.call(user_id: user.id, actor_user_id: @actor.id)
+      assert user.reload.superuser?
+      assert_raises(SuperuserAlreadyGranted) { GrantSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+      assert_equal user, RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id)
+      assert_not user.reload.superuser?
+      assert authentication.active?
+      assert user.authenticate("a long password phrase")
+      assert_equal "superuser@example.test", user.email_address
+    end
+
+    test "unsupported and missing identities reject both operations" do
+      freeze_time
+      guest = UserGuest.create!
+      deleted = UserDeleted.create!
+      [ guest, deleted ].each do |user|
+        assert_not user.superuser?
+        assert_raises(SuperuserUnavailable) { user.grant_superuser!(actor: @actor) }
+        assert_raises(SuperuserUnavailable) { user.revoke_superuser!(actor: @actor) }
+      end
+      travel UserGuest::EXPIRY_DURATION
+      [ guest.id, deleted.id, -1 ].each do |user_id|
+        assert_raises(SuperuserUnavailable) { GrantSuperuser.call(user_id:, actor_user_id: @actor.id) }
+        assert_raises(SuperuserUnavailable) { RevokeSuperuser.call(user_id:, actor_user_id: @actor.id) }
+      end
+      assert_not guest.reload.superuser?
+    end
+
+    test "operations load authoritative state even when caller holds a stale account" do
+      user = account
+      GrantSuperuser.call(user_id: user.id, actor_user_id: @actor.id)
+      assert_not user.superuser?
+      RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id)
+      assert_not user.reload.superuser?
+      user.destroy!
+      assert_raises(SuperuserUnavailable) { GrantSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+      assert_raises(SuperuserUnavailable) { RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+    end
+
+    test "only current superusers can authorize grants and revocations including direct model actions" do
+      user = account
+      guest = UserGuest.create!
+      deleted = UserDeleted.create!
+      [ user, guest, deleted ].each do |actor|
+        assert_raises(SuperuserRequired) { GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id) }
+        assert_raises(SuperuserRequired) { RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id) }
+        assert_raises(SuperuserRequired) { user.grant_superuser!(actor:) }
+        assert_raises(SuperuserRequired) { user.revoke_superuser!(actor:) }
+      end
+      travel UserGuest::EXPIRY_DURATION do
+        assert_raises(SuperuserRequired) { GrantSuperuser.call(user_id: user.id, actor_user_id: guest.id) }
+      end
+      assert_raises(SuperuserRequired) { GrantSuperuser.call(user_id: user.id, actor_user_id: -1) }
+      assert_raises(SuperuserRequired) { RevokeSuperuser.call(user_id: user.id, actor_user_id: -1) }
+      assert_not user.reload.superuser?
+    end
+
+    test "revoked and removed actors cannot use stale privilege or revoke another superuser" do
+      user = account
+      GrantSuperuser.call(user_id: user.id, actor_user_id: @actor.id)
+      RevokeSuperuser.call(user_id: @actor.id, actor_user_id: @actor.id)
+      assert @actor.superuser?
+      assert_raises(SuperuserRequired) { RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+      @actor.destroy!
+      assert_raises(SuperuserRequired) { RevokeSuperuser.call(user_id: user.id, actor_user_id: @actor.id) }
+      assert user.reload.superuser?
+    end
+
+    test "storage requires clearing superuser privilege when anonymizing a deleted account" do
+      # Explicit storage-contract test: deletion workflow is not implemented yet.
+      deleted_attributes = { type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil }
+      error = assert_raises(ActiveRecord::StatementInvalid) do
+        User.transaction(requires_new: true) { @actor.update_columns(deleted_attributes) }
+      end
+      assert_includes error.message, "only_registered_users_can_be_superusers"
+      assert @actor.reload.superuser?
+
+      @actor.update_columns(deleted_attributes.merge(superuser: false))
+      deleted_user = User.find(@actor.id)
+      assert_not deleted_user.superuser?
+      assert_not deleted_user.active?
+      assert_raises(SuperuserRequired) { GrantSuperuser.call(user_id: account.id, actor_user_id: deleted_user.id) }
+    end
+
+    test "storage and model validation restrict permission to registered accounts" do
+      [ UserGuest, UserDeleted ].each do |model|
+        assert_not model.new(superuser: true).valid?
+        error = assert_raises(ActiveRecord::StatementInvalid) do
+          User.transaction(requires_new: true) do
+            User.insert_all!([ { type: model.sti_name, superuser: true,
+              created_at: Time.current, updated_at: Time.current } ])
+          end
+        end
+        assert_includes error.message, "only_registered_users_can_be_superusers"
+      end
+      user = account
+      error = assert_raises(ActiveRecord::NotNullViolation) do
+        User.transaction(requires_new: true) { user.update_columns(superuser: nil) }
+      end
+      assert_includes error.message, "superuser"
+    end
+  end
+end

@@ -5,7 +5,7 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 ## Current progress
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
-- Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented.
+- Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented. Minimal superuser permission and explicit grant/revoke operations restricted to existing superusers are implemented.
 - Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; actual catalogue execution and web entry-point wiring remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
@@ -13,7 +13,7 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
-- Next: admin-only canonical catalogue inspection. Identity currently has no administrator capability; prepare that minimal Identity-owned prerequisite first, with safe explicit grant/revoke actions and a permission query that Film knowledge can read. Do not expose catalogue admin routes before authorization is implemented. Actual bulk catalogue execution still requires an explicit film list and provider budget.
+- Superuser access is ready for review: denied-by-default Identity state and actor-authorized grant/revoke operations are implemented. Next, scope Film knowledge’s superuser-only read-only catalogue inspection. No live account grants or catalogue frontend implementation are included. Actual bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Delivery order

@@ -4,7 +4,8 @@ require "stringio"
 
 class RegistrationActivityProbeController < ApplicationController
   def create
-    render json: { id: ensure_guest_user!.id }
+    user = ensure_guest_user!
+    render json: { id: user.id, superuser: user.superuser? }
   end
 end
 
@@ -65,6 +66,36 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     client.post "/registration-activity-probe", params: { authenticity_token: csrf(client) }
     assert_equal 200, client.response.status
     User.find(JSON.parse(client.response.body).fetch("id"))
+  end
+
+  test "existing signed-in browser observes grants and revocations on the next request" do
+    actor = UserRegistered.create!(email_address: "operator@example.test", password: "a long password phrase",
+      password_confirmation: "a long password phrase", email_confirmed_at: Time.current, superuser: true)
+    signup
+    confirm
+    user = Session.last.user
+    authentication_id = Session.last.id
+    Identity::GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    post "/registration-activity-probe", params: { authenticity_token: csrf }
+    assert_response :success
+    assert_equal true, JSON.parse(response.body).fetch("superuser")
+    Identity::RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    post "/registration-activity-probe", params: { authenticity_token: csrf }
+    assert_response :success
+    assert_equal false, JSON.parse(response.body).fetch("superuser")
+    assert_equal user.id, JSON.parse(response.body).fetch("id")
+    assert_equal [ authentication_id ], Session.where(user_id: user.id).pluck(:id)
+  end
+
+  test "public registration cannot grant superuser permission for direct or guest signup" do
+    [ false, true ].each_with_index do |with_guest, index|
+      guest if with_guest
+      signup(email_address: "ordinary-#{index}@example.test", superuser: true)
+      confirm
+      assert_response :see_other
+      assert_not Session.last.user.superuser?
+      delete session_path, params: { authenticity_token: csrf }
+    end
   end
 
   test "direct signup sends an exact trusted link without creating user until explicit confirmation" do

@@ -1,6 +1,8 @@
 class UserGuest < User
   EXPIRY_DURATION = 24.hours.freeze
 
+  validates :superuser, inclusion: { in: [ false ] }
+
   validates :email_address, :password_digest, :email_confirmed_at, inclusion: { in: [ nil ] }
 
   scope :active, -> { where(arel_table[:created_at].gt(EXPIRY_DURATION.ago)) }
