@@ -20,7 +20,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    LibraryFilm.where(user_id: @user_ids).delete_all
+    Library::LibraryFilm.where(user_id: @user_ids).delete_all
     Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Identity::Session.where(user_id: @user_ids).delete_all
     Identity::User.where(id: @user_ids).delete_all
@@ -76,14 +76,14 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
   { "watchlist" => Library::AddToWatchlist, "not interested" => Library::MarkNotInterested }.each do |intent, operation|
     test "#{intent} committed first is reconciled by waiting delivery" do
       contender = nil
-      source = intent == "watchlist" ? LibraryFilmNotInterested : LibraryFilmToWatch
+      source = intent == "watchlist" ? Library::LibraryFilmNotInterested : Library::LibraryFilmToWatch
       entry = source.create!(user: @guest, film: @film)
       Identity::User.transaction do
         entry = operation.call(user_id: @guest.id, library_film_id: entry.id)
         contender = blocked { deliver }
       end
       assert_equal :processed, Timeout.timeout(5) { contender.value }
-      assert LibraryFilmWatched.exists?(entry.id)
+      assert Library::LibraryFilmWatched.exists?(entry.id)
       assert_equal 1, watched_events.count
     end
   end
@@ -95,7 +95,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       Identity::User.transaction do
         @guest.lock!
         deliver
-        entry = LibraryFilm.find_by!(user: @guest, film: @film)
+        entry = Library::LibraryFilm.find_by!(user: @guest, film: @film)
         contender = blocked do
           operation.call(user_id: @guest.id, library_film_id: entry.id)
         rescue failure
@@ -103,7 +103,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
         end
       end
       assert_equal :rejected, Timeout.timeout(5) { contender.value }
-      assert LibraryFilmWatched.exists?(user: @guest, film: @film)
+      assert Library::LibraryFilmWatched.exists?(user: @guest, film: @film)
       assert_equal 1, watched_events.count
     end
   end
@@ -116,7 +116,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :skipped, Timeout.timeout(5) { contender.value }
-    assert_not LibraryFilm.exists?(user: @guest)
+    assert_not Library::LibraryFilm.exists?(user: @guest)
     assert_empty watched_events
   end
 
@@ -129,7 +129,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :missing, Timeout.timeout(5) { contender.value }
-    assert_not LibraryFilm.exists?(user_id: @guest.id)
+    assert_not Library::LibraryFilm.exists?(user_id: @guest.id)
     assert_not EventDelivery.exists?(@delivery.id)
     assert Registry::Film.exists?(@film.id)
   end
@@ -143,7 +143,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
-    assert LibraryFilmWatched.exists?(user_id: @guest.id, film: @film)
+    assert Library::LibraryFilmWatched.exists?(user_id: @guest.id, film: @film)
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_equal 1, watched_events.count
   end

@@ -4,7 +4,7 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
   setup do
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Detail film")
-    @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
   end
 
   test "missing and inactive owners and foreign entries cannot be used" do
@@ -19,21 +19,21 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
 
   test "caller rollback and publication failure leave original entry and events intact" do
     [ Library::RecordWatched, Library::RemoveFromWatchlist ].each do |operation|
-      assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
-        LibraryFilm.transaction(requires_new: true) do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
+        Library::LibraryFilm.transaction(requires_new: true) do
           operation.call(user_id: @user.id, library_film_id: @entry.id)
           raise ActiveRecord::Rollback
         end
       end
-      assert LibraryFilm.find(@entry.id).can_watch?
+      assert Library::LibraryFilm.find(@entry.id).can_watch?
     end
     failure = -> { raise ActiveRecord::StatementInvalid, "injected publication failure" }
     DomainEvent.set_callback(:create, :before, failure)
     [ Library::RecordWatched, Library::RemoveFromWatchlist ].each do |operation|
-      assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: @entry.id) }
       end
-      assert LibraryFilm.find(@entry.id).can_watch?
+      assert Library::LibraryFilm.find(@entry.id).can_watch?
     end
   ensure
     DomainEvent.skip_callback(:create, :before, failure, raise: false) if failure
@@ -47,15 +47,15 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
         Library::MarkNotInterested.call(user_id: @user.id, library_film_id: @entry.id)
       end
     end
-    assert LibraryFilm.find(@entry.id).can_watch?
+    assert Library::LibraryFilm.find(@entry.id).can_watch?
     DomainEvent.skip_callback(:create, :before, failure)
     Library::MarkNotInterested.call(user_id: @user.id, library_film_id: @entry.id)
     DomainEvent.set_callback(:create, :before, failure)
     [ Library::AddToWatchlist, Library::RemoveNotInterested ].each do |operation|
-      assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: @entry.id) }
       end
-      assert LibraryFilm.find(@entry.id).can_remove_from_not_interested?
+      assert Library::LibraryFilm.find(@entry.id).can_remove_from_not_interested?
     end
   ensure
     DomainEvent.skip_callback(:create, :before, failure, raise: false) if failure

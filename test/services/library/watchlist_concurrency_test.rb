@@ -13,7 +13,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    LibraryFilm.where(user_id: @user_ids).delete_all
+    Library::LibraryFilm.where(user_id: @user_ids).delete_all
     Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Identity::Session.where(user_id: @user_ids).delete_all
     Identity::User.where(id: @user_ids).delete_all
@@ -44,20 +44,20 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
   end
 
   [
-    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::AddToWatchlist, Library::WatchlistUnavailable ],
-    [ LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RemoveFromWatchlist, Library::FilmUnavailable ],
-    [ LibraryFilmToWatch, Library::RecordWatched, Library::RemoveFromWatchlist, Library::NotOnWatchlist ],
-    [ LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RecordWatched, Library::FilmUnavailable ],
-    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::RecordWatched, nil ],
-    [ LibraryFilmToWatch, Library::RecordWatched, Library::AddToWatchlist, Library::WatchlistUnavailable ],
-    [ LibraryFilmNotInterested, Library::RemoveNotInterested, Library::AddToWatchlist, Library::FilmUnavailable ],
-    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::RemoveNotInterested, Library::NotMarkedNotInterested ],
-    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::MarkNotInterested, Library::DismissalUnavailable ],
-    [ LibraryFilmNotInterested, Library::RemoveNotInterested, Library::RemoveNotInterested, Library::FilmUnavailable ],
-    [ LibraryFilmNotInterested, Library::AddToWatchlist, Library::MarkNotInterested, nil ],
-    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::AddToWatchlist, nil ],
-    [ LibraryFilmToWatch, Library::RecordWatched, Library::MarkNotInterested, Library::DismissalUnavailable ],
-    [ LibraryFilmToWatch, Library::MarkNotInterested, Library::RecordWatched, Library::AlreadyWatched ]
+    [ Library::LibraryFilmNotInterested, Library::AddToWatchlist, Library::AddToWatchlist, Library::WatchlistUnavailable ],
+    [ Library::LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RemoveFromWatchlist, Library::FilmUnavailable ],
+    [ Library::LibraryFilmToWatch, Library::RecordWatched, Library::RemoveFromWatchlist, Library::NotOnWatchlist ],
+    [ Library::LibraryFilmToWatch, Library::RemoveFromWatchlist, Library::RecordWatched, Library::FilmUnavailable ],
+    [ Library::LibraryFilmNotInterested, Library::AddToWatchlist, Library::RecordWatched, nil ],
+    [ Library::LibraryFilmToWatch, Library::RecordWatched, Library::AddToWatchlist, Library::WatchlistUnavailable ],
+    [ Library::LibraryFilmNotInterested, Library::RemoveNotInterested, Library::AddToWatchlist, Library::FilmUnavailable ],
+    [ Library::LibraryFilmNotInterested, Library::AddToWatchlist, Library::RemoveNotInterested, Library::NotMarkedNotInterested ],
+    [ Library::LibraryFilmToWatch, Library::MarkNotInterested, Library::MarkNotInterested, Library::DismissalUnavailable ],
+    [ Library::LibraryFilmNotInterested, Library::RemoveNotInterested, Library::RemoveNotInterested, Library::FilmUnavailable ],
+    [ Library::LibraryFilmNotInterested, Library::AddToWatchlist, Library::MarkNotInterested, nil ],
+    [ Library::LibraryFilmToWatch, Library::MarkNotInterested, Library::AddToWatchlist, nil ],
+    [ Library::LibraryFilmToWatch, Library::RecordWatched, Library::MarkNotInterested, Library::DismissalUnavailable ],
+    [ Library::LibraryFilmToWatch, Library::MarkNotInterested, Library::RecordWatched, Library::AlreadyWatched ]
   ].each do |source, first, second, failure|
     test "#{first} before #{second} serializes on the existing relationship" do
       @entry = source.create!(user: @guest, film: @film)
@@ -81,15 +81,15 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
         assert_equal @entry.created_at, outcome.created_at
       end
       if result.destroyed?
-        assert_not LibraryFilm.exists?(user_id: @guest.id, film_id: @film.id)
+        assert_not Library::LibraryFilm.exists?(user_id: @guest.id, film_id: @film.id)
       else
-        assert_equal @entry.id, LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
+        assert_equal @entry.id, Library::LibraryFilm.find_by!(user_id: @guest.id, film_id: @film.id).id
       end
     end
   end
 
   test "removal cannot enter between existing-entry lookup and watched transition" do
-    @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
+    @entry = Library::LibraryFilmToWatch.create!(user: @guest, film: @film)
     entry_id = @entry.id
     contender = nil
     observed = false
@@ -106,12 +106,12 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
         end
       end
     end
-    LibraryFilm.set_callback(:find, :after, callback)
+    Library::LibraryFilm.set_callback(:find, :after, callback)
     result = call(Library::RecordWatched)
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
     assert_equal @entry.id, result.id
-    assert_not LibraryFilm.find(@entry.id).can_watch?
+    assert_not Library::LibraryFilm.find(@entry.id).can_watch?
   ensure
-    LibraryFilm.skip_callback(:find, :after, callback, raise: false) if callback
+    Library::LibraryFilm.skip_callback(:find, :after, callback, raise: false) if callback
   end
 end

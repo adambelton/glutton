@@ -13,13 +13,13 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
-- Registry domain/model namespacing is implemented. Identity model namespacing is ready for review; Library, Ratings and Foundation follow as separately owned tasks; catalogue inspection stays deferred.
+- Registry and Identity model namespaces are implemented. Library model namespacing is implemented and in review. Ratings and Foundation delivery namespace work remains on separate local branches for subsequent review/publication. Catalogue inspection stays deferred.
 - [Catalogue inspection](tasks/catalogue_inspection.md): prepared draft, deferred until the remaining domain model namespaces are complete. Registry will own superuser-only, read-only film/category/quality lists and details, related-record navigation and stored source/evidence display. Identity's superuser prerequisite is implemented. Editing, imports, source refresh and provider execution remain excluded; bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Model namespace migration order
 
-Before catalogue inspection, start with the Registry rename and its five models. Then prepare and deliver separate model-namespace tasks for Identity, Library, Ratings and Foundation. Each owns its model moves and persistence/lifecycle compatibility; mechanical cross-domain references may be included explicitly without transferring mutation ownership. Keep existing tables/IDs and behaviour. Identity/Library STI storage and class-dependent tokens/serialization need their own migration review. These follow-ups are planned sequencing, not implementation authorization or completed task records.
+Registry and Identity are complete. Library is the next independently owned namespace outcome, followed by Ratings and Foundation delivery. Preserve existing tables/IDs, short STI values and behaviour; mechanically update shared reads without transferring mutation ownership. Each task retains its own working record until PR publication. Catalogue inspection follows the namespace migrations.
 
 ## Delivery order
 

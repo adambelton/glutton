@@ -20,7 +20,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    LibraryFilm.where(user_id: @user_ids).delete_all
+    Library::LibraryFilm.where(user_id: @user_ids).delete_all
     Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Identity::Session.where(user_id: @user_ids).delete_all
     Identity::User.where(id: @user_ids).delete_all
