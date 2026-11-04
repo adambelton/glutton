@@ -141,7 +141,7 @@ A quality must plausibly influence whether a viewer enjoys or avoids a film thro
 
 The [working vocabulary](film_qualities/MASTER_LIST.md) has 235 candidates, aiming for roughly 250 without padding. Apply **individually configurable maximums per category**, rather than one global 20-quality cap; do not fill quotas. Reduce redundant signals; the cap alone does not establish fair comparison scores.
 
-Qualities and quality categories are editable product data. Adding a category must not require deployment. Quality names are immutable after creation. Definitions/exclusions can be tuned within the same concept; a new meaning requires an explicit new concept. Category moves or category renames preserve quality meaning and do not themselves rescore. Adding/removing concepts, changing meaning, splits and merges require appropriate reassessment without losing original ratings/expressions or historical score explanations. [replace hard-coded dimensions with editable quality categories](film_quality_requirements.md) replaces code-managed dimensions with persisted categories and max/weight configuration; persisted configuration is implemented; selection/scoring and admin forms remain separate. Admin UI, assignment policy execution and scoring remain separate work.
+Qualities and quality categories are editable product data. Adding a category must not require deployment. Quality names are immutable after creation. Definitions/exclusions can be tuned within the same concept; a new meaning requires an explicit new concept. Category moves or category renames preserve quality meaning and do not themselves rescore. Adding/removing concepts, changing meaning, splits and merges require appropriate reassessment without losing original ratings/expressions or historical score explanations. [replace hard-coded dimensions with editable quality categories](film_quality_requirements.md) replaces code-managed dimensions with persisted categories and max/weight configuration; persisted configuration and initial selection are implemented; scoring and admin forms remain separate. Admin UI, assignment policy execution and scoring remain separate work.
 
 Owner direction, 29 October: category maximums should differ by category and be stored as editable data. Subgenres at 2 and tropes at 4–5 are illustrative candidates, not final defaults. Test a 60% support gate; [selection-policy findings](research/quality_selection_policy.md) compare outputs using uniform ceilings for experimental control only. Add separate admin category-weight tuning, initially 1 for every category. Caps govern selection; weights govern scoring. Category cap/weight settings are persisted; admin controls and scoring application remain to build. Variable totals and correlated labels still need fair-comparison rules.
 
@@ -161,11 +161,11 @@ Owner confirmed removal of FilmAnalysis/AnalysisQuality. The four models are Qua
 
 ### 5.4 Film information, reporting and comparison
 
-Present useful sourced film information, accepted qualities and their context with spoiler labelling and a way to report inaccuracies. Keep film facts/traits separate from personal predictions. Normal navigation from watched Library may warn about spoilers; direct access need not enforce watched status. Discovery cards remain spoiler-safe. First load seed data, then build admin-only viewing of canonical films, quality categories and qualities, including source context and associated-record navigation. Add manual editing afterwards, followed by manual source refresh and JEV change inspection/application. Suggestions can remain transient. Expression-led missing-quality investigation/testing is post-release. The canonical catalogue is distinct from a user's personal Library. Community moderation/editing is deferred.
+Present useful sourced film information, accepted qualities and their context with spoiler labelling and a way to report inaccuracies. Keep film facts/traits separate from personal predictions. Normal navigation from watched Library may warn about spoilers; direct access need not enforce watched status. Discovery cards remain spoiler-safe. First load seed data, then build admin-only viewing of canonical films, quality categories and qualities, including source context and associated-record navigation. Add manual editing afterwards, followed by manual source refresh and JEV change inspection/application. Displayed differences can be derived from retained evaluations without a separate suggestion queue. Expression-led missing-quality investigation/testing is post-release. The canonical catalogue is distinct from a user's personal Library. Community moderation/editing is deferred.
 
 The proposed podcast can compare original expectations with the hosts' submitted reactions using actual historical score contributions. It does not require Glutton to own a second encyclopaedic narrative or invent predicted scene reactions. Film information, personal recommendation explanation and review comparison remain distinct presentation responsibilities, not a commitment to an analysis persistence model.
 
-See [film-quality requirements](film_quality_requirements.md) for evidence, JEV question/request-packing discussion, reassessment boundaries and open model decisions.
+See [film-quality requirements](film_quality_requirements.md) for evidence, JEV question/request-packing discussion, reassessment boundaries and evaluation persistence.
 
 ## 6. From expressions to recommendations
 
@@ -198,8 +198,8 @@ Maintain the distinction between direct evidence and inferred attribution. Reint
 
 Saving a film triggers two distinct assessments:
 
-1. **Quality scoring through JEV:** Assess implicit evidence from the rating and explicit evidence from the submitted expressions. Implicit scoring uses the expressions profile that existed before this submission; it must not include updates derived from this film's newly submitted expressions. JEV handles both kinds of quality scoring; Claude is not required for this scoring round. Preserve the distinction between implicit and explicit evidence.
-2. **Expressions profile building:** Independently assess whether the submitted expressions meaningfully change the viewer's explicit preference understanding. The proposed cost optimisation is to ask JEV first, then ask Claude to update the profile only when warranted. Benchmark this gate, including additions, refinements and contradictions; it is a hypothesis rather than a proven cheapest or most accurate approach. The profile remains exclusively grounded in original expressions.
+1. **Quality scoring through JEV:** Assess implicit evidence from the rating and explicit evidence from the submitted expressions. Profile-informed interpretation uses the applicable expressions profile and preserves its actual input version, following the Ratings scoring design. JEV handles both kinds of quality scoring; Claude is not required for this scoring round. Preserve the distinction between implicit and explicit evidence.
+2. **Expressions profile building:** Independently assess whether the submitted expressions meaningfully change the viewer's explicit preference understanding. Profile synthesis and updates require an LLM call. No JEV gate is assumed; meaningful-change criteria and processing cadence remain for the Ratings implementation. The profile remains exclusively grounded in original expressions.
 
 New expressions benefit recommendations through their own explicit scoring once processing completes. Updated profiles inform subsequently assessed films once available. Earlier ratings are reinterpreted through periodic scoring improvements, including the implicit scoring of the submission that changed the profile. A viewer who first rates many films without expressions and later adds some receives that retrospective benefit when reassessment runs.
 
@@ -262,7 +262,7 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 
 The [working master list](film_qualities/MASTER_LIST.md) is provisional editorial material, not accepted production assignments or validated preference prediction. Retained [matching inputs and six review examples](film_qualities/README.md) support initial assignment policy and admin improvement design; the old community-publishing proposal has been superseded. Further individual-quality tuning is not a prerequisite. Superseded generative-analysis and JEV tuning artifacts were removed at the owner's request; [concise findings](research/film_quality_findings.md) preserve the useful evidence and limitations.
 
-Editable categories are planned, while JEV request packing and the need for independent analysis/history models remain open. Historical score contributions must remain inspectable as vocabulary and film assignments evolve.
+Editable categories and initial film-quality assignment are implemented. FilmQualityEval retains judgments and call/decision evidence independently of accepted film-quality associations; later reassessment remains to build. Historical score contributions must remain inspectable as vocabulary and film assignments evolve.
 
 ## 9. Sustainability, monetisation and long-term possibilities
 
@@ -282,9 +282,9 @@ The next phase should decide architecture, persistence and integration boundarie
 
 - Ruby on Rails and PostgreSQL in a cohesive monolith; no initial distributed-service requirement.
 - Explicit separation of catalogue/enrichment, personal taste and discovery responsibilities, without assuming Rails engines or specific module boundaries.
-- Database-backed editable quality categories, stable quality identities and current film associations. Independent analysis/history models remain an open decision.
+- Database-backed editable quality categories, stable quality identities and current film associations. FilmQualityEval retains evaluation evidence; no independent FilmAnalysis lifecycle is retained.
 - Background jobs where justified for source refresh, accepted quality-change reassessment and external enrichment; an additional on-demand refresh control remains an option.
-- Adapter boundaries for metadata provider, source retrieval, JEV quality scoring/profile-change assessment, Claude expressions-profile synthesis and recommendation evaluation.
+- Adapter boundaries for metadata provider, source retrieval, JEV film/rating quality evaluation, LLM expressions-profile synthesis and recommendation evaluation.
 - Persistence of source provenance, relevant source/accepted-input identity, quality-vocabulary revision and classification run metadata to support reproducibility.
 - Usage limits, deduplication, retry/idempotency and sensible costs for external model/provider calls.
 
@@ -302,7 +302,7 @@ Avoid choosing framework patterns or building abstractions solely for potential 
 4. Can users inspect sourced film information and quality context, and report an inaccurate association?
 5. Can classifications be regenerated after a quality change without losing the viewer's original expressions?
 6. After a viewer supplies an informative expression, can Glutton **reinterpret older ratings** and produce sensibly changed recommendations at a periodic refresh (or optional on-demand refresh), without manufacturing new explicit expressions or self-reinforcing scores?
-7. Can save-time JEV scoring use the pre-submission profile while separately assessing profile changes, with explicit evidence taking effect after scoring and historical evidence improving after refresh?
+7. Can deferred JEV scoring preserve direct expression evidence separately from profile-informed interpretation, with new explicit evidence taking effect after processing and historical interpretations improving after refresh?
 8. Can viewers manage their three library views, find watched films awaiting ratings, revise ratings/expressions, and reconsider dismissals?
 9. Does Haven’t seen it prevent repeated rating prompts while preserving recommendation eligibility, and can the viewer add it directly to To watch? Does marking it watched subsequently make it available to rate?
 10. Can source information be refreshed independently of accepted quality changes, with scoring updated only for relevant accepted changes?

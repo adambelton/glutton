@@ -1,9 +1,16 @@
 class Film < ApplicationRecord
   has_many :film_qualities, dependent: :restrict_with_exception
+  has_many :film_quality_evals, dependent: :restrict_with_exception
   has_many :qualities, through: :film_qualities
 
-  def ready_for_quality_assessment?
+  scope :without_qualities, -> { where.missing(:film_qualities) }
+
+  def has_source_context?
     tmdb_metadata? && wikipedia_context?
+  end
+
+  def has_film_qualities?
+    film_qualities.exists?
   end
 
   def import!(tmdb_data:, wikipedia_context:)

@@ -14,7 +14,7 @@ class FilmQualityCatalogueMigrationTest < ActiveSupport::TestCase
     ActiveRecord::Migration.suppress_messages do
       CreateFilms.new.migrate(:up)
       CreateFilmQualityCatalogue.new.migrate(:up)
-      assert_equal %w[film_qualities films qualities quality_categories], connection.tables.sort
+      assert_equal %w[film_qualities film_quality_evals films qualities quality_categories], connection.tables.sort
       assert_not connection.column_exists?(:qualities, :key)
       assert_not connection.column_exists?(:quality_categories, :key)
       assert connection.column_exists?(:qualities, :match_rule, :text)
@@ -23,6 +23,11 @@ class FilmQualityCatalogueMigrationTest < ActiveSupport::TestCase
       assert connection.foreign_key_exists?(:qualities, :quality_categories, column: :quality_category_id)
       assert connection.foreign_key_exists?(:film_qualities, :qualities, column: :quality_id)
       assert connection.foreign_key_exists?(:film_qualities, :films, column: :film_id)
+      assert connection.foreign_key_exists?(:film_qualities, :film_quality_evals, column: [ :film_quality_eval_id, :film_id ])
+      assert_not connection.column_exists?(:film_qualities, :evidence_references)
+      assert connection.foreign_key_exists?(:film_quality_evals, :films, column: :film_id)
+      assert_equal %w[id film_id output application created_at updated_at], connection.columns(:film_quality_evals).map(&:name)
+      assert_equal %w[id film_id quality_id film_quality_eval_id created_at updated_at], connection.columns(:film_qualities).map(&:name)
       assert connection.index_exists?(:film_qualities, [ :film_id, :quality_id ], unique: true)
       assert connection.column_exists?(:films, :wikipedia_context, :jsonb, null: false)
       assert connection.column_exists?(:films, :tmdb_metadata, :jsonb, null: false)

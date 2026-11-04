@@ -55,7 +55,7 @@ class QualityCategoryTest < ActiveSupport::TestCase
     assert_not QualityCategory.exists?(category.id)
   end
 
-  test "recategorisation preserves identity and evidence and rejects collisions or stale moves" do
+  test "recategorisation preserves identity and film associations and rejects collisions or stale moves" do
     source = quality_categories(:tone)
     target = quality_categories(:emotional_character)
     quality = source.qualities.create!(name: "Dread")
@@ -65,11 +65,10 @@ class QualityCategoryTest < ActiveSupport::TestCase
     assert_equal source, quality.reload.quality_category
     category = QualityCategory.create!(name: "New")
     @film = Film.create!(title: "Quality move")
-    link = @film.film_qualities.create!(quality: quality, evidence_references: [ "M1" ])
+    link = @film.film_qualities.create!(quality: quality)
     quality.recategorise!(quality_category: category)
     assert_equal category, quality.reload.quality_category
     assert_equal quality.id, link.reload.quality_id
-    assert_equal [ "M1" ], link.evidence_references
     assert_raises(ActiveRecord::StaleObjectError) { stale.recategorise!(quality_category: source) }
     assert_raises(ActiveRecord::RecordInvalid) { quality.update!(name: "Renamed") }
     assert quality.errors.of_kind?(:name, :immutable)

@@ -28,7 +28,7 @@ class FilmKnowledge::ImportFilmConcurrencyTest < ActiveSupport::TestCase
   test "a real unique index race gives one complete film and one explicit conflict" do
     ready, release = Queue.new, Queue.new
     @callback = lambda do |film|
-      raise "initial insert lacks sources" unless film.ready_for_quality_assessment?
+      raise "initial insert lacks sources" unless film.has_source_context?
       ready << true
       release.pop
     end
@@ -46,7 +46,7 @@ class FilmKnowledge::ImportFilmConcurrencyTest < ActiveSupport::TestCase
     2.times { release << true }
     results = Timeout.timeout(5) { @threads.map(&:value) }
     film = Film.find_by!(tmdb_id: 80000001)
-    assert film.ready_for_quality_assessment?
+    assert film.has_source_context?
     assert_includes results, film
     conflict = (results - [ film ]).sole
     assert_equal [ :persistence, :existing_film, 80000001 ], [ conflict.stage, conflict.reason, conflict.tmdb_id ]
@@ -94,6 +94,6 @@ class FilmKnowledge::ImportFilmConcurrencyTest < ActiveSupport::TestCase
     2.times { release << true }
     films = Timeout.timeout(5) { @threads.map(&:value) }
     assert_equal 2, films.map(&:id).uniq.size
-    assert films.all?(&:ready_for_quality_assessment?)
+    assert films.all?(&:has_source_context?)
   end
 end

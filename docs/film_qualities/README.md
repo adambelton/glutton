@@ -18,7 +18,7 @@ The example match/uncertain bands were inspection settings only. No top-20 trunc
 
 ## Current use
 
-The runtime YAML seed loads the retained names/definitions into an empty catalogue. Canonical TMDB/Wikipedia source import is implemented. Initial film-quality assignment remains to build, followed by admin inspection, editing, source refresh and explicit change evaluation. Selection uses the agreed >=60% support threshold and persisted category-specific ceilings, not a global 20 limit or category quota. Source refresh alone changes no accepted associations or historical score contributions. Community editing is deferred.
+The runtime YAML seed loads the retained names/definitions into an empty catalogue. Canonical TMDB/Wikipedia source import is implemented. Initial film-quality assignment retains FilmQualityEval call/decision evidence and generated association provenance, with per-film batch warnings; the next stages are admin inspection, editing, source refresh and explicit change evaluation. Selection uses the agreed >=60% support threshold and persisted category-specific ceilings, not a global 20 limit or category quota. Source refresh alone changes no accepted associations or historical score contributions. Community editing is deferred.
 
 ## Langfuse
 

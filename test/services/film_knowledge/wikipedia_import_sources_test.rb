@@ -91,7 +91,7 @@ class FilmKnowledge::WikipediaImportSourcesTest < ActiveSupport::TestCase
       FilmKnowledge::ImportFilm.call(tmdb_id: selected.fetch(:tmdb_id), tmdb_client:,
         wikidata_client: FilmKnowledge::WikidataClient.new(http_class: http), wikipedia_client: FilmKnowledge::WikipediaClient.new(http_class: http))
     end
-    assert film.reload.ready_for_quality_assessment?
+    assert film.reload.has_source_context?
     assert_equal 348, film.tmdb_id
     assert_equal "Q1", film.wikidata_id
     assert_not Film.exists?(tmdb_id: 349)

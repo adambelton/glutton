@@ -1,19 +1,19 @@
 # Glutton — Implementation progress
 
-Updated: 3 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 4 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented.
-- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial quality assignment and bulk/on-demand entry-point wiring remain to build.
+- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment and warning-isolated batch execution are implemented; bulk catalogue execution and on-demand entry-point wiring remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
 - Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
-- Next: initial film-quality assignment against the seeded vocabulary, using the agreed >=60% support threshold and configured category ceilings. Canonical source import is implemented; source refresh and multilingual fetching remain later work.
+- Next: finish canonical seed loading with one per-film orchestration path for source import and initial quality assignment, reusable from an explicit bounded batch entry point. Per-film assessment/evaluation persistence and warning-isolated quality assignment are implemented. Prepare the owning Film knowledge task before implementation; bulk execution requires its own source list and explicit provider budget. Admin inspection follows seed loading.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Delivery order
@@ -24,7 +24,7 @@ The agreed order is seed first:
 2. **View canonical content:** admin-only film, quality-category and quality lists/detail pages, including source context, associations and navigation between related records. Admin authorisation must protect these screens. Viewing comes before editing.
 3. **Manual editing:** add admin operations/forms for quality definitions (names immutable), category settings and film-quality additions/removals. Reuse the accepted-record operations later; no change-evaluation workflow is a prerequisite for an explicit manual edit.
 4. **Manual source refresh:** refresh TMDB/Wikipedia data from the canonical film screen and show outcomes/provenance. Source refresh alone changes no accepted film qualities.
-5. **Evaluate potential changes:** wire JEV quality checks into the manual-refresh flow, show suggested differences and allow explicit application using the manual-editing operations. Suggestions can remain transient; no suggestion queue/history model is required initially.
+5. **Evaluate potential changes:** wire JEV quality checks into the manual-refresh flow, show suggested differences and allow explicit application using the manual-editing operations. Retain immutable FilmQualityEval evidence; proposed differences need no separate suggestion queue/history model.
 6. **After initial release:** inspect user expressions to discover missing qualities/category preferences and test vocabulary improvements. This admin discovery tool is deferred; ordinary expression interpretation/scoring for viewer preferences remains in release scope.
 
 Bulk seed and ordinary missing-film imports will share canonical enrichment/initial-assignment behaviour. Scheduled sync is later work, not a prerequisite. Core expression interpretation/scoring stays in release scope; expression-led vocabulary discovery is post-release.
@@ -71,6 +71,12 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
 This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
+
+## Future Ratings evaluation work
+
+Within the later Ratings scoring implementation, add RatingQualityEval records and link generated RatingQuality results to their originating evaluation. Distinguish profile-based interpretation from direct expression evidence; capture exact input/profile/definition versions, ordered calls/questions/responses, probabilities, deterministic processing and application outcomes. Retain historical results, reject stale work and replace contributions without double counting. Profile-only changes do not replace directly expressed evidence. Preserve Ratings ownership and the existing [scoring design](ratings_scoring_design.md); this is a future scoped outcome, not a new working task or implemented schema.
+
+Expression-profile updates require an LLM call; no JEV gate is assumed. JEV evaluates rating qualities against profiles or explicit expressions. Application evidence belongs in the database, with optional Langfuse diagnostic links. Do not introduce a generic cross-domain evaluation table/framework.
 
 ## Release follow-up
 
