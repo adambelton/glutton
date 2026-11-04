@@ -3,7 +3,7 @@ require "test_helper"
 class RatingPersistenceTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Ratings persistence")
+    @film = Registry::Film.create!(title: "Ratings persistence")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
   end
 
@@ -22,7 +22,7 @@ class RatingPersistenceTest < ActiveSupport::TestCase
       assert_raises(ActiveRecord::InvalidForeignKey) { insert(film_attributes.merge(field => -1)) }
     end
     assert_raises(ActiveRecord::InvalidForeignKey) do
-      Film.transaction(requires_new: true) { @film.destroy! }
+      Registry::Film.transaction(requires_new: true) { @film.destroy! }
     end
     duplicate = RatingFilm.new(film_attributes)
     assert_not duplicate.valid?
@@ -31,7 +31,7 @@ class RatingPersistenceTest < ActiveSupport::TestCase
 
   test "dismissal defaults false and cannot be null in model or database" do
     assert_not @rating_film.dismissed?
-    other = Film.create!(title: "Other candidate")
+    other = Registry::Film.create!(title: "Other candidate")
     insert(film_attributes.merge(film_id: other.id))
     assert_not RatingFilm.find_by!(film: other).dismissed?
     @rating_film.dismissed = nil
@@ -42,7 +42,7 @@ class RatingPersistenceTest < ActiveSupport::TestCase
   end
 
   test "dismissal scopes reflect persisted state and model owns duplicate rejection" do
-    second = RatingFilm.create!(user: @user, film: Film.create!(title: "Second candidate"))
+    second = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Second candidate"))
     assert @rating_film.can_dismiss?
     @rating_film.dismiss!
     assert_not @rating_film.can_dismiss?

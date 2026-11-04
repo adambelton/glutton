@@ -8,7 +8,7 @@ module Library
 
     def self.call(event:, user:)
       validate_event!(event:, user:)
-      film = Film.find_by(id: event.payload.fetch("film_id"))
+      film = Registry::Film.find_by(id: event.payload.fetch("film_id"))
       raise FilmUnavailable, "Rated film is unavailable" unless film
 
       library_film = LibraryFilm.lock.find_by(user_id: user.id, film_id: film.id)

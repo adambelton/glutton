@@ -5,7 +5,7 @@ module Ratings
         user = User.lock.find_by(id: user_id)
         raise IdentityUnavailable unless user&.active?
 
-        film = Film.find_by(id: film_id)
+        film = Registry::Film.find_by(id: film_id)
         raise FilmUnavailable unless film
 
         rating_film = RatingFilm.find_or_create_by!(user:, film:)

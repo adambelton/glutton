@@ -3,7 +3,7 @@ require "test_helper"
 class LibraryFilmTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Library model film")
+    @film = Registry::Film.create!(title: "Library model film")
   end
 
   def attributes
@@ -59,12 +59,12 @@ class LibraryFilmTest < ActiveSupport::TestCase
 
   test "foreign keys require real owners and films and preserve referenced films" do
     assert_raises(ActiveRecord::InvalidForeignKey) { insert(attributes.merge(type: "LibraryFilmWatched", user_id: User.maximum(:id) + 1)) }
-    assert_raises(ActiveRecord::InvalidForeignKey) { insert(attributes.merge(type: "LibraryFilmWatched", film_id: Film.maximum(:id) + 1)) }
+    assert_raises(ActiveRecord::InvalidForeignKey) { insert(attributes.merge(type: "LibraryFilmWatched", film_id: Registry::Film.maximum(:id) + 1)) }
     LibraryFilmWatched.create!(attributes)
     assert_raises(ActiveRecord::InvalidForeignKey) do
-      Film.transaction(requires_new: true) { @film.destroy! }
+      Registry::Film.transaction(requires_new: true) { @film.destroy! }
     end
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "validation messages resolve through English locales with strict translation checks" do

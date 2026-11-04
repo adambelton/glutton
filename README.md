@@ -339,22 +339,22 @@ The separate TMDB API key is not used. Restart Rails/console after changing deve
 After applying migrations, explicitly import one already-selected movie ID from `bin/rails console`:
 
 ```ruby
-film = FilmKnowledge::ImportFilm.call(tmdb_id: 348)
+film = Registry::ImportFilm.call(tmdb_id: 348)
 ```
 
 Use the real import for development data as well.
 
 Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. It returns only when `film.has_source_context?` is true. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
 
-`ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Film#import!(tmdb_data:, wikipedia_context:)` for one complete save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
+`ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Registry::Film#import!(tmdb_data:, wikipedia_context:)` for one complete save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
 
 Physical column order is `id`, `title`, `release_date`, `tmdb_id`, `tmdb_metadata`, `wikidata_id`, `wikipedia_context`, `created_at`, `updated_at`.
 
 The film retains title, nullable source release date, TMDB metadata/provenance in `tmdb_metadata`, a nullable indexed `wikidata_id`, and source material in `wikipedia_context`. That packet contains TMDB/Wikidata/page identity, language, title, revision ID/timestamp/URL, article/history URLs, retrieval time, licence name/URL and ordered `source_paragraphs` (`id`, `section`, `text`). The provider-specific JSON columns store their packets directly, without redundant `tmdb`/`wikipedia` wrappers. The Wikipedia packet retains its language-specific page/revision identity as provenance and its entity identity matches `wikidata_id`; the language-independent Wikidata identity can remain when context is purged. The current importer fetches English Wikipedia only; other languages can later resolve their articles through the same entity. Paragraph references P1… belong to that revision. Extraction preserves prose/order, normalises HTML entities/whitespace and removes citations, tables, navigation, reference/cast sections and standalone blockquotes. Readiness requires complete provenance and narrative under Plot, Synopsis, Story or Premise; it does not certify semantic completeness.
 
-Import creates a new film only. An existing TMDB identity raises `FilmKnowledge::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
+Import creates a new film only. An existing TMDB identity raises `Registry::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
 
-Invalid selected IDs raise `FilmKnowledge::InvalidTmdbId`. Known provider/coverage failures raise `FilmKnowledge::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
+Invalid selected IDs raise `Registry::InvalidTmdbId`. Known provider/coverage failures raise `Registry::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
 
 Each client configures its fixed HTTPS host and response-size limit on the provider-agnostic `ProviderRequest`. The transport accepts host/path/parameters/headers, parses JSON and raises sanitized transport errors; clients own response shape, API error interpretation and import-stage translation. Adding a provider requires no transport registry or provider-specific branch. Requests use a descriptive User-Agent, 5-second connect and 10-second read/write timeouts, a 30-second total request limit, streamed body caps (TMDB 2 MiB, Wikimedia 8 MiB), and no automatic retries or HTTP redirects. API-level article redirects are accepted only with matching Wikidata identity and revision/page checks. Errors omit credentials and provider bodies.
 
@@ -365,8 +365,8 @@ This operation serves both future bulk catalogue loading and on-demand import. I
 From Rails console, using the same ignored `TMDB_API_READ_ACCESS_TOKEN` configuration:
 
 ```ruby
-page = FilmKnowledge::SearchTmdbFilms.call(query: "The Thing")
-page = FilmKnowledge::SearchTmdbFilms.call(query: "The Thing", page: 2, primary_release_year: 1982)
+page = Registry::SearchTmdbFilms.call(query: "The Thing")
+page = Registry::SearchTmdbFilms.call(query: "The Thing", page: 2, primary_release_year: 1982)
 page[:candidates]
 ```
 
@@ -377,17 +377,17 @@ Queries must be nonblank Strings of at most 200 characters after outer whitespac
 After explicitly choosing a candidate, pass its integer TMDB ID to the existing import operation; import still retrieves and validates details independently:
 
 ```ruby
-film = FilmKnowledge::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
+film = Registry::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
 ```
 
-Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
+Invalid inputs raise `Registry::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
 
 ## Load canonical films with initial qualities
 
 Seed the quality vocabulary first and configure the existing TMDB, Wikipedia/Wikidata and TypeSafe credentials. `LoadFilm` coordinates the create-only source import and initial assignment in one call:
 
 ```ruby
-result = FilmKnowledge::LoadFilm.call(
+result = Registry::LoadFilm.call(
   tmdb_id: selected_candidate.fetch(:tmdb_id),
   maximum_requests: 8,
   maximum_cost_usd: 0.02
@@ -403,7 +403,7 @@ Request and cost limits apply to TypeSafe. They are required positive integer/fi
 For an explicit batch, supply the complete TMDB ID list and its limits:
 
 ```ruby
-summary = FilmKnowledge::LoadFilms.call(
+summary = Registry::LoadFilms.call(
   tmdb_ids: selected_tmdb_ids,
   maximum_films: 10,
   maximum_requests_per_film: 8,
@@ -417,14 +417,14 @@ summary.fetch(:limits)
 
 The entire list is validated and copied before work starts. The batch rejects more than `maximum_films` or a worst-case allocation (`list size × per-film cost limit`) above the total cost ceiling, using exact decimal arithmetic. Duplicate IDs remain explicit attempts/conflicts and count toward that envelope. Unused allocations are not borrowed across films. `limits` reports the film count and maximum TypeSafe requests/cost for the validated list, rather than actual billed usage.
 
-The batch runs films independently in list order, reports each import/assessment/unexpected failure or zero-quality warning, and continues. `loaded_film_ids` contains only films that finished with qualities. Warnings identify the TMDB ID and the persisted Film ID when available, without raw private exception text. `Film.without_qualities` finds imported films requiring assessment or intervention. Independent workers can call `LoadFilm` with their own explicit bounds; no scheduler, automatic catalogue execution or process pool is installed.
+The batch runs films independently in list order, reports each import/assessment/unexpected failure or zero-quality warning, and continues. `loaded_film_ids` contains only films that finished with qualities. Warnings identify the TMDB ID and the persisted Film ID when available, without raw private exception text. `Registry::Film.without_qualities` finds imported films requiring assessment or intervention. Independent workers can call `LoadFilm` with their own explicit bounds; no scheduler, automatic catalogue execution or process pool is installed.
 
 ## Assign initial film qualities
 
 Configure `TYPESAFE_API_KEY` in the ignored development environment and use the existing Langfuse configuration for tracing. The quality vocabulary must already be seeded and the film must have usable imported source data. From Rails console:
 
 ```ruby
-result = FilmKnowledge::AssignInitialFilmQualities.call(film_id: film.id)
+result = Registry::AssignInitialFilmQualities.call(film_id: film.id)
 result.fetch(:film_qualities)
 result.fetch(:film_quality_eval) # persisted evaluation, including call history and application outcome
 result.fetch(:film_quality_eval).output # complete persisted judgments, policies, call history and usage/cost
@@ -432,17 +432,17 @@ result.fetch(:film_quality_eval).output # complete persisted judgments, policies
 
 The service pins `jev-1.14.0` and uses the retained contextual-support questions. Code selects support >=0.60 within each category's maximum, descending support then Quality ID for ties. Category weights do not affect membership; ceilings are maxima. Evidence questions identify a directly supporting paragraph for each selected quality. Model judgments still need inspection; support is not an enjoyment score or proof of correctness.
 
-Accepted state is persisted as `FilmQuality` records with a `film_quality_eval` reference. Evidence is stored only in the evaluation output; FilmQuality exposes no evidence reader. `FilmQualityEval` independently retains the evaluation: source/definition snapshots, ordered exact request/response pairs and call count, all probabilities, evidence, selection decisions (threshold/category ceiling/rank), model/policies, usage/cost and optional trace ID. Its output is immutable; a single application outcome records accepted association IDs or a safe failure reason. Langfuse is diagnostic telemetry, not a runtime dependency for reading evaluation evidence. Manual and pre-existing associations may have no evaluation; no history is fabricated for them. There is no receipt or status column on Film.
+Accepted state is persisted as `Registry::FilmQuality` records with a `film_quality_eval` reference. Evidence is stored only in the evaluation output; FilmQuality exposes no evidence reader. `Registry::FilmQualityEval` independently retains the evaluation: source/definition snapshots, ordered exact request/response pairs and call count, all probabilities, evidence, selection decisions (threshold/category ceiling/rank), model/policies, usage/cost and optional trace ID. Its output is immutable; a single application outcome records accepted association IDs or a safe failure reason. Langfuse is diagnostic telemetry, not a runtime dependency for reading evaluation evidence. Manual and pre-existing associations may have no evaluation; no history is fabricated for them. There is no receipt or status column on Film.
 
 Existing associations fail explicitly instead of being overwritten. Provider work precedes short write locks; changed sources/vocabulary or intervening assignments prevent application. A failed write rolls back every new association while retaining the completed evaluation and its failure outcome. Stale evaluations are retained but not applied. Provider failures retain a failed evaluation with partial answers, safe errors and attempted-call history; requests blocked before sending are identified and excluded from the provider-call count. Usage/cost totals include validated responses only, and incomplete usage is flagged. Unparseable/transport failures have no JSON response to retain.
 
 Requests have size/time/call/cost bounds and no automatic retries or long-context opt-in; the default client reserves a conservative cost allowance before each call and reconciles actual input-token usage afterward.
 
-For an explicit batch, enqueue the Film knowledge job with selected IDs:
+For an explicit batch, enqueue the Registry job with selected IDs:
 
 ```ruby
-FilmKnowledge::AssignInitialFilmQualitiesJob.perform_later(film_ids: selected_film_ids)
-Film.without_qualities # films needing assessment or manual intervention
+Registry::AssignInitialFilmQualitiesJob.perform_later(film_ids: selected_film_ids)
+Registry::Film.without_qualities # films needing assessment or manual intervention
 ```
 
 The job logs localized structured warnings for each film with zero qualities, an assessment error or an unexpected per-film failure, then continues with later films. Zero supported qualities retain a completed evaluation with an empty accepted association list; an explicit later request may assess the film again. The review query also includes films not assessed yet. Insufficient coverage currently means zero, matching that query; no higher minimum or category quota is inferred. The job does not schedule itself or automatically process the catalogue.

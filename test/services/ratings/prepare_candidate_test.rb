@@ -3,7 +3,7 @@ require "test_helper"
 class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Selected film")
+    @film = Registry::Film.create!(title: "Selected film")
   end
 
   def prepare(**attributes)
@@ -36,7 +36,7 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
 
   test "missing films and inactive or missing owners cannot admit candidates" do
     assert_no_difference "RatingFilm.count" do
-      assert_raises(Ratings::FilmUnavailable) { prepare(film_id: Film.maximum(:id) + 1) }
+      assert_raises(Ratings::FilmUnavailable) { prepare(film_id: Registry::Film.maximum(:id) + 1) }
       @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
       assert_raises(Ratings::IdentityUnavailable) { prepare }
       @user.delete

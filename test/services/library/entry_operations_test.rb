@@ -12,7 +12,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Existing Library film")
+    @film = Registry::Film.create!(title: "Existing Library film")
   end
 
   OPERATIONS.each do |operation, source, permission, rejection|
@@ -47,7 +47,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       end
       assert_no_difference [ "LibraryFilm.count", "DomainEvent.count" ] do
         assert_raises(error) { operation.call(user_id: @user.id, library_film_id: entry.id) }
-        watched = LibraryFilmWatched.create!(user: @user, film: Film.create!(title: "Watched"))
+        watched = LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Watched"))
         assert_raises(rejection) { operation.call(user_id: @user.id, library_film_id: watched.id) }
         watched.destroy!
       end

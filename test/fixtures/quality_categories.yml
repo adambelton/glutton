@@ -1,3 +1,6 @@
+_fixture:
+  model_class: Registry::QualityCategory
+
 emotional_character:
   name: Emotional character
   maximum_qualities: 3

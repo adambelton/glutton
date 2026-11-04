@@ -5,7 +5,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     @forgery = RatingsController.allow_forgery_protection
     RatingsController.allow_forgery_protection = true
     @user = UserGuest.create!
-    @film = Film.create!(title: "Selected <film>", release_date: Date.new(1982, 6, 25))
+    @film = Registry::Film.create!(title: "Selected <film>", release_date: Date.new(1982, 6, 25))
     bind_user
   end
 
@@ -66,7 +66,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
     assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
       rate(expression_texts: [ "  <script>Private</script>  ", "", "Ending" ], user_id: foreign.user_id,
-        film_id: Film.create!(title: "Ignored film").id, held: true, dismissed: true)
+        film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
     end
     assert_response :see_other
     assert_redirected_to new_rating_path
@@ -138,7 +138,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     row.submit_rating!(value: Rating::Values::BRILLIANT)
     token = csrf
     assert_response :success
-    [ "#{@film.id}junk", Film.maximum(:id) + 1 ].each do |id|
+    [ "#{@film.id}junk", Registry::Film.maximum(:id) + 1 ].each do |id|
       get new_rating_path(film_id: id)
       assert_response :not_found
       post rating_path, params: { film_id: id, authenticity_token: token }

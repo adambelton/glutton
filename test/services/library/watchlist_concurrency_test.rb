@@ -8,7 +8,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
     @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
-    @film = Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
+    @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
   end
 
   teardown do
@@ -17,7 +17,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
     PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Session.where(user_id: @user_ids).delete_all
     User.where(id: @user_ids).delete_all
-    Film.where(id: @film_ids).delete_all
+    Registry::Film.where(id: @film_ids).delete_all
   end
 
   def blocked(&operation)

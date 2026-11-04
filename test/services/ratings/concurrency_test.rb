@@ -8,7 +8,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     freeze_time
     @threads = []
     @user = UserGuest.create!
-    @film = Film.create!(title: "Concurrent Ratings film")
+    @film = Registry::Film.create!(title: "Concurrent Ratings film")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
   end
 
@@ -17,7 +17,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     PendingRegistration.where(guest_user_id: @user.id).delete_all
     Session.where(user_id: @user.id).delete_all
     User.where(id: @user.id).delete_all
-    Film.where(id: @film.id).delete_all
+    Registry::Film.where(id: @film.id).delete_all
   end
 
   def blocked(&operation)
@@ -110,7 +110,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_not User.exists?(@user.id)
     assert_not RatingFilm.exists?(@rating_film.id)
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "claim preserves activity and a waiting dismissal succeeds past the old guest deadline" do
@@ -201,7 +201,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_not RatingFilm.exists?(@rating_film.id)
     assert_empty Rating.where(rating_film_id: @rating_film.id)
     assert_empty rating_events
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "cleanup removes saved rating and event but retains the shared film" do
@@ -213,7 +213,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_not Rating.exists?(rating.id)
     assert_not RatingFilm.exists?(@rating_film.id)
     assert_empty rating_events
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "claim before waiting submission preserves owner and allows rating past guest deadline" do
@@ -405,6 +405,6 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_empty Rating.where(rating_film_id: @rating_film.id)
     assert_empty RatingExpression.where(rating_id: [ original.id, replacement.id ])
     assert_empty rating_events
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 end

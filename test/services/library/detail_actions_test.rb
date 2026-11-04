@@ -3,7 +3,7 @@ require "test_helper"
 class Library::DetailActionsTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Detail film")
+    @film = Registry::Film.create!(title: "Detail film")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
   end
 

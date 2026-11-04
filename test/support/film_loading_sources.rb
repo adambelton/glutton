@@ -29,14 +29,14 @@ module FilmLoadingSources
       http = Http.new(sources: self)
       @type_safe_client_class = Class.new do
         define_singleton_method(:new) do |**limits|
-          FilmKnowledge::TypeSafeClient.new(token: "private-loading-test-key", http_class: http, **limits)
+          Registry::TypeSafeClient.new(token: "private-loading-test-key", http_class: http, **limits)
         end
       end
     end
 
     def movie(tmdb_id:)
       source_request(:tmdb, tmdb_id:)
-      raise FilmKnowledge::TmdbUnavailable.new(reason: :timeout) if @import_failure_ids.include?(tmdb_id)
+      raise Registry::TmdbUnavailable.new(reason: :timeout) if @import_failure_ids.include?(tmdb_id)
       { "id" => tmdb_id, "title" => "Loading fixture #{tmdb_id}" }
     end
 
@@ -52,14 +52,14 @@ module FilmLoadingSources
 
     def context(title:, wikidata_id:, tmdb_id:)
       source_request(:wikipedia, tmdb_id:)
-      raise FilmKnowledge::ImportIncomplete.new(stage: :wikipedia, reason: :missing_article) if @wikipedia_failure_ids.include?(tmdb_id)
+      raise Registry::ImportIncomplete.new(stage: :wikipedia, reason: :missing_article) if @wikipedia_failure_ids.include?(tmdb_id)
       @context_builder.call(tmdb_id:, wikidata_id:)
     end
 
     def assess(payload:)
       outside_transaction!
       tmdb_id = payload.fetch("state").fetch("film_title").split.last.to_i
-      film = Film.find_by!(tmdb_id:)
+      film = Registry::Film.find_by!(tmdb_id:)
       raise "Assessment started without source context" unless film.has_source_context?
       @assessment_requests << { tmdb_id:, payload: }
       raise Net::ReadTimeout.new("private-loading-test-key private-provider-body") if @assessment_failure_ids.include?(tmdb_id)
@@ -69,7 +69,7 @@ module FilmLoadingSources
     end
 
     def call(tmdb_id:, maximum_requests:, maximum_cost_usd:)
-      FilmKnowledge::LoadFilm.call(tmdb_id:, maximum_requests:, maximum_cost_usd:,
+      Registry::LoadFilm.call(tmdb_id:, maximum_requests:, maximum_cost_usd:,
         tmdb_client: self, wikidata_client: self, wikipedia_client: self,
         type_safe_client_class: @type_safe_client_class, tracer_provider: @tracer_provider)
     end
@@ -82,7 +82,7 @@ module FilmLoadingSources
     end
 
     def outside_transaction!
-      raise "Provider request inside transaction" if Film.connection.transaction_open?
+      raise "Provider request inside transaction" if Registry::Film.connection.transaction_open?
     end
   end
 

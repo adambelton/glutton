@@ -1,7 +1,7 @@
 # Initial catalogue enrichment and admin quality improvement
 
 Status: Ready for review — release direction clarified by owner on 29 October 2026; implementation details remain proposed.  
-Owner: Film knowledge. [clarify initial catalogue enrichment and admin quality improvement](film_quality_review_workflow.md), [requirements](film_quality_requirements.md).
+Owner: Registry. [clarify initial catalogue enrichment and admin quality improvement](film_quality_review_workflow.md), [requirements](film_quality_requirements.md).
 
 The initial release imports films from TMDB, enriches them with maintained Wikipedia plot/context and assigns qualities within **individually configured category ceilings**. This supersedes the former global-20 proposal. Admin category weights are a separate planned scoring control, initially 1 for every category; the current editable baseline caps are supplied by [category seed configuration](../config/quality_categories.yml), including subgenres 2 and tropes 5. Bulk seeding and user-requested missing-film imports use the same path. Admins improve the vocabulary and film associations; community editing is deferred. The previous contributor/submission/publisher proposal is superseded.
 
@@ -38,7 +38,7 @@ Record the source/context, vocabulary, question/model and selection-policy versi
 
 ## Admin tools
 
-The canonical-film and quality/category interfaces are admin-only: deliver viewing after the seed, then manual editing. The expression investigation interface is deferred until after initial release. Ordinary users can search TMDB and request a missing-film import; they cannot edit canonical metadata/quality associations, definitions or discovery cases. The canonical film catalogue belongs to Film knowledge and is distinct from each user's Library.
+The canonical-film and quality/category interfaces are admin-only: deliver viewing after the seed, then manual editing. The expression investigation interface is deferred until after initial release. Ordinary users can search TMDB and request a missing-film import; they cannot edit canonical metadata/quality associations, definitions or discovery cases. The canonical film catalogue belongs to Registry and is distinct from each user's Library.
 
 | Interface | Inspect | Allowed improvement |
 | --- | --- | --- |
@@ -62,7 +62,7 @@ Reject a set exceeding any configured category ceiling explicitly and preserve t
 
 This admin gap-discovery/testing capability is not an initial-release dependency. It follows seed loading, content viewing, manual editing, manual source refresh and JEV change inspection. Core expression interpretation for viewer preferences is unchanged.
 
-Start with an admin examining an expression against its film, not an assumption that every unmatched phrase deserves a new label. Film knowledge may read relevant Ratings-owned evidence through authorised read paths; it does not edit original expressions, infer consent for public display, or take ownership of user profiles. The implementation must define appropriate admin access and minimal context before exposing real user text. No bulk export or live expression processing is performed by this design task.
+Start with an admin examining an expression against its film, not an assumption that every unmatched phrase deserves a new label. Registry may read relevant Ratings-owned evidence through authorised read paths; it does not edit original expressions, infer consent for public display, or take ownership of user profiles. The implementation must define appropriate admin access and minimal context before exposing real user text. No bulk export or live expression processing is performed by this design task.
 
 The investigation should distinguish:
 
@@ -175,7 +175,7 @@ Jonathan Barkan describes a focus on horror of human behaviour. Jacob Trussell i
 The delivery order is owner-directed. Each implementation task has one small owning-domain outcome:
 
 1. **Load seed:** persist/load definitions and vocabulary, import canonical TMDB films, enrich with Wikipedia context and perform initial assignment using the existing category/60% baseline. Reuse the same path for bulk and on-demand imports. No per-film change-review workflow is required to seed.
-2. **View:** authorise admin access and expose read-only lists/details for films, quality categories and qualities, with source/evidence and related-record navigation. Identity owns access mutations; Film knowledge owns its screens/content. Shared reads need no projection/event.
+2. **View:** authorise admin access and expose read-only lists/details for films, quality categories and qualities, with source/evidence and related-record navigation. Identity owns access mutations; Registry owns its screens/content. Shared reads need no projection/event.
 3. **Manually edit:** add bounded quality/category editing and film-quality add/remove operations. Keep immutable names, validation/freshness and explicit outcomes. Plot corrections remain on Wikipedia.
 4. **Manually refresh:** expose TMDB/Wikipedia source refresh and statuses without requiring JEV change evaluation yet. Preserve accepted associations and manual corrections.
 5. **Evaluate changes:** wire the JEV check into refresh, display suggestions/evidence and explicitly apply chosen edits through the manual operations. Derive displayed differences from retained FilmQualityEval evidence; no independent analysis or persisted suggestion lifecycle is required.

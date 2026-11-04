@@ -1,6 +1,6 @@
 class LibraryFilm < ApplicationRecord
   belongs_to :user
-  belongs_to :film
+  belongs_to :film, class_name: "Registry::Film"
 
   validates :film_id, uniqueness: { scope: :user_id }
 

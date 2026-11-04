@@ -6,15 +6,20 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented. Minimal superuser permission and explicit grant/revoke operations restricted to existing superusers are implemented.
-- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; actual catalogue execution and web entry-point wiring remain to build.
+- Registry: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; actual catalogue execution and web entry-point wiring remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
 - Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
-- Superuser access is ready for review: denied-by-default Identity state and actor-authorized grant/revoke operations are implemented. Next, scope Film knowledge’s superuser-only read-only catalogue inspection. No live account grants or catalogue frontend implementation are included. Actual bulk catalogue execution still requires an explicit film list and provider budget.
+- Registry domain/model namespacing is implemented. Next: separately owned Identity, Library, Ratings and Foundation model-namespace tasks; catalogue inspection stays deferred.
+- [Catalogue inspection](tasks/catalogue_inspection.md): prepared draft, deferred until the remaining domain model namespaces are complete. Registry will own superuser-only, read-only film/category/quality lists and details, related-record navigation and stored source/evidence display. Identity's superuser prerequisite is implemented. Editing, imports, source refresh and provider execution remain excluded; bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
+
+## Model namespace migration order
+
+Before catalogue inspection, start with the Registry rename and its five models. Then prepare and deliver separate model-namespace tasks for Identity, Library, Ratings and Foundation. Each owns its model moves and persistence/lifecycle compatibility; mechanical cross-domain references may be included explicitly without transferring mutation ownership. Keep existing tables/IDs and behaviour. Identity/Library STI storage and class-dependent tokens/serialization need their own migration review. These follow-ups are planned sequencing, not implementation authorization or completed task records.
 
 ## Delivery order
 
@@ -41,7 +46,7 @@ Routine progress needs no task or PR citation. Only cite a PR when a specific pi
 
 | Owner | Responsibilities | Boundary |
 | --- | --- | --- |
-| Film knowledge | Film identity, TMDB search/import, metadata/media references, source context, editable quality categories/vocabulary and accepted film associations | Shared film knowledge independent of viewers |
+| Registry | Film identity, TMDB search/import, metadata/media references, source context, editable quality categories/vocabulary and accepted film associations | Shared film knowledge independent of viewers |
 | Library | Canonical user–film relationship: watchlist, watched, not interested; library management and views | Does not own rating/recommendation presentation histories, ratings, expressions or inferred taste |
 | Ratings | Rating presentations and all responses, ratings, original expressions; scoring, profiles and reassessment as distinct capabilities | Owns next-film selection from its own presentation state; reports completed ratings through Library operations |
 | Recommendations | Candidate selection, ranking, explanations, recommendation presentations and all responses | Owns recommendation eligibility; consults Library and Ratings, requests Library-owned actions |
