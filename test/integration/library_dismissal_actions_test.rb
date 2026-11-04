@@ -41,7 +41,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       assert_select "form[action=?]", remove_from_watchlist_library_film_path(@entry)
       assert_select "form[action=?]", add_to_watchlist_library_film_path(@entry), count: 0
       assert_difference "DomainEvent.count", 1 do
-        assert_no_difference([ "Library::LibraryFilm.count", "RatingFilm.count", "Rating.count" ]) { dismiss }
+        assert_no_difference([ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count" ]) { dismiss }
       end
       assert_response :see_other
       assert_redirected_to library_film_path(@entry)
@@ -67,7 +67,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
 
   test "remove from not interested preserves Ratings evidence and old IDs cannot affect replacement rows" do
     dismiss
-    rating_film = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
     csrf = token
     assert_difference "Library::LibraryFilm.count", -1 do
       assert_difference "DomainEvent.count", 1 do

@@ -74,7 +74,7 @@ class RatingsController < ApplicationController
     @value = params[:value] if params[:value].is_a?(String)
     @expression_texts = []
     texts = params.fetch(:expression_texts, [])
-    unless texts.is_a?(Array) && texts.size <= Rating::MAX_EXPRESSIONS && texts.all? { |text| text.is_a?(String) }
+    unless texts.is_a?(Array) && texts.size <= Ratings::Rating::MAX_EXPRESSIONS && texts.all? { |text| text.is_a?(String) }
       raise Ratings::InvalidExpressions
     end
     @expression_texts = texts

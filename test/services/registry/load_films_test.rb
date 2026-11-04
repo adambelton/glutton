@@ -34,7 +34,7 @@ class Registry::LoadFilmsTest < ActiveSupport::TestCase
     original_logger = Rails.logger
     Rails.logger = ActiveSupport::Logger.new(output)
     result = nil
-    assert_no_difference [ "Library::LibraryFilm.count", "Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
       assert_difference [ "Registry::Film.count", "Registry::FilmQualityEval.count" ], 5 do
         result = load_films(tmdb_ids: [ first, import_failure, assessment_failure, zero, first, unexpected, last ], film_loader: sources)
       end

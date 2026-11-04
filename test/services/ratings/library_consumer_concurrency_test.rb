@@ -11,7 +11,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
     event = Identity::User.transaction do
-      DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
+      DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Library::Events::FILM_ADDED_TO_WATCHLIST,
         payload: { user_id: @guest.id, film_id: @film.id })
     end
@@ -58,7 +58,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   end
 
   def candidate
-    RatingFilm.uncached { RatingFilm.find_by(user: @guest, film: @film) }
+    Ratings::RatingFilm.uncached { Ratings::RatingFilm.find_by(user: @guest, film: @film) }
   end
 
   test "duplicate delivery creates one held candidate" do
@@ -68,16 +68,16 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { deliver }
     end
     assert_equal :not_due, Timeout.timeout(5) { contender.value }
-    assert_equal 1, RatingFilm.where(user: @guest).count
+    assert_equal 1, Ratings::RatingFilm.where(user: @guest).count
     assert candidate.held?
   end
 
   test "submission before waiting hold preserves saved evidence" do
-    row = RatingFilm.create!(user: @guest, film: @film)
+    row = Ratings::RatingFilm.create!(user: @guest, film: @film)
     contender = rating = nil
     Identity::User.transaction do
       rating = Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
-        value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
       contender = blocked { deliver }
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
@@ -99,7 +99,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   end
 
   test "dismissal before waiting hold preserves both states" do
-    row = RatingFilm.create!(user: @guest, film: @film)
+    row = Ratings::RatingFilm.create!(user: @guest, film: @film)
     contender = nil
     Identity::User.transaction do
       Ratings::Dismiss.call(user_id: @guest.id, rating_film_id: row.id)
@@ -136,7 +136,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   end
 
   test "claim preserves held candidate while later delivery succeeds past guest deadline" do
-    row = RatingFilm.create!(user: @guest, film: @film, dismissed: true)
+    row = Ratings::RatingFilm.create!(user: @guest, film: @film, dismissed: true)
     contender = nil
     Identity::User.transaction do
       @guest.lock!
@@ -156,7 +156,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     row = candidate
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
-    assert_not RatingFilm.exists?(row.id)
+    assert_not Ratings::RatingFilm.exists?(row.id)
     assert_not EventDelivery.exists?(@delivery.id)
     assert Registry::Film.exists?(@film.id)
   end
@@ -164,7 +164,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   def submit_selected_film
     row = Ratings::PrepareCandidate.call(user_id: @guest.id, film_id: @film.id)
     Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
-      value: Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
+      value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
   end
 
   test "targeted admission before waiting Library delivery preserves one candidate and evidence" do
@@ -174,7 +174,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { deliver }
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
-    assert_equal 1, RatingFilm.where(user: @guest, film: @film).count
+    assert_equal 1, Ratings::RatingFilm.where(user: @guest, film: @film).count
     assert_equal rating.rating_film_id, candidate.id
     assert candidate.held?
     assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
@@ -189,7 +189,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { submit_selected_film }
     end
     rating = Timeout.timeout(5) { contender.value }
-    assert_equal 1, RatingFilm.where(user: @guest, film: @film).count
+    assert_equal 1, Ratings::RatingFilm.where(user: @guest, film: @film).count
     assert_equal rating.rating_film_id, candidate.id
     assert candidate.held?
     assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)

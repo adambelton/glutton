@@ -1,14 +1,14 @@
 require "test_helper"
 
-class RatingPersistenceTest < ActiveSupport::TestCase
+class Ratings::RatingPersistenceTest < ActiveSupport::TestCase
   setup do
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Ratings persistence")
-    @rating_film = RatingFilm.create!(user: @user, film: @film)
+    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
   end
 
   def insert(attributes)
-    RatingFilm.transaction(requires_new: true) { RatingFilm.insert_all!([ attributes ]) }
+    Ratings::RatingFilm.transaction(requires_new: true) { Ratings::RatingFilm.insert_all!([ attributes ]) }
   end
 
   def film_attributes
@@ -24,7 +24,7 @@ class RatingPersistenceTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::InvalidForeignKey) do
       Registry::Film.transaction(requires_new: true) { @film.destroy! }
     end
-    duplicate = RatingFilm.new(film_attributes)
+    duplicate = Ratings::RatingFilm.new(film_attributes)
     assert_not duplicate.valid?
     assert duplicate.errors.of_kind?(:film_id, :taken)
   end
@@ -33,27 +33,27 @@ class RatingPersistenceTest < ActiveSupport::TestCase
     assert_not @rating_film.dismissed?
     other = Registry::Film.create!(title: "Other candidate")
     insert(film_attributes.merge(film_id: other.id))
-    assert_not RatingFilm.find_by!(film: other).dismissed?
+    assert_not Ratings::RatingFilm.find_by!(film: other).dismissed?
     @rating_film.dismissed = nil
     assert_not @rating_film.valid?
     assert_raises(ActiveRecord::NotNullViolation) do
-      RatingFilm.transaction(requires_new: true) { @rating_film.save!(validate: false) }
+      Ratings::RatingFilm.transaction(requires_new: true) { @rating_film.save!(validate: false) }
     end
   end
 
   test "dismissal scopes reflect persisted state and model owns duplicate rejection" do
-    second = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Second candidate"))
+    second = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Second candidate"))
     assert @rating_film.can_dismiss?
     @rating_film.dismiss!
     assert_not @rating_film.can_dismiss?
     assert_raises(Ratings::DismissalUnavailable) { @rating_film.dismiss! }
-    assert_equal [ @rating_film.id ], RatingFilm.where(user: @user).dismissed.pluck(:id)
-    assert_equal [ second.id ], RatingFilm.where(user: @user).pending.pluck(:id)
+    assert_equal [ @rating_film.id ], Ratings::RatingFilm.where(user: @user).dismissed.pluck(:id)
+    assert_equal [ second.id ], Ratings::RatingFilm.where(user: @user).pending.pluck(:id)
   end
 
   test "validation and domain errors render English under strict translation checks" do
     assert_equal :strict, Rails.application.config.i18n.raise_on_missing_translations
-    empty = RatingFilm.new(dismissed: nil)
+    empty = Ratings::RatingFilm.new(dismissed: nil)
     empty.valid?
     assert_includes empty.errors.full_messages, "User must exist"
     assert_includes empty.errors.full_messages, "Film must exist"

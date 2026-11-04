@@ -14,7 +14,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
 
   def events
     DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
-      user_id: @user.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN, stream_key: "film:#{@film.id}"
+      user_id: @user.id, publisher: Library::Events::PUBLISHING_DOMAIN, stream_key: "film:#{@film.id}"
     }).order(:sequence)
   end
 

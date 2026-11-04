@@ -37,18 +37,18 @@ en:
       dismissal_unavailable: This film has already been dismissed from rating rotation.
   activerecord:
     models:
-      rating: Rating
-      rating_expression: Rating expression
-      rating_film: Rating film
+      ratings/rating: Rating
+      ratings/rating_expression: Rating expression
+      ratings/rating_film: Rating film
     attributes:
-      rating_expression:
+      ratings/rating_expression:
         rating: Rating
         text: Expression
-      rating:
+      ratings/rating:
         rating_film: Rating film
         value: Rating
         rating_expressions: Expressions
-      rating_film:
+      ratings/rating_film:
         user: User
         film: Film
         film_id: Film

@@ -7,8 +7,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     @user = Identity::UserGuest.create!
     bind_user(@user)
     @film = Registry::Film.create!(title: "Revision film")
-    @candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
-    @original = @candidate.submit_rating!(value: Rating::Values::BRILLIANT, expression_texts: [ "  <script>original</script>\nÉerie 👻  " ])
+    @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    @original = @candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "  <script>original</script>\nÉerie 👻  " ])
   end
 
   teardown do
@@ -29,13 +29,13 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
 
   def revise(**attributes)
     patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id,
-      value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "New thought" ], authenticity_token: edit }.merge(attributes)
+      value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "New thought" ], authenticity_token: edit }.merge(attributes)
   end
 
   test "edit reads latest rating and exact escaped expressions without any writes" do
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
-      previous_rating_id: @original.id, value: Rating::Values::NOT_FOR_ME, expression_texts: [ "  <script>new</script>\n  " ])
-    assert_no_difference [ "RatingFilm.count", "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+      previous_rating_id: @original.id, value: Ratings::Rating::Values::NOT_FOR_ME, expression_texts: [ "  <script>new</script>\n  " ])
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       edit
       assert_response :success
       assert_select 'input[name="_method"][value="patch"]'
@@ -49,8 +49,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "replacement preserves original and candidate state without publishing and allows clearing expressions" do
-    assert_no_difference [ "DomainEvent.count", "DomainEventStream.count", "RatingFilm.count" ] do
-      assert_difference "Rating.count", 1 do
+    assert_no_difference [ "DomainEvent.count", "DomainEventStream.count", "Ratings::RatingFilm.count" ] do
+      assert_difference "Ratings::Rating.count", 1 do
         revise(expression_texts: [ "  Updated\n👻 ", "", "  " ], user_id: Identity::UserGuest.create!.id, held: false)
       end
     end
@@ -60,7 +60,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_select '[role="status"]', I18n.t("ratings.browser.updated")
     latest = @candidate.reload.current_rating
     assert_equal [ "  Updated\n👻 " ], latest.rating_expressions.pluck(:text)
-    assert_equal Rating::Values::BRILLIANT, @original.reload.value
+    assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value
     assert_equal [ "  <script>original</script>\nÉerie 👻  " ], @original.rating_expressions.pluck(:text)
     assert @candidate.held?
     assert @candidate.dismissed?
@@ -72,8 +72,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
 
   test "validation retains original expected id and cannot retarget an intervening revision" do
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
-      previous_rating_id: @original.id, value: Rating::Values::GARBAGE)
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+      previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE)
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       revise(expression_texts: { bad: "shape" })
       assert_response :unprocessable_entity
       assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
@@ -87,7 +87,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid values and expressions preserve safe input without writing" do
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       [ nil, "unknown", [], { bad: "value" } ].each do |value|
         revise(value:, expression_texts: [ "  Keep <script>this</script>  " ])
         assert_response :unprocessable_entity
@@ -95,10 +95,10 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
         assert_select "script", text: /this/, count: 0
         assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
       end
-      revise(expression_texts: [ "a" * (RatingExpression::MAX_TEXT_LENGTH + 1) ])
+      revise(expression_texts: [ "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
       assert_response :unprocessable_entity
-      assert_select "input[checked][value=?]", Rating::Values::I_ENJOYED_THAT
-      [ nil, "text", [ { bad: "text" } ], Array.new(Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
+      assert_select "input[checked][value=?]", Ratings::Rating::Values::I_ENJOYED_THAT
+      [ nil, "text", [ { bad: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
         revise(expression_texts:)
         assert_response :unprocessable_entity
       end
@@ -106,7 +106,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "missing malformed stale and replayed previous ids never overwrite" do
-    assert_no_difference "Rating.count" do
+    assert_no_difference "Ratings::Rating.count" do
       [ nil, "", "0", "-1", "1junk", [], { id: @original.id }, @original.id + 1 ].each do |previous_rating_id|
         revise(previous_rating_id:)
         assert_response :conflict
@@ -114,17 +114,17 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     end
     revise
     assert_response :see_other
-    assert_no_difference "Rating.count" do
+    assert_no_difference "Ratings::Rating.count" do
       revise
       assert_response :conflict
     end
   end
 
   test "missing foreign and unrated candidates are unavailable without admission" do
-    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: Registry::Film.create!(title: "Private film"))
-    unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: Registry::Film.create!(title: "Private film"))
+    unrated = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
     unpresented = Registry::Film.create!(title: "No candidate")
-    assert_no_difference [ "RatingFilm.count", "Rating.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count" ] do
       [ nil, "", [], { id: @film.id }, "#{@film.id}junk", foreign.film_id, unpresented.id, Registry::Film.maximum(:id) + 1 ].each do |film_id|
         get edit_rating_path, params: { film_id: }
         assert_response :not_found
@@ -134,7 +134,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       assert_response :conflict
       revise(rating_film_id: unrated.id)
       assert_response :conflict
-      [ foreign.id, RatingFilm.maximum(:id) + 1, nil, [], "#{@candidate.id}junk" ].each do |rating_film_id|
+      [ foreign.id, Ratings::RatingFilm.maximum(:id) + 1, nil, [], "#{@candidate.id}junk" ].each do |rating_film_id|
         revise(rating_film_id:)
         assert_response :not_found
       end
@@ -149,8 +149,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     revise
     assert_response :see_other
     film = Registry::Film.create!(title: "<b>Another film</b>")
-    row = RatingFilm.create!(user:, film:)
-    post rating_path, params: { rating_film_id: row.id, value: Rating::Values::BRILLIANT, authenticity_token: edit }
+    row = Ratings::RatingFilm.create!(user:, film:)
+    post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: edit }
     assert_redirected_to new_rating_path
     follow_redirect!
     assert_select "a[href=?]", edit_rating_path(film_id: film.id), text: I18n.t("ratings.browser.edit_saved", title: film.title)
@@ -159,11 +159,11 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
 
   test "csrf expired revoked signed out and deleted sessions cannot revise" do
     token = edit
-    assert_no_difference "Rating.count" do
-      patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Rating::Values::GARBAGE }
+    assert_no_difference "Ratings::Rating.count" do
+      patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE }
       assert_response :unprocessable_entity
       @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-      patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Rating::Values::GARBAGE, authenticity_token: token }
+      patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE, authenticity_token: token }
       assert_response :unauthorized
       get edit_rating_path(film_id: @film.id)
       assert_response :unauthorized
