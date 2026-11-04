@@ -4,7 +4,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Revised rating")
+    @film = Registry::Film.create!(title: "Revised rating")
     @rating_film = RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
     @original = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
       value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Original evidence" ])
@@ -60,8 +60,8 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
 
   test "missing foreign removed and unrated candidates cannot be revised" do
     other = UserGuest.create!
-    unrated = RatingFilm.create!(user: @user, film: Film.create!(title: "Unrated"))
-    removed = RatingFilm.create!(user: @user, film: Film.create!(title: "Removed"))
+    unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
+    removed = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Removed"))
     removed.destroy!
     assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count", "RatingFilm.count" ] do
       [ -1, removed.id ].each do |id|
@@ -74,7 +74,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "stale foreign and replayed previous IDs cannot overwrite the current rating" do
-    other = RatingFilm.create!(user: @user, film: Film.create!(title: "Other rating"))
+    other = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Other rating"))
     foreign_rating = other.submit_rating!(value: Rating::Values::GARBAGE)
     [ -1, foreign_rating.id, nil ].each do |previous_rating_id|
       assert_raises(Ratings::StaleRating) { revise(previous_rating_id:) }

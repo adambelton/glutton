@@ -3,7 +3,7 @@ require "test_helper"
 class Ratings::FindCandidateTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Candidate lookup")
+    @film = Registry::Film.create!(title: "Candidate lookup")
     @candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
   end
 

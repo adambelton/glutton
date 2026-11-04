@@ -4,7 +4,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Rated film")
+    @film = Registry::Film.create!(title: "Rated film")
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRatingsEvent::SUBSCRIBER }
   end
 
@@ -51,7 +51,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
 
   test "watchlist and not interested are reconciled preserving identity and public failures" do
     [ LibraryFilmToWatch, LibraryFilmNotInterested ].each do |model|
-      @film = Film.create!(title: "Intent")
+      @film = Registry::Film.create!(title: "Intent")
       entry = model.create!(user: @user, film: @film)
       publish
       assert_equal({ processed: 1 }, dispatch)
@@ -128,7 +128,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
 
   test "rating specific fields are not interpreted by Library" do
     [ {}, { value: nil }, { value: "opaque rating choice", rating_id: nil, extra: "opaque metadata" } ].each do |fields|
-      @film = Film.create!(title: "Viewing evidence")
+      @film = Registry::Film.create!(title: "Viewing evidence")
       publish(payload: { user_id: @user.id, film_id: @film.id }.merge(fields))
       assert_equal({ processed: 1 }, dispatch)
       assert LibraryFilmWatched.exists?(user: @user, film: @film)

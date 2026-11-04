@@ -1,5 +1,5 @@
 en:
-  film_knowledge:
+  registry:
     loading:
       errors:
         invalid_tmdb_ids: Supply a nonempty list of positive integer TMDB IDs.

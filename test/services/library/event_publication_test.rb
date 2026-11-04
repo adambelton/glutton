@@ -4,7 +4,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Published film")
+    @film = Registry::Film.create!(title: "Published film")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
   end
 
@@ -59,7 +59,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
   test "independent owners and films keep independent event streams" do
     entries = [ @entry,
       LibraryFilmToWatch.create!(user: UserGuest.create!, film: @film),
-      LibraryFilmToWatch.create!(user: @user, film: Film.create!(title: "Other")) ]
+      LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
     entries.each { |entry| Library::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
     assert_equal [ 1, 1, 1 ], DomainEvent.pluck(:sequence)
     assert_equal 3, DomainEvent.distinct.count(:domain_event_stream_id)

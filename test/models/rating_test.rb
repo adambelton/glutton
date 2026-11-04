@@ -7,7 +7,7 @@ class RatingTest < ActiveSupport::TestCase
   end
 
   def candidate(**attributes)
-    RatingFilm.create!(user: @user, film: Film.create!(title: "Rating model"), **attributes)
+    RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Rating model"), **attributes)
   end
 
   def insert(**attributes)

@@ -3,7 +3,7 @@ require "test_helper"
 class RatingRevisionPersistenceTest < ActiveSupport::TestCase
   setup do
     @user = UserGuest.create!
-    @film = Film.create!(title: "Revision storage")
+    @film = Registry::Film.create!(title: "Revision storage")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
     @rating = @rating_film.submit_rating!(value: Rating::Values::BRILLIANT)
   end
@@ -15,7 +15,7 @@ class RatingRevisionPersistenceTest < ActiveSupport::TestCase
   end
 
   test "latest IDs select one current rating per candidate despite equal or backdated timestamps" do
-    other = RatingFilm.create!(user: @user, film: Film.create!(title: "Another film"))
+    other = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Another film"))
     other_rating = other.submit_rating!(value: Rating::Values::GARBAGE)
     2.times { insert(created_at: @rating.created_at - 1.day) }
     latest = @rating_film.ratings.order(id: :desc).first

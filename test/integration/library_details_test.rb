@@ -5,7 +5,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     @forgery = LibraryController.allow_forgery_protection
     LibraryController.allow_forgery_protection = true
     @user = UserGuest.create!
-    @film = Film.create!(title: "A <script>film</script>", release_date: Date.new(2001, 1, 1))
+    @film = Registry::Film.create!(title: "A <script>film</script>", release_date: Date.new(2001, 1, 1))
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
     bind_user
   end
@@ -44,7 +44,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       assert_equal "no-store", response.headers["Cache-Control"]
       assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
       assert_no_match(/translation missing/i, response.body)
-      row = LibraryFilmNotInterested.create!(user: @user, film: Film.create!(title: "Other film"))
+      row = LibraryFilmNotInterested.create!(user: @user, film: Registry::Film.create!(title: "Other film"))
       get library_film_path(row)
       assert_select "form[action=?]", add_to_watchlist_library_film_path(row)
       assert_select "form[action=?]", remove_from_not_interested_library_film_path(row)
@@ -58,7 +58,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     other = UserGuest.create!
     assert_difference "DomainEvent.count", 1 do
       assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count" ] do
-        watch(user_id: other.id, film_id: Film.create!(title: "Ignore").id, type: "LibraryFilmNotInterested")
+        watch(user_id: other.id, film_id: Registry::Film.create!(title: "Ignore").id, type: "LibraryFilmNotInterested")
       end
     end
     assert_redirected_to library_film_path(@entry)

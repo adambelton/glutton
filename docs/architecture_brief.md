@@ -43,7 +43,7 @@ Use a cohesive Ruby on Rails application backed by PostgreSQL. Initial scaffoldi
 
 Organise code around domain responsibilities with explicit application operations for workflows. Keep substantial product decisions—such as rating transitions, recommendation eligibility, scoring and preference calculations—in ordinary Ruby objects with explicit inputs/results, independently testable without Rails boot or database records. Application operations load the required state, invoke those rules, persist results and publish domain events atomically with the source change. Other product domains react asynchronously in their own transactions. Keep database constraints for persisted invariants; independent rule tests do not replace persistence or workflow tests.
 
-Keep all current models directly under `app/models/`, following Rails' default file mapping. `user.rb` defines the User STI storage/query root (direct construction is prohibited); `user_registered.rb`, `user_guest.rb` and `user_deleted.rb` define UserRegistered, UserGuest and UserDeleted. All share the users table and use their full top-level class names as STI values. No namespace, table-name override or directory-collapse rule is needed. User-owned registration/credential permissions and actions stay on the models; registration transition execution remains in its Identity service. Session UI uses Rails polymorphic partials. Session owns resumption and fresh binding checks, consulting user.active? and a model-owned inactive error when needed. The transport derives cookie expiry from user.session_duration; this does not impose a registered server-session TTL. Session remains in `session.rb`. Reconsider model organisation only when concrete behaviour warrants it.
+Registry models live under `app/models/registry/` with matching `Registry::` constants: Film, QualityCategory, Quality, FilmQuality and FilmQualityEval. They retain their existing unprefixed database tables and foreign keys; Library and Ratings canonical-film associations explicitly reference `Registry::Film`. Registry services/jobs use the same namespace. Other domains currently keep their models directly under `app/models/`, following Rails' default file mapping; their namespace moves are separately scoped follow-ups. `user.rb` defines the User STI storage/query root (direct construction is prohibited); `user_registered.rb`, `user_guest.rb` and `user_deleted.rb` define UserRegistered, UserGuest and UserDeleted. All share the users table and use their full top-level class names as STI values. These Identity classes currently need no namespace, table-name override or directory-collapse rule. User-owned registration/credential permissions and actions stay on the models; registration transition execution remains in its Identity service. Session UI uses Rails polymorphic partials. Session owns resumption and fresh binding checks, consulting user.active? and a model-owned inactive error when needed. The transport derives cookie expiry from user.session_duration; this does not impose a registered server-session TTL. Session remains in `session.rb`. Reconsider model organisation only when concrete behaviour warrants it.
 
 Confirmation has one transaction coordinator in Identity::CompleteRegistration, including attachment of an unattached registration to the current active guest. PendingRegistration owns token resolution and confirmation access rules shared by GET and completion; GET performs no attachment. The browser completion entry point delegates to that coordinator. Completion locks the source user before the pending request and revalidates the token after locking.
 
@@ -61,7 +61,7 @@ Boundaries follow distinct activities and their language, not a generic user–f
 
 | Area | Owns | Boundary |
 | --- | --- | --- |
-| Film knowledge | Film identity, metadata/media, sourced context, editable quality categories/vocabulary and accepted film–quality associations | Shared knowledge independent of viewers |
+| Registry | Film identity, metadata/media, sourced context, editable quality categories/vocabulary and accepted film–quality associations | Shared knowledge independent of viewers |
 | Library | Canonical user–film relationship: watchlist, watched and not interested; library management | Does not own purpose-specific presentation histories, ratings or inferred preferences |
 | Ratings | Rating presentations and responses, ratings, original expressions, scoring, expressions profiles and inferred preferences | Rating submission, scoring and profile building are distinct capabilities; Ratings publishes completed-viewing facts and explicit Library action requests |
 | Recommendations | Selection, eligibility, ranking, explanations, presentation and response history | Maintains projections from Library/Rating events; publishes response choices without owning Library state |
@@ -72,7 +72,7 @@ Ratings contains separate capabilities for recording evidence, scoring, profile 
 
 A Ratings “haven’t seen it” response suppresses later rating prompts without creating a Library entry or excluding recommendation eligibility. Recommendations assumes candidates are unwatched absent evidence otherwise; its exclusion rule uses Library's classifications, not the mere existence of any user–film record. Library owns watched-but-unrated films and links to Ratings. Its rated display reflects Ratings' authoritative current rating rather than owning a duplicate value.
 
-Film knowledge owns the shared quality vocabulary; Ratings interprets it as evidence about a viewer. Dynamically source people candidates from verified credits. Any apparent need to change multiple domains requires a boundary/invariant review before creating provider/consumer tasks; an occasional stable interaction is not inherently a modelling defect.
+Registry owns the shared quality vocabulary; Ratings interprets it as evidence about a viewer. Dynamically source people candidates from verified credits. Any apparent need to change multiple domains requires a boundary/invariant review before creating provider/consumer tasks; an occasional stable interaction is not inherently a modelling defect.
 
 Qualities and quality categories are editable descriptive product data. Do not invent behavioural subclasses unless concrete rules require them; category membership is not a class selector.
 
@@ -156,7 +156,7 @@ Recommendation explanations must be supported by the evidence actually used and 
 
 Store enough information about served recommendations and scoring versions to compare outcomes and understand ranking changes. The required retention and detail should be proportionate to evaluation needs.
 
-## 9. Film knowledge sources and quality decisions
+## 9. Registry sources and quality decisions
 
 Current direction, 28 October 2026: use maintained Wikipedia narrative/context and a revisable master vocabulary. Glutton owns accepted source-backed quality associations; JEV is the chosen assessment engine. Source acquisition and candidate evaluation do not automatically accept new qualities. [Current requirements](film_quality_requirements.md) supersede the former generated-analysis dossier design.
 
@@ -164,7 +164,7 @@ Quality categories are persisted editable records with maximum-qualities and wei
 
 Qualities have equal initial base treatment. Do not use film centrality or model confidence as an intrinsic weight or quality-selection gate. Actual rating/expression evidence determines user-specific contributions. Category weights are stored configuration; their scoring use, recalculation behaviour and editing UI remain separately scoped. Ceilings are category-specific maxima, with no global 20 limit or category minimum.
 
-A Wikipedia page refresh changes source material. A deliberate accepted film-quality change is the proposed trigger for affected downstream reassessment. Do not automatically regenerate matches or scores for every page revision. Film knowledge publishes accepted changes only through a separately agreed event contract; Ratings and Recommendations own their resulting mutations.
+A Wikipedia page refresh changes source material. A deliberate accepted film-quality change is the proposed trigger for affected downstream reassessment. Do not automatically regenerate matches or scores for every page revision. Registry publishes accepted changes only through a separately agreed event contract; Ratings and Recommendations own their resulting mutations.
 
 Historical rating/recommendation contributions explain the scores actually produced using saved inputs/results. FilmQualityEval preserves complete call and decision evidence, while FilmQuality stores accepted current associations linked to their originating evaluation. No independent FilmAnalysis/AnalysisQuality lifecycle or archive of every former association set is retained. Langfuse is optional diagnostic tracing; application evaluation records remain readable independently.
 

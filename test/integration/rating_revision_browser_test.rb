@@ -6,7 +6,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     RatingsController.allow_forgery_protection = true
     @user = UserGuest.create!
     bind_user(@user)
-    @film = Film.create!(title: "Revision film")
+    @film = Registry::Film.create!(title: "Revision film")
     @candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
     @original = @candidate.submit_rating!(value: Rating::Values::BRILLIANT, expression_texts: [ "  <script>original</script>\nÉerie 👻  " ])
   end
@@ -121,11 +121,11 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "missing foreign and unrated candidates are unavailable without admission" do
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: Film.create!(title: "Private film"))
-    unrated = RatingFilm.create!(user: @user, film: Film.create!(title: "Unrated"))
-    unpresented = Film.create!(title: "No candidate")
+    foreign = RatingFilm.create!(user: UserGuest.create!, film: Registry::Film.create!(title: "Private film"))
+    unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
+    unpresented = Registry::Film.create!(title: "No candidate")
     assert_no_difference [ "RatingFilm.count", "Rating.count" ] do
-      [ nil, "", [], { id: @film.id }, "#{@film.id}junk", foreign.film_id, unpresented.id, Film.maximum(:id) + 1 ].each do |film_id|
+      [ nil, "", [], { id: @film.id }, "#{@film.id}junk", foreign.film_id, unpresented.id, Registry::Film.maximum(:id) + 1 ].each do |film_id|
         get edit_rating_path, params: { film_id: }
         assert_response :not_found
         assert_not_includes response.body, "Private film"
@@ -148,7 +148,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     bind_user(user)
     revise
     assert_response :see_other
-    film = Film.create!(title: "<b>Another film</b>")
+    film = Registry::Film.create!(title: "<b>Another film</b>")
     row = RatingFilm.create!(user:, film:)
     post rating_path, params: { rating_film_id: row.id, value: Rating::Values::BRILLIANT, authenticity_token: edit }
     assert_redirected_to new_rating_path

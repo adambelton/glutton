@@ -8,7 +8,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
     @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
-    @film = Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
+    @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
     event = User.transaction do
       DomainEvents::Publish.call(user_id: @guest.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
@@ -24,7 +24,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Session.where(user_id: @user_ids).delete_all
     User.where(id: @user_ids).delete_all
-    Film.where(id: @film_ids).delete_all
+    Registry::Film.where(id: @film_ids).delete_all
   end
 
   def blocked(&operation)
@@ -132,7 +132,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal :missing, Timeout.timeout(5) { contender.value }
     assert_nil candidate
     assert_not EventDelivery.exists?(@delivery.id)
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "claim preserves held candidate while later delivery succeeds past guest deadline" do
@@ -158,7 +158,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not RatingFilm.exists?(row.id)
     assert_not EventDelivery.exists?(@delivery.id)
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   def submit_selected_film

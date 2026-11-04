@@ -21,7 +21,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def candidate(title, **attributes)
-    RatingFilm.create!(user: @user, film: Film.create!(title:, release_date: Date.new(1982, 6, 25)), **attributes)
+    RatingFilm.create!(user: @user, film: Registry::Film.create!(title:, release_date: Date.new(1982, 6, 25)), **attributes)
   end
 
   def csrf

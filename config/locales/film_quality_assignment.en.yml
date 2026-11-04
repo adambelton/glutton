@@ -1,14 +1,14 @@
 en:
   activerecord:
     models:
-      film_quality_eval: Film quality evaluation
+      registry/film_quality_eval: Film quality evaluation
     attributes:
-      film_quality_eval:
+      registry/film_quality_eval:
         output: Evaluation output
         application: Application outcome
-      film_quality:
+      registry/film_quality:
         film_quality_eval: Film quality evaluation
-  film_knowledge:
+  registry:
     assignment:
       errors:
         film_missing: The film no longer exists.

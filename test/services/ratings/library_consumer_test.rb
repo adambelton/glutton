@@ -4,7 +4,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Library activity")
+    @film = Registry::Film.create!(title: "Library activity")
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
   end
 
@@ -31,7 +31,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   test "each admitted state preserves dismissal and original evidence across all combinations" do
     [ false, true ].product([ false, true ]).each do |held, dismissed|
       Ratings::ConsumeLibraryEvent::EVENT_NAMES.each do |name|
-        @film = Film.create!(title: "State combination")
+        @film = Registry::Film.create!(title: "State combination")
         row = RatingFilm.create!(user: @user, film: @film, held:, dismissed:)
         rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
           value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
@@ -57,7 +57,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     [ [ Library::Events::FILM_MARKED_WATCHED, false, false ],
       [ Library::Events::FILM_ADDED_TO_WATCHLIST, true, false ],
       [ Library::Events::FILM_MARKED_NOT_INTERESTED, false, true ] ].each do |name, held, dismissed|
-      @film = Film.create!(title: "Admission")
+      @film = Registry::Film.create!(title: "Admission")
       assert_equal :processed, deliver(publish(name)).first
       assert_equal held, candidate.held?
       assert_equal dismissed, candidate.dismissed?
@@ -69,7 +69,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     dispatch
     first = candidate
     travel 1.hour
-    later = RatingFilm.create!(user: @user, film: Film.create!(title: "Later"))
+    later = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Later"))
     foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
     assert_equal [ later.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
@@ -160,7 +160,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
 
   test "real cross domain delivery in either order preserves rating and dismissal without loops" do
     [ true, false ].each do |library_first|
-      @film = Film.create!(title: "Both domains")
+      @film = Registry::Film.create!(title: "Both domains")
       entry = LibraryFilmNotInterested.create!(user: @user, film: @film)
       Library::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id)
       Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id)

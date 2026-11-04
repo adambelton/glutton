@@ -15,7 +15,7 @@ class Library::BrowseTest < ActiveSupport::TestCase
 
   test "query count stays bounded as the watched list grows and film data is preloaded" do
     user = UserGuest.create!
-    create_entry = -> { LibraryFilmWatched.create!(user:, film: Film.create!(title: "Film")) }
+    create_entry = -> { LibraryFilmWatched.create!(user:, film: Registry::Film.create!(title: "Film")) }
     create_entry.call
     count_queries = lambda do
       queries = []

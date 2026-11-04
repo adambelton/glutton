@@ -14,7 +14,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def entry(model = LibraryFilmWatched, user: @user, title: "A film", **attributes)
-    model.create!(user:, film: Film.create!(title:, **attributes))
+    model.create!(user:, film: Registry::Film.create!(title:, **attributes))
   end
 
   test "three views isolate membership and owner and default to watchlist without writes" do
@@ -50,7 +50,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select 'a[href*="rating/new"]', count: 5
     row = RatingFilm.find_by!(user: @user, film: rows.last.film)
     Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Rating::Values::BRILLIANT)
-    absent = RatingFilm.create!(user: @user, film: Film.create!(title: "Not in Library"))
+    absent = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
     absent.submit_rating!(value: Rating::Values::BRILLIANT)
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Rated", count: 1

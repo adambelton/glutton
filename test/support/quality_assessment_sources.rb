@@ -30,15 +30,15 @@ module QualityAssessmentSources
   end
 
   def imported_assignment_film(tmdb_id: 800001, context: wikipedia_context(tmdb_id: tmdb_id))
-    Film.new(tmdb_id:).import!(tmdb_data: { title: "Assessment fixture", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
+    Registry::Film.new(tmdb_id:).import!(tmdb_data: { title: "Assessment fixture", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
   end
 
   def assessment_quality(category: quality_categories(:tone), name: "Supported quality")
-    Quality.create!(name:, quality_category: category, match_rule: "A supported property is established.", not_sufficient: "An unsupported property is not established.")
+    Registry::Quality.create!(name:, quality_category: category, match_rule: "A supported property is established.", not_sufficient: "An unsupported property is not established.")
   end
 
   def quality_definition_snapshots
-    Quality.order(:id).map do |quality|
+    Registry::Quality.order(:id).map do |quality|
       { "id" => quality.id, "name" => quality.name, "quality_category_id" => quality.quality_category_id,
         "match_rule" => quality.match_rule, "not_sufficient" => quality.not_sufficient }
     end
@@ -50,7 +50,7 @@ module QualityAssessmentSources
   end
 
   def quality_category_snapshots
-    QualityCategory.order(:id).map do |quality_category|
+    Registry::QualityCategory.order(:id).map do |quality_category|
       { "id" => quality_category.id, "name" => quality_category.name, "maximum_qualities" => quality_category.maximum_qualities }
     end
   end

@@ -45,6 +45,6 @@ module TmdbHttp
   def fake_http(code: 200, body: '{"id":348,"title":"Alien"}', failure: nil, token: "fake-test-token")
     response = Response.new(code:, body:)
     @http = Connection.new(response:, failure:)
-    FilmKnowledge::TmdbClient.new(token:, http_class: @http)
+    Registry::TmdbClient.new(token:, http_class: @http)
   end
 end

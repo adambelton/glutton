@@ -8,7 +8,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
     @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
-    @film = Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
+    @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
   end
 
@@ -18,7 +18,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     PendingRegistration.where(guest_user_id: @user_ids).delete_all
     Session.where(user_id: @user_ids).delete_all
     User.where(id: @user_ids).delete_all
-    Film.where(id: @film_ids).delete_all
+    Registry::Film.where(id: @film_ids).delete_all
   end
 
   def blocked(&operation)
@@ -105,7 +105,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
     assert_not User.exists?(@guest.id)
     assert_not LibraryFilm.exists?(user_id: @guest.id)
-    assert Film.exists?(@film.id)
+    assert Registry::Film.exists?(@film.id)
   end
 
   test "waiting write re-reads a claimed guest as registered after the old guest deadline" do

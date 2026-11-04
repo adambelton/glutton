@@ -5,7 +5,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     @forgery = LibraryController.allow_forgery_protection
     LibraryController.allow_forgery_protection = true
     @user = UserGuest.create!
-    @film = Film.create!(title: "Intent <film>")
+    @film = Registry::Film.create!(title: "Intent <film>")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
     bind_user
   end

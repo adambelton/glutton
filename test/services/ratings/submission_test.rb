@@ -4,7 +4,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @user = UserGuest.create!
-    @film = Film.create!(title: "Rating submission")
+    @film = Registry::Film.create!(title: "Rating submission")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
   end
 
@@ -14,7 +14,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "all four choices save owned ratings and exact v1 facts without Library changes" do
     Rating::Values::ALL.each_with_index do |value, index|
-      candidate = RatingFilm.create!(user: @user, film: Film.create!(title: "Choice #{index}"))
+      candidate = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Choice #{index}"))
       rating = nil
       assert_no_difference "LibraryFilm.count" do
         assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
@@ -118,7 +118,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   test "omitted and empty expressions preserve rating only submission" do
     rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::BRILLIANT)
     assert_empty rating.reload.rating_expressions
-    other = RatingFilm.create!(user: @user, film: Film.create!(title: "No expressions"))
+    other = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "No expressions"))
     assert_empty submit(rating_film_id: other.id, expression_texts: []).reload.rating_expressions
   end
 

@@ -7,7 +7,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   end
 
   def candidate(**attributes)
-    RatingFilm.create!(user: @user, film: Film.create!(title: "Candidate film"), **attributes)
+    RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Candidate film"), **attributes)
   end
 
   def candidates(**options)
@@ -19,8 +19,8 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   end
 
   test "empty queue does not admit catalogue or library films" do
-    LibraryFilmWatched.create!(user: @user, film: Film.create!(title: "Library only"))
-    Film.create!(title: "Catalogue only")
+    LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Library only"))
+    Registry::Film.create!(title: "Catalogue only")
     assert_no_difference [ "RatingFilm.count", "LibraryFilm.count" ] do
       assert_empty candidates
     end

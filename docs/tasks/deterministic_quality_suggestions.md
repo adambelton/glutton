@@ -1,7 +1,7 @@
 # Build deterministic film-quality suggestions
 
 Status: Draft — prepared, not started; lower priority  
-Owner: Film knowledge
+Owner: Registry
 
 ## Goal
 
@@ -11,7 +11,7 @@ Turn one complete set of recorded per-quality support probabilities into an insp
 
 ## Scope
 
-- Define one small Film knowledge operation consuming a film identity and a complete probability map for an explicitly captured vocabulary. Load authoritative qualities/categories/current film links in the owning service boundary; arithmetic/ranking belongs in code, not another model question.
+- Define one small Registry operation consuming a film identity and a complete probability map for an explicitly captured vocabulary. Load authoritative qualities/categories/current film links in the owning service boundary; arithmetic/ranking belongs in code, not another model question.
 - Baseline minimum support is >=0.60. Require finite numeric values in [0,1], known quality IDs and complete declared coverage. Reject missing/unknown IDs, incomplete results, empty vocabulary and malformed values explicitly; do not substitute zero, clamp values or silently accept a partial provider response. Settle the precise callable input/result contract in this spec before implementation.
 - Select within each persisted category by descending support, then stable Quality ID for ties. Respect maximum_qualities including zero; no category minimum, padding, cross-category slot borrowing or global 20 ceiling. Do not multiply support by category weight or send qualitative importance guidance.
 - Return proposed IDs with categories/support and inspectable exclusion reasons (below threshold or beyond category ceiling). Return added/retained/removed IDs versus the film's current accepted set and an explicit unchanged comparison when appropriate. A manual association below the gate may appear as a suggested removal; never remove it automatically.
@@ -23,7 +23,7 @@ Turn one complete set of recorded per-quality support probabilities into an insp
 - No TypeSafe/OpenAI requests, prompt/definition changes, new paid experiments or provider adapter. Use fixed probabilities in tests. No research vocabulary seeding or inference that the six-film examples are accepted catalogue data.
 - No accepted FilmQuality mutation, publication event, Ratings/Recommendations/Library writes, score calculation, category-weight application, source synchronisation, bulk imports or admin UI. No new permanent suggestion/history table or generic workflow engine.
 - Do not introduce category quotas, a new global maximum, importance/centrality ranking, preferences inferred from model support or hidden tie randomness. Preserve the existing names and category-setting semantics.
-- Keep changes within this one Film knowledge operation/result contract. A provider integration or production apply/publication workflow needs its own scoped task and agreed downstream contracts.
+- Keep changes within this one Registry operation/result contract. A provider integration or production apply/publication workflow needs its own scoped task and agreed downstream contracts.
 
 ## Acceptance criteria
 
