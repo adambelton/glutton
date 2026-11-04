@@ -48,18 +48,18 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
     assert_select "p", "Released in 1982"
     assert_equal "no-store", response.headers["Cache-Control"]
-    assert_difference [ "Ratings::Rating.count", "DomainEvent.count" ], 1 do
+    assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do
         rate(expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "", " \t", "The ending" ], user_id: next_candidate.user_id, held: true)
       end
     end
     assert_response :see_other
     assert_equal [ "  Atmosphere!\nÉerie 👻  ", "The ending" ], @candidate.ratings.sole.rating_expressions.pluck(:text)
-    assert_equal Ratings::Events::RATING_SUBMITTED, DomainEvent.last.name
+    assert_equal Ratings::Events::RATING_SUBMITTED, DomainEvents::DomainEvent.last.name
     follow_redirect!
     assert_select "h2", "Next film"
     assert_select '[role="status"]', I18n.t("ratings.browser.saved")
-    assert_no_difference [ "DomainEvent.count", "Ratings::Rating.count" ] do
+    assert_no_difference [ "DomainEvents::DomainEvent.count", "Ratings::Rating.count" ] do
       post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf }
     end
     assert_response :see_other
@@ -99,14 +99,14 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
 
   test "malformed missing and oversized input never writes" do
     [ nil, "", "unknown", "x" * 10_000, [], { choice: "brilliant" } ].each do |value|
-      assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         rate(value:, expression_texts: [ "Keep this" ])
         assert_response :unprocessable_entity
         assert_select "textarea#expression-0", "Keep this"
       end
     end
     [ nil, "text", { text: "text" }, [ { text: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
-      assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         rate(expression_texts:)
         assert_response :unprocessable_entity
       end
@@ -133,7 +133,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert @candidate.reload.held?
     assert @candidate.dismissed?
-    assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       rate
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("ratings.errors.already_rated")
@@ -146,7 +146,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   test "signed out expired revoked and deleted sessions cannot write or create replacement users" do
     token = csrf
     @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :unauthorized
       get new_rating_path
@@ -166,7 +166,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "csrf is enforced for both writes and expression parameters are filtered" do
-    assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT }
       assert_response :unprocessable_entity
       post dismiss_rating_path, params: { rating_film_id: @candidate.id }

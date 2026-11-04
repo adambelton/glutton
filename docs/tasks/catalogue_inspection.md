@@ -1,11 +1,11 @@
 # Inspect the canonical catalogue as a superuser
 
-Status: Draft — deferred until remaining domain model namespaces are complete  
-Owner: Registry (following the pending Registry rename)
+Status: Draft — prepared for implementation after the final namespace merge  
+Owner: Registry
 
 ## Goal
 
-Let an internal superuser inspect existing canonical films, quality categories and qualities, and navigate their current associations. This is one read-only catalogue inspection experience, distinct from the personal Library. Prerequisites: the completed Registry namespace and remaining separately owned model-namespace migrations, existing `Registry::Film`/`Registry::QualityCategory`/`Registry::Quality`/`Registry::FilmQuality` storage and Identity's persisted `superuser?` state. Follow the [implementation plan](../implementation_plan.md), [catalogue requirements](../film_quality_requirements.md) and [workflow direction](../film_quality_review_workflow.md).
+Let an internal superuser inspect existing canonical films, quality categories and qualities, and navigate their current associations. This is one read-only catalogue inspection experience, distinct from the personal Library. Prerequisites: the completed Registry/Identity/Library/Ratings namespaces and final DomainEvents model namespace merge, existing `Registry::Film`/`Registry::QualityCategory`/`Registry::Quality`/`Registry::FilmQuality` storage and Identity's persisted `superuser?` state. Follow the [implementation plan](../implementation_plan.md), [catalogue requirements](../film_quality_requirements.md) and [workflow direction](../film_quality_review_workflow.md).
 
 ## Scope
 

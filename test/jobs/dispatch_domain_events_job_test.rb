@@ -41,11 +41,11 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     GoodJob.perform_inline("domain_events", limit: 5)
     assert job.reload.finished_at
     assert_equal [ event.id ], EventEffect.pluck(:event_id)
-    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, delivery(event).status
   end
 
   test "source rollback produces neither an event nor a wakeup job" do
-    assert_no_difference [ "DomainEvent.count", "GoodJob::Job.count" ] do
+    assert_no_difference [ "DomainEvents::DomainEvent.count", "GoodJob::Job.count" ] do
       Identity::User.transaction do
         publish
         raise ActiveRecord::Rollback
@@ -63,7 +63,7 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     end
     DispatchDomainEventsJob.queue_adapter = adapter
     event = publish
-    assert DomainEvent.exists?(event.id)
+    assert DomainEvents::DomainEvent.exists?(event.id)
     assert_equal 0, EventEffect.count
     DispatchDomainEventsJob.queue_adapter = GoodJob::Adapter.new(execution_mode: :external)
     DispatchDomainEventsJob.perform_later
@@ -102,9 +102,9 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     assert status.signaled?
     assert_equal Signal.list.fetch("KILL"), status.termsig
     assert_equal 0, EventEffect.count
-    assert_equal EventDelivery::Statuses::PENDING, delivery(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PENDING, delivery(event).status
     GoodJob.perform_inline("domain_events", limit: 5)
     assert_equal [ event.id ], EventEffect.pluck(:event_id)
-    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, delivery(event).status
   end
 end

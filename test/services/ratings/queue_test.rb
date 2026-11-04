@@ -62,7 +62,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "dismissal requires no prior presentation and affects only Ratings" do
     film = candidate
-    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "Ratings::RatingFilm.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count", "Ratings::RatingFilm.count" ] do
       assert_equal film.id, dismiss(film).id
     end
     assert film.reload.dismissed?

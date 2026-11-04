@@ -13,7 +13,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
   end
 
   def events
-    DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
+    DomainEvents::DomainEvent.joins(:domain_event_stream).where(domain_event_streams: {
       user_id: @user.id, publisher: Library::Events::PUBLISHING_DOMAIN, stream_key: "film:#{@film.id}"
     }).order(:sequence)
   end
@@ -61,7 +61,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
       Library::LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film),
       Library::LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
     entries.each { |entry| Library::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
-    assert_equal [ 1, 1, 1 ], DomainEvent.pluck(:sequence)
-    assert_equal 3, DomainEvent.distinct.count(:domain_event_stream_id)
+    assert_equal [ 1, 1, 1 ], DomainEvents::DomainEvent.pluck(:sequence)
+    assert_equal 3, DomainEvents::DomainEvent.distinct.count(:domain_event_stream_id)
   end
 end

@@ -8,7 +8,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
 
   test "publication rejects blank publishers without persisting a stream or event" do
     [ nil, "", " " ].each do |publisher|
-      assert_no_difference [ "DomainEventStream.count", "DomainEvent.count" ] do
+      assert_no_difference [ "DomainEvents::DomainEventStream.count", "DomainEvents::DomainEvent.count" ] do
         error = assert_raises(ActiveRecord::RecordInvalid) { publish(publisher:) }
         assert error.record.errors.added?(:publisher, :blank)
       end
@@ -49,7 +49,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     travel 10.seconds
     assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
     receipt = delivery(event)
-    receipt.update!(attempts: EventDelivery::MAX_ATTEMPTS)
+    receipt.update!(attempts: DomainEvents::EventDelivery::MAX_ATTEMPTS)
     receipt.record_failure!(ArgumentError.new)
     assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
     receipt.retry!
@@ -69,7 +69,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
       publish
       raise ActiveRecord::Rollback
     end
-    assert_equal 1, DomainEvent.count
+    assert_equal 1, DomainEvents::DomainEvent.count
     second = publish(correlation_id: first.correlation_id, causation_id: first.id)
     assert_equal 2, second.sequence
     assert_equal first.id, second.causation_id
@@ -92,11 +92,11 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
   test "events wait for later subscriptions and processing records exactly one effect" do
     event = publish
     assert_empty dispatch
-    assert_equal 0, EventDelivery.count
+    assert_equal 0, DomainEvents::EventDelivery.count
     assert_equal({ processed: 1 }, dispatch(subscription))
     assert_equal 1, EventEffect.count
     assert_equal event.id, EventEffect.first.event_id
-    assert_equal EventDelivery::Statuses::PROCESSED, delivery(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, delivery(event).status
     assert_empty dispatch(subscription)
     assert_equal :not_due, DomainEvents::Deliver.call(delivery_id: delivery(event).id, subscription: subscription)
     assert_equal 1, EventEffect.count
@@ -146,7 +146,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     first = publish
     publish(name: "Unrelated")
     second = publish
-    receipt = EventDelivery.create!(domain_event: second, subscriber: "projection", next_attempt_at: Time.current)
+    receipt = DomainEvents::EventDelivery.create!(domain_event: second, subscriber: "projection", next_attempt_at: Time.current)
     assert_equal :blocked, DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription)
     dispatch(subscription)
     dispatch(subscription)
@@ -160,7 +160,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
       assert_equal({ index == 9 ? :failed : :retrying => 1 }, dispatch(failing))
       travel_to delivery(event).next_attempt_at
     end
-    assert_equal EventDelivery::Statuses::FAILED, delivery(event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::FAILED, delivery(event).status
     assert_empty dispatch(subscription)
     delivery(event).with_lock { delivery(event).retry! }
     assert_equal({ processed: 1 }, dispatch(subscription))
@@ -174,7 +174,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal({ retrying: 1 }, dispatch(subscription(name: "invalid") { |event:, user:| nil }))
     assert_equal({ retrying: 1 }, dispatch(subscription(name: "rollback") { |event:, user:| raise ActiveRecord::Rollback }))
     assert_equal 0, EventEffect.count
-    assert_equal EventDelivery::Statuses::IGNORED, delivery(event, subscriber: "ignored").status
+    assert_equal DomainEvents::EventDelivery::Statuses::IGNORED, delivery(event, subscriber: "ignored").status
   end
 
   test "expired and deleted owners skip handlers and physical cleanup cascades payloads" do
@@ -187,11 +187,11 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal({ skipped: 2 }, dispatch(subscription))
     assert_equal 0, EventEffect.count
-    assert_equal EventDelivery::Statuses::SKIPPED, delivery(other_event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, delivery(other_event).status
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
-    assert_not DomainEvent.exists?(expired_event.id)
-    assert_not EventDelivery.exists?(domain_event_id: expired_event.id)
-    assert DomainEvent.exists?(other_event.id)
+    assert_not DomainEvents::DomainEvent.exists?(expired_event.id)
+    assert_not DomainEvents::EventDelivery.exists?(domain_event_id: expired_event.id)
+    assert DomainEvents::DomainEvent.exists?(other_event.id)
     assert Identity::User.exists?(deleted.id)
   end
 
@@ -213,12 +213,12 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal "new_publisher", stream.reload.publisher
     [ nil, "" ].each do |publisher|
       assert_raises(ActiveRecord::StatementInvalid) do
-        DomainEventStream.transaction(requires_new: true) { stream.update_columns(publisher:) }
+        DomainEvents::DomainEventStream.transaction(requires_new: true) { stream.update_columns(publisher:) }
       end
     end
     assert_raises(ActiveRecord::RecordNotUnique) do
-      DomainEventStream.transaction(requires_new: true) do
-        DomainEventStream.insert_all!([ stream.reload.attributes.except("id") ])
+      DomainEvents::DomainEventStream.transaction(requires_new: true) do
+        DomainEvents::DomainEventStream.insert_all!([ stream.reload.attributes.except("id") ])
       end
     end
     assert_equal "new_publisher", stream.reload.publisher
@@ -228,18 +228,18 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     event = publish
     dispatch(subscription)
     assert_raises(ActiveRecord::RecordNotUnique) do
-      EventDelivery.transaction(requires_new: true) do
-        EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
+      DomainEvents::EventDelivery.transaction(requires_new: true) do
+        DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
       end
     end
     assert_raises(ActiveRecord::RecordNotUnique) do
-      DomainEvent.transaction(requires_new: true) do
-        DomainEvent.insert_all!([ event.attributes.except("id").merge("id" => SecureRandom.uuid) ])
+      DomainEvents::DomainEvent.transaction(requires_new: true) do
+        DomainEvents::DomainEvent.insert_all!([ event.attributes.except("id").merge("id" => SecureRandom.uuid) ])
       end
     end
     assert_raises(ActiveRecord::StatementInvalid) do
-      DomainEvent.transaction(requires_new: true) do
-        DomainEvent.insert_all!([ event.attributes.except("id").merge("id" => SecureRandom.uuid, "sequence" => 2, "payload" => []) ])
+      DomainEvents::DomainEvent.transaction(requires_new: true) do
+        DomainEvents::DomainEvent.insert_all!([ event.attributes.except("id").merge("id" => SecureRandom.uuid, "sequence" => 2, "payload" => []) ])
       end
     end
   end

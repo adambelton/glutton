@@ -15,7 +15,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
         stream_key: "film:#{@film.id}", name: Ratings::Events::RATING_SUBMITTED,
         payload: { user_id: @guest.id, film_id: @film.id })
     end
-    @delivery = EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
+    @delivery = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: @subscription.name, next_attempt_at: Time.current)
   end
 
   teardown do
@@ -58,7 +58,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
   end
 
   def watched_events
-    DomainEvent.joins(:domain_event_stream).where(name: Library::Events::FILM_MARKED_WATCHED,
+    DomainEvents::DomainEvent.joins(:domain_event_stream).where(name: Library::Events::FILM_MARKED_WATCHED,
       domain_event_streams: { user_id: @guest.id })
   end
 
@@ -70,7 +70,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :not_due, Timeout.timeout(5) { contender.value }
     assert_equal 1, watched_events.count
-    assert_equal EventDelivery::Statuses::PROCESSED, @delivery.reload.status
+    assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, @delivery.reload.status
   end
 
   { "watchlist" => Library::AddToWatchlist, "not interested" => Library::MarkNotInterested }.each do |intent, operation|
@@ -130,7 +130,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :missing, Timeout.timeout(5) { contender.value }
     assert_not Library::LibraryFilm.exists?(user_id: @guest.id)
-    assert_not EventDelivery.exists?(@delivery.id)
+    assert_not DomainEvents::EventDelivery.exists?(@delivery.id)
     assert Registry::Film.exists?(@film.id)
   end
 

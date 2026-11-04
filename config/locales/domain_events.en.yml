@@ -1,11 +1,11 @@
 en:
   activerecord:
     attributes:
-      domain_event_stream:
+      domain_events/domain_event_stream:
         publisher: Publishing domain
     errors:
       models:
-        domain_event_stream:
+        domain_events/domain_event_stream:
           attributes:
             publisher:
               blank: cannot be blank

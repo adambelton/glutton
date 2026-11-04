@@ -12,7 +12,7 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
   end
 
   test "reads an existing owned candidate without changing its exclusion state" do
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_no_changes -> { @candidate.reload.updated_at } do
         row = find
         assert_equal @candidate.id, row.id

@@ -50,12 +50,12 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     second = Timeout.timeout(5) { contender.value }
     assert_equal [ 1, 2 ], [ first.sequence, second.sequence ]
     assert_equal first.domain_event_stream_id, second.domain_event_stream_id
-    assert_equal 1, DomainEventStream.where(user: @user).count
+    assert_equal 1, DomainEvents::DomainEventStream.where(user: @user).count
   end
 
   test "two workers commit one effect and receipt" do
     event = publish
-    receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
+    receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
     contender = nil
     Identity::User.transaction do
       @user.lock!
@@ -69,7 +69,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
 
   test "a process interruption rolls back the effect and leaves pending work retryable" do
     event = publish
-    receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
+    receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
     interruption = Class.new(Exception)
     interrupted = subscription do |event:, user:|
       EventEffect.create!(event_id: event.id, subscriber: "projection", value: 1)
@@ -77,7 +77,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_raises(interruption) { DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: interrupted) }
     assert_equal 0, EventEffect.count
-    assert_equal EventDelivery::Statuses::PENDING, receipt.reload.status
+    assert_equal DomainEvents::EventDelivery::Statuses::PENDING, receipt.reload.status
     assert_equal 0, receipt.attempts
     assert_equal :processed, DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription)
     assert_equal 1, EventEffect.count
@@ -93,14 +93,14 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_empty Timeout.timeout(5) { contender.value }
-    assert_equal 0, EventDelivery.count
+    assert_equal 0, DomainEvents::EventDelivery.count
     assert_equal 0, EventEffect.count
-    assert_not DomainEvent.exists?(event.id)
+    assert_not DomainEvents::DomainEvent.exists?(event.id)
   end
 
   test "cleanup winning before delivery prevents resurrection" do
     event = publish
-    receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
+    receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
     travel Identity::UserGuest::EXPIRY_DURATION
     contender = nil
     Identity::User.transaction do
@@ -110,6 +110,6 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :missing, Timeout.timeout(5) { contender.value }
     assert_equal 0, EventEffect.count
-    assert_not DomainEvent.exists?(event.id)
+    assert_not DomainEvents::DomainEvent.exists?(event.id)
   end
 end
