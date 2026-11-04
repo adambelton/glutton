@@ -26,17 +26,17 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   def candidate
-    RatingFilm.find_by!(user: @user, film: @film)
+    Ratings::RatingFilm.find_by!(user: @user, film: @film)
   end
 
   def rate(**attributes)
     token = csrf
-    post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::I_ENJOYED_THAT, authenticity_token: token }.merge(attributes)
+    post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, authenticity_token: token }.merge(attributes)
   end
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do
-    assert_difference "RatingFilm.count", 1 do
-      assert_no_difference [ "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+    assert_difference "Ratings::RatingFilm.count", 1 do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
         2.times { get new_rating_path(film_id: @film.id); assert_response :success }
       end
     end
@@ -63,14 +63,14 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     @user = Identity::UserRegistered.create!(email_address: "targeted@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user
-    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
-    assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
+    assert_difference [ "Ratings::Rating.count", "DomainEvent.count" ], 1 do
       rate(expression_texts: [ "  <script>Private</script>  ", "", "Ending" ], user_id: foreign.user_id,
         film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
     end
     assert_response :see_other
     assert_redirected_to new_rating_path
-    rating = Rating.last
+    rating = Ratings::Rating.last
     assert_equal @user.id, rating.rating_film.user_id
     assert_equal [ "  <script>Private</script>  ", "Ending" ], rating.rating_expressions.pluck(:text)
     assert_not rating.rating_film.held?
@@ -83,14 +83,14 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   test "validation retains selected film choice and escaped exact expressions without admitting candidate" do
     csrf
     text = "  <script>alert('expression')</script>  "
-    assert_no_difference [ "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
-      rate(expression_texts: [ text, "x" * (RatingExpression::MAX_TEXT_LENGTH + 1) ])
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+      rate(expression_texts: [ text, "x" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
       assert_response :unprocessable_entity
     end
     assert_select "h2", @film.title
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
     assert_select "textarea#expression-0", text: text
-    assert_select "input[checked][value=?]", Rating::Values::I_ENJOYED_THAT
+    assert_select "input[checked][value=?]", Ratings::Rating::Values::I_ENJOYED_THAT
     assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
     assert_select "script", text: /alert\(/, count: 0
     assert_select "details[open]"
@@ -101,8 +101,8 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   test "malformed choice and expression structures preserve the existing candidate" do
     csrf
     [ { value: nil }, { value: [ "brilliant" ] }, { expression_texts: "text" }, { expression_texts: { text: "text" } },
-      { expression_texts: [ { text: "text" } ] }, { expression_texts: Array.new(Rating::MAX_EXPRESSIONS + 1, "text") } ].each do |attributes|
-      assert_no_difference [ "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
+      { expression_texts: [ { text: "text" } ] }, { expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") } ].each do |attributes|
+      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
         rate(**attributes)
         assert_response :unprocessable_entity
       end
@@ -116,8 +116,8 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: @film.id)
     assert_response :conflict
     assert_select '[role="alert"]', I18n.t("ratings.errors.already_rated")
-    assert_no_difference [ "Rating.count", "DomainEvent.count" ] do
-      post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvent.count" ] do
+      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :conflict
     end
   end
@@ -126,16 +126,16 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     token = csrf
     row = candidate
     row.update!(held: true, dismissed: true)
-    post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::GARBAGE, authenticity_token: token }
+    post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::GARBAGE, authenticity_token: token }
     assert_response :see_other
     assert row.reload.held?
     assert row.dismissed?
-    assert_equal Rating::Values::GARBAGE, row.ratings.sole.value
+    assert_equal Ratings::Rating::Values::GARBAGE, row.ratings.sole.value
   end
 
   test "invalid film identity and foreign candidate state do not disclose other users" do
-    row = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film, held: true, dismissed: true)
-    row.submit_rating!(value: Rating::Values::BRILLIANT)
+    row = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film, held: true, dismissed: true)
+    row.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     token = csrf
     assert_response :success
     [ "#{@film.id}junk", Registry::Film.maximum(:id) + 1 ].each do |id|
@@ -144,16 +144,16 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       post rating_path, params: { film_id: id, authenticity_token: token }
       assert_response :not_found
     end
-    assert_equal 1, RatingFilm.where(user: @user).count
+    assert_equal 1, Ratings::RatingFilm.where(user: @user).count
   end
 
   test "csrf and signed out expired revoked deleted sessions prevent writes" do
     token = csrf
-    post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::BRILLIANT }
+    post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT }
     assert_response :unprocessable_entity
     @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "RatingFilm.count", "Identity::User.count", "Identity::Session.count" ] do
-      post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
+    assert_no_difference [ "Ratings::RatingFilm.count", "Identity::User.count", "Identity::Session.count" ] do
+      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :unauthorized
       get new_rating_path(film_id: @film.id)
       assert_response :unauthorized
@@ -171,7 +171,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "only omission selects the queue while malformed film IDs are rejected" do
-    RatingFilm.create!(user: @user, film: @film)
+    Ratings::RatingFilm.create!(user: @user, film: @film)
     get new_rating_path
     assert_response :success
     assert_select "h2", @film.title
@@ -179,26 +179,26 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       get new_rating_path, params: { film_id: }
       assert_response :not_found
     end
-    post rating_path, params: { authenticity_token: csrf, value: Rating::Values::BRILLIANT }
+    post rating_path, params: { authenticity_token: csrf, value: Ratings::Rating::Values::BRILLIANT }
     assert_response :not_found
-    assert_empty Rating.all
+    assert_empty Ratings::Rating.all
   end
 
   test "submission requires an existing owned candidate and cannot admit or recreate one" do
     get new_rating_path
     token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
-    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ nil, foreign.id, foreign.id + 1, "#{foreign.id}junk" ].each do |rating_film_id|
-      assert_no_difference [ "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
-        post rating_path, params: { film_id: @film.id, rating_film_id:, value: Rating::Values::BRILLIANT, authenticity_token: token }
+      assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
+        post rating_path, params: { film_id: @film.id, rating_film_id:, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
         assert_response :not_found
       end
     end
     csrf
     removed_id = candidate.id
     candidate.destroy!
-    post rating_path, params: { rating_film_id: removed_id, value: Rating::Values::BRILLIANT, authenticity_token: token }
+    post rating_path, params: { rating_film_id: removed_id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
     assert_response :not_found
-    assert_empty RatingFilm.where(user: @user)
+    assert_empty Ratings::RatingFilm.where(user: @user)
   end
 end

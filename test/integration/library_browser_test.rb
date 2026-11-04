@@ -22,7 +22,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     watched = entry(title: "Watched film")
     uninterested = entry(Library::LibraryFilmNotInterested, title: "Not interested film")
     entry(user: Identity::UserGuest.create!, title: "Private film")
-    assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
       get library_path(user_id: Identity::UserGuest.last.id)
       assert_response :success
       assert_select "h3", text: watchlist.film.title, count: 1
@@ -41,17 +41,17 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   test "only same-owner actual ratings count and committed ratings are visible without delivery" do
     rows = 5.times.map { |i| entry(title: "Film #{i}") }
     rows.drop(1).zip([ [ false, false ], [ true, false ], [ false, true ], [ true, true ] ]).each do |row, (held, dismissed)|
-      RatingFilm.create!(user: @user, film: row.film, held:, dismissed:)
+      Ratings::RatingFilm.create!(user: @user, film: row.film, held:, dismissed:)
     end
-    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
-    foreign.submit_rating!(value: Rating::Values::BRILLIANT)
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
+    foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Awaiting rating", count: 5
     assert_select 'a[href*="rating/new"]', count: 5
-    row = RatingFilm.find_by!(user: @user, film: rows.last.film)
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Rating::Values::BRILLIANT)
-    absent = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
-    absent.submit_rating!(value: Rating::Values::BRILLIANT)
+    row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
+    absent = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
+    absent.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Rated", count: 1
     assert_select "p", text: "Awaiting rating", count: 4
@@ -62,16 +62,16 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   test "links admit missing candidates reuse held dismissed candidates and reject stale rated links" do
     [ nil, [ true, false ], [ false, true ], [ true, true ] ].each do |flags|
       row = entry
-      candidate = RatingFilm.create!(user: @user, film: row.film, held: flags.first, dismissed: flags.last) if flags
+      candidate = Ratings::RatingFilm.create!(user: @user, film: row.film, held: flags.first, dismissed: flags.last) if flags
       get library_path(view: Library::Browse::Views::WATCHED)
       link = Nokogiri::HTML(response.body).at_css("a[href='#{new_rating_path(film_id: row.film_id)}']")["href"]
-      assert_difference "RatingFilm.count", flags ? 0 : 1 do
+      assert_difference "Ratings::RatingFilm.count", flags ? 0 : 1 do
         get link
         assert_response :success
       end
-      candidate ||= RatingFilm.find_by!(user: @user, film: row.film)
+      candidate ||= Ratings::RatingFilm.find_by!(user: @user, film: row.film)
       assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
-      post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::I_ENJOYED_THAT }
+      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::I_ENJOYED_THAT }
       assert_response :see_other
       get library_path(view: Library::Browse::Views::WATCHED)
       assert_select "a[href=?]", link, count: 0
@@ -162,12 +162,12 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       bind_user
       watched = entry(title: '<script>film</script> "title"')
       unrated = entry
-      candidate = RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
-      original = candidate.submit_rating!(value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+      candidate = Ratings::RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
+      original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
       current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
-        previous_rating_id: original.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
+        previous_rating_id: original.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
       edit_link = edit_rating_path(film_id: watched.film_id)
-      assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
         [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
           get path
           assert_response :success
@@ -188,7 +188,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select 'input[name="previous_rating_id"][value=?]', current.id.to_s
       assert_select "textarea", text: "Current"
       patch rating_path, params: { rating_film_id: candidate.id, previous_rating_id: current.id,
-        value: Rating::Values::BRILLIANT, expression_texts: [ "Updated from Library" ] }
+        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Updated from Library" ] }
       assert_response :see_other
       get library_film_path(watched)
       get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
@@ -203,7 +203,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     { Library::Browse::Views::WATCHLIST => Library::LibraryFilmToWatch,
       Library::Browse::Views::NOT_INTERESTED => Library::LibraryFilmNotInterested }.each do |view, model|
       row = entry(model)
-      RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Rating::Values::BRILLIANT)
+      Ratings::RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
       [ library_path(view:), library_film_path(row) ].each do |path|
         get path
         assert_response :success

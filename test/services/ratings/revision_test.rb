@@ -5,14 +5,14 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     freeze_time
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Revised rating")
-    @rating_film = RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
+    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
     @original = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
-      value: Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Original evidence" ])
+      value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Original evidence" ])
   end
 
   def revise(**options)
     Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
-      previous_rating_id: @original.id, value: Rating::Values::BRILLIANT,
+      previous_rating_id: @original.id, value: Ratings::Rating::Values::BRILLIANT,
       expression_texts: [ "  New evidence! É 👻  " ], **options)
   end
 
@@ -21,10 +21,10 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     previous = @original
     original_expression_id = @original.rating_expressions.sole.id
     created_at = @rating_film.created_at
-    Rating::Values::ALL.each do |value|
+    Ratings::Rating::Values::ALL.each do |value|
       replacement = nil
-      assert_no_difference [ "Library::LibraryFilm.count", "RatingFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
-        assert_difference [ "Rating.count", "RatingExpression.count" ], 1 do
+      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "DomainEvent.count", "DomainEventStream.count" ] do
+        assert_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count" ], 1 do
           replacement = revise(previous_rating_id: previous.id, value:)
         end
       end
@@ -35,7 +35,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
       assert_equal [ "  New evidence! É 👻  " ], replacement.rating_expressions.pluck(:text)
       previous = replacement
     end
-    assert_equal Rating::Values::I_ENJOYED_THAT, @original.reload.value
+    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, @original.reload.value
     assert_equal original_expression_id, @original.rating_expressions.sole.id
     assert_equal "Original evidence", @original.rating_expressions.sole.text
     assert_equal Library::LibraryFilm::RatingStatuses::RATED, library_film.rating_status
@@ -44,10 +44,10 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     assert @rating_film.reload.dismissed?
     assert @rating_film.held?
     assert_equal created_at, @rating_film.created_at
-    assert_equal [ @rating_film.id ], RatingFilm.where(user: @user).rated.pluck(:id)
-    assert_empty RatingFilm.where(user: @user).unrated
+    assert_equal [ @rating_film.id ], Ratings::RatingFilm.where(user: @user).rated.pluck(:id)
+    assert_empty Ratings::RatingFilm.where(user: @user).unrated
     assert_empty Ratings::NextCandidates.call(user_id: @user.id)
-    assert_raises(Ratings::AlreadyRated) { @rating_film.submit_rating!(value: Rating::Values::GARBAGE) }
+    assert_raises(Ratings::AlreadyRated) { @rating_film.submit_rating!(value: Ratings::Rating::Values::GARBAGE) }
   end
 
   test "same value and omitted expressions are a full replacement" do
@@ -60,10 +60,10 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
 
   test "missing foreign removed and unrated candidates cannot be revised" do
     other = Identity::UserGuest.create!
-    unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
-    removed = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Removed"))
+    unrated = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
+    removed = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Removed"))
     removed.destroy!
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count", "RatingFilm.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count", "Ratings::RatingFilm.count" ] do
       [ -1, removed.id ].each do |id|
         assert_raises(Ratings::FilmUnavailable) { revise(rating_film_id: id) }
       end
@@ -74,13 +74,13 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "stale foreign and replayed previous IDs cannot overwrite the current rating" do
-    other = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Other rating"))
-    foreign_rating = other.submit_rating!(value: Rating::Values::GARBAGE)
+    other = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Other rating"))
+    foreign_rating = other.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
     [ -1, foreign_rating.id, nil ].each do |previous_rating_id|
       assert_raises(Ratings::StaleRating) { revise(previous_rating_id:) }
     end
     replacement = revise
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       assert_raises(Ratings::StaleRating) { revise }
     end
     assert_equal replacement.id, @rating_film.reload.current_rating.id
@@ -89,7 +89,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   test "inactive and missing owners are rejected using fresh state" do
     deleted = Identity::UserDeleted.create!
     travel Identity::UserGuest::EXPIRY_DURATION
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       [ @user.id, deleted.id, -1 ].each do |user_id|
         assert_raises(Ratings::IdentityUnavailable) { revise(user_id:) }
       end
@@ -98,26 +98,26 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "invalid replacements retain the current rating and leave transaction usable" do
-    [ nil, "unknown", Rating::Values::BRILLIANT.to_sym ].each do |value|
+    [ nil, "unknown", Ratings::Rating::Values::BRILLIANT.to_sym ].each do |value|
       assert_raises(ActiveRecord::RecordInvalid) { revise(value:) }
       assert_equal @original.id, @rating_film.reload.current_rating.id
     end
-    [ nil, "text", {}, [ nil ], [ 1 ], Array.new(Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
+    [ nil, "text", {}, [ nil ], [ 1 ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
       assert_raises(Ratings::InvalidExpressions) { revise(expression_texts:) }
       assert_equal @original.id, @rating_film.reload.current_rating.id
     end
-    [ "", " \n", "é" * (RatingExpression::MAX_TEXT_LENGTH + 1) ].each do |text|
+    [ "", " \n", "é" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ].each do |text|
       assert_raises(ActiveRecord::RecordInvalid) { revise(expression_texts: [ "valid", text ]) }
     end
     assert_equal [ @original.id ], @rating_film.ratings.pluck(:id)
     assert_equal 1, DomainEvent.count
     assert_equal [ "Original evidence" ], @original.reload.rating_expressions.pluck(:text)
-    assert_equal Rating::MAX_EXPRESSIONS, revise(expression_texts: Array.new(Rating::MAX_EXPRESSIONS, "é" * RatingExpression::MAX_TEXT_LENGTH)).rating_expressions.count
+    assert_equal Ratings::Rating::MAX_EXPRESSIONS, revise(expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS, "é" * Ratings::RatingExpression::MAX_TEXT_LENGTH)).rating_expressions.count
   end
 
   test "caller rollback preserves current rating and original stream sequence" do
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
-      Rating.transaction(requires_new: true) do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
+      Ratings::Rating.transaction(requires_new: true) do
         revise
         raise ActiveRecord::Rollback
       end
@@ -128,9 +128,9 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "expression persistence failure preserves the current rating and all evidence" do
-    connection = RatingExpression.connection
+    connection = Ratings::RatingExpression.connection
     connection.execute("ALTER TABLE rating_expressions ADD CONSTRAINT revision_test_expression CHECK (text <> 'blocked')")
-    assert_no_difference [ "Rating.count", "RatingExpression.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ] do
       assert_raises(ActiveRecord::StatementInvalid) { revise(expression_texts: [ "valid", "blocked" ]) }
     end
     assert_equal @original.id, @rating_film.reload.current_rating.id

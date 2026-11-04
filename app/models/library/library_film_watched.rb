@@ -13,7 +13,7 @@ module Library
     end
 
     def rated?
-      RatingFilm.where(user_id:, film_id:).rated.exists?
+      Ratings::RatingFilm.where(user_id:, film_id:).rated.exists?
     end
   end
 end

@@ -53,7 +53,7 @@ class Registry::ImportFilmRecoveryTest < ActiveSupport::TestCase
     quality = Registry::Quality.create!(name: "Existing quality", quality_category: category)
     association = Registry::FilmQuality.create!(film:, quality:)
     timestamp = association.updated_at
-    assert_no_difference [ "Registry::FilmQuality.count", "Library::LibraryFilm.count", "Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Registry::FilmQuality.count", "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
       assert run_import.has_source_context?
     end
     assert_equal timestamp, association.updated_at

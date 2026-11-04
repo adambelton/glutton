@@ -9,7 +9,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     @threads = []
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Concurrent Ratings film")
-    @rating_film = RatingFilm.create!(user: @user, film: @film)
+    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
   end
 
   teardown do
@@ -57,7 +57,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { candidates }
     end
     assert_equal first.map(&:id), Timeout.timeout(5) { contender.value }.map(&:id)
-    assert_equal 1, RatingFilm.where(user: @user).count
+    assert_equal 1, Ratings::RatingFilm.where(user: @user).count
   end
 
   def dismiss
@@ -109,7 +109,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_not Identity::User.exists?(@user.id)
-    assert_not RatingFilm.exists?(@rating_film.id)
+    assert_not Ratings::RatingFilm.exists?(@rating_film.id)
     assert Registry::Film.exists?(@film.id)
   end
 
@@ -144,7 +144,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def submit(expression_texts: [ "Atmosphere", "  Ending!  " ])
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Rating::Values::I_ENJOYED_THAT, expression_texts:)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts:)
   end
 
   def rating_events
@@ -198,8 +198,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
-    assert_not RatingFilm.exists?(@rating_film.id)
-    assert_empty Rating.where(rating_film_id: @rating_film.id)
+    assert_not Ratings::RatingFilm.exists?(@rating_film.id)
+    assert_empty Ratings::Rating.where(rating_film_id: @rating_film.id)
     assert_empty rating_events
     assert Registry::Film.exists?(@film.id)
   end
@@ -209,9 +209,9 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, rating_events.count
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
-    assert_not RatingExpression.where(rating_id: rating.id).exists?
-    assert_not Rating.exists?(rating.id)
-    assert_not RatingFilm.exists?(@rating_film.id)
+    assert_not Ratings::RatingExpression.where(rating_id: rating.id).exists?
+    assert_not Ratings::Rating.exists?(rating.id)
+    assert_not Ratings::RatingFilm.exists?(@rating_film.id)
     assert_empty rating_events
     assert Registry::Film.exists?(@film.id)
   end
@@ -227,7 +227,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     rating = Timeout.timeout(5) { contender.value }
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
-    assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
+    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @user.id, rating_events.sole.payload["user_id"]
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
   end
@@ -245,7 +245,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
     assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
-    assert_equal Rating::Values::I_ENJOYED_THAT, rating.reload.value
+    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, rating.reload.value
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal @user.id, @rating_film.reload.user_id
     assert_equal expression_ids, rating.reload.rating_expressions.pluck(:id)
@@ -256,7 +256,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   def submit_selected_film
     row = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
     Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
-      value: Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
+      value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
   end
 
   test "competing targeted submissions admit one candidate and one first rating" do
@@ -271,7 +271,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       end
     end
     assert_equal :already_rated, Timeout.timeout(5) { contender.value }
-    row = RatingFilm.where(user: @user, film: @film).sole
+    row = Ratings::RatingFilm.where(user: @user, film: @film).sole
     assert_equal [ "Selected film evidence" ], row.ratings.sole.rating_expressions.pluck(:text)
     assert_equal 1, rating_events.count
   end
@@ -291,7 +291,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       expected = targeted_first ? [ "Selected film evidence" ] : [ "Atmosphere", "  Ending!  " ]
       assert_equal expected, @rating_film.ratings.sole.rating_expressions.pluck(:text)
       assert_equal 1, rating_events.count
-      Rating.where(rating_film: @rating_film).delete_all
+      Ratings::Rating.where(rating_film: @rating_film).delete_all
       DomainEventStream.where(user: @user).delete_all
     end
   end
@@ -309,7 +309,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
-    assert_empty RatingFilm.where(user: @user)
+    assert_empty Ratings::RatingFilm.where(user: @user)
     assert_empty rating_events
   end
 
@@ -321,14 +321,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id) }
     end
     assert_equal first.id, Timeout.timeout(5) { contender.value }.id
-    assert_equal [ first.id ], RatingFilm.where(user: @user, film: @film).pluck(:id)
+    assert_equal [ first.id ], Ratings::RatingFilm.where(user: @user, film: @film).pluck(:id)
     assert_empty first.ratings
     assert_empty rating_events
   end
 
   def revise(previous_rating_id:)
     Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
-      previous_rating_id:, value: Rating::Values::BRILLIANT, expression_texts: [ "Replacement evidence" ])
+      previous_rating_id:, value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Replacement evidence" ])
   end
 
   test "competing revisions yield one replacement and one stale failure" do
@@ -344,7 +344,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal :stale, Timeout.timeout(5) { contender.value }
     assert_equal replacement.id, @rating_film.reload.current_rating.id
-    assert Rating.exists?(original.id)
+    assert Ratings::Rating.exists?(original.id)
     assert_equal 2, @rating_film.ratings.count
     assert_equal 1, rating_events.count
   end
@@ -379,8 +379,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     latest = Timeout.timeout(5) { contender.value }
     assert_equal latest.id, @rating_film.reload.current_rating.id
     assert_equal 3, @rating_film.ratings.count
-    assert Rating.exists?(original.id)
-    assert Rating.exists?(replacement.id)
+    assert Ratings::Rating.exists?(original.id)
+    assert Ratings::Rating.exists?(replacement.id)
     assert_equal [ "Atmosphere", "  Ending!  " ], original.rating_expressions.pluck(:text)
     assert_equal [ "Replacement evidence" ], replacement.rating_expressions.pluck(:text)
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
@@ -402,8 +402,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
-    assert_empty Rating.where(rating_film_id: @rating_film.id)
-    assert_empty RatingExpression.where(rating_id: [ original.id, replacement.id ])
+    assert_empty Ratings::Rating.where(rating_film_id: @rating_film.id)
+    assert_empty Ratings::RatingExpression.where(rating_id: [ original.id, replacement.id ])
     assert_empty rating_events
     assert Registry::Film.exists?(@film.id)
   end

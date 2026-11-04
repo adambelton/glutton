@@ -20,7 +20,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   end
 
   def candidate
-    RatingFilm.find_by(user: @user, film: @film)
+    Ratings::RatingFilm.find_by(user: @user, film: @film)
   end
 
   def deliver(event)
@@ -32,12 +32,12 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     [ false, true ].product([ false, true ]).each do |held, dismissed|
       Ratings::ConsumeLibraryEvent::EVENT_NAMES.each do |name|
         @film = Registry::Film.create!(title: "State combination")
-        row = RatingFilm.create!(user: @user, film: @film, held:, dismissed:)
+        row = Ratings::RatingFilm.create!(user: @user, film: @film, held:, dismissed:)
         rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
-          value: Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+          value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
         created_at = row.created_at
         event = publish(name)
-        assert_no_difference([ "Rating.count", "RatingExpression.count", "DomainEvent.count" ]) { deliver(event) }
+        assert_no_difference([ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvent.count" ]) { deliver(event) }
         row.reload
         assert_equal name == Library::Events::FILM_ADDED_TO_WATCHLIST, row.held?
         assert_equal dismissed || name == Library::Events::FILM_MARKED_NOT_INTERESTED, row.dismissed?
@@ -69,8 +69,8 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     dispatch
     first = candidate
     travel 1.hour
-    later = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Later"))
-    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
+    later = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Later"))
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     assert_equal [ later.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
     dispatch
@@ -110,7 +110,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     first = publish(Library::Events::FILM_ADDED_TO_WATCHLIST)
     travel 1.second
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
-    connection = RatingFilm.connection
+    connection = Ratings::RatingFilm.connection
     connection.execute("ALTER TABLE rating_films ADD CONSTRAINT consumer_test_no_hold CHECK (NOT held)")
     assert_equal({ retrying: 1 }, dispatch)
     assert_nil candidate
@@ -126,8 +126,8 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   end
 
   test "failed combined dismissal and release rolls both back" do
-    row = RatingFilm.create!(user: @user, film: @film, held: true)
-    connection = RatingFilm.connection
+    row = Ratings::RatingFilm.create!(user: @user, film: @film, held: true)
+    connection = Ratings::RatingFilm.connection
     connection.execute("ALTER TABLE rating_films ADD CONSTRAINT consumer_test_keep_hold CHECK (held)")
     event = publish(Library::Events::FILM_MARKED_NOT_INTERESTED)
     assert_equal :retrying, deliver(event).first
@@ -165,9 +165,9 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       Library::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id)
       Library::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id)
       2.times { dispatch } if library_first
-      row = candidate || RatingFilm.create!(user: @user, film: @film)
+      row = candidate || Ratings::RatingFilm.create!(user: @user, film: @film)
       rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
-        value: Rating::Values::BRILLIANT, expression_texts: [ "Still original" ])
+        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Still original" ])
       5.times { DomainEvents::Dispatch.call }
       assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
       assert row.reload.dismissed?

@@ -7,7 +7,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   end
 
   def candidate(**attributes)
-    RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Candidate film"), **attributes)
+    Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Candidate film"), **attributes)
   end
 
   def candidates(**options)
@@ -21,7 +21,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   test "empty queue does not admit catalogue or library films" do
     Library::LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Library only"))
     Registry::Film.create!(title: "Catalogue only")
-    assert_no_difference [ "RatingFilm.count", "Library::LibraryFilm.count" ] do
+    assert_no_difference [ "Ratings::RatingFilm.count", "Library::LibraryFilm.count" ] do
       assert_empty candidates
     end
   end
@@ -51,7 +51,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     original_update = first.updated_at
     travel 1.hour
     second = candidate
-    assert_no_difference "RatingFilm.count" do
+    assert_no_difference "Ratings::RatingFilm.count" do
       assert_equal [ first.id, second.id ], candidates.map(&:id)
       assert_equal [ first.id, second.id ], candidates.map(&:id)
     end
@@ -62,7 +62,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "dismissal requires no prior presentation and affects only Ratings" do
     film = candidate
-    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "RatingFilm.count" ] do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvent.count", "Ratings::RatingFilm.count" ] do
       assert_equal film.id, dismiss(film).id
     end
     assert film.reload.dismissed?
@@ -92,7 +92,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "outer rollback restores dismissal" do
     film = candidate
-    RatingFilm.transaction(requires_new: true) do
+    Ratings::RatingFilm.transaction(requires_new: true) do
       dismiss(film)
       raise ActiveRecord::Rollback
     end
@@ -101,9 +101,9 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "failed dismissal is safely rescued in an outer transaction" do
     film = candidate
-    connection = RatingFilm.connection
+    connection = Ratings::RatingFilm.connection
     connection.execute("ALTER TABLE rating_films ADD CONSTRAINT ratings_test_block_dismissal CHECK (NOT dismissed)")
-    RatingFilm.transaction do
+    Ratings::RatingFilm.transaction do
       assert_raises(ActiveRecord::StatementInvalid) { dismiss(film) }
       assert_not film.reload.dismissed?
       assert_equal [ film.id ], candidates.map(&:id)

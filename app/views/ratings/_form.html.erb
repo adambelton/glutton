@@ -15,7 +15,7 @@
   <% end %>
   <fieldset aria-describedby="<%= 'rating-errors' if @errors.present? %>">
     <legend><%= t("ratings.browser.choice") %></legend>
-    <% Rating::Values::ALL.each do |value| %>
+    <% Ratings::Rating::Values::ALL.each do |value| %>
       <div>
         <%= radio_button_tag :value, value, @value == value, id: "rating-#{value}", required: true %>
         <%= label_tag "rating-#{value}", t("ratings.values.#{value}") %>
@@ -26,11 +26,11 @@
     <summary><%= t("ratings.browser.expressions") %></summary>
   <fieldset aria-describedby="expression-help<%= ' rating-errors' if @errors.present? %>">
     <legend><%= t("ratings.browser.expressions") %></legend>
-    <p id="expression-help"><%= t("ratings.browser.expression_help", count: Rating::MAX_EXPRESSIONS, length: RatingExpression::MAX_TEXT_LENGTH) %></p>
-    <% Rating::MAX_EXPRESSIONS.times do |index| %>
+    <p id="expression-help"><%= t("ratings.browser.expression_help", count: Ratings::Rating::MAX_EXPRESSIONS, length: Ratings::RatingExpression::MAX_TEXT_LENGTH) %></p>
+    <% Ratings::Rating::MAX_EXPRESSIONS.times do |index| %>
       <div>
         <%= label_tag "expression-#{index}", t("ratings.browser.expression", number: index + 1) %>
-        <%= text_area_tag "expression_texts[]", @expression_texts[index], id: "expression-#{index}", maxlength: RatingExpression::MAX_TEXT_LENGTH, rows: 2 %>
+        <%= text_area_tag "expression_texts[]", @expression_texts[index], id: "expression-#{index}", maxlength: Ratings::RatingExpression::MAX_TEXT_LENGTH, rows: 2 %>
       </div>
     <% end %>
   </fieldset>

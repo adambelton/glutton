@@ -13,13 +13,13 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
-- Registry and Identity model namespaces are implemented. Library model namespacing is implemented and in review. Ratings and Foundation delivery namespace work remains on separate local branches for subsequent review/publication. Catalogue inspection stays deferred.
+- Registry, Identity and Library model namespaces are implemented. Ratings model namespacing is implemented and in review against current main. Foundation delivery namespace work remains on its separate local branch for subsequent review/publication. Catalogue inspection stays deferred.
 - [Catalogue inspection](tasks/catalogue_inspection.md): prepared draft, deferred until the remaining domain model namespaces are complete. Registry will own superuser-only, read-only film/category/quality lists and details, related-record navigation and stored source/evidence display. Identity's superuser prerequisite is implemented. Editing, imports, source refresh and provider execution remain excluded; bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Model namespace migration order
 
-Registry and Identity are complete. Library is the next independently owned namespace outcome, followed by Ratings and Foundation delivery. Preserve existing tables/IDs, short STI values and behaviour; mechanically update shared reads without transferring mutation ownership. Each task retains its own working record until PR publication. Catalogue inspection follows the namespace migrations.
+Registry, Identity and Library are complete. Ratings is the next independently owned namespace outcome, followed by Foundation delivery. Preserve existing tables/IDs, short STI values and behaviour; mechanically update shared reads without transferring mutation ownership. Each task retains its own working record until PR publication. Catalogue inspection follows the namespace migrations.
 
 ## Delivery order
 

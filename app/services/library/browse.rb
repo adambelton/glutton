@@ -26,7 +26,7 @@ module Library
       next_page = entries.size > PAGE_SIZE
       entries = entries.first(PAGE_SIZE)
       rated_film_ids = if view == Views::WATCHED
-        RatingFilm.where(user_id: user.id, film_id: entries.map(&:film_id)).rated.pluck(:film_id)
+        Ratings::RatingFilm.where(user_id: user.id, film_id: entries.map(&:film_id)).rated.pluck(:film_id)
       else
         []
       end

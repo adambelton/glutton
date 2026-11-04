@@ -9,7 +9,7 @@ class Registry::LoadQualityVocabularyTest < ActiveSupport::TestCase
     baseline = JSON.parse(Rails.root.join("docs/film_qualities/vocabulary.json").read)
     defaults = YAML.load_file(Rails.root.join("config/quality_categories.yml"))
 
-    assert_no_difference [ "Registry::Film.count", "Registry::FilmQuality.count", "Library::LibraryFilm.count", "Rating.count", "DomainEvent.count" ] do
+    assert_no_difference [ "Registry::Film.count", "Registry::FilmQuality.count", "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvent.count" ] do
       load Rails.root.join("db/seeds.rb")
       assert_equal 235, Registry::Quality.count
       assert_equal 9, Registry::QualityCategory.count
