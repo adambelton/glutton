@@ -1,0 +1,7 @@
+en:
+  identity:
+    superuser:
+      required: Only an existing superuser can change superuser access.
+      unavailable: Superuser permissions are unavailable for this account.
+      already_granted: This account already has superuser access.
+      already_revoked: This account does not have superuser access.

@@ -2,12 +2,15 @@ class CreateUsers < ActiveRecord::Migration[8.1]
   def change
     create_table :users do |t|
       t.string :type, null: false
+      t.boolean :superuser, null: false, default: false
       t.string :email_address
       t.string :password_digest
       t.datetime :email_confirmed_at
       t.timestamps
     end
     add_index :users, :email_address, unique: true
+    add_check_constraint :users, "NOT superuser OR type = 'UserRegistered'",
+      name: "only_registered_users_can_be_superusers"
 
     add_check_constraint :users, <<~SQL.squish, name: "registered_users_require_credentials"
       type <> 'UserRegistered' OR (

@@ -17,6 +17,14 @@ class User < ApplicationRecord
     nil
   end
 
+  def grant_superuser!(actor:)
+    raise Identity::SuperuserUnavailable
+  end
+
+  def revoke_superuser!(actor:)
+    raise Identity::SuperuserUnavailable
+  end
+
   def can_reset_password?
     false
   end

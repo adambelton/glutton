@@ -9,6 +9,22 @@ class UserRegistered < User
   validates :password, length: { minimum: 15 }, allow_nil: true
   validates :password_confirmation, presence: true, if: -> { password.present? }
 
+  def grant_superuser!(actor:)
+    raise Identity::SuperuserRequired unless actor.superuser?
+    raise Identity::SuperuserAlreadyGranted if superuser?
+
+    update!(superuser: true)
+    self
+  end
+
+  def revoke_superuser!(actor:)
+    raise Identity::SuperuserRequired unless actor.superuser?
+    raise Identity::SuperuserAlreadyRevoked unless superuser?
+
+    update!(superuser: false)
+    self
+  end
+
   def can_reset_password?
     active? && email_confirmed_at.present?
   end

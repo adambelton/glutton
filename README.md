@@ -230,6 +230,52 @@ ten-attempt IP budget per three minutes. These are per-worker memory limits: res
 clears them and multiple workers do not share them. Shared release abuse controls
 remain separate work. Tests use local transport; implementation has sent no live mail.
 
+## Internal superuser privilege
+
+Identity stores a denied-by-default superuser permission on registered accounts.
+Set the first superuser directly through the database after verifying the intended
+registered account. There is no application bootstrap bypass. Make later changes
+from a trusted `bin/rails console`, identifying both the existing superuser actor
+and the target account:
+
+```ruby
+Identity::GrantSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
+Identity::RevokeSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
+```
+
+Both operations load and lock actor and target in ascending ID order, authorize
+the actor against current state and return the changed account. Ordinary, guest,
+expired, deleted, missing or revoked actors cannot authorize changes; unauthorized
+actors raise `Identity::SuperuserRequired`. Models also require an authorized actor.
+Self-revocation is allowed; no last-superuser protection is imposed. Deleted
+identities cannot retain superuser privilege. Registered-account deletion remains
+future work and must clear that flag atomically with anonymization and session
+revocation; it does not require a separate superuser actor.
+Missing, guest and deleted identities raise `Identity::SuperuserUnavailable`.
+Repeated grants raise `Identity::SuperuserAlreadyGranted`; repeated revocations
+raise `Identity::SuperuserAlreadyRevoked`. Other validation/database failures
+propagate. No email, seed, registration parameter or public endpoint grants access.
+
+Consumers can read `current_user&.superuser?` as internal privilege state.
+Feature-specific authorization is deferred to the features that need it. Guests
+(including expired guests), deleted identities and ordinary accounts are denied. Re-read authoritative identity state for each request; do not
+cache permission in sessions. Existing browser sessions see grant/revoke on the next
+request without signing in again.
+
+The original users migration and schema include this permission. For an existing
+local database that already ran that migration, apply these additive changes once
+from the console, preserving accounts and unrelated data, then run
+`bin/rails db:schema:dump` (do not reset the database):
+
+```ruby
+connection = ActiveRecord::Base.connection
+connection.transaction do
+  connection.add_column(:users, :superuser, :boolean, null: false, default: false)
+  connection.add_check_constraint(:users, "NOT superuser OR type = 'UserRegistered'",
+    name: "only_registered_users_can_be_superusers")
+end
+```
+
 ## Expired Identity cleanup
 
 Run one bounded cleanup pass with:

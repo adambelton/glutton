@@ -315,7 +315,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
     t.datetime "email_confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "superuser", default: false, null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.check_constraint "NOT superuser OR type::text = 'UserRegistered'::text", name: "only_registered_users_can_be_superusers"
     t.check_constraint "type::text <> 'UserRegistered'::text OR email_address IS NOT NULL AND email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text AND password_digest IS NOT NULL AND password_digest::text ~ '[^[:space:]]'::text AND email_confirmed_at IS NOT NULL", name: "registered_users_require_credentials"
     t.check_constraint "type::text = 'UserRegistered'::text OR email_address IS NULL AND password_digest IS NULL AND email_confirmed_at IS NULL", name: "other_users_have_no_credentials"
   end
