@@ -17,7 +17,7 @@ class FilmKnowledge::ImportFilmRecoveryTest < ActiveSupport::TestCase
     end
     assert_not Film.exists?(tmdb_id: 348)
     assert_difference "Film.count", 1 do
-      assert run_import.ready_for_quality_assessment?
+      assert run_import.has_source_context?
     end
   end
 
@@ -51,12 +51,11 @@ class FilmKnowledge::ImportFilmRecoveryTest < ActiveSupport::TestCase
     film = Film.create!(tmdb_id: 349, title: "Other film", tmdb_metadata: { details: {} })
     category = QualityCategory.create!(name: "Import test", maximum_qualities: 2)
     quality = Quality.create!(name: "Existing quality", quality_category: category)
-    association = FilmQuality.create!(film:, quality:, evidence_references: [ "Admin accepted" ])
+    association = FilmQuality.create!(film:, quality:)
     timestamp = association.updated_at
     assert_no_difference [ "FilmQuality.count", "LibraryFilm.count", "Rating.count", "DomainEvent.count" ] do
-      assert run_import.ready_for_quality_assessment?
+      assert run_import.has_source_context?
     end
-    assert_equal [ "Admin accepted" ], association.reload.evidence_references
     assert_equal timestamp, association.updated_at
   end
 

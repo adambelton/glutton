@@ -6,9 +6,9 @@ class FilmTest < ActiveSupport::TestCase
 
   test "import supplies matching article identity and ready source inputs" do
     film = Film.new(tmdb_id: 348)
-    assert_not film.ready_for_quality_assessment?
+    assert_not film.has_source_context?
     film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: wikipedia_context)
-    assert film.reload.ready_for_quality_assessment?
+    assert film.reload.has_source_context?
     assert_equal "Q1", film.wikidata_id
     assert_equal wikipedia_context, film.wikipedia_context
   end
@@ -31,7 +31,7 @@ class FilmTest < ActiveSupport::TestCase
   test "readiness rejects constructor state with mismatched article identity" do
     film = Film.new(title: "Mismatched source", tmdb_id: 348, wikidata_id: "Q2",
       tmdb_metadata: { details: {} }, wikipedia_context: wikipedia_context)
-    assert_not film.ready_for_quality_assessment?
+    assert_not film.has_source_context?
   end
 
   test "provider content can be empty while identifiers remain available" do
@@ -40,7 +40,7 @@ class FilmTest < ActiveSupport::TestCase
     assert_equal({}, film.wikipedia_context)
     assert_equal film.id, Film.find_by!(wikidata_id: "Q1").id
     assert_equal 348, film.tmdb_id
-    assert_not film.ready_for_quality_assessment?
+    assert_not film.has_source_context?
   end
 
   test "Wikidata identifier is nullable and uses the Q identifier format" do

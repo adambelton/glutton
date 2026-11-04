@@ -40,7 +40,6 @@ en:
       film_quality:
         film: Film
         quality: Quality
-        evidence_references: Evidence references
     errors:
       models:
         quality:

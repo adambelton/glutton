@@ -298,7 +298,7 @@ film = FilmKnowledge::ImportFilm.call(tmdb_id: 348)
 
 Use the real import for development data as well.
 
-Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. It returns only when `film.ready_for_quality_assessment?` is true. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
+Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. It returns only when `film.has_source_context?` is true. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
 
 `ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Film#import!(tmdb_data:, wikipedia_context:)` for one complete save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
 
@@ -335,6 +335,35 @@ film = FilmKnowledge::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id
 ```
 
 Invalid inputs raise `FilmKnowledge::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
+
+## Assign initial film qualities
+
+Configure `TYPESAFE_API_KEY` in the ignored development environment and use the existing Langfuse configuration for tracing. The quality vocabulary must already be seeded and the film must have usable imported source data. From Rails console:
+
+```ruby
+result = FilmKnowledge::AssignInitialFilmQualities.call(film_id: film.id)
+result.fetch(:film_qualities)
+result.fetch(:film_quality_eval) # persisted evaluation, including call history and application outcome
+result.fetch(:film_quality_eval).output # complete persisted judgments, policies, call history and usage/cost
+```
+
+The service pins `jev-1.14.0` and uses the retained contextual-support questions. Code selects support >=0.60 within each category's maximum, descending support then Quality ID for ties. Category weights do not affect membership; ceilings are maxima. Evidence questions identify a directly supporting paragraph for each selected quality. Model judgments still need inspection; support is not an enjoyment score or proof of correctness.
+
+Accepted state is persisted as `FilmQuality` records with a `film_quality_eval` reference. Evidence is stored only in the evaluation output; FilmQuality exposes no evidence reader. `FilmQualityEval` independently retains the evaluation: source/definition snapshots, ordered exact request/response pairs and call count, all probabilities, evidence, selection decisions (threshold/category ceiling/rank), model/policies, usage/cost and optional trace ID. Its output is immutable; a single application outcome records accepted association IDs or a safe failure reason. Langfuse is diagnostic telemetry, not a runtime dependency for reading evaluation evidence. Manual and pre-existing associations may have no evaluation; no history is fabricated for them. There is no receipt or status column on Film.
+
+Existing associations fail explicitly instead of being overwritten. Provider work precedes short write locks; changed sources/vocabulary or intervening assignments prevent application. A failed write rolls back every new association while retaining the completed evaluation and its failure outcome. Stale evaluations are retained but not applied. Provider failures retain a failed evaluation with partial answers, safe errors and attempted-call history; requests blocked before sending are identified and excluded from the provider-call count. Usage/cost totals include validated responses only, and incomplete usage is flagged. Unparseable/transport failures have no JSON response to retain.
+
+Requests have size/time/call/cost bounds and no automatic retries or long-context opt-in; the default client reserves a conservative cost allowance before each call and reconciles actual input-token usage afterward.
+
+For an explicit batch, enqueue the Film knowledge job with selected IDs:
+
+```ruby
+FilmKnowledge::AssignInitialFilmQualitiesJob.perform_later(film_ids: selected_film_ids)
+Film.without_qualities # films needing assessment or manual intervention
+```
+
+The job logs localized structured warnings for each film with zero qualities, an assessment error or an unexpected per-film failure, then continues with later films. Zero supported qualities retain a completed evaluation with an empty accepted association list; an explicit later request may assess the film again. The review query also includes films not assessed yet. Insufficient coverage currently means zero, matching that query; no higher minimum or category quota is inferred. The job does not schedule itself or automatically process the catalogue.
+
 
 ## Library watched state
 

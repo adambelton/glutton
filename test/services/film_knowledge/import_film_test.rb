@@ -18,7 +18,7 @@ class FilmKnowledge::ImportFilmTest < ActiveSupport::TestCase
         overview: "The crew encounters danger", poster_path: "Unused", credits: [ "Unused" ] }
       film = assert_difference("Film.count", 1) { import(payload) }
       assert film.persisted?
-      assert film.ready_for_quality_assessment?
+      assert film.has_source_context?
       assert_equal "Q1", film.wikidata_id
       assert_equal "Q1", film.wikipedia_context.dig("wikidata_id")
       assert_equal [ "Alien", 348, Date.new(1979, 5, 25) ], [ film.title, film.tmdb_id, film.release_date ]
@@ -44,12 +44,12 @@ class FilmKnowledge::ImportFilmTest < ActiveSupport::TestCase
     end
     insert_count = 0
     callback = lambda do |film|
-      raise "initial insert lacks complete sources" unless film.ready_for_quality_assessment?
+      raise "initial insert lacks complete sources" unless film.has_source_context?
       insert_count += 1
     end
     Film.set_callback(:create, :before, callback)
     film = FilmKnowledge::ImportFilm.call(tmdb_id: 348, tmdb_client: client, wikidata_client: wikidata_source, wikipedia_client: source)
-    assert film.reload.ready_for_quality_assessment?
+    assert film.reload.has_source_context?
     assert_equal 1, insert_count
   ensure
     Film.skip_callback(:create, :before, callback, raise: false)

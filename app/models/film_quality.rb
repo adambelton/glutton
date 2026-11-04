@@ -1,15 +1,15 @@
 class FilmQuality < ApplicationRecord
   belongs_to :film
   belongs_to :quality
+  belongs_to :film_quality_eval, optional: true
 
-  validate :supported_evidence
+  validate :evaluation_provenance
 
   private
 
-  def supported_evidence
-    unless evidence_references.is_a?(Array) && evidence_references.any? &&
-        evidence_references.all? { |reference| reference.is_a?(String) && reference.present? }
-      errors.add(:evidence_references, :invalid)
+  def evaluation_provenance
+    if film_quality_eval && !film_quality_eval.supports_association?(film_id:, quality_id:)
+      errors.add(:film_quality_eval, :invalid)
     end
   end
 end

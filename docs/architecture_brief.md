@@ -79,7 +79,7 @@ Qualities and quality categories are editable descriptive product data. Do not i
 ## 5. Core concepts and invariants
 
 - **Film:** A distinct work identified consistently across imports, including remakes and versions where relevant.
-- **Film source information:** Maintained source material with provenance; an independent FilmAnalysis lifecycle is under review.
+- **Film source information:** Current source material with provenance; FilmQualityEval retains immutable assessed inputs and results.
 - **Film–quality assessment:** An accepted source-backed association for current scoring; permanent historical association sets are not yet required. Current assignment freshness is distinct from retention history.
 - **Library entry:** The canonical user–film relationship, owned by Library. Viewing facts and watchlist/dismissal intent need consistent rules without prescribing a table structure. Confirmed-unseen rating responses belong to Ratings and need no Library entry.
 - **Rating presentation / response:** Ratings' record that a film was presented and the viewer's response, including haven’t seen it. Separate from canonical Library state.
@@ -105,33 +105,28 @@ Source-backed film information is directly accessible; normal navigation is thro
 
 ## 6. Saving a rated film
 
-Scoring clarification, 22 October 2026: [Ratings scoring design](ratings_scoring_design.md) records the agreed unexpressed, implicitly expressed and explicitly expressed classifications, current-profile recomputation rules and proposed Rating/RatingExpression/RatingQuality relationships. It supersedes the earlier separate-score terminology and mandatory prior-profile capture described below. The current rating flow captures original expressions; scoring and profile processing remain deferred.
+Scoring clarification, 22 October 2026: [Ratings scoring design](ratings_scoring_design.md) records the agreed unexpressed, implicitly expressed and explicitly expressed classifications, current-profile recomputation rules and proposed Rating/RatingExpression/RatingQuality relationships. Profile versions and evidence classifications follow that design. The current rating flow captures original expressions; scoring and profile processing remain deferred.
 
 ### Record the submission
 
-A Ratings operation validates its own seen confirmation and the rating, without requiring a Library watched record, then atomically persists the rating and expressions, records a submission revision, and identifies the expressions profile revision that existed before this submission. The viewer can continue rating once their input is durably saved.
+A Ratings operation validates its own seen confirmation and the rating, without requiring a Library watched record, then atomically persists the rating and expressions and preserves the submitted rating and original expressions. The viewer can continue rating once their input is durably saved.
 
 Saving and assessment completion are distinct states. Provider failure must not lose the submission. Deferred work must be durably discoverable and retryable; the exact database-backed job or pending-work mechanism is an implementation decision.
 
 ### Branch A: quality scoring through JEV
 
-Use the rating, submitted expressions, relevant film knowledge and the captured prior expressions profile to produce:
+Use the rating, submitted expressions, relevant film knowledge and the applicable expressions profile to produce:
 
-1. Implicit quality evidence based on the rating, interpreted using that prior profile.
+1. Implicit quality evidence based on the rating, interpreted using that profile.
 2. Explicit quality evidence based on the expressions submitted for this film.
 
-The captured profile **must not include changes derived from this submission**. Both kinds of scoring are handled through JEV; Claude is not required for this round of scoring. This specifies responsibility, not whether the assessments require one provider request or several.
+Record the actual profile/input versions used and reject stale work. Both kinds of scoring are handled through JEV; Claude is not required for this round of scoring. This specifies responsibility, not whether the assessments require one provider request or several.
 
 Store implicit and explicit outputs separately enough to inspect and evaluate them. How JEV represents relevance, direction and strength, and how these outputs combine, must be established through experiments.
 
 ### Branch B: expressions profile assessment
 
-Independently assess whether the new expressions add, narrow, contradict or otherwise meaningfully change the existing understanding of explicit preferences. The proposed cost-saving sequence is:
-
-1. Ask JEV whether the expressions warrant a profile update.
-2. If so, ask Claude to synthesize a revised expressions profile from explicit evidence.
-
-Benchmark the JEV gate against always attempting synthesis. A false negative can suppress useful context, so original expressions and processing status must remain available for recovery. The gate's exact question, inputs and threshold remain open.
+Use an LLM call to synthesize and update the expressions profile from original expressions, preserving their context. No JEV gate is assumed. Meaningful-change criteria, synthesis inputs, revision semantics and cadence remain for the Ratings implementation. Preserve original expressions and processing state so failures can be recovered without treating inferred quality scores as new user statements.
 
 Submissions without expressions do not require profile synthesis. Edits and deletions require reassessing the affected explicit evidence; an additions-only novelty check is insufficient for removing an earlier claim.
 
@@ -139,7 +134,7 @@ Submissions without expressions do not require profile synthesis. Edits and dele
 
 The two branches may complete independently. Completed scoring can affect recommendations without waiting for profile synthesis. A new profile revision informs subsequent assessments once available, and makes historical assessments candidates for refresh.
 
-Rapid submissions can capture the same prior profile while processing is pending. Record this honestly and reconcile through reassessment. Profile updates must detect an outdated base revision and merge or retry against current explicit evidence, rather than overwrite another update. The serialization strategy remains open.
+Rapid submissions may be assessed against the same profile revision while processing is pending. Record this honestly and reconcile through reassessment. Profile updates must detect an outdated base revision and merge or retry against current explicit evidence, rather than overwrite another update. The serialization strategy remains open.
 
 ## 7. Immediate effects and periodic reassessment
 
@@ -147,7 +142,7 @@ An expression contributes explicit evidence for its own film as soon as scoring 
 
 Refresh considers all relevant rated films, including the implicit assessment of the submission that caused the profile change. It recomputes from authoritative inputs and selected current revisions, preserving the distinction between direct expression evidence and inferred attribution.
 
-Track freshness through input revisions rather than a single ambiguous updated timestamp. Relevant changes include ratings, expressions, expressions profile, film analysis/associations, vocabulary and scoring method. Different changes may require different processing stages; a profile change need not require reclassifying unchanged expression text.
+Track freshness through input revisions rather than a single ambiguous updated timestamp. Relevant changes include ratings, expressions, expressions profile, accepted film qualities, vocabulary and scoring method. Different changes may require different processing stages; a profile change need not require reclassifying unchanged expression text.
 
 The exact refresh cadence, material-change criteria and whether MVP offers a manual refresh control remain open. Coalesce superseded work, bound provider costs, and avoid claiming that recommendations incorporate a profile revision before the relevant processing completes.
 
@@ -165,19 +160,17 @@ Store enough information about served recommendations and scoring versions to co
 
 Current direction, 28 October 2026: use maintained Wikipedia narrative/context and a revisable master vocabulary. Glutton owns accepted source-backed quality associations; JEV is the chosen assessment engine. Source acquisition and candidate evaluation do not automatically accept new qualities. [Current requirements](film_quality_requirements.md) supersede the former generated-analysis dossier design.
 
-Quality categories are editable records, not the seven `FilmQuality::Dimensions` constants. Task [replace hard-coded dimensions with editable quality categories](film_quality_requirements.md) plans their replacement while preserving quality identities and existing associations. Categories organise concepts without defining scoring behaviour; a grouping-only edit does not rescore.
+Quality categories are persisted editable records with maximum-qualities and weight settings. Names and database IDs identify concepts without separate keys. Category ceilings govern film-quality selection; weights begin at 1 and do not affect JEV presence judgments. Category grouping alone does not rescore. See [current requirements](film_quality_requirements.md).
 
-Initial quality/category base weights are equal, following the owner's 28 October clarification. Do not use film centrality or model confidence as an intrinsic weight or default quality-selection gate. A presentation characteristic such as minimal dialogue may matter more to a viewer than a central theme. Actual rating/expression evidence still determines user-specific contributions. Future system- or user-controlled category weighting is optional and unspecified; no weight fields, category quotas or weighting UI are required now. The max-20 selection policy remains separate from score weighting.
+Qualities have equal initial base treatment. Do not use film centrality or model confidence as an intrinsic weight or quality-selection gate. Actual rating/expression evidence determines user-specific contributions. Category weights are stored configuration; their scoring use, recalculation behaviour and editing UI remain separately scoped. Ceilings are category-specific maxima, with no global 20 limit or category minimum.
 
 A Wikipedia page refresh changes source material. A deliberate accepted film-quality change is the proposed trigger for affected downstream reassessment. Do not automatically regenerate matches or scores for every page revision. Film knowledge publishes accepted changes only through a separately agreed event contract; Ratings and Recommendations own their resulting mutations.
 
-Historical rating/recommendation contributions explain the scores actually produced. They must not depend on reconstructing an old film association set. Whether FilmAnalysis/AnalysisQuality are needed for a separate review/rollback/audit purpose remains open; current source information plus direct current associations may suffice. No model removal is implemented or authorised by this requirement.
+Historical rating/recommendation contributions explain the scores actually produced using saved inputs/results. FilmQualityEval preserves complete call and decision evidence, while FilmQuality stores accepted current associations linked to their originating evaluation. No independent FilmAnalysis/AnalysisQuality lifecycle or archive of every former association set is retained. Langfuse is optional diagnostic tracing; application evaluation records remain readable independently.
 
-Owner clarification, 29 October 2026: further fine tuning is not a prerequisite to a useful community-improved seed. The [working baseline](film_qualities/README.md) retains the current vocabulary, neutral question contract and six uncapped examples. The next design work is selection and source-backed community review/publishing. No Langfuse prompt migration is required for that step; quality meanings remain product data.
+Initial film assignment is implemented using independent per-quality support questions in one request and supporting-paragraph Choice questions in batches of at most four. Code selects support >=0.60 within configured category ceilings. Completed and failed/partial evaluations are retained; stale inputs prevent application and batch warnings isolate per-film failures. The [working baseline](film_qualities/README.md) retains vocabulary/question material and historical examples. No prompt migration or further tuning is required before seed loading.
 
-JEV's logical judgments and HTTP request packing are separate. Independent per-quality questions may share state in one request or several batches; production grouping, context, thresholds and failure handling remain to be discussed. Do not hard-code category partitions or interpret support probability as a preference score.
-
-The existing generated-analysis implementation remains legacy code until separately scoped replacement/removal. Its old research trials are not the current product contract. Keep source evidence, original expressions and actual historical score outputs, without assuming that every intermediate film analysis or former association set needs permanent retention.
+Follow the seed-first [implementation plan](implementation_plan.md): admin inspection, manual editing, source refresh and explicit change comparison/application remain to build. Community editing is deferred. Source refresh alone changes no accepted associations or downstream scores.
 
 ### Current provider decision — 18 October 2026
 
@@ -295,7 +288,7 @@ Develop complete working slices:
 
 1. Validate a small catalogue subset; implement independent viewing status and library classification, confirmed-unseen exclusion from rating prompts, direct watchlist addition, spoiler-labelled film-information navigation, ratings and multiple expressions.
 2. Establish JEV scoring contracts and a rating-only recommendation baseline.
-3. Add explicit scoring and profile synthesis using the prior-profile rule.
+3. Add explicit scoring and profile synthesis with recorded input/profile versions and the agreed evidence classifications.
 4. Add historical reassessment, freshness tracking and before/after ranking evaluation.
 5. Complete discovery presentation, library management, film-information visibility and quality reporting; expand the validated seed catalogue.
 
@@ -303,17 +296,17 @@ The first public loop requires all core behaviours above. External imports and c
 
 Evaluate rating-only versus expression-informed recommendations, positive and negative recurring patterns, contextual expressions, conflicting evidence, and profile changes that do or do not warrant refresh. Verify that identical repeated processing does not amplify evidence.
 
-Workflow tests should cover retry/idempotency, concurrent profile updates, stale results, edits/deletions, prior-profile capture and recommendation exclusion for every library classification. Also verify persistence of confirmed-unseen status, its exclusion from rating prompts but not recommendations, direct watchlist addition, preservation of viewing status when classification is removed, and eligibility for rating after marking watched. Benchmark classification precision/recall, the novelty gate, recommendation usefulness, latency and cost separately.
+Workflow tests should cover retry/idempotency, concurrent profile updates, stale results, edits/deletions, input-version provenance and recommendation exclusion for every library classification. Also verify persistence of confirmed-unseen status, its exclusion from rating prompts but not recommendations, direct watchlist addition, preservation of viewing status when classification is removed, and eligibility for rating after marking watched. Benchmark classification precision/recall, profile-update decisions, recommendation usefulness, latency and cost separately.
 
 ## 13. Decisions still to make
 
 - Select production deployment and the job approach when deferred processing is introduced. Rails, PostgreSQL and server-rendered Hotwire are the implemented framework choices.
-- Define JEV assessment inputs and outputs, and validate required provider capabilities.
+- Define Ratings JEV assessment inputs and outputs, and validate required provider capabilities.
 - Define implicit/explicit aggregation and the initial recommendation ranking formula.
 - Define expressions profile structure, synthesis inputs and revision semantics.
 - Choose refresh cadence, material-change criteria and user-visible processing states.
 - Specify re-rating, expression editing/deletion and library-transition behaviour.
-- Agree source/evidence coverage, accepted film-quality changes and spoiler-safe presentation; resolve independent analysis-model retention.
+- Agree source/evidence coverage, accepted film-quality changes and spoiler-safe presentation; specify source/evaluation purge and manual-edit provenance rules.
 - Decide what recommendation evidence and delivery history to retain for evaluation.
 
 These decisions should be recorded with their reasoning, observed results and conditions for revisiting them. Domain boundaries and abstractions should evolve in response to those findings.

@@ -66,13 +66,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
   create_table "film_qualities", force: :cascade do |t|
     t.bigint "film_id", null: false
     t.bigint "quality_id", null: false
-    t.jsonb "evidence_references", null: false
+    t.bigint "film_quality_eval_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["film_id", "quality_id"], name: "index_film_qualities_on_film_id_and_quality_id", unique: true
     t.index ["film_id"], name: "index_film_qualities_on_film_id"
+    t.index ["film_quality_eval_id"], name: "index_film_qualities_on_film_quality_eval_id"
     t.index ["quality_id"], name: "index_film_qualities_on_quality_id"
-    t.check_constraint "jsonb_typeof(evidence_references) = 'array'::text AND jsonb_array_length(evidence_references) > 0", name: "film_qualities_evidence_present"
+  end
+
+  create_table "film_quality_evals", force: :cascade do |t|
+    t.bigint "film_id", null: false
+    t.jsonb "output", null: false
+    t.jsonb "application", default: {"status" => "pending"}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_film_quality_evals_on_film_id"
+    t.index ["id", "film_id"], name: "index_film_quality_evals_on_id_and_film_id", unique: true
+    t.check_constraint "jsonb_typeof(application) = 'object'::text AND COALESCE((application ->> 'status'::text) = ANY (ARRAY['pending'::text, 'applied'::text, 'failed'::text]), false)", name: "film_quality_evals_application"
+    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['assessed_at'::text, 'source'::text, 'definitions'::text, 'categories'::text, 'question_policy'::text, 'selection_policy'::text, 'evidence_policy'::text, 'minimum_support'::text, 'model'::text, 'support'::text, 'evidence'::text, 'selected_quality_ids'::text, 'input_tokens'::text, 'calculated_cost_usd'::text, 'calls'::text, 'call_count'::text, 'selection_decisions'::text, 'status'::text, 'usage_complete'::text] AND COALESCE((output ->> 'status'::text) = ANY (ARRAY['completed'::text, 'failed'::text]), false)", name: "film_quality_evals_completed_output"
   end
 
   create_table "films", force: :cascade do |t|
@@ -311,8 +323,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
+  add_foreign_key "film_qualities", "film_quality_evals", column: ["film_quality_eval_id", "film_id"], primary_key: ["id", "film_id"]
   add_foreign_key "film_qualities", "films"
   add_foreign_key "film_qualities", "qualities"
+  add_foreign_key "film_quality_evals", "films"
   add_foreign_key "library_films", "films"
   add_foreign_key "library_films", "users", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade

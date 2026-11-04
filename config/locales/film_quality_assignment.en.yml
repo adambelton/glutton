@@ -1,0 +1,34 @@
+en:
+  activerecord:
+    models:
+      film_quality_eval: Film quality evaluation
+    attributes:
+      film_quality_eval:
+        output: Evaluation output
+        application: Application outcome
+      film_quality:
+        film_quality_eval: Film quality evaluation
+  film_knowledge:
+    assignment:
+      errors:
+        film_missing: The film no longer exists.
+        unready_film: The film needs usable source data before assigning qualities.
+        already_assigned: Initial qualities cannot be assigned over an existing decision.
+        invalid_vocabulary: The quality vocabulary is empty or has incomplete definitions.
+        stale_inputs: The assessment inputs changed before qualities could be assigned.
+        invalid_response: The assessment source returned invalid or incomplete answers.
+        unsupported_model: The assessment source returned a different model.
+        configuration: TypeSafe access is not configured.
+        request_limit: The assessment request limit was reached.
+        budget_exceeded: The assessment cost allowance would be exceeded.
+        too_large: The assessment exceeded the supported request or response size.
+        authentication: The assessment source rejected access.
+        rate_limited: The assessment source rate limit was reached.
+        timeout: The assessment request timed out.
+        transport: The assessment source could not be reached.
+        http_error: The assessment request failed.
+        not_found: The requested assessment model or endpoint was not found.
+      warnings:
+        no_qualities: "Film %{film_id} has no supported qualities and needs manual review."
+        assessment_failed: "Film %{film_id} could not be assessed and needs manual review: %{detail}"
+        unexpected_failure: "Film %{film_id} could not be assessed because of an unexpected failure and needs manual review."
