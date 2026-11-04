@@ -7,16 +7,16 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @threads = []
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Concurrent Ratings film")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
   end
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    PendingRegistration.where(guest_user_id: @user.id).delete_all
-    Session.where(user_id: @user.id).delete_all
-    User.where(id: @user.id).delete_all
+    Identity::PendingRegistration.where(guest_user_id: @user.id).delete_all
+    Identity::Session.where(user_id: @user.id).delete_all
+    Identity::User.where(id: @user.id).delete_all
     Registry::Film.where(id: @film.id).delete_all
   end
 
@@ -30,7 +30,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
-    connection = User.connection
+    connection = Identity::User.connection
     Timeout.timeout(5) do
       until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
@@ -52,7 +52,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "concurrent reads return the same candidates without creating records" do
     first = contender = nil
-    User.transaction do
+    Identity::User.transaction do
       first = candidates
       contender = blocked { candidates }
     end
@@ -67,7 +67,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "concurrent dismissals have one winner and an explicit duplicate failure" do
     candidates
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       dismiss
       contender = blocked do
         dismiss
@@ -81,14 +81,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "selection waiting across expiry rejects the freshly inactive owner" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         candidates
       rescue Ratings::IdentityUnavailable
         :inactive
       end
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_not @rating_film.reload.dismissed?
@@ -97,8 +97,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "cleanup wins before a waiting dismissal and removes ratings activity but preserves film" do
     candidates
     contender = nil
-    travel UserGuest::EXPIRY_DURATION
-    User.transaction do
+    travel Identity::UserGuest::EXPIRY_DURATION
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         dismiss
@@ -108,7 +108,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
-    assert_not User.exists?(@user.id)
+    assert_not Identity::User.exists?(@user.id)
     assert_not RatingFilm.exists?(@rating_film.id)
     assert Registry::Film.exists?(@film.id)
   end
@@ -116,11 +116,11 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "claim preserves activity and a waiting dismissal succeeds past the old guest deadline" do
     candidates
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       assert_equal @user.id, claim.user_id
       contender = blocked { dismiss }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal @rating_film.id, Timeout.timeout(5) { contender.value }.id
     assert @rating_film.reload.dismissed?
@@ -132,10 +132,10 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     candidates
     dismiss
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       claim
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
@@ -155,7 +155,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "competing first submissions produce one rating one event and an explicit failure" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       submit
       contender = blocked do
         submit(expression_texts: [ "Losing submission" ])
@@ -171,14 +171,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "submission waiting across expiry rejects freshly inactive owner" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         submit
       rescue Ratings::IdentityUnavailable
         :inactive
       end
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_empty @rating_film.ratings
@@ -187,8 +187,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "cleanup before waiting submission cannot resurrect activity" do
     contender = nil
-    travel UserGuest::EXPIRY_DURATION
-    User.transaction do
+    travel Identity::UserGuest::EXPIRY_DURATION
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         submit
@@ -207,7 +207,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "cleanup removes saved rating and event but retains the shared film" do
     rating = submit
     assert_equal 1, rating_events.count
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not RatingExpression.where(rating_id: rating.id).exists?
     assert_not Rating.exists?(rating.id)
@@ -218,11 +218,11 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
 
   test "claim before waiting submission preserves owner and allows rating past guest deadline" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       assert_equal @user.id, claim.user_id
       contender = blocked { submit }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     rating = Timeout.timeout(5) { contender.value }
     assert_equal @rating_film.id, rating.rating_film_id
@@ -237,10 +237,10 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     event = rating_events.sole
     expression_ids = rating.rating_expressions.pluck(:id)
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       claim
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
@@ -262,7 +262,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "competing targeted submissions admit one candidate and one first rating" do
     @rating_film.destroy!
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       submit_selected_film
       contender = blocked do
         submit_selected_film
@@ -279,7 +279,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "targeted and queue submissions serialize in either order" do
     [ true, false ].each do |targeted_first|
       contender = nil
-      User.transaction do
+      Identity::User.transaction do
         targeted_first ? submit_selected_film : submit
         contender = blocked do
           targeted_first ? submit : submit_selected_film
@@ -299,14 +299,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "targeted admission waiting across expiry leaves no candidate" do
     @rating_film.destroy!
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         submit_selected_film
       rescue Ratings::IdentityUnavailable
         :inactive
       end
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_empty RatingFilm.where(user: @user)
@@ -316,7 +316,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "concurrent explicit entries return the same unfinished candidate" do
     @rating_film.destroy!
     first = contender = nil
-    User.transaction do
+    Identity::User.transaction do
       first = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
       contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id) }
     end
@@ -334,7 +334,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "competing revisions yield one replacement and one stale failure" do
     original = submit
     contender = replacement = nil
-    User.transaction do
+    Identity::User.transaction do
       replacement = revise(previous_rating_id: original.id)
       contender = blocked do
         revise(previous_rating_id: original.id)
@@ -352,14 +352,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   test "revision waiting across expiry rejects owner without superseding" do
     original = submit
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         revise(previous_rating_id: original.id)
       rescue Ratings::IdentityUnavailable
         :inactive
       end
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_equal original.id, @rating_film.reload.current_rating.id
@@ -370,11 +370,11 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     original = submit
     replacement = revise(previous_rating_id: original.id)
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       claim
       contender = blocked { revise(previous_rating_id: replacement.id) }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     latest = Timeout.timeout(5) { contender.value }
     assert_equal latest.id, @rating_film.reload.current_rating.id
@@ -391,8 +391,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     original = submit
     replacement = revise(previous_rating_id: original.id)
     contender = nil
-    travel UserGuest::EXPIRY_DURATION
-    User.transaction do
+    travel Identity::UserGuest::EXPIRY_DURATION
+    Identity::User.transaction do
       @user.lock!
       contender = blocked do
         revise(previous_rating_id: replacement.id)

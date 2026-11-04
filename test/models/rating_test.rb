@@ -2,7 +2,7 @@ require "test_helper"
 
 class RatingTest < ActiveSupport::TestCase
   setup do
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @rating_film = candidate
   end
 
@@ -41,7 +41,7 @@ class RatingTest < ActiveSupport::TestCase
     rated = candidate
     rated_dismissed = candidate(dismissed: true)
     [ rated, rated_dismissed ].each { |row| row.submit_rating!(value: Rating::Values::BRILLIANT) }
-    foreign = candidate(user: UserGuest.create!)
+    foreign = candidate(user: Identity::UserGuest.create!)
     travel 1.hour
     newest = candidate
     owned = RatingFilm.where(user: @user)

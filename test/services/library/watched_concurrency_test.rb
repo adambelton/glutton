@@ -7,7 +7,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
-    @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
+    @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @entry = LibraryFilmToWatch.create!(user: @guest, film: @film)
   end
@@ -15,9 +15,9 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
     LibraryFilm.where(user_id: @user_ids).delete_all
-    PendingRegistration.where(guest_user_id: @user_ids).delete_all
-    Session.where(user_id: @user_ids).delete_all
-    User.where(id: @user_ids).delete_all
+    Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
+    Identity::Session.where(user_id: @user_ids).delete_all
+    Identity::User.where(id: @user_ids).delete_all
     Registry::Film.where(id: @film_ids).delete_all
   end
 
@@ -31,7 +31,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     end
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
-    connection = User.connection
+    connection = Identity::User.connection
     Timeout.timeout(5) do
       until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
@@ -54,7 +54,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "concurrent watched transitions serialize and reject the second request without changes" do
     contender = nil
     first = attributes = nil
-    User.transaction do
+    Identity::User.transaction do
       first = record
       attributes = [ first.id, first.created_at, first.updated_at ]
       contender = blocked do
@@ -75,10 +75,10 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     freeze_time
     original = record
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       claim
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
       contender = blocked { Identity::CleanupExpiredAccounts.call }
     end
     assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, Timeout.timeout(5) { contender.value })
@@ -89,9 +89,9 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "cleanup wins before waiting write and cannot leave orphaned library activity" do
     freeze_time
     record
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       contender = blocked do
         begin
@@ -103,7 +103,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
-    assert_not User.exists?(@guest.id)
+    assert_not Identity::User.exists?(@guest.id)
     assert_not LibraryFilm.exists?(user_id: @guest.id)
     assert Registry::Film.exists?(@film.id)
   end
@@ -111,10 +111,10 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   test "waiting write re-reads a claimed guest as registered after the old guest deadline" do
     freeze_time
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       claim
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
       contender = blocked { record }
     end
     assert Timeout.timeout(5) { contender.value }.persisted?

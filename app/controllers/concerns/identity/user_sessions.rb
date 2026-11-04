@@ -18,7 +18,7 @@ module Identity
       return @current_user if defined?(@current_user)
 
       payload = identity_payload
-      @current_user = Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
+      @current_user = Identity::Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
       clear_identity_cookie unless @current_user
       @current_user
     rescue Identity::GuestExpired
@@ -37,18 +37,18 @@ module Identity
       end
 
       pending = current_pending_registration
-      authentication = Session.transaction do
-        guest = UserGuest.create!
+      authentication = Identity::Session.transaction do
+        guest = Identity::UserGuest.create!
         if pending.present?
           Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: guest.id)
         end
-        Session.create!(user: guest)
+        Identity::Session.create!(user: guest)
       end
       bind_session(authentication)
       @current_user
     rescue Identity::RegistrationUnavailable
       # A link may expire or be consumed while guest creation waits for locks.
-      pending = PendingRegistration.find_by(id: session[:pending_registration_id])
+      pending = Identity::PendingRegistration.find_by(id: session[:pending_registration_id])
       raise if pending.present? && pending.active?
 
       session.delete(:pending_registration_id)
@@ -61,7 +61,7 @@ module Identity
       id = session[:pending_registration_id]
       return if id.nil?
 
-      registration = PendingRegistration.find_by(id: id)
+      registration = Identity::PendingRegistration.find_by(id: id)
       user = current_user
       if registration&.active? && (user ? registration.available_to?(user:) : registration.unattached?)
         registration
@@ -83,13 +83,13 @@ module Identity
       return @bound_session if defined?(@bound_session)
 
       payload = identity_payload
-      @bound_session = Session.find_by(id: payload["id"], user_id: payload["user_id"]) if payload
+      @bound_session = Identity::Session.find_by(id: payload["id"], user_id: payload["user_id"]) if payload
     end
 
     def bind_session(authentication)
       user = authentication.user
       if user.can_register? && session[:pending_registration_id].present?
-        pending = PendingRegistration.find_by(id: session[:pending_registration_id])
+        pending = Identity::PendingRegistration.find_by(id: session[:pending_registration_id])
       end
       registration_alert = flash[:alert]
       reset_session

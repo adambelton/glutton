@@ -9,9 +9,9 @@ class SessionsController < ApplicationController
   end
 
   def create
-    new_session = Session.transaction do
+    new_session = Identity::Session.transaction do
       created_session = Identity::Authenticate.call(email_address: params[:email_address], password: params[:password])
-      Session.revoke(id: bound_session.id) if created_session && bound_session
+      Identity::Session.revoke(id: bound_session.id) if created_session && bound_session
       created_session
     end
 
@@ -25,7 +25,7 @@ class SessionsController < ApplicationController
   end
 
   def destroy
-    Session.revoke(id: bound_session.id) if bound_session
+    Identity::Session.revoke(id: bound_session.id) if bound_session
     clear_identity_cookie
     reset_session
     redirect_to root_path, notice: I18n.t("identity.sessions.signed_out"), status: :see_other

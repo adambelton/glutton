@@ -4,7 +4,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = RatingsController.allow_forgery_protection
     RatingsController.allow_forgery_protection = true
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     bind_user(@user)
     @candidate = candidate("First film", created_at: 2.days.ago)
   end
@@ -14,7 +14,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def bind_user(user)
-    authentication = Session.create!(user:)
+    authentication = Identity::Session.create!(user:)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: authentication.id, user_id: user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -38,7 +38,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     candidate("Dismissed", dismissed: true, created_at: 4.days.ago)
     rated = candidate("Rated", created_at: 4.days.ago)
     rated.submit_rating!(value: Rating::Values::GARBAGE)
-    candidate("Foreign", user: UserGuest.create!, created_at: 4.days.ago)
+    candidate("Foreign", user: Identity::UserGuest.create!, created_at: 4.days.ago)
     next_candidate = candidate("Next film")
     get root_path
     assert_select "a[href=?]", new_rating_path
@@ -69,7 +69,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "registered users can save all four choices without expressions" do
-    @user = UserRegistered.create!(email_address: "ratings@example.test", password: "a long password phrase",
+    @user = Identity::UserRegistered.create!(email_address: "ratings@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user(@user)
     Rating::Values::ALL.each do |value|
@@ -114,7 +114,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "foreign missing and malformed candidates have the same unavailable response" do
-    foreign = candidate("Private title", user: UserGuest.create!)
+    foreign = candidate("Private title", user: Identity::UserGuest.create!)
     token = csrf
     [ foreign.id, RatingFilm.maximum(:id) + 1, "#{@candidate.id}junk" ].each do |id|
       post dismiss_rating_path, params: { rating_film_id: id, authenticity_token: token, user_id: foreign.user_id }
@@ -145,8 +145,8 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
 
   test "signed out expired revoked and deleted sessions cannot write or create replacement users" do
     token = csrf
-    @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "User.count", "Session.count", "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
+    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count", "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
       post rating_path, params: { rating_film_id: @candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :unauthorized
       get new_rating_path
@@ -156,7 +156,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     end
     @user.update!(created_at: Time.current)
     bind_user(@user)
-    Session.where(user: @user).delete_all
+    Identity::Session.where(user: @user).delete_all
     get new_rating_path
     assert_response :unauthorized
     bind_user(@user)

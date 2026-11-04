@@ -79,6 +79,14 @@ Pull requests and pushes to `main` run `bin/ci` through GitHub Actions, using
 with `bin/ci`; PostgreSQL must already be available locally. Hosted runs need no
 repository secrets and do not deploy the app.
 
+## Identity model namespace
+
+Identity models use `Identity::User`, its lifecycle subclasses, `Identity::Session`
+and `Identity::PendingRegistration`. They retain existing tables and short STI
+labels. Existing signed-in sessions use the same cookie payload and remain valid.
+The namespace migration invalidates previously issued confirmation/password-reset
+links; request new links after the migration. There is no legacy-token fallback.
+
 ## Identity mail
 
 Action Mailer composes confirmation and password-reset messages. Registration and
@@ -141,7 +149,7 @@ require application translation loading.
 
 ## Registration confirmation provider
 
-Pending registrations expire one hour after creation (`PendingRegistration::EXPIRY_DURATION`).
+Pending registrations expire one hour after creation (`Identity::PendingRegistration::EXPIRY_DURATION`).
 A linked guest must also remain active. `Identity::RegistrationConfirmation.token_for(pending_registration_id:)`
 issues a purpose-bound token valid only while that registration remains active;
 resending does not extend the original deadline. It does not send email. Tokens contain no
@@ -271,7 +279,7 @@ from the console, preserving accounts and unrelated data, then run
 connection = ActiveRecord::Base.connection
 connection.transaction do
   connection.add_column(:users, :superuser, :boolean, null: false, default: false)
-  connection.add_check_constraint(:users, "NOT superuser OR type = 'UserRegistered'",
+  connection.add_check_constraint(:users, "NOT superuser OR type = 'Identity::UserRegistered'",
     name: "only_registered_users_can_be_superusers")
 end
 ```

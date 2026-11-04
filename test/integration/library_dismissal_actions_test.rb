@@ -4,7 +4,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = LibraryController.allow_forgery_protection
     LibraryController.allow_forgery_protection = true
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Intent <film>")
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
     bind_user
@@ -15,7 +15,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
   end
 
   def bind_user
-    @authentication = Session.create!(user: @user)
+    @authentication = Identity::Session.create!(user: @user)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: @authentication.id, user_id: @user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -31,7 +31,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
   end
 
   test "guest and registered users can dismiss and reconsider without changing relationship identity" do
-    [ @user, UserRegistered.create!(email_address: "intent@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current) ].each do |user|
+    [ @user, Identity::UserRegistered.create!(email_address: "intent@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current) ].each do |user|
       @user = user
       @entry = LibraryFilmToWatch.find_or_create_by!(user: @user, film: @film)
       created_at = @entry.created_at
@@ -123,9 +123,9 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
 
   test "new actions reject foreign and malformed IDs and require CSRF and active identity" do
     csrf = token
-    foreign = LibraryFilmNotInterested.create!(user: UserGuest.create!, film: @film)
+    foreign = LibraryFilmNotInterested.create!(user: Identity::UserGuest.create!, film: @film)
     actions = [ [ :post, :mark_not_interested_library_film_path ], [ :post, :add_to_watchlist_library_film_path ], [ :delete, :remove_from_not_interested_library_film_path ] ]
-    assert_no_difference [ "LibraryFilm.count", "DomainEvent.count", "User.count" ] do
+    assert_no_difference [ "LibraryFilm.count", "DomainEvent.count", "Identity::User.count" ] do
       actions.each do |verb, helper|
         [ foreign.id, "invalid", "0", "999999999" ].each do |id|
           public_send(verb, public_send(helper, id), params: { authenticity_token: csrf })
@@ -141,11 +141,11 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       end
       @user.update!(created_at: Time.current)
       bind_user
-      Session.revoke(id: @authentication.id)
+      Identity::Session.revoke(id: @authentication.id)
       post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :unauthorized
       bind_user
-      @user.becomes!(UserDeleted).save!
+      @user.becomes!(Identity::UserDeleted).save!
       delete remove_from_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :gone
     end

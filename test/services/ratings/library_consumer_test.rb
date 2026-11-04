@@ -3,13 +3,13 @@ require "test_helper"
 class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Library activity")
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Ratings::ConsumeLibraryEvent::SUBSCRIBER }
   end
 
   def publish(name, **options)
-    User.transaction do
+    Identity::User.transaction do
       DomainEvents::Publish.call(user_id: @user.id, publisher: Library::EVENTS_PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name:, payload: { user_id: @user.id, film_id: @film.id }, **options)
     end
@@ -70,7 +70,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     first = candidate
     travel 1.hour
     later = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Later"))
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     assert_equal [ later.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
     dispatch

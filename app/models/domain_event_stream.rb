@@ -1,5 +1,5 @@
 class DomainEventStream < ApplicationRecord
-  belongs_to :user
+  belongs_to :user, class_name: "Identity::User"
   has_many :domain_events
 
   validates :publisher, presence: true

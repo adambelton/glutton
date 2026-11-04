@@ -73,7 +73,7 @@ en:
         action: Reset your password
   activerecord:
     attributes:
-      pending_registration:
+      identity/pending_registration:
         confirmation_delivery_attempts: Confirmation delivery attempts
         confirmation_delivery_attempted_at: Last confirmation delivery attempt
         guest_user: Guest
@@ -81,22 +81,22 @@ en:
         password: Password
         password_confirmation: Password confirmation
         password_digest: Password digest
-      user:
+      identity/user:
         type: Account type
         email_address: Email
         password: Password
         password_confirmation: Password confirmation
         password_digest: Password digest
         email_confirmed_at: Email confirmed at
-      session:
+      identity/session:
         user: User
     errors:
       models:
-        pending_registration:
+        identity/pending_registration:
           attributes:
             email_address:
               registered: is already registered. Sign in instead.
-        session:
+        identity/session:
           attributes:
             user:
               inactive: must be active

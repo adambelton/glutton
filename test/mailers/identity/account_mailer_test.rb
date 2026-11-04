@@ -4,7 +4,7 @@ require "stringio"
 module Identity
   class AccountMailerTest < ActionMailer::TestCase
     test "both messages render multipart content without account or session changes" do
-      assert_no_difference [ "User.count", "Session.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
         { confirmation: :confirmation_url, password_reset: :reset_url }.each do |action, argument|
           url = "https://example.test/action?token=private-marker&other=escaped"
           message = AccountMailer.public_send(action, recipient: "reader@example.test", argument => url).message
@@ -62,7 +62,7 @@ module Identity
         raise IOError, "simulated SMTP failure"
       end
       assert_equal "private-key-marker", transport.settings[:password]
-      assert_no_difference [ "User.count", "Session.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
         assert_raises(IOError) { message.deliver }
       end
       assert_equal 1, calls

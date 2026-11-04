@@ -2,12 +2,12 @@ require "test_helper"
 
 class LibraryBrowserTest < ActionDispatch::IntegrationTest
   setup do
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     bind_user
   end
 
   def bind_user
-    @authentication = Session.create!(user: @user)
+    @authentication = Identity::Session.create!(user: @user)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: @authentication.id, user_id: @user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -21,9 +21,9 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     watchlist = entry(LibraryFilmToWatch, title: "Watchlist film")
     watched = entry(title: "Watched film")
     uninterested = entry(LibraryFilmNotInterested, title: "Not interested film")
-    entry(user: UserGuest.create!, title: "Private film")
-    assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count", "User.count", "Session.count" ] do
-      get library_path(user_id: UserGuest.last.id)
+    entry(user: Identity::UserGuest.create!, title: "Private film")
+    assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
+      get library_path(user_id: Identity::UserGuest.last.id)
       assert_response :success
       assert_select "h3", text: watchlist.film.title, count: 1
       assert_select "h3", count: 1
@@ -43,7 +43,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     rows.drop(1).zip([ [ false, false ], [ true, false ], [ false, true ], [ true, true ] ]).each do |row, (held, dismissed)|
       RatingFilm.create!(user: @user, film: row.film, held:, dismissed:)
     end
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: rows.first.film)
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
     foreign.submit_rating!(value: Rating::Values::BRILLIANT)
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Awaiting rating", count: 5
@@ -128,34 +128,34 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "registered access and signed out revoked expired deleted identity outcomes" do
-    @user = UserRegistered.create!(email_address: "library@example.test", password: "a long password phrase",
+    @user = Identity::UserRegistered.create!(email_address: "library@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user
     get library_path
     assert_response :success
-    Session.revoke(id: @authentication.id)
+    Identity::Session.revoke(id: @authentication.id)
     get library_path
     assert_response :unauthorized
     assert_select "a[href=?]", new_session_path
     assert_select "a[href=?]", new_registration_path
     cookies.delete(:session_id)
-    assert_no_difference [ "User.count", "Session.count" ] do
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       get library_path
       assert_response :unauthorized
     end
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     bind_user
-    travel UserGuest::EXPIRY_DURATION + 1.second do
+    travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
       get library_path
       assert_response :unauthorized
     end
     bind_user
-    @user.becomes!(UserDeleted).save!
+    @user.becomes!(Identity::UserDeleted).save!
     get library_path
     assert_response :gone
   end
   test "edit links expose latest owner evidence on both surfaces without writes" do
-    [ @user, UserRegistered.create!(email_address: "edit-library@example.test",
+    [ @user, Identity::UserRegistered.create!(email_address: "edit-library@example.test",
       password: "long test password", password_confirmation: "long test password",
       email_confirmed_at: Time.current) ].each do |user|
       @user = user

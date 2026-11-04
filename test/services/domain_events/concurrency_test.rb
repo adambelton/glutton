@@ -15,7 +15,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
 
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
-    User.where(id: @user.id).delete_all
+    Identity::User.where(id: @user.id).delete_all
     EventEffect.connection.drop_table(:event_effects)
     DispatchDomainEventsJob.queue_adapter = @old_adapter
   end
@@ -31,7 +31,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
     Timeout.timeout(5) do
-      until User.connection.uncached { User.connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
+      until Identity::User.connection.uncached { Identity::User.connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
       end
     end
@@ -43,7 +43,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
       DomainEvents::Publish.call(user_id: @user.id, publisher: "test_domain", stream_key: "film:1", name: "Changed", payload: {})
     end
     contender = first = nil
-    User.transaction do
+    Identity::User.transaction do
       first = publish
       contender = blocked { publish }
     end
@@ -57,7 +57,7 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     event = publish
     receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked { DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription) }
       assert_equal :processed, DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription)
@@ -85,9 +85,9 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
 
   test "cleanup winning before receipt insertion leaves no delivery or effect" do
     event = publish
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked { dispatch(subscription) }
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
@@ -101,9 +101,9 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
   test "cleanup winning before delivery prevents resurrection" do
     event = publish
     receipt = EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @user.lock!
       contender = blocked { DomainEvents::Deliver.call(delivery_id: receipt.id, subscription: subscription) }
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]

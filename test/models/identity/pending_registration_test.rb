@@ -1,14 +1,14 @@
 require "test_helper"
 require "stringio"
 
-class PendingRegistrationTest < ActiveSupport::TestCase
+class Identity::PendingRegistrationTest < ActiveSupport::TestCase
   def registration(**attributes)
-    PendingRegistration.new(email_address: "reader@example.test", password: "a long password phrase",
+    Identity::PendingRegistration.new(email_address: "reader@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", **attributes)
   end
 
   test "credentials normalize hash and remain separate from user identity" do
-    assert_no_difference [ "User.count", "Session.count" ] do
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       record = registration(email_address: " Reader@Example.TEST \t")
       record.save!
       record.reload
@@ -45,7 +45,7 @@ class PendingRegistrationTest < ActiveSupport::TestCase
   end
 
   test "database independently enforces canonical credentials optional foreign key and unique guest" do
-    guest = UserGuest.create!
+    guest = Identity::UserGuest.create!
     registration(guest_user: guest).save!
     invalid_rows = [
       { email_address: nil }, { email_address: "" }, { email_address: "Reader@example.test" },
@@ -54,44 +54,44 @@ class PendingRegistrationTest < ActiveSupport::TestCase
     ]
     invalid_rows.each do |attributes|
       assert_raises(ActiveRecord::StatementInvalid) do
-        PendingRegistration.transaction(requires_new: true) do
+        Identity::PendingRegistration.transaction(requires_new: true) do
           row = registration.tap(&:save!)
-          connection = PendingRegistration.connection
+          connection = Identity::PendingRegistration.connection
           updates = attributes.map { |key, value| "#{connection.quote_column_name(key)} = #{connection.quote(value)}" }.join(", ")
           connection.execute("UPDATE pending_registrations SET #{updates} WHERE id = #{row.id}")
         end
       end
     end
-    assert_difference "PendingRegistration.count", 2 do
+    assert_difference "Identity::PendingRegistration.count", 2 do
       2.times { registration.save! }
     end
   end
 
   test "guest deletion removes only linked pending credentials" do
-    guest = UserGuest.create!
-    other_guest = UserGuest.create!
+    guest = Identity::UserGuest.create!
+    other_guest = Identity::UserGuest.create!
     linked = registration(guest_user: guest).tap(&:save!)
     other = registration(guest_user: other_guest).tap(&:save!)
     direct = registration.tap(&:save!)
     guest.delete
-    assert_not PendingRegistration.exists?(linked.id)
-    assert PendingRegistration.exists?(other.id)
-    assert PendingRegistration.exists?(direct.id)
-    assert User.exists?(other_guest.id)
+    assert_not Identity::PendingRegistration.exists?(linked.id)
+    assert Identity::PendingRegistration.exists?(other.id)
+    assert Identity::PendingRegistration.exists?(direct.id)
+    assert Identity::User.exists?(other_guest.id)
   end
 
   test "availability trusts user permissions and restricts attached ownership" do
     freeze_time
     record = registration.tap(&:save!)
-    guest = UserGuest.create!
-    other = UserGuest.create!
+    guest = Identity::UserGuest.create!
+    other = Identity::UserGuest.create!
     assert record.unattached?
     assert record.available_to?(user: guest)
     record.attach_to!(user: guest)
     assert_not record.unattached?
     assert record.available_to?(user: guest)
     assert_not record.available_to?(user: other)
-    registered = UserRegistered.create!(email_address: "member@example.test", password: "a long password phrase",
+    registered = Identity::UserRegistered.create!(email_address: "member@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     assert_not record.available_to?(user: registered)
     travel_to record.expires_at do

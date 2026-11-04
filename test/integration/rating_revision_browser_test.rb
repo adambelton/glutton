@@ -4,7 +4,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = RatingsController.allow_forgery_protection
     RatingsController.allow_forgery_protection = true
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     bind_user(@user)
     @film = Registry::Film.create!(title: "Revision film")
     @candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
@@ -16,7 +16,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def bind_user(user)
-    authentication = Session.create!(user:)
+    authentication = Identity::Session.create!(user:)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: authentication.id, user_id: user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -51,7 +51,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   test "replacement preserves original and candidate state without publishing and allows clearing expressions" do
     assert_no_difference [ "DomainEvent.count", "DomainEventStream.count", "RatingFilm.count" ] do
       assert_difference "Rating.count", 1 do
-        revise(expression_texts: [ "  Updated\n👻 ", "", "  " ], user_id: UserGuest.create!.id, held: false)
+        revise(expression_texts: [ "  Updated\n👻 ", "", "  " ], user_id: Identity::UserGuest.create!.id, held: false)
       end
     end
     assert_redirected_to edit_rating_path(film_id: @film.id)
@@ -121,7 +121,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "missing foreign and unrated candidates are unavailable without admission" do
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: Registry::Film.create!(title: "Private film"))
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: Registry::Film.create!(title: "Private film"))
     unrated = RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Unrated"))
     unpresented = Registry::Film.create!(title: "No candidate")
     assert_no_difference [ "RatingFilm.count", "Rating.count" ] do
@@ -142,7 +142,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "registered owners can edit and first submission offers a film specific edit link" do
-    user = UserRegistered.create!(email_address: "revision@example.test", password: "a long password phrase",
+    user = Identity::UserRegistered.create!(email_address: "revision@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     @candidate.update!(user:)
     bind_user(user)
@@ -162,13 +162,13 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_no_difference "Rating.count" do
       patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Rating::Values::GARBAGE }
       assert_response :unprocessable_entity
-      @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
+      @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
       patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Rating::Values::GARBAGE, authenticity_token: token }
       assert_response :unauthorized
       get edit_rating_path(film_id: @film.id)
       assert_response :unauthorized
       @user.update!(created_at: Time.current)
-      Session.where(user: @user).delete_all
+      Identity::Session.where(user: @user).delete_all
       get edit_rating_path(film_id: @film.id)
       assert_response :unauthorized
       cookies.delete(:session_id)

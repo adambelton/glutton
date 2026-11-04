@@ -13,7 +13,7 @@ module DomainEvents
           .pluck("domain_events.id", "domain_event_streams.user_id").each do |event_id, user_id|
           # The owner may be physically cleaned up between discovery and insertion.
           DomainEvent.transaction do
-            user = User.lock.find_by(id: user_id)
+            user = Identity::User.lock.find_by(id: user_id)
             next unless user && DomainEvent.exists?(event_id)
 
             EventDelivery.create_or_find_by!(subscriber: subscription.name, domain_event_id: event_id) do |delivery|

@@ -3,7 +3,7 @@ require "test_helper"
 class Ratings::SubmissionTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Rating submission")
     @rating_film = RatingFilm.create!(user: @user, film: @film)
   end
@@ -72,12 +72,12 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   test "missing foreign and inactive identities fail without writes" do
-    other = UserGuest.create!
+    other = Identity::UserGuest.create!
     assert_no_difference [ "RatingExpression.count", "Rating.count", "DomainEvent.count" ] do
       assert_raises(Ratings::FilmUnavailable) { submit(user_id: other.id) }
       assert_raises(Ratings::FilmUnavailable) { submit(rating_film_id: -1) }
-      deleted = UserDeleted.create!
-      travel UserGuest::EXPIRY_DURATION
+      deleted = Identity::UserDeleted.create!
+      travel Identity::UserGuest::EXPIRY_DURATION
       [ @user.id, deleted.id, -1 ].each do |user_id|
         assert_raises(Ratings::IdentityUnavailable) { submit(user_id:) }
       end

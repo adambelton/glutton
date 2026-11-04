@@ -6,9 +6,9 @@ module Identity
     self.use_transactional_tests = false
 
     setup do
-      @actor = UserRegistered.create!(email_address: "operator-concurrency@example.test", password: "a long password phrase",
+      @actor = Identity::UserRegistered.create!(email_address: "operator-concurrency@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current, superuser: true)
-      @user = UserRegistered.create!(email_address: "admin-concurrency@example.test", password: "a long password phrase",
+      @user = Identity::UserRegistered.create!(email_address: "admin-concurrency@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     end
 
@@ -24,7 +24,7 @@ module Identity
     test "concurrent duplicate grants and revocations have one explicit winner" do
       [ [ GrantSuperuser, SuperuserAlreadyGranted ], [ RevokeSuperuser, SuperuserAlreadyRevoked ] ].each do |operation, failure|
         contender = nil
-        User.transaction do
+        Identity::User.transaction do
           @actor.lock!
           @user.lock!
           contender = blocked_operation do
@@ -41,7 +41,7 @@ module Identity
 
     test "waiting revocation re-reads permission after a concurrent grant" do
       contender = nil
-      User.transaction do
+      Identity::User.transaction do
         @actor.lock!
         @user.lock!
         contender = blocked_operation { RevokeSuperuser.call(user_id: @user.id, actor_user_id: @actor.id) }
@@ -53,7 +53,7 @@ module Identity
 
     test "waiting grant rejects a concurrently removed account" do
       contender = nil
-      User.transaction do
+      Identity::User.transaction do
         @actor.lock!
         @user.lock!
         contender = blocked_operation do
@@ -68,7 +68,7 @@ module Identity
 
     test "an actor revoked while a grant waits cannot authorize that grant" do
       contender = nil
-      User.transaction do
+      Identity::User.transaction do
         @actor.lock!
         contender = blocked_operation do
           GrantSuperuser.call(user_id: @user.id, actor_user_id: @actor.id)

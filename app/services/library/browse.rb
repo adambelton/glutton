@@ -12,7 +12,7 @@ module Library
     Page = Data.define(:entries, :rated_film_ids, :next_page)
 
     def self.call(user_id:, view:, page:)
-      user = User.find_by(id: user_id)
+      user = Identity::User.find_by(id: user_id)
       raise IdentityUnavailable unless user&.active?
 
       entries = case view

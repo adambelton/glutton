@@ -11,7 +11,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     @origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example.test"
-    @user = UserRegistered.create!(email_address: "recovery@example.test", password: "original password phrase",
+    @user = Identity::UserRegistered.create!(email_address: "recovery@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     @reset_token = @user.password_reset_token
     ActionMailer::Base.deliveries.clear
@@ -54,12 +54,12 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       assert_select '[role="status"]', text: I18n.t("identity.recovery.requested"), count: 1
     end
     assert_equal 1, ActionMailer::Base.deliveries.count
-    assert_equal 0, Session.count
+    assert_equal 0, Identity::Session.count
   end
 
   test "GET HEAD and missing CSRF cannot change credentials or consume a link" do
     digest = @user.password_digest
-    assert_no_difference [ "Session.count", "ActionMailer::Base.deliveries.count" ] do
+    assert_no_difference [ "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
       get edit_password_reset_path(token: @reset_token)
       assert_response :success
       assert_equal "no-store", response.headers["Cache-Control"]
@@ -73,7 +73,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     assert_equal digest, @user.reload.password_digest
-    assert_equal @user, UserRegistered.find_by_password_reset_token(@reset_token)
+    assert_equal @user, Identity::UserRegistered.find_by_password_reset_token(@reset_token)
   end
 
   test "invalid input rerenders empty fields and success requires fresh sign in" do
@@ -84,7 +84,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "leakpw"
     update_password
     assert_redirected_to new_session_path
-    assert_equal 0, Session.count
+    assert_equal 0, Identity::Session.count
     follow_redirect!
     assert_select '[role="status"]', text: I18n.t("identity.recovery.completed"), count: 1
     update_password
@@ -115,7 +115,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     update_password(authenticity_token: old_csrf)
     assert_response :see_other
     assert cookies[:session_id].blank?
-    assert_equal 0, Session.count
+    assert_equal 0, Identity::Session.count
     other.cookies[:session_id] = old_cookie
     other.get root_path
     assert_not_includes other.response.body, "Signed in"
@@ -126,7 +126,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "another registered browser conflicts and deleted browser fails explicitly" do
-    other = UserRegistered.create!(email_address: "different@example.test", password: "original password phrase",
+    other = Identity::UserRegistered.create!(email_address: "different@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     sign_in(user: other)
     cookie = cookies[:session_id]
@@ -151,9 +151,9 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       password_confirmation: "original password phrase" }, authenticity_token: csrf }
     assert_response :see_other
     get root_path
-    guest_session = Session.last
+    guest_session = Identity::Session.last
     guest = guest_session.user
-    pending = PendingRegistration.last
+    pending = Identity::PendingRegistration.last
     assert_equal guest.id, pending.guest_user_id
     cookie = cookies[:session_id]
     update_password
@@ -161,7 +161,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_equal cookie, cookies[:session_id]
     assert guest_session.active?
     assert_not (guest.reload).can_reset_password?
-    assert PendingRegistration.exists?(pending.id)
+    assert Identity::PendingRegistration.exists?(pending.id)
     get registration_path
     assert_response :success
     assert_select "h1", I18n.t("identity.registration.pending_title")

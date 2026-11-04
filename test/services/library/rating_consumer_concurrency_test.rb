@@ -7,10 +7,10 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
   setup do
     freeze_time
     @threads, @user_ids, @film_ids = [], [], []
-    @guest = UserGuest.create!.tap { |user| @user_ids << user.id }
+    @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRatingsEvent::SUBSCRIBER }
-    event = User.transaction do
+    event = Identity::User.transaction do
       DomainEvents::Publish.call(user_id: @guest.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Ratings::Events::RATING_SUBMITTED,
         payload: { user_id: @guest.id, film_id: @film.id })
@@ -21,9 +21,9 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
   teardown do
     @threads.each { |thread| thread.kill if thread.alive?; thread.join }
     LibraryFilm.where(user_id: @user_ids).delete_all
-    PendingRegistration.where(guest_user_id: @user_ids).delete_all
-    Session.where(user_id: @user_ids).delete_all
-    User.where(id: @user_ids).delete_all
+    Identity::PendingRegistration.where(guest_user_id: @user_ids).delete_all
+    Identity::Session.where(user_id: @user_ids).delete_all
+    Identity::User.where(id: @user_ids).delete_all
     Registry::Film.where(id: @film_ids).delete_all
   end
 
@@ -37,7 +37,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     end
     @threads << thread
     pid = Timeout.timeout(5) { ready.pop }
-    connection = User.connection
+    connection = Identity::User.connection
     Timeout.timeout(5) do
       until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{pid}))") }.positive?
         sleep 0.01
@@ -64,7 +64,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "competing deliveries commit one effect and one receipt" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       assert_equal :processed, deliver
       contender = blocked { deliver }
     end
@@ -78,7 +78,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       contender = nil
       source = intent == "watchlist" ? LibraryFilmNotInterested : LibraryFilmToWatch
       entry = source.create!(user: @guest, film: @film)
-      User.transaction do
+      Identity::User.transaction do
         entry = operation.call(user_id: @guest.id, library_film_id: entry.id)
         contender = blocked { deliver }
       end
@@ -92,7 +92,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     [ [ Library::AddToWatchlist, Library::WatchlistUnavailable ],
       [ Library::MarkNotInterested, Library::DismissalUnavailable ] ].each do |operation, failure|
       contender = nil
-      User.transaction do
+      Identity::User.transaction do
         @guest.lock!
         deliver
         entry = LibraryFilm.find_by!(user: @guest, film: @film)
@@ -110,10 +110,10 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "expiry while delivery waits skips activity" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       contender = blocked { deliver }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :skipped, Timeout.timeout(5) { contender.value }
     assert_not LibraryFilm.exists?(user: @guest)
@@ -122,8 +122,8 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "cleanup winning against delivery cannot resurrect owner activity" do
     contender = nil
-    travel UserGuest::EXPIRY_DURATION
-    User.transaction do
+    travel Identity::UserGuest::EXPIRY_DURATION
+    Identity::User.transaction do
       @guest.lock!
       contender = blocked { deliver }
       assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
@@ -136,11 +136,11 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
 
   test "claim allows waiting delivery beyond former guest deadline" do
     contender = nil
-    User.transaction do
+    Identity::User.transaction do
       @guest.lock!
       claim
       contender = blocked { deliver }
-      travel UserGuest::EXPIRY_DURATION
+      travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
     assert LibraryFilmWatched.exists?(user_id: @guest.id, film: @film)

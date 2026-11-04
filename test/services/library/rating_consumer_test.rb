@@ -3,13 +3,13 @@ require "test_helper"
 class Library::RatingConsumerTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Rated film")
     @subscription = DomainEvents::Subscriptions.all.find { |entry| entry.name == Library::ConsumeRatingsEvent::SUBSCRIBER }
   end
 
   def publish(payload: { user_id: @user.id, film_id: @film.id }, **options)
-    User.transaction do
+    Identity::User.transaction do
       DomainEvents::Publish.call(user_id: @user.id, publisher: Ratings::EVENTS_PUBLISHING_DOMAIN,
         stream_key: "film:#{@film.id}", name: Ratings::Events::RATING_SUBMITTED, payload:, **options)
     end
@@ -161,12 +161,12 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
 
   test "expired and deleted identities are skipped" do
     event = publish
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal({ skipped: 1 }, dispatch)
     assert_equal EventDelivery::Statuses::SKIPPED, receipt(event).status
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     event = publish
-    @user.becomes!(UserDeleted).save!
+    @user.becomes!(Identity::UserDeleted).save!
     assert_equal({ skipped: 1 }, dispatch)
     assert_equal EventDelivery::Statuses::SKIPPED, receipt(event).status
     assert_empty LibraryFilm.all

@@ -64,7 +64,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal({ "value" => 1 }, first.payload)
     assert_raises(ActiveRecord::ReadOnlyRecord) { first.update!(name: "Other") }
     assert_raises(ActiveRecord::ReadOnlyRecord) { first.update_columns(payload: {}) }
-    User.transaction(requires_new: true) do
+    Identity::User.transaction(requires_new: true) do
       @user.touch
       publish
       raise ActiveRecord::Rollback
@@ -84,7 +84,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal first.domain_event_stream_id, publish.domain_event_stream_id
     assert_raises(ArgumentError) { publish(payload: []) }
     assert_raises(DomainEvents::OwnerUnavailable) { publish(user_id: nil) }
-    travel UserGuest::EXPIRY_DURATION do
+    travel Identity::UserGuest::EXPIRY_DURATION do
       assert_raises(DomainEvents::OwnerUnavailable) { publish }
     end
   end
@@ -179,12 +179,12 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
 
   test "expired and deleted owners skip handlers and physical cleanup cascades payloads" do
     expired_event = publish
-    deleted = UserDeleted.create!
-    other = UserGuest.create!
+    deleted = Identity::UserDeleted.create!
+    other = Identity::UserGuest.create!
     other_event = publish(user_id: other.id)
     # The stored owner can change after publication; consumption must re-read it.
     other.update_columns(type: "UserDeleted")
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal({ skipped: 2 }, dispatch(subscription))
     assert_equal 0, EventEffect.count
     assert_equal EventDelivery::Statuses::SKIPPED, delivery(other_event).status
@@ -192,7 +192,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_not DomainEvent.exists?(expired_event.id)
     assert_not EventDelivery.exists?(domain_event_id: expired_event.id)
     assert DomainEvent.exists?(other_event.id)
-    assert User.exists?(deleted.id)
+    assert Identity::User.exists?(deleted.id)
   end
 
   test "claim preserves owner and events beyond the guest deadline" do
@@ -201,7 +201,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
       password: "a long password phrase", password_confirmation: "a long password phrase")
     token = Identity::RegistrationConfirmation.token_for(pending_registration_id: pending.id)
     Identity::CompleteRegistration.call(token:)
-    travel UserGuest::EXPIRY_DURATION
+    travel Identity::UserGuest::EXPIRY_DURATION
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
     assert_equal({ processed: 1 }, dispatch(subscription))
     assert_equal @user.id, event.domain_event_stream.user_id

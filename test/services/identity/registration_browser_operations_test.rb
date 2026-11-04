@@ -10,12 +10,12 @@ module Identity
     test "attachment is idempotent preserves token and rejects either conflicting link" do
       record = prepare
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       before = record.slice(:id, :email_address, :password_digest, :created_at)
       2.times { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: guest.id) }
       assert_equal before, record.reload.slice(:id, :email_address, :password_digest, :created_at)
-      assert_equal record, PendingRegistration.find_by_token_for(:email_confirmation, token)
-      other_guest = UserGuest.create!
+      assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+      other_guest = Identity::UserGuest.create!
       assert_raises(RegistrationConflict) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: other_guest.id) }
       direct = prepare
       assert_raises(RegistrationConflict) { AttachRegistration.call(pending_registration_id: direct.id, guest_user_id: guest.id) }
@@ -26,22 +26,22 @@ module Identity
     test "attachment rejects expired missing deleted and registered owners without mutation" do
       freeze_time
       record = prepare
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       guest.update_columns(type: "UserDeleted")
-      registered = UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
+      registered = Identity::UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
       [ -1, guest.id, registered.id ].each do |id|
         assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: id) }
       end
-      fresh_guest = UserGuest.create!
-      travel PendingRegistration::EXPIRY_DURATION
+      fresh_guest = Identity::UserGuest.create!
+      travel Identity::PendingRegistration::EXPIRY_DURATION
       assert_raises(RegistrationUnavailable) { AttachRegistration.call(pending_registration_id: record.id, guest_user_id: fresh_guest.id) }
       assert_nil record.reload.guest_user_id
     end
 
     test "browser completion attaches an unattached token request to the current guest" do
       record = prepare
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       session = CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       assert_equal guest.id, session.user_id
@@ -51,11 +51,11 @@ module Identity
     test "unattached confirmation rejects registered and expired current identities" do
       record = prepare
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
-      registered = UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
+      registered = Identity::UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-      expired = UserGuest.create!(created_at: UserGuest::EXPIRY_DURATION.ago)
+      expired = Identity::UserGuest.create!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
       [ registered, expired ].each do |user|
-        assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+        assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Identity::PendingRegistration.count" ] do
           assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: user.id) }
         end
         assert_nil record.reload.guest_user_id
@@ -63,35 +63,35 @@ module Identity
     end
 
     test "confirmation does not replace another pending registration linked to the guest" do
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       linked = prepare(guest_user_id: guest.id)
       direct = prepare(email_address: "other@example.test")
       token = RegistrationConfirmation.token_for(pending_registration_id: direct.id)
-      assert_no_difference [ "User.count", "Session.count", "PendingRegistration.count" ] do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Identity::PendingRegistration.count" ] do
         assert_raises(RegistrationConflict) { CompleteBrowserRegistration.call(token:, current_user_id: guest.id) }
       end
       assert_nil direct.reload.guest_user_id
       assert_equal guest.id, linked.reload.guest_user_id
-      assert_not User.find(guest.id).can_reset_password?
+      assert_not Identity::User.find(guest.id).can_reset_password?
     end
 
     test "failed browser confirmation rolls back attachment" do
       record = prepare
-      UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
+      Identity::UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
-      guest = UserGuest.create!
+      guest = Identity::UserGuest.create!
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       assert_raises(RegistrationUnavailable) do
         CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       end
       assert_nil record.reload.guest_user_id
-      assert_not (User.find(guest.id)).can_reset_password?
+      assert_not (Identity::User.find(guest.id)).can_reset_password?
     end
 
     test "failure after browser attachment preserves the guest sessions and permits retry" do
       record = prepare
-      guest = UserGuest.create!
-      previous_session = Session.create!(user: guest)
+      guest = Identity::UserGuest.create!
+      previous_session = Identity::Session.create!(user: guest)
       token = RegistrationConfirmation.token_for(pending_registration_id: record.id)
       failure = ->(event) { raise IOError, "simulated session failure" if event.payload[:sql].match?(/INSERT INTO "sessions"/) }
       assert_raises(IOError) do
@@ -101,8 +101,8 @@ module Identity
       end
       assert_nil record.reload.guest_user_id
       assert previous_session.active?
-      assert_not User.find(guest.id).can_reset_password?
-      assert_equal record, PendingRegistration.resolve_confirmation!(token:)
+      assert_not Identity::User.find(guest.id).can_reset_password?
+      assert_equal record, Identity::PendingRegistration.resolve_confirmation!(token:)
 
       completed = CompleteBrowserRegistration.call(token:, current_user_id: guest.id)
       assert completed.active?
@@ -115,10 +115,10 @@ module Identity
       assert_raises(ActiveRecord::RecordInvalid) do
         SubmitRegistration.call(previous_id: record.id, email_address: "invalid", password: "tiny", password_confirmation: "tiny")
       end
-      assert PendingRegistration.exists?(record.id)
+      assert Identity::PendingRegistration.exists?(record.id)
       replacement = SubmitRegistration.call(previous_id: record.id, email_address: "new@example.test",
         password: "a long password phrase", password_confirmation: "a long password phrase")
-      assert_not PendingRegistration.exists?(record.id)
+      assert_not Identity::PendingRegistration.exists?(record.id)
       assert_equal "new@example.test", replacement.email_address
     end
 
@@ -158,7 +158,7 @@ module Identity
 
     test "resend stops when another request already registered the email" do
       record = prepare
-      UserRegistered.create!(email_address: record.email_address, password: "existing password phrase",
+      Identity::UserRegistered.create!(email_address: record.email_address, password: "existing password phrase",
         password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
       original_origin = ENV["APP_ORIGIN"]
       ENV["APP_ORIGIN"] = "https://glutton.example.test"
@@ -174,7 +174,7 @@ module Identity
       record = prepare
       [ -1, 6, nil ].each do |count|
         assert_raises(ActiveRecord::StatementInvalid) do
-          PendingRegistration.transaction(requires_new: true) { record.update_columns(confirmation_delivery_attempts: count) }
+          Identity::PendingRegistration.transaction(requires_new: true) { record.update_columns(confirmation_delivery_attempts: count) }
         end
       end
     end

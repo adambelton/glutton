@@ -17,16 +17,16 @@ class IdentityCleanupTest < ActiveSupport::TestCase
   end
 
   test "real command deletes test records reports aggregate counts and safely repeats" do
-    guest = UserGuest.create!(created_at: (UserGuest::EXPIRY_DURATION + 1.hour).ago)
+    guest = Identity::UserGuest.create!(created_at: (Identity::UserGuest::EXPIRY_DURATION + 1.hour).ago)
     stdout, stderr, status = command("identity:cleanup_expired")
     assert status.success?, stderr
     assert_equal "guests_deleted=1 pending_registrations_deleted=0\n", stdout
-    assert_not User.exists?(guest.id)
+    assert_not Identity::User.exists?(guest.id)
     stdout, stderr, status = command("identity:cleanup_expired")
     assert status.success?, stderr
     assert_equal "guests_deleted=0 pending_registrations_deleted=0\n", stdout
   ensure
-    User.where(id: guest&.id).delete_all
+    Identity::User.where(id: guest&.id).delete_all
   end
 
   test "command exits nonzero and excludes private exception details" do

@@ -2,7 +2,7 @@ require "test_helper"
 
 class Ratings::FindCandidateTest < ActiveSupport::TestCase
   setup do
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Candidate lookup")
     @candidate = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
   end
@@ -23,7 +23,7 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
   end
 
   test "foreign deleted and missing candidates are unavailable without admission" do
-    other = UserGuest.create!
+    other = Identity::UserGuest.create!
     assert_no_difference "RatingFilm.count" do
       assert_raises(Ratings::FilmUnavailable) { find(user_id: other.id) }
       assert_raises(Ratings::FilmUnavailable) { find(rating_film_id: @candidate.id + 1) }
@@ -34,7 +34,7 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
   end
 
   test "fresh inactive or missing identity cannot load candidate" do
-    @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
+    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
     assert_raises(Ratings::IdentityUnavailable) { find }
     @user.delete
     assert_raises(Ratings::IdentityUnavailable) { find }

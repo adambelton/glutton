@@ -4,7 +4,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = LibraryController.allow_forgery_protection
     LibraryController.allow_forgery_protection = true
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "A <script>film</script>", release_date: Date.new(2001, 1, 1))
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
     bind_user
@@ -15,7 +15,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
   end
 
   def bind_user
-    @authentication = Session.create!(user: @user)
+    @authentication = Identity::Session.create!(user: @user)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: @authentication.id, user_id: @user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -55,7 +55,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "mark watched retains relationship and redirects to updated detail before event delivery" do
     original_id, original_created_at = @entry.id, @entry.created_at
-    other = UserGuest.create!
+    other = Identity::UserGuest.create!
     assert_difference "DomainEvent.count", 1 do
       assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "Rating.count" ] do
         watch(user_id: other.id, film_id: Registry::Film.create!(title: "Ignore").id, type: "LibraryFilmNotInterested")
@@ -83,7 +83,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "watched detail reads same-user actual ratings independent of candidate flags" do
     Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     foreign.submit_rating!(value: Rating::Values::BRILLIANT)
     row = RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
     get library_film_path(@entry)
@@ -96,7 +96,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
   end
 
   test "registered owner removes entry and stale actions cannot recreate or target its replacement" do
-    @user = UserRegistered.create!(email_address: "details@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current)
+    @user = Identity::UserRegistered.create!(email_address: "details@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current)
     @entry = LibraryFilmToWatch.create!(user: @user, film: @film)
     bind_user
     csrf = token
@@ -123,7 +123,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "invalid foreign and removed IDs are unavailable and unsupported actions conflict" do
     csrf = token
-    foreign = LibraryFilmToWatch.create!(user: UserGuest.create!, film: @film)
+    foreign = LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film)
     [ "0", "-1", "invalid", "999999999", foreign.id ].each do |id|
       get library_film_path(id)
       assert_response :not_found
@@ -139,7 +139,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "csrf and unavailable sessions protect writes without creating replacement identities" do
     csrf = token
-    assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "DomainEvent.count", "User.count" ] do
+    assert_no_difference [ "LibraryFilm.count", "RatingFilm.count", "DomainEvent.count", "Identity::User.count" ] do
       post mark_watched_library_film_path(@entry)
       assert_response :unprocessable_entity
       delete remove_from_watchlist_library_film_path(@entry)
@@ -151,11 +151,11 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       assert_response :unauthorized
       @user.update!(created_at: Time.current)
       bind_user
-      Session.revoke(id: @authentication.id)
+      Identity::Session.revoke(id: @authentication.id)
       get library_film_path(@entry)
       assert_response :unauthorized
       bind_user
-      @user.becomes!(UserDeleted).save!
+      @user.becomes!(Identity::UserDeleted).save!
       get library_film_path(@entry)
       assert_response :gone
     end

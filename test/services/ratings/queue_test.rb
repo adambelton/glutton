@@ -3,7 +3,7 @@ require "test_helper"
 class Ratings::QueueTest < ActiveSupport::TestCase
   setup do
     freeze_time
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
   end
 
   def candidate(**attributes)
@@ -31,7 +31,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     first = candidate(created_at: 2.hours.ago)
     second = candidate(created_at: 2.hours.ago)
     candidate(dismissed: true, created_at: 1.day.ago)
-    candidate(user: UserGuest.create!, created_at: 1.day.ago)
+    candidate(user: Identity::UserGuest.create!, created_at: 1.day.ago)
     assert_equal [ first.id, second.id ], candidates(limit: 2).map(&:id)
     assert_equal [ first.id, second.id, recent.id ], candidates.map(&:id)
   end
@@ -74,15 +74,15 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "missing and foreign rows fail without changing the candidate" do
     film = candidate
-    assert_raises(Ratings::FilmUnavailable) { dismiss(film, UserGuest.create!) }
+    assert_raises(Ratings::FilmUnavailable) { dismiss(film, Identity::UserGuest.create!) }
     assert_raises(Ratings::FilmUnavailable) { Ratings::Dismiss.call(user_id: @user.id, rating_film_id: -1) }
     assert_not film.reload.dismissed?
   end
 
   test "missing expired and deleted owners cannot select or dismiss" do
     film = candidate
-    deleted = UserDeleted.create!
-    travel UserGuest::EXPIRY_DURATION
+    deleted = Identity::UserDeleted.create!
+    travel Identity::UserGuest::EXPIRY_DURATION
     [ @user.id, deleted.id, -1 ].each do |user_id|
       assert_raises(Ratings::IdentityUnavailable) { Ratings::NextCandidates.call(user_id:) }
       assert_raises(Ratings::IdentityUnavailable) { Ratings::Dismiss.call(user_id:, rating_film_id: film.id) }

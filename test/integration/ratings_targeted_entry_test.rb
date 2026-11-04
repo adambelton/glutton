@@ -4,7 +4,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = RatingsController.allow_forgery_protection
     RatingsController.allow_forgery_protection = true
-    @user = UserGuest.create!
+    @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Selected <film>", release_date: Date.new(1982, 6, 25))
     bind_user
   end
@@ -14,7 +14,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   def bind_user
-    authentication = Session.create!(user: @user)
+    authentication = Identity::Session.create!(user: @user)
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: authentication.id, user_id: @user.id } }
     cookies[:session_id] = jar[:session_id]
@@ -36,7 +36,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do
     assert_difference "RatingFilm.count", 1 do
-      assert_no_difference [ "Rating.count", "DomainEvent.count", "User.count", "Session.count" ] do
+      assert_no_difference [ "Rating.count", "DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
         2.times { get new_rating_path(film_id: @film.id); assert_response :success }
       end
     end
@@ -60,10 +60,10 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "registered user saves selected film with exact expressions ignoring ownership and state tampering" do
-    @user = UserRegistered.create!(email_address: "targeted@example.test", password: "a long password phrase",
+    @user = Identity::UserRegistered.create!(email_address: "targeted@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     assert_difference [ "Rating.count", "DomainEvent.count" ], 1 do
       rate(expression_texts: [ "  <script>Private</script>  ", "", "Ending" ], user_id: foreign.user_id,
         film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
@@ -134,7 +134,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid film identity and foreign candidate state do not disclose other users" do
-    row = RatingFilm.create!(user: UserGuest.create!, film: @film, held: true, dismissed: true)
+    row = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film, held: true, dismissed: true)
     row.submit_rating!(value: Rating::Values::BRILLIANT)
     token = csrf
     assert_response :success
@@ -151,8 +151,8 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     token = csrf
     post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::BRILLIANT }
     assert_response :unprocessable_entity
-    @user.update!(created_at: UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "RatingFilm.count", "User.count", "Session.count" ] do
+    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
+    assert_no_difference [ "RatingFilm.count", "Identity::User.count", "Identity::Session.count" ] do
       post rating_path, params: { rating_film_id: candidate.id, value: Rating::Values::BRILLIANT, authenticity_token: token }
       assert_response :unauthorized
       get new_rating_path(film_id: @film.id)
@@ -161,7 +161,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     end
     @user.update!(created_at: Time.current)
     bind_user
-    Session.where(user: @user).delete_all
+    Identity::Session.where(user: @user).delete_all
     get new_rating_path(film_id: @film.id)
     assert_response :unauthorized
     bind_user
@@ -187,7 +187,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   test "submission requires an existing owned candidate and cannot admit or recreate one" do
     get new_rating_path
     token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
-    foreign = RatingFilm.create!(user: UserGuest.create!, film: @film)
+    foreign = RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ nil, foreign.id, foreign.id + 1, "#{foreign.id}junk" ].each do |rating_film_id|
       assert_no_difference [ "RatingFilm.count", "Rating.count", "DomainEvent.count" ] do
         post rating_path, params: { film_id: @film.id, rating_film_id:, value: Rating::Values::BRILLIANT, authenticity_token: token }
