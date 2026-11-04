@@ -1,0 +1,14 @@
+en:
+  film_knowledge:
+    loading:
+      errors:
+        invalid_tmdb_ids: Supply a nonempty list of positive integer TMDB IDs.
+        invalid_film_limit: The film count must fit a positive integer film limit.
+        invalid_request_limit: The per-film TypeSafe request limit must be a positive integer.
+        invalid_cost_limit: Cost limits must be positive finite decimal amounts.
+        batch_budget_exceeded: The maximum per-film allocations exceed the batch cost limit.
+        open_transaction: Film loading must start outside a database transaction.
+      warnings:
+        import_failed: "TMDB film %{tmdb_id} could not be imported: %{detail}"
+        assessment_failed: "TMDB film %{tmdb_id} was imported but quality assignment failed and needs manual review: %{detail}"
+        unexpected_failure: "TMDB film %{tmdb_id} could not be loaded because of an unexpected failure and needs manual review."

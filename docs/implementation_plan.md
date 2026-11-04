@@ -6,14 +6,14 @@ Updated: 4 November 2026. This document describes current progress, agreed order
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented.
-- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment and warning-isolated batch execution are implemented; bulk catalogue execution and on-demand entry-point wiring remain to build.
+- Film knowledge: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; actual catalogue execution and web entry-point wiring remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
 - Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
-- Next: finish canonical seed loading with one per-film orchestration path for source import and initial quality assignment, reusable from an explicit bounded batch entry point. Per-film assessment/evaluation persistence and warning-isolated quality assignment are implemented. Prepare the owning Film knowledge task before implementation; bulk execution requires its own source list and explicit provider budget. Admin inspection follows seed loading.
+- Next: admin-only canonical catalogue inspection. Identity currently has no administrator capability; prepare that minimal Identity-owned prerequisite first, with safe explicit grant/revoke actions and a permission query that Film knowledge can read. Do not expose catalogue admin routes before authorization is implemented. Actual bulk catalogue execution still requires an explicit film list and provider budget.
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Delivery order
