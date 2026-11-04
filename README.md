@@ -364,7 +364,6 @@ Film.without_qualities # films needing assessment or manual intervention
 
 The job logs localized structured warnings for each film with zero qualities, an assessment error or an unexpected per-film failure, then continues with later films. Zero supported qualities retain a completed evaluation with an empty accepted association list; an explicit later request may assess the film again. The review query also includes films not assessed yet. Insufficient coverage currently means zero, matching that query; no higher minimum or category quota is inferred. The job does not schedule itself or automatically process the catalogue.
 
-Live relationship verification on Alien retained one FilmQualityEval and 28 linked FilmQuality records, with the complete 235-quality assessment, eight request/response pairs and application outcome. Database provenance, evidence references, source preservation and Langfuse agreement were checked within the approved $0.02 ceiling (calculated cost $0.010665186). Some selected meanings remain interpretive; this verifies integration and provenance, not measured accuracy or recall.
 
 ## Library watched state
 
