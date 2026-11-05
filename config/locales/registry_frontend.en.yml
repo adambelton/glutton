@@ -58,6 +58,7 @@ en:
     metadata_spoilers: Show metadata · May contain spoilers
     context_spoilers: Show source context · Spoilers
     no_metadata: No TMDB metadata is stored.
+    no_paragraph_evidence: Supporting paragraph references have not been collected.
     no_context: No source paragraphs are available.
     tmdb_attribution: This product uses the TMDB API but is not endorsed or certified by TMDB.
     view_tmdb: View film on TMDB

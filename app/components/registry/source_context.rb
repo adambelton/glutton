@@ -1,9 +1,10 @@
 module Registry
   class SourceContext < UI::Base
-    def initialize(context:, paragraphs: nil, prefix: "source")
+    def initialize(context:, paragraphs: nil, prefix: "source", empty_message_key: "registry.no_context")
       @context = context
       @paragraphs = paragraphs || context.fetch("source_paragraphs", [])
       @prefix = prefix
+      @empty_message_key = empty_message_key
     end
 
     def view_template
@@ -24,7 +25,7 @@ module Registry
           p { paragraph.fetch("text") }
         end
       end
-      p(class: "empty-state") { t("registry.no_context") } if @paragraphs.empty?
+      p(class: "empty-state") { t(@empty_message_key) } if @paragraphs.empty?
     end
 
     private

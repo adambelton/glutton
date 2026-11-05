@@ -2,9 +2,8 @@ module Registry
   class InitialQualityAssessment
     MODEL = "jev-1.14.0".freeze
     POLICY = "support-0.60-category-cap-id-ties-v1".freeze
-    EVIDENCE_POLICY = "strongest-source-paragraph-v1".freeze
+    EVIDENCE_POLICY = "not-collected-initial-assignment-v1".freeze
     MINIMUM_SUPPORT = 0.60
-    EVIDENCE_BATCH_SIZE = 4
 
     attr_reader :result
 
@@ -12,7 +11,7 @@ module Registry
       @source, @definitions, @categories = source, definitions, categories
       @contract = JSON.parse(Rails.root.join("docs/film_qualities/matching.json").read)
       @trace_id = trace_id
-      @calls, @support, @evidence, @selected_quality_ids = [], {}, {}, []
+      @calls, @support, @selected_quality_ids = [], {}, []
       @selection_decisions = []
     end
 
@@ -33,26 +32,8 @@ module Registry
       response = answer(client:, state:, questions:, phase: "quality-support")
       definitions.each { |definition| @support[definition.fetch("id").to_s] = response.fetch("answers").fetch(question_id(definition)).fetch("noul") }
       @selection_decisions = selection_decisions
-      definitions_by_id = definitions.index_by { |definition| definition.fetch("id") }
-      selected = @selection_decisions.select { |decision| decision.fetch("selected") }
-        .map { |decision| definitions_by_id.fetch(decision.fetch("quality_id")) }
-      selected.each_slice(EVIDENCE_BATCH_SIZE) do |batch|
-        criteria = state.fetch("source_paragraphs").to_h { |paragraph| [ paragraph.fetch("id"), "Source paragraph #{paragraph.fetch('id')} under #{paragraph['section'] || 'the introduction'}" ] }
-        questions = batch.to_h do |definition|
-          [ question_id(definition), {
-            "type" => "choice",
-            "instructions" => {
-              "question" => "Which supplied source paragraph most directly supports #{definition.fetch('name')}?",
-              "definition" => definition.fetch("match_rule"), "not_sufficient" => definition.fetch("not_sufficient")
-            }, "criteria" => criteria
-          } ]
-        end
-        response = answer(client:, state:, questions:, phase: "quality-evidence")
-        batch.each do |definition|
-          @evidence[definition.fetch("id").to_s] = [ response.fetch("answers").fetch(question_id(definition)).fetch("choice") ]
-        end
-      end
-      @selected_quality_ids = selected.map { |definition| definition.fetch("id") }
+      @selected_quality_ids = @selection_decisions.select { |decision| decision.fetch("selected") }
+        .map { |decision| decision.fetch("quality_id") }
       @result = build_result.merge("status" => "completed")
       self
     rescue AssignmentFailed => error
@@ -94,7 +75,7 @@ module Registry
         "definitions" => definitions, "categories" => categories,
         "question_policy" => @contract, "selection_policy" => POLICY, "evidence_policy" => EVIDENCE_POLICY,
         "minimum_support" => MINIMUM_SUPPORT,
-        "model" => MODEL, "trace_id" => @trace_id, "support" => @support, "evidence" => @evidence,
+        "model" => MODEL, "trace_id" => @trace_id, "support" => @support, "evidence" => {},
         "selected_quality_ids" => @selected_quality_ids,
         "calls" => @calls, "call_count" => @calls.count { |call| call.fetch("status") != "not_sent" },
         "selection_decisions" => @selection_decisions,
