@@ -1,0 +1,28 @@
+module Views
+  module Ratings
+    class New < ::Views::Base
+      def initialize(rating_film:, targeted:, value: nil, expression_texts: [], errors: nil, edited_film: nil)
+        @rating_film, @targeted, @value = rating_film, targeted, value
+        @expression_texts, @errors, @edited_film = expression_texts, errors, edited_film
+      end
+
+      def view_template
+        page(title: t("ratings.browser.title")) do
+          if @edited_film
+            p { text_link(t("ratings.browser.edit_saved", title: @edited_film["title"]), edit_rating_path(film_id: @edited_film["id"])) }
+          end
+          if @rating_film
+            render ::Ratings::Form.new(rating_film: @rating_film, method: :post, value: @value, expression_texts: @expression_texts, errors: @errors)
+            if @targeted
+              p { text_link(t("ratings.browser.continue"), new_rating_path) }
+            else
+              render UI::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film.id })
+            end
+          else
+            p(class: "ui-empty") { t("ratings.browser.empty") }
+          end
+        end
+      end
+    end
+  end
+end

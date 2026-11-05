@@ -147,27 +147,50 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     assert_equal 1, Ratings::RatingFilm.where(user: @user).count
   end
 
-  test "csrf and signed out expired revoked deleted sessions prevent writes" do
+  test "guest entry can rate a selected film without registration" do
+    cookies.delete("session_id")
+    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ], 1 do
+      get new_rating_path(film_id: @film.id)
+      assert_response :success
+      assert_select "h2", @film.title
+    end
+    guest = Identity::Session.order(:id).last.user
+    rating_film = Ratings::RatingFilm.find_by!(user: guest, film: @film)
+    csrf_token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+    assert_difference "Ratings::Rating.count", 1 do
+      post rating_path, params: { rating_film_id: rating_film.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: csrf_token }
+      assert_response :see_other
+    end
+    assert_equal guest.id, rating_film.reload.user_id
+  end
+
+  test "writes reject expired sessions while targeted GET can start a separate fresh guest" do
     token = csrf
     post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT }
     assert_response :unprocessable_entity
-    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "Ratings::RatingFilm.count", "Identity::User.count", "Identity::Session.count" ] do
-      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
-      assert_response :unauthorized
-      get new_rating_path(film_id: @film.id)
-      assert_response :unauthorized
-      assert_select "a[href=?]", new_session_path
+    travel (Identity::UserGuest::EXPIRY_DURATION + 1.second) do
+      assert_no_difference [ "Ratings::RatingFilm.count", "Identity::User.count", "Identity::Session.count" ] do
+        post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
+        assert_response :unauthorized
+      end
+      assert_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ], 1 do
+        get new_rating_path(film_id: @film.id)
+        assert_response :success
+      end
     end
-    @user.update!(created_at: Time.current)
     bind_user
-    Identity::Session.where(user: @user).delete_all
-    get new_rating_path(film_id: @film.id)
-    assert_response :unauthorized
+    Identity::Session.where(user: @user).each { |authentication| Identity::Session.revoke(id: authentication.id) }
+    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+      get new_rating_path(film_id: @film.id)
+      assert_response :success
+    end
     bind_user
+    # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.
     @user.update_columns(type: "UserDeleted")
-    get new_rating_path(film_id: @film.id)
-    assert_response :gone
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      get new_rating_path(film_id: @film.id)
+      assert_response :gone
+    end
   end
 
   test "only omission selects the queue while malformed film IDs are rejected" do

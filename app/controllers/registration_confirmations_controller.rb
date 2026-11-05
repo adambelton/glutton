@@ -9,6 +9,7 @@ class RegistrationConfirmationsController < ApplicationController
     @token = params[:token]
     registration = Identity::PendingRegistration.resolve_confirmation!(token: @token)
     registration.authorize_confirmation!(user:) if user
+    render ::Views::Identity::RegistrationConfirmation.new(token: @token)
   end
 
   def create

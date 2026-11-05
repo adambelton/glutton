@@ -21,8 +21,9 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
-      root "home#index"
-      get "/rating/new", to: "ratings#new", as: :new_rating
+      root "ratings#new"
+      resource :library, only: :show, controller: :library
+      resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :password_reset, only: [ :new, :create, :edit, :update ]
       resource :session, only: [ :new, :create, :destroy ]
       resource :registration, only: [ :new, :create, :show ]
@@ -49,6 +50,25 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   def signup(client = self, **attributes)
     credentials = { email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase" }.merge(attributes)
     client.post registration_path, params: { registration: credentials, authenticity_token: csrf(client) }
+  end
+
+  test "registration on the local development alias uses its explicitly configured origin" do
+    original_environment = Rails.env
+    Rails.env = "development"
+    ENV["APP_ORIGIN"] = "http://glutton.local:3847"
+    host! "glutton.local:3847"
+    assert_emails 1 do
+      signup
+      assert_response :see_other
+      assert_redirected_to registration_path
+    end
+    message = ActionMailer::Base.deliveries.last
+    assert_includes message.text_part.body.decoded, "http://glutton.local:3847/registration_confirmation?token="
+    follow_redirect!
+    assert_response :success
+    assert_select '[role="status"]', I18n.t("identity.registration.accepted")
+  ensure
+    Rails.env = original_environment
   end
 
   def email_token
@@ -112,7 +132,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     get registration_confirmation_path, params: { token: }
     assert_response :success
     assert_select 'form[action="/registration_confirmation"] input[name="token"][type="hidden"]'
-    assert_select 'form[action="/registration_confirmation"] input[type="submit"]'
+    assert_select 'form[action="/registration_confirmation"] button[type="submit"]'
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_equal "no-referrer", response.headers["Referrer-Policy"]
     assert_equal 0, Identity::UserRegistered.count
@@ -312,7 +332,9 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(token:)
     assert_response :unprocessable_entity
     assert Identity::PendingRegistration.exists?(registration.id)
-    assert_equal 0, Identity::User.count
+    assert_equal 1, Identity::UserGuest.count
+    assert_equal 0, Identity::UserRegistered.count
+    assert_nil registration.reload.guest_user_id
   end
 
   test "already registered email is rejected without pending creation or another email" do

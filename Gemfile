@@ -22,6 +22,10 @@ gem "importmap-rails"
 gem "turbo-rails"
 # Hotwire's modest JavaScript framework [https://stimulus.hotwired.dev]
 gem "stimulus-rails"
+# Ruby views and locally compiled Tailwind styles for the Registry frontend.
+gem "phlex-rails", "~> 2.4"
+gem "tailwindcss-rails", "~> 4.7"
+gem "tailwind_merge", "~> 1.5"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1"
@@ -47,6 +51,8 @@ group :development, :test do
 end
 
 group :development do
+  # Generator only; generated components are application-owned source.
+  gem "ruby_ui", "1.6.0", require: false
   gem "dotenv-rails"
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"

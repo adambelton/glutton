@@ -109,7 +109,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
     post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
     Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     get library_film_path(@entry)
-    assert_select "form", count: 0
+    assert_select "main form", count: 0
     assert_select "p", "Awaiting rating"
     assert_no_difference "DomainEvents::DomainEvent.count" do
       post mark_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }

@@ -7,6 +7,7 @@ class RegistrationsController < ApplicationController
 
   def new
     @registration = Identity::PendingRegistration.new
+    render ::Views::Identity::RegistrationNew.new(registration: @registration)
   end
 
   def create
@@ -19,11 +20,13 @@ class RegistrationsController < ApplicationController
     redirect_to registration_path, notice: I18n.t("identity.registration.accepted"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @registration = error.record
-    render :new, status: :unprocessable_entity
+    render ::Views::Identity::RegistrationNew.new(registration: @registration), status: :unprocessable_entity
   end
 
   def show
     @registration = current_pending_registration
     raise Identity::RegistrationUnavailable if @registration.nil?
+
+    render ::Views::Identity::RegistrationPending.new(registration: @registration)
   end
 end

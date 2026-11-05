@@ -1,25 +1,23 @@
 # Glutton — Implementation progress
 
-Updated: 4 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 5 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Production deployment and scheduling remain decisions to make.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented. Minimal superuser permission and explicit grant/revoke operations restricted to existing superusers are implemented.
-- Registry: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; actual catalogue execution and web entry-point wiring remain to build.
+- Registry: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; superuser-only read-only catalogue inspection is implemented; import/edit/refresh web entry points and bulk catalogue execution remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
 - Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
-- Registry, Identity, Library and Ratings namespaces are implemented. The final Foundation delivery namespace task is implemented and in review. Catalogue inspection stays deferred until this final namespace change is merged.
-- [Catalogue inspection](tasks/catalogue_inspection.md): prepared draft, deferred until the remaining domain model namespaces are complete. Registry will own superuser-only, read-only film/category/quality lists and details, related-record navigation and stored source/evidence display. Identity's superuser prerequisite is implemented. Editing, imports, source refresh and provider execution remain excluded; bulk catalogue execution still requires an explicit film list and provider budget.
+Browser views use Phlex pages under `app/views/<domain>` and application-owned components under `app/components`, with shared brand typography/colour themes. Registry inspection is superuser-only; Ratings is the root destination with guest-session entry and optional registration. Email templates remain ERB. All manual local work uses `glutton_development`; automated tests use `glutton_test`.
+
+Next: a narrowly scoped Registry task for editing existing quality definitions/exclusions while preserving immutable names, accepted film associations and historical evaluation snapshots. Category settings and manual film-quality changes follow as separate Registry outcomes; source refresh and reassessment remain later.
+
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
-
-## Model namespace migration order
-
-Registry, Identity, Library and Ratings are complete. Foundation delivery is the final namespace outcome; its models share the existing DomainEvents namespace with their services. All retain existing tables/IDs and behaviour. The undeployed Identity migration intentionally invalidates old confirmation/reset links; newly issued links and existing signed-in sessions retain their agreed rules. Catalogue inspection follows the final namespace migration.
 
 ## Delivery order
 
@@ -75,7 +73,7 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with roomier film rows; keep the Library dropdown above the list. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
+This is the agreed navigation design, not a claim that every destination is implemented. Ratings is now wired as the root page with automatic guest-session entry (registration optional), and the shared header includes implemented Ratings/Library destinations, a superuser-only Registry link and account controls; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and the complete mobile primary-navigation design remain separately scoped work.
 
 ## Future Ratings evaluation work
 

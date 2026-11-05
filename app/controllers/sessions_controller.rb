@@ -6,6 +6,7 @@ class SessionsController < ApplicationController
     with: -> { render plain: I18n.t("identity.sessions.rate_limited"), status: :too_many_requests }
 
   def new
+    render ::Views::Identity::SignIn.new
   end
 
   def create
@@ -20,7 +21,7 @@ class SessionsController < ApplicationController
       redirect_to root_path, status: :see_other
     else
       @error = I18n.t("identity.sessions.invalid_credentials")
-      render :new, status: :unprocessable_entity
+      render ::Views::Identity::SignIn.new(error: @error), status: :unprocessable_entity
     end
   end
 

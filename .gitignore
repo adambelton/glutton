@@ -32,3 +32,7 @@
 
 # RubyMine
 /.idea/
+
+# Tailwind output is rebuilt for tests and asset precompilation.
+/app/assets/builds/*
+!/app/assets/builds/.keep

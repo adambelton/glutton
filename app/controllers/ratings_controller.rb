@@ -1,16 +1,17 @@
 class RatingsController < ApplicationController
+  before_action :ensure_guest_user!, only: :new
   before_action :require_identity
 
   rescue_from Identity::Required, Ratings::IdentityUnavailable do
-    render :signed_out, status: :unauthorized
+    render ::Views::Ratings::SignedOut.new, status: :unauthorized
   end
   rescue_from Ratings::FilmUnavailable do |error|
     @error = error.message
-    render :unavailable, status: :not_found
+    render ::Views::Ratings::Unavailable.new(error: @error), status: :not_found
   end
   rescue_from Ratings::AlreadyRated, Ratings::DismissalUnavailable, Ratings::RevisionUnavailable do |error|
     @error = error.message
-    render :unavailable, status: :conflict
+    render ::Views::Ratings::Unavailable.new(error: @error), status: :conflict
   end
 
   def new
@@ -20,6 +21,7 @@ class RatingsController < ApplicationController
     else
       @rating_film = Ratings::NextCandidates.call(user_id: current_user.id, limit: 1).first
     end
+    render_new
   end
 
   def create
@@ -42,6 +44,7 @@ class RatingsController < ApplicationController
     @previous_rating_id = rating.id
     @value = rating.value
     @expression_texts = rating.rating_expressions.map(&:text)
+    render_edit
   end
 
   def update
@@ -60,7 +63,7 @@ class RatingsController < ApplicationController
   rescue Ratings::StaleRating => error
     @rating_film = Ratings::FindCandidate.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
     @error = error.message
-    render :stale, status: :conflict
+    render ::Views::Ratings::Stale.new(error: @error, rating_film: @rating_film), status: :conflict
   end
 
   def dismiss
@@ -69,6 +72,16 @@ class RatingsController < ApplicationController
   end
 
   private
+
+  def render_new(status: :ok)
+    render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: params.key?(:film_id),
+      value: @value, expression_texts: @expression_texts, errors: @errors, edited_film: flash[:edited_film]), status:
+  end
+
+  def render_edit(status: :ok)
+    render ::Views::Ratings::Edit.new(rating_film: @rating_film, previous_rating_id: @previous_rating_id,
+      value: @value, expression_texts: @expression_texts, errors: @errors), status:
+  end
 
   def read_rating_input
     @value = params[:value] if params[:value].is_a?(String)
@@ -89,7 +102,7 @@ class RatingsController < ApplicationController
 
   def render_invalid_revision
     @rating_film = Ratings::FindCandidate.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
-    render :edit, status: :unprocessable_entity
+    render_edit(status: :unprocessable_entity)
   end
 
   def film_id_param
@@ -108,6 +121,6 @@ class RatingsController < ApplicationController
 
   def render_invalid_rating
     @rating_film = Ratings::FindCandidate.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
-    render :new, status: :unprocessable_entity
+    render_new(status: :unprocessable_entity)
   end
 end

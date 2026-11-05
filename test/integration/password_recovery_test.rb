@@ -1,5 +1,12 @@
 require "test_helper"
 
+class PasswordRecoveryActivityProbeController < ApplicationController
+  def create
+    ensure_guest_user!
+    head :no_content
+  end
+end
+
 class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   setup do
     @forgery = PasswordResetsController.allow_forgery_protection
@@ -142,15 +149,22 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "unrelated guest and its pending registration survive reset without merging" do
-    previous = HomeController.instance_method(:index)
-    HomeController.define_method(:index) do
-      ensure_guest_user!
-      render plain: "guest"
+    Rails.application.routes.draw do
+      root "ratings#new"
+      resource :library, only: :show, controller: :library
+      resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
+      resource :registration, only: [ :new, :create, :show ]
+      resource :registration_email, only: :create
+      resource :registration_confirmation, only: [ :show, :create ]
+      resource :password_reset, only: [ :new, :create, :edit, :update ]
+      resource :session, only: [ :new, :create, :destroy ]
+      post "/password-recovery-activity", to: "password_recovery_activity_probe#create"
     end
     post registration_path, params: { registration: { email_address: "guest-pending@example.test", password: "original password phrase",
       password_confirmation: "original password phrase" }, authenticity_token: csrf }
     assert_response :see_other
-    get root_path
+    post "/password-recovery-activity", params: { authenticity_token: csrf }
+    assert_response :no_content
     guest_session = Identity::Session.last
     guest = guest_session.user
     pending = Identity::PendingRegistration.last
@@ -167,7 +181,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_select "h1", I18n.t("identity.registration.pending_title")
     assert @user.reload.authenticate("replacement password phrase")
   ensure
-    HomeController.define_method(:index, previous) if previous
+    Rails.application.reload_routes!
   end
 
   test "request logs filter full token URLs credentials and email cache keys" do

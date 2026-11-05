@@ -2,37 +2,38 @@ class LibraryController < ApplicationController
   before_action :require_identity
 
   rescue_from Identity::Required, Library::IdentityUnavailable do
-    render :signed_out, status: :unauthorized
+    render ::Views::Library::SignedOut.new, status: :unauthorized
   end
 
   rescue_from Library::FilmUnavailable do
     @error = I18n.t("library.detail.unavailable")
-    render :unavailable, status: :not_found
+    render ::Views::Library::Unavailable.new(error: @error), status: :not_found
   end
   rescue_from Library::AlreadyWatched do
     @error = I18n.t("library.detail.watch_unavailable")
-    render :unavailable, status: :conflict
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
   rescue_from Library::NotOnWatchlist do
     @error = I18n.t("library.detail.not_on_watchlist")
-    render :unavailable, status: :conflict
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
 
   rescue_from Library::DismissalUnavailable do
     @error = I18n.t("library.detail.dismissal_unavailable")
-    render :unavailable, status: :conflict
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
   rescue_from Library::WatchlistUnavailable do
     @error = I18n.t("library.detail.watchlist_unavailable")
-    render :unavailable, status: :conflict
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
   rescue_from Library::NotMarkedNotInterested do
     @error = I18n.t("library.detail.not_dismissed")
-    render :unavailable, status: :conflict
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
 
   def film
     @library_film = Library::FindFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    render ::Views::Library::FilmDetail.new(library_film: @library_film)
   end
 
   def mark_watched
@@ -64,11 +65,12 @@ class LibraryController < ApplicationController
     @view = params.fetch(:view, Library::Browse::Views::WATCHLIST)
     page = params.fetch(:page, "1")
     unless Library::Browse::Views::ALL.include?(@view) && page.is_a?(String) && page.match?(/\A[1-9]\d{0,8}\z/)
-      render :invalid, status: :bad_request
+      render ::Views::Library::Invalid.new, status: :bad_request
       return
     end
     @page_number = page.to_i
     @page = Library::Browse.call(user_id: current_user.id, view: @view, page: @page_number)
+    render ::Views::Library::Browse.new(view: @view, page: @page, page_number: @page_number)
   end
 
   private
