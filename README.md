@@ -410,7 +410,7 @@ Seed the quality vocabulary first and configure the existing TMDB, Wikipedia/Wik
 ```ruby
 result = Registry::LoadFilm.call(
   tmdb_id: selected_candidate.fetch(:tmdb_id),
-  maximum_requests: 8,
+  maximum_requests: 1,
   maximum_cost_usd: 0.02
 )
 result.fetch(:film)
@@ -427,7 +427,7 @@ For an explicit batch, supply the complete TMDB ID list and its limits:
 summary = Registry::LoadFilms.call(
   tmdb_ids: selected_tmdb_ids,
   maximum_films: 10,
-  maximum_requests_per_film: 8,
+  maximum_requests_per_film: 1,
   maximum_cost_usd_per_film: 0.02,
   maximum_cost_usd: 0.20
 )
@@ -451,9 +451,9 @@ result.fetch(:film_quality_eval) # persisted evaluation, including call history 
 result.fetch(:film_quality_eval).output # complete persisted judgments, policies, call history and usage/cost
 ```
 
-The service pins `jev-1.14.0` and uses the retained contextual-support questions. Code selects support >=0.60 within each category's maximum, descending support then Quality ID for ties. Category weights do not affect membership; ceilings are maxima. Evidence questions identify a directly supporting paragraph for each selected quality. Model judgments still need inspection; support is not an enjoyment score or proof of correctness.
+The service pins `jev-1.14.0` and uses the retained contextual-support questions. Code selects support >=0.60 within each category's maximum, descending support then Quality ID for ties. Category weights do not affect membership; ceilings are maxima. Initial assignment makes one bundled support request per film and collects no paragraph references. New evaluations retain empty paragraph evidence with a not-collected policy; historical paragraph evidence remains readable. Explicit manual-review evidence collection is deferred and should use one bundled request unless measured cost or provider limits justify splitting. Model judgments still need inspection; support is not an enjoyment score or proof of correctness.
 
-Accepted state is persisted as `Registry::FilmQuality` records with a `film_quality_eval` reference. Evidence is stored only in the evaluation output; FilmQuality exposes no evidence reader. `Registry::FilmQualityEval` independently retains the evaluation: source/definition snapshots, ordered exact request/response pairs and call count, all probabilities, evidence, selection decisions (threshold/category ceiling/rank), model/policies, usage/cost and optional trace ID. Its output is immutable; a single application outcome records accepted association IDs or a safe failure reason. Langfuse is diagnostic telemetry, not a runtime dependency for reading evaluation evidence. Manual and pre-existing associations may have no evaluation; no history is fabricated for them. There is no receipt or status column on Film.
+Accepted state is persisted as `Registry::FilmQuality` records with a `film_quality_eval` reference. Any collected paragraph evidence is stored only in the evaluation output; FilmQuality exposes no evidence reader. `Registry::FilmQualityEval` independently retains the evaluation: source/definition snapshots, ordered exact request/response pairs and call count, all probabilities, evidence, selection decisions (threshold/category ceiling/rank), model/policies, usage/cost and optional trace ID. Its output is immutable; a single application outcome records accepted association IDs or a safe failure reason. Langfuse is diagnostic telemetry, not a runtime dependency for reading evaluation evidence. Manual and pre-existing associations may have no evaluation; no history is fabricated for them. There is no receipt or status column on Film.
 
 Existing associations fail explicitly instead of being overwritten. Provider work precedes short write locks; changed sources/vocabulary or intervening assignments prevent application. A failed write rolls back every new association while retaining the completed evaluation and its failure outcome. Stale evaluations are retained but not applied. Provider failures retain a failed evaluation with partial answers, safe errors and attempted-call history; requests blocked before sending are identified and excluded from the provider-call count. Usage/cost totals include validated responses only, and incomplete usage is flagged. Unparseable/transport failures have no JSON response to retain.
 

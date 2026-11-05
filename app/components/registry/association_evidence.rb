@@ -27,7 +27,7 @@ module Registry
               paragraphs.each { |paragraph| a(href: "##{prefix}-#{paragraph.fetch('id')}") { paragraph.fetch("id") } }
             end
           end
-          render SourceContext.new(context:, paragraphs:, prefix:)
+          render SourceContext.new(context:, paragraphs:, prefix:, empty_message_key: "registry.no_paragraph_evidence")
         end
       end
     end

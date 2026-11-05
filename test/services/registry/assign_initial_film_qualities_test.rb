@@ -4,7 +4,7 @@ require_relative "../../support/quality_assessment_sources"
 class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
   include QualityAssessmentSources
 
-  test "assigns threshold matches in category order with source evidence and an inspectable result" do
+  test "assigns threshold matches from one support request with an inspectable result" do
     film = imported_assignment_film
     first = assessment_quality(name: "First")
     second = assessment_quality(name: "Second")
@@ -16,7 +16,7 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
       assert_equal film, result.fetch(:film)
     end
     assert_equal [ first.id, second.id ].sort, film.reload.quality_ids.sort
-    assert_equal({ first.id.to_s => [ "P1" ], second.id.to_s => [ "P1" ] }, result.fetch(:film_quality_eval).reload.output.fetch("evidence"))
+    assert_empty result.fetch(:film_quality_eval).reload.output.fetch("evidence")
     assessment_result = result.fetch(:film_quality_eval).output
     assert_equal [ second.id, first.id ], assessment_result.fetch("selected_quality_ids")
     assert_equal 0.59, assessment_result.fetch("support").fetch(below.id.to_s)
@@ -27,14 +27,14 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal film, evaluation.film
     assert_equal [ evaluation.id ], film.film_qualities.distinct.pluck(:film_quality_eval_id)
     assert_equal client.requests.map { |request| request.fetch(:questions).deep_stringify_keys }, evaluation.output.fetch("calls").map { |call| call.dig("request", "questions") }
-    assert_equal 2, evaluation.output.fetch("call_count")
+    assert_equal 1, evaluation.output.fetch("call_count")
     assert_equal client.requests.map { |request| request.fetch(:state).deep_stringify_keys }, evaluation.output.fetch("calls").map { |call| call.dig("request", "state") }
-    assert_equal 2, evaluation.output.fetch("calls").count { |call| call.fetch("status") == "completed" }
+    assert_equal 1, evaluation.output.fetch("calls").count { |call| call.fetch("status") == "completed" }
     assert_equal "applied", evaluation.application.fetch("status")
     assert_equal film.film_qualities.order(:id).ids, evaluation.application.fetch("film_quality_ids").sort
     assert_equal [ "selected", "selected", "below_threshold" ], evaluation.output.fetch("selection_decisions").sort_by { |decision| decision.fetch("quality_id") }.map { |decision| decision.fetch("reason") }
-    assert_equal 200, assessment_result.fetch("input_tokens")
-    assert_equal [ "quality-support", "quality-evidence" ], client.requests.map { |request| request.fetch(:phase) }
+    assert_equal 100, assessment_result.fetch("input_tokens")
+    assert_equal [ "quality-support" ], client.requests.map { |request| request.fetch(:phase) }
     assert_not client.requests.first.fetch(:state).key?("categories")
     assert_equal "Do the supplied source_paragraphs support First in this film?", client.requests.first.dig(:questions, "quality_#{first.id}", "instructions")
     timestamp = film.updated_at
@@ -147,21 +147,17 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal 0, Registry::FilmQuality.count
   end
 
-  test "an evidence request failure cannot apply a partial assignment" do
+  test "a support request failure cannot apply any assignment" do
     film = imported_assignment_film
     assessment_quality
-    requests = 0
-    client = Client.new(before_answer: lambda do
-      requests += 1
-      raise Registry::AssignmentFailed.new(reason: :timeout) if requests == 2
-    end)
+    client = Client.new(before_answer: -> { raise Registry::AssignmentFailed.new(reason: :timeout) })
     error = assert_raises(Registry::AssignmentFailed) { Registry::AssignInitialFilmQualities.call(film_id: film.id, client:) }
     assert_equal :timeout, error.reason
     evaluation = film.film_quality_evals.sole
     assert_equal "failed", evaluation.output.fetch("status")
-    assert_equal 2, evaluation.output.fetch("call_count")
-    assert_equal [ "completed", "failed" ], evaluation.output.fetch("calls").map { |call| call.fetch("status") }
-    assert_equal 0.7, evaluation.output.fetch("support").values.sole
+    assert_equal 1, evaluation.output.fetch("call_count")
+    assert_equal [ "failed" ], evaluation.output.fetch("calls").map { |call| call.fetch("status") }
+    assert_empty evaluation.output.fetch("support")
     assert_equal "timeout", evaluation.application.fetch("reason")
     assert_equal [], evaluation.output.fetch("selected_quality_ids")
     assert_raises(Registry::AssignmentFailed) { evaluation.apply_initial_qualities! }

@@ -29,17 +29,22 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
   teardown { @provider.shutdown }
 
   def client(http: Http.new)
-    Registry::TypeSafeClient.new(token: "private-test-key", http_class: http, tracer: @provider.tracer("glutton.registry", "1"))
+    Registry::TypeSafeClient.new(token: "private-test-key", http_class: http, tracer: @provider.tracer("glutton.registry", "1"), maximum_requests: 1)
   end
 
   test "assignment records exact requests answers usage cost and hierarchy without secrets" do
     film = imported_assignment_film
     assessment_quality
-    result = Registry::AssignInitialFilmQualities.call(film_id: film.id, client: client, tracer_provider: @provider)
+    assessment_quality(name: "Another quality")
+    http = Http.new
+    result = Registry::AssignInitialFilmQualities.call(film_id: film.id, client: client(http:), tracer_provider: @provider)
     spans = @exporter.finished_spans
     root = spans.find { |span| span.name == "assign-initial-film-qualities" }
     generations = spans.reject { |span| span == root }
-    assert_equal 2, generations.size
+    assert_equal 1, generations.size
+    assert_equal 1, http.requests.size
+    assert_equal 2, result.fetch(:film_qualities).size
+    assert_empty result.fetch(:film_quality_eval).output.fetch("evidence")
     evaluation = result.fetch(:film_quality_eval).reload
     assert_equal evaluation.id, root.attributes.fetch("film_quality_eval_id")
     calls = evaluation.output.fetch("calls")

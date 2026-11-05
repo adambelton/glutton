@@ -22,7 +22,7 @@ class Registry::LoadFilmsTest < ActiveSupport::TestCase
 
   def load_films(**options)
     Registry::LoadFilms.call(**{ tmdb_ids: [ TMDB_IDS.first ], maximum_films: 10,
-      maximum_requests_per_film: 2, maximum_cost_usd_per_film: 0.02, maximum_cost_usd: 0.20,
+      maximum_requests_per_film: 1, maximum_cost_usd_per_film: 0.02, maximum_cost_usd: 0.20,
       film_loader: @sources }.merge(options))
   end
 
@@ -54,7 +54,7 @@ class Registry::LoadFilmsTest < ActiveSupport::TestCase
     end
     assert_equal "completed", Registry::Film.find_by!(tmdb_id: zero).film_quality_evals.sole.output.fetch("status")
     assert_equal "failed", Registry::Film.find_by!(tmdb_id: unexpected).film_quality_evals.sole.output.fetch("status")
-    assert_equal 14, result.fetch(:limits).fetch(:maximum_requests)
+    assert_equal 7, result.fetch(:limits).fetch(:maximum_requests)
     assert_equal BigDecimal("0.14"), result.fetch(:limits).fetch(:maximum_cost_usd)
     refute_includes output.string, "private-loading-test-key"
     refute_includes output.string, "private-provider-body"
@@ -126,10 +126,10 @@ class Registry::LoadFilmsTest < ActiveSupport::TestCase
     assert_empty @sources.source_requests
   end
 
-  test "a request limit failure for one film does not consume another film's allocation" do
+  test "each film completes within its own single-request allocation" do
     result = load_films(tmdb_ids: TMDB_IDS.first(2), maximum_requests_per_film: 1)
-    assert_empty result.fetch(:loaded_film_ids)
-    assert_equal [ :request_limit, :request_limit ], result.fetch(:warnings).map { |warning| warning.fetch(:failure_reason) }
+    assert_equal 2, result.fetch(:loaded_film_ids).size
+    assert_empty result.fetch(:warnings)
     assert_equal TMDB_IDS.first(2), @sources.assessment_requests.map { |request| request.fetch(:tmdb_id) }
     assert_equal 2, Registry::Film.where(tmdb_id: TMDB_IDS.first(2)).count
   end

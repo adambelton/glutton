@@ -25,7 +25,7 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     Registry::Quality.where(id: @quality.id).delete_all
   end
 
-  def load_film(tmdb_id: TMDB_IDS.first, maximum_requests: 2, maximum_cost_usd: 0.02, sources: @sources)
+  def load_film(tmdb_id: TMDB_IDS.first, maximum_requests: 1, maximum_cost_usd: 0.02, sources: @sources)
     sources.call(tmdb_id:, maximum_requests:, maximum_cost_usd:)
   end
 
@@ -40,10 +40,10 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_equal [ evaluation.id ], result.fetch(:film_qualities).map(&:film_quality_eval_id)
     assert_equal film.id, evaluation.film_id
     assert_equal "applied", evaluation.application.fetch("status")
-    assert_equal 2, evaluation.output.fetch("call_count")
+    assert_equal 1, evaluation.output.fetch("call_count")
     assert_empty result.fetch(:warnings)
     assert_equal [ :tmdb, :external_ids, :wikidata, :wikipedia ], @sources.source_requests.map { |request| request.fetch(:phase) }
-    assert_equal 2, @sources.assessment_requests.size
+    assert_equal 1, @sources.assessment_requests.size
   end
 
   test "incomplete source acquisition creates no film and never starts assessment" do
@@ -99,11 +99,11 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_equal 1, original.fetch(:film).film_qualities.count
   end
 
-  test "actual request and spend guards are enforced for each film" do
-    error = assert_raises(Registry::AssignmentFailed) { load_film(maximum_requests: 1) }
-    assert_equal :request_limit, error.reason
+  test "a one-request allocation completes and the spend guard still rejects before sending" do
+    result = load_film(maximum_requests: 1)
+    assert_equal 1, result.fetch(:film_qualities).size
     assert_equal 1, @sources.assessment_requests.size
-    assert_equal [ "completed", "not_sent" ], Registry::Film.find_by!(tmdb_id: TMDB_IDS.first).film_quality_evals.sole.output.fetch("calls").map { |call| call.fetch("status") }
+    assert_equal [ "completed" ], result.fetch(:film_quality_eval).output.fetch("calls").map { |call| call.fetch("status") }
     sources = loading_sources
     error = assert_raises(Registry::AssignmentFailed) do
       load_film(tmdb_id: TMDB_IDS.first + 1, maximum_cost_usd: 0.00000001, sources:)
@@ -152,7 +152,7 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_equal 1, film.film_qualities.count
     assert_equal film, results.filter_map { |outcome| outcome[:result] }.sole.fetch(:film)
     assert_equal :existing_film, results.filter_map { |outcome| outcome[:error] }.sole.reason
-    assert_equal 2, @sources.assessment_requests.size
+    assert_equal 1, @sources.assessment_requests.size
   end
 
   test "independent workers load different films with separate request allocations" do
@@ -172,8 +172,8 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     2.times { release << true }
     results = Timeout.timeout(5) { @threads.map(&:value) }
     assert_equal TMDB_IDS.first(2), results.map { |result| result.fetch(:film).tmdb_id }.sort
-    assert_equal [ 2, 2 ], results.map { |result| result.fetch(:film_quality_eval).output.fetch("call_count") }
-    assert_equal 4, @sources.assessment_requests.size
+    assert_equal [ 1, 1 ], results.map { |result| result.fetch(:film_quality_eval).output.fetch("call_count") }
+    assert_equal 2, @sources.assessment_requests.size
   end
 
   test "bounded client construction retains the existing assignment trace hierarchy" do
@@ -183,7 +183,7 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     result = load_film(sources: loading_sources(tracer_provider: provider))
     root = exporter.finished_spans.find { |span| span.name == "assign-initial-film-qualities" }
     generations = exporter.finished_spans.reject { |span| span == root }
-    assert_equal 2, generations.size
+    assert_equal 1, generations.size
     assert_equal root.trace_id.unpack1("H*"), result.fetch(:film_quality_eval).output.fetch("trace_id")
     generations.each do |span|
       assert_equal root.trace_id, span.trace_id

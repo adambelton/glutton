@@ -13,15 +13,19 @@ Updated: 5 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
+Regular initial quality assignment makes one bundled support request per film without automatic paragraph-evidence requests. Source/definition snapshots, probabilities, decisions and application provenance remain recorded; historical paragraph evidence remains readable. On-demand manual review remains deferred; prefer one request unless measured limits/cost justify splitting.
+
 Browser views use Phlex pages under `app/views/<domain>` and application-owned components under `app/components`, with shared brand typography/colour themes. Registry inspection is superuser-only; Ratings is the root destination with guest-session entry and optional registration. Email templates remain ERB. All manual local work uses `glutton_development`; automated tests use `glutton_test`.
 
-Next: a narrowly scoped Registry task for editing existing quality definitions/exclusions while preserving immutable names, accepted film associations and historical evaluation snapshots. Category settings and manual film-quality changes follow as separate Registry outcomes; source refresh and reassessment remain later.
+Development contains 50 source-backed films with initial qualities, providing data for public-feature verification. Core Ratings, Library and Recommendations functionality takes priority over Registry editing.
+
+- [Edit existing quality definitions](tasks/quality_definition_editing.md): Deferred draft; implementation not started. Superuser-only editing of matching definitions/exclusions, preserving immutable names, accepted film associations and historical evaluation snapshots, with explicit stale-form protection. Category settings and manual film-quality changes follow as separate Registry outcomes; source refresh and reassessment remain later.
 
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
 ## Delivery order
 
-The agreed order is seed first:
+The immediate priority is a usable development seed followed by core public Ratings, Library and Recommendations functionality. Registry editing/refresh improvements below are deferred. The canonical-content dependency order remains:
 
 1. **Load the initial seed:** persist/load the quality vocabulary and definitions, retain category defaults, import canonical films from TMDB, enrich with Wikipedia context and assign initial qualities under the chosen 60%/category-cap baseline. Initial assignment is part of making seed data usable; it does not depend on a refresh-suggestion product or per-film human approval.
 2. **View canonical content:** admin-only film, quality-category and quality lists/detail pages, including source context, associations and navigation between related records. Admin authorisation must protect these screens. Viewing comes before editing.
@@ -74,6 +78,10 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
 This is the agreed navigation design, not a claim that every destination is implemented. Ratings is now wired as the root page with automatic guest-session entry (registration optional), and the shared header includes implemented Ratings/Library destinations, a superuser-only Registry link and account controls; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and the complete mobile primary-navigation design remain separately scoped work.
+
+## Future Recommendations scoring work
+
+When implementing Recommendations, evaluate how variable film-quality counts and source coverage affect ranking, including raw-sum/normalization bias, overlapping qualities and positive/negative preference signals. Category caps do not establish fair scoring. The [recommendation construction requirements](architecture_brief.md#8-recommendation-construction) record the comparison cases; no scoring formula is selected yet.
 
 ## Future Ratings evaluation work
 

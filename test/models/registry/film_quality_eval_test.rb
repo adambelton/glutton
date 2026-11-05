@@ -41,7 +41,7 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
     evaluation.apply_initial_qualities!
     assert_equal evaluation, @film.film_qualities.sole.film_quality_eval
     link = @film.film_qualities.sole.reload
-    assert_equal [ "P1" ], link.film_quality_eval.output.fetch("evidence").fetch(link.quality_id.to_s)
+    assert_empty link.film_quality_eval.output.fetch("evidence")
     assert_equal "applied", evaluation.reload.application.fetch("status")
     assert_equal @film.film_qualities.ids, evaluation.application.fetch("film_quality_ids")
     assert_raises(ActiveRecord::DeleteRestrictionError) { @film.destroy! }

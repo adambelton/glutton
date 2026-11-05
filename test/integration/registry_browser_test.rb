@@ -1,5 +1,5 @@
 require "test_helper"
-require_relative "../support/film_import_sources"
+require_relative "../support/quality_assessment_sources"
 
 class RegistryBrowserTest < ActionDispatch::IntegrationTest
   include FilmImportSources
@@ -141,6 +141,23 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
     assert_select "a[href=?]", registry_quality_path(candidate), count: 0
     assert_select "article#source-P1 p", "Current source <script>text</script>"
+  end
+
+  test "support-only assignments show saved support without claiming paragraph evidence" do
+    film = Registry::Film.new(tmdb_id: 800003).import!(
+      tmdb_data: { title: "Support-only film", release_date: nil, tmdb_metadata: { "details" => {} } },
+      wikipedia_context: wikipedia_context(tmdb_id: 800003))
+    result = Registry::AssignInitialFilmQualities.call(film_id: film.id, client: QualityAssessmentSources::Client.new)
+    assert_empty result.fetch(:film_quality_eval).output.fetch("evidence")
+    get registry_film_path(film)
+    assert_response :success
+    assert_select ".evidence-content" do
+      assert_select "p", I18n.t("registry.support", value: 70)
+      assert_select "p", I18n.t("registry.no_paragraph_evidence")
+      assert_select "a[href=?]", film.wikipedia_context.fetch("revision_url")
+      assert_select "article", count: 0
+      assert_select "p", text: I18n.t("registry.no_context"), count: 0
+    end
   end
 
   test "optional fields empty associations missing records and invalid parameters have explicit states" do
