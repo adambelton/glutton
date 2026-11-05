@@ -1,0 +1,95 @@
+en:
+  registry:
+    wordmark: glutton.
+    title: Registry
+    dark_mode: Dark mode
+    internal: Internal access
+    back_to_app: Back to app
+    eyebrow: The collection behind the experience
+    navigation: Registry navigation
+    skip: Skip to content
+    read_only: Read-only registry
+    films: Films
+    categories: Quality categories
+    qualities: Qualities
+    films_description: Inspect canonical films, accepted qualities and the sources behind them.
+    categories_description: The groupings, selection limits and weights that organise the vocabulary.
+    qualities_description: Explore the definitions that describe what a film has to offer.
+    film_description: Canonical film record · Source material and quality evidence may contain spoilers.
+    category_description: Category settings and the qualities they govern.
+    quality_description: Matching criteria and films with this accepted quality.
+    canonical_films: Canonical films
+    associated_films: Associated films
+    accepted_qualities: Accepted qualities
+    accepted_explanation: Current associations only. Stored evaluation evidence may describe an earlier source revision.
+    all_films: ← All films
+    all_categories: ← All categories
+    all_qualities: ← All qualities
+    film: Film
+    quality: Quality
+    category: Category
+    release_date: Release date
+    tmdb_id: TMDB ID
+    wikidata_id: Wikidata ID
+    definition: Matching definition
+    exclusions: Not sufficient to match
+    maximum: Maximum qualities per film
+    weight: Scoring weight
+    not_stored: Not stored
+    source_status: Source coverage
+    source_available: Context available
+    source_incomplete: Context incomplete
+    records:
+      one: "%{count} record"
+      other: "%{count} records"
+    page: "Page %{number} of %{total}"
+    previous: Previous
+    next: Next
+    pagination: Pagination
+    empty: No records on this page.
+    no_qualities: No accepted qualities are stored. This does not establish that assignment completed or that no qualities match.
+    no_evidence: No evaluation provenance is linked to this association.
+    view_evidence: "View evidence · Evaluation %{id} · Spoilers"
+    historical_evidence: Evidence below comes from the evaluation’s saved source revision, rather than the current film context.
+    support: "Recorded contextual support: %{value}%. This is evidence confidence, not preference value."
+    evidence_paragraphs: Referenced evidence paragraphs
+    metadata: TMDB metadata
+    wikipedia: Wikipedia source context
+    metadata_spoilers: Show metadata · May contain spoilers
+    context_spoilers: Show source context · Spoilers
+    no_metadata: No TMDB metadata is stored.
+    no_context: No source paragraphs are available.
+    tmdb_attribution: This product uses the TMDB API but is not endorsed or certified by TMDB.
+    view_tmdb: View film on TMDB
+    wikipedia_attribution: Source material from Wikipedia. Follow the article, revision and history links for attribution and the licence for reuse terms.
+    article: Article
+    revision: "Revision %{id}"
+    history: Revision history
+    license: Licence
+    retrieved: "Retrieved: %{at}"
+    paragraph: "%{id} · %{section}"
+    context: Context
+    original_title: Original title
+    tagline: Tagline
+    overview: Overview
+    runtime: Runtime
+    minutes:
+      one: "%{count} minute"
+      other: "%{count} minutes"
+    original_language: Original language
+    status: Status
+    imdb_id: IMDb ID
+    genres: Genres
+    production_companies: Production companies
+    production_countries: Production countries
+    spoken_languages: Spoken languages
+    errors:
+      forbidden:
+        title: Superuser access required
+        description: This registry is available to internal superusers. Your account does not have access.
+      not_found:
+        title: Record not found
+        description: This record is not available in the registry. It may have been removed.
+      invalid:
+        title: Invalid page
+        description: Choose a positive page number to browse the registry.

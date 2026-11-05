@@ -1,5 +1,0 @@
-<p><%= t("identity.registration.verify_required") %></p>
-<p><%= t("identity.registration.expires", deadline: l(registration.expires_at, format: :registration)) %></p>
-<% if registration.guest_user_id.present? %>
-  <p><%= t("identity.registration.guest_temporary") %></p>
-<% end %>

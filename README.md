@@ -10,7 +10,7 @@ A horror discovery app built with Rails, PostgreSQL and server-rendered Hotwire 
 - PostgreSQL **17** running locally (verified with **17.9**).
 - The local PostgreSQL role matching your OS username must have permission to create databases. For another local connection, use standard `PGHOST`, `PGPORT`, `PGUSER` and `PGPASSWORD` environment variables; do not commit credentials.
 
-Rails **8.1.4** and all gem versions are locked in `Gemfile.lock`. The frontend uses importmap, so Node.js is not required. No external API keys are needed for default local operation.
+Rails **8.1.4.1** and all gem versions are locked in `Gemfile.lock`. The frontend uses importmap, so Node.js is not required. No external API keys are needed for default local operation.
 
 ## Setup
 
@@ -34,13 +34,27 @@ PostgreSQL must already be running. On this machine the existing service is Home
 bin/dev
 ```
 
-Open [Glutton](http://localhost:3000) or the [health endpoint](http://localhost:3000/up). Stop the foreground server with **Ctrl-C**. To choose another port, use `bin/dev -p 3001`.
+`bin/dev` builds application styles before starting Rails. While changing styles/components, run `bin/rails tailwindcss:watch` in a second terminal. Tests and asset precompilation also build Tailwind.
+
+Open [Glutton](http://glutton.local:3000) (or [localhost](http://localhost:3000)) or the [health endpoint](http://localhost:3000/up). Stop the foreground server with **Ctrl-C**. To choose another port, use `bin/dev -p 3001`.
+
+For the stable development hostname, add `127.0.0.1 glutton.local` to this machine’s `/etc/hosts` (administrator access required). Rails permits this exact hostname in development. For registration/recovery links, explicitly set `APP_ORIGIN=http://glutton.local:3000` (or the actual local port); do not infer it from request headers. Keep the normal port at `3000` for a consistent browser credential entry; an alias does not move existing localhost cookies or saved credentials. All manual local work, including Registry review, uses `glutton_development`; do not use a separate preview database. The currently running development server is at `http://glutton.local:3847/registry`. Automated tests continue to use the disposable `glutton_test` database.
 
 `/up` checks that Rails boots; it does not check PostgreSQL. Check the development database explicitly with:
 
 ```sh
 bin/rails runner 'puts "#{ActiveRecord::Base.connection.adapter_name}: #{ActiveRecord::Base.connection.select_value("SELECT current_database()")}"'
 ```
+
+## Browser frontend
+
+The root page opens Ratings and starts a guest session on first visit, with registration optional. Superusers can open `/registry` from the application header to inspect canonical films, categories and qualities. The pages are read-only and use current Registry records and stored source/evaluation evidence. No import, source refresh or provider calls occur while browsing. Bootstrap the first superuser directly in the database as described under internal privileges; this frontend does not grant privileges.
+
+All browser views use Phlex and Tailwind with importmaps/Hotwire. Full-page views live under `app/views/<domain>` with `Views::<Domain>` namespaces (for example `Views::Identity::SignIn`). `app/views/base.rb` supplies shared page composition. Reusable fragments live under `app/components/<domain>` in their owning domain namespace (for example `Identity::AccountStatus` and `Ratings::Form`); shared layouts and controls live under `app/components/ui` and `app/components/ruby_ui`. `config/initializers/phlex_views.rb` registers the Phlex `Views` autoload root. Controllers render explicit components with their inputs. Layouts are composed Phlex components rather than ERB wrappers. The four account-email templates remain unchanged in ERB. Light is the default theme. The header’s Dark mode toggle remembers an explicit choice in browser storage, including across navigation/reloads. Without JavaScript the pages retain their light appearance; if storage is blocked, toggling still works for the current document.
+
+RubyUI is a development-only generator, not a runtime dependency. Generate only components needed by the current feature with `bin/rails generate ruby_ui:component ComponentName`. Generated files under `app/components/ruby_ui` are application-owned: inspect changes before overwriting them and incorporate upstream fixes deliberately. The generated components come from RubyUI 1.6.0; its MIT licence is retained beside them. Local adaptations make table overflow keyboard-focusable, remove the button-only `type` attribute from links, and omit unused FormField controller hooks from inputs, textareas and native selects; native validation and existing Rails form behavior are retained. Regenerating the Table component may add an unused footer; do not retain unused generated components.
+
+Shared brand/theme tokens and application/Registry styling live in `app/assets/tailwind/application.css`. The small Stimulus theme controller persists `glutton.theme` in browser storage and is used by both application and Registry headers. The interface uses typography and the supplied brand palette, with no hero imagery; the wordmark is always `glutton.` in locally hosted Tangerine Regular. Its OFL licence is kept with the font. Use restrained, legible sans-serif text for functional controls and content.
 
 ## Verify
 
@@ -55,10 +69,10 @@ bin/importmap audit
 
 Or run the combined local checks with `bin/ci`. Dependency audits require network access. Brakeman runs the locked scanner version; `bin/brakeman --ensure-latest` optionally checks whether a newer scanner exists. Updating the scanner is a deliberate dependency update rather than a prerequisite for every local scan.
 
-The smoke tests check the home page, Hotwire import map, health route and isolated PostgreSQL test connection. To manually verify a running server:
+The smoke tests check the Ratings landing page, Hotwire import map, health route and isolated PostgreSQL test connection. To manually verify a running server:
 
 ```sh
-curl --fail http://localhost:3000/
+curl --include http://localhost:3000/
 curl --fail http://localhost:3000/up
 ```
 
@@ -171,12 +185,11 @@ Open `/registration/new` to register, `/registration` to view pending verificati
 and resend an email, and the confirmation link to explicitly confirm with a POST.
 Viewing a link does not register or sign in. Signing up as an existing guest keeps
 its ID; beginning guest activity after signup attaches that browser's pending
-request before the guest/session is committed. The current home page does not
-save product activity; later Ratings UI will call the existing Identity entry point.
+request before the guest/session is committed. The Ratings landing page starts a guest session through Identity when no active identity is bound. Existing sessions are reused; expired/revoked guests receive a new session without reviving prior activity. Writes never create replacement sessions. First-visit film discovery remains separate work.
 
 Set `APP_ORIGIN` in ignored `.env.development` or production process environment to
 the application's trusted public HTTPS origin, e.g. `https://app.example.test`.
-Do not use the incoming Host header. Production requires a usable HTTPS app origin; development also supports HTTP localhost, including with live Resend delivery.
+Do not use the incoming Host header. Production requires a usable HTTPS app origin; development also supports HTTP localhost and the exact `glutton.local` alias, including with live Resend delivery.
 registering a sending domain alone does not provide HTTPS application hosting.
 Missing/invalid origin fails clearly on send without contacting SMTP. No HTTPS
 hosting or tunnel is provisioned by this task. Development without SMTP can use:

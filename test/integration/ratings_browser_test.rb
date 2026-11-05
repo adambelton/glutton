@@ -143,26 +143,33 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "signed out expired revoked and deleted sessions cannot write or create replacement users" do
+  test "expired and revoked sessions cannot write but may start a fresh guest on Ratings entry" do
     token = csrf
-    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-    assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-      post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
-      assert_response :unauthorized
-      get new_rating_path
-      assert_response :unauthorized
-      assert_select "a[href=?]", new_session_path
-      assert_select "a[href=?]", new_registration_path
+    travel (Identity::UserGuest::EXPIRY_DURATION + 1.second) do
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+        post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
+        assert_response :unauthorized
+      end
+      assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+        get new_rating_path
+        assert_response :success
+        assert_select "h2", text: @candidate.film.title, count: 0
+      end
     end
-    @user.update!(created_at: Time.current)
     bind_user(@user)
-    Identity::Session.where(user: @user).delete_all
-    get new_rating_path
-    assert_response :unauthorized
+    Identity::Session.where(user: @user).each { |authentication| Identity::Session.revoke(id: authentication.id) }
+    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+      get new_rating_path
+      assert_response :success
+      assert_select "h2", text: @candidate.film.title, count: 0
+    end
     bind_user(@user)
+    # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.
     @user.update_columns(type: "UserDeleted")
-    get new_rating_path
-    assert_response :gone
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      get new_rating_path
+      assert_response :gone
+    end
   end
 
   test "csrf is enforced for both writes and expression parameters are filtered" do

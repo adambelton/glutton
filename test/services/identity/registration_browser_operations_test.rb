@@ -135,25 +135,32 @@ module Identity
       ENV["APP_ORIGIN"] = original
     end
 
-    test "development SMTP permits localhost links while production and remote HTTP reject" do
+    test "development permits exact local account link hosts while production and lookalikes reject HTTP" do
       original_origin = ENV["APP_ORIGIN"]
       original_environment = Rails.env
-      original_method = AccountMailer.delivery_method
-      AccountMailer.delivery_method = :smtp
       Rails.env = "development"
-      ENV["APP_ORIGIN"] = "http://localhost:3000"
-      assert_equal "http://localhost:3000", DeliverRegistrationConfirmation.send(:validated_origin)
-      assert AccountMailer.confirmation(recipient: "reader@example.test", confirmation_url: "http://localhost:3000/registration_confirmation?token=example").message.multipart?
-      ENV["APP_ORIGIN"] = "http://remote.example"
-      assert_raises(ArgumentError) { DeliverRegistrationConfirmation.send(:validated_origin) }
+      [ "http://localhost:3000", "http://glutton.local:3847" ].each do |origin|
+        ENV["APP_ORIGIN"] = origin
+        assert_equal origin, MailOrigin.call
+        assert AccountMailer.confirmation(recipient: "reader@example.test", confirmation_url: "#{origin}/registration_confirmation?token=example").message.multipart?
+        assert AccountMailer.password_reset(recipient: "reader@example.test", reset_url: "#{origin}/password_reset/edit?token=example").message.multipart?
+      end
+      [ "http://remote.example", "http://glutton.local.evil.test", "http://other.local", "http://user:pass@glutton.local:3847" ].each do |origin|
+        ENV["APP_ORIGIN"] = origin
+        assert_raises(ArgumentError) { MailOrigin.call }
+        assert_raises(ArgumentError) { AccountMailer.confirmation(recipient: "reader@example.test", confirmation_url: "#{origin}/registration_confirmation?token=example").message }
+        assert_raises(ArgumentError) { AccountMailer.password_reset(recipient: "reader@example.test", reset_url: "#{origin}/password_reset/edit?token=example").message }
+      end
       Rails.env = "production"
-      ENV["APP_ORIGIN"] = "http://localhost:3000"
-      assert_raises(ArgumentError) { DeliverRegistrationConfirmation.send(:validated_origin) }
-      assert_raises(ArgumentError) { AccountMailer.confirmation(recipient: "reader@example.test", confirmation_url: "http://localhost:3000/registration_confirmation?token=example").message }
+      [ "http://localhost:3000", "http://glutton.local:3847" ].each do |origin|
+        ENV["APP_ORIGIN"] = origin
+        assert_raises(ArgumentError) { MailOrigin.call }
+        assert_raises(ArgumentError) { AccountMailer.confirmation(recipient: "reader@example.test", confirmation_url: "#{origin}/registration_confirmation?token=example").message }
+        assert_raises(ArgumentError) { AccountMailer.password_reset(recipient: "reader@example.test", reset_url: "#{origin}/password_reset/edit?token=example").message }
+      end
     ensure
       ENV["APP_ORIGIN"] = original_origin
       Rails.env = original_environment
-      AccountMailer.delivery_method = original_method
     end
 
     test "resend stops when another request already registered the email" do

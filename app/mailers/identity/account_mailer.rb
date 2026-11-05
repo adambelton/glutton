@@ -21,9 +21,9 @@ module Identity
       rescue URI::InvalidURIError
         uri = nil
       end
-      local_http = Rails.env.development? && uri&.scheme == "http" && %w[localhost 127.0.0.1 ::1].include?(uri.host)
+      local_http = Rails.env.development? && uri&.scheme == "http" && %w[localhost 127.0.0.1 ::1 glutton.local].include?(uri.host)
       unless uri && uri.host.present? && uri.userinfo.nil? && (uri.scheme == "https" || local_http)
-        raise ArgumentError, "link must be an HTTPS URL (localhost HTTP is allowed in development)"
+        raise ArgumentError, "link must be an HTTPS URL (local application HTTP is allowed in development)"
       end
       @link = url
       mail(to: recipient, subject: subject)

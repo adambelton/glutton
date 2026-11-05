@@ -34,7 +34,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
         assert_select "h3", count: 1
         assert_select "option[selected][value=?]", view
       end
-      assert_select 'a[href*="rating/new"]', count: 0
+      assert_select 'main a[href*="rating/new"]', count: 0
     end
   end
 
@@ -47,7 +47,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Awaiting rating", count: 5
-    assert_select 'a[href*="rating/new"]', count: 5
+    assert_select 'main a[href*="rating/new"]', count: 5
     row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
     Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
     absent = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))

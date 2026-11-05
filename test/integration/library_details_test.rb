@@ -70,7 +70,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     assert_equal @film.id, event.payload.fetch("film_id")
     follow_redirect!
     assert_select '[role="status"]', I18n.t("library.detail.watched")
-    assert_select "form", count: 0
+    assert_select "main form", count: 0
     assert_select "a[href=?]", new_rating_path(film_id: @film.id)
     assert_no_difference "DomainEvents::DomainEvent.count" do
       watch
@@ -92,7 +92,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     row.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_film_path(@entry)
     assert_select "p", "Rated"
-    assert_select 'a[href*="rating/new"]', count: 0
+    assert_select 'main a[href*="rating/new"]', count: 0
   end
 
   test "registered owner removes entry and stale actions cannot recreate or target its replacement" do

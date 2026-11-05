@@ -19,8 +19,9 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     SessionsController.allow_forgery_protection = true
     SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
-      root "home#index"
-      get "/rating/new", to: "ratings#new", as: :new_rating
+      root "ratings#new"
+      resource :library, only: :show, controller: :library
+      resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create
       resource :registration_confirmation, only: [ :show, :create ]
@@ -48,10 +49,16 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     JSON.parse(client.response.body)
   end
 
-  test "scaffold visits do not create users" do
-    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
-      get "/"
+  test "Ratings landing starts one guest session and reuses it on repeat visits" do
+    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+      get root_path
       assert_response :success
+    end
+    guest_id = lookup.fetch("id")
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      get root_path
+      assert_response :success
+      assert_equal guest_id, lookup.fetch("id")
     end
   end
 

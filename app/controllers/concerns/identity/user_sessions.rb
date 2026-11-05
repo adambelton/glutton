@@ -8,7 +8,7 @@ module Identity
 
       rescue_from Identity::AccountDeleted do
         session.delete(:pending_registration_id)
-        render "sessions/deleted", status: :gone
+        render ::Views::Identity::Deleted.new, status: :gone
       end
     end
 

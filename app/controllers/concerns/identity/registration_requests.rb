@@ -8,16 +8,16 @@ module Identity
     included do
       before_action :registration_headers
       rescue_from Identity::RegistrationUnavailable do
-        render "registrations/unavailable", status: :unprocessable_entity
+        render ::Views::Identity::RegistrationUnavailable.new, status: :unprocessable_entity
       end
       rescue_from Identity::RegistrationConflict do
-        render "registrations/conflict", status: :conflict
+        render ::Views::Identity::RegistrationConflict.new(warning: current_user&.sign_out_warning), status: :conflict
       end
       rescue_from Identity::DeliverRegistrationConfirmation::Limited do
         render plain: I18n.t("identity.registration.limited"), status: :too_many_requests
       end
       rescue_from Identity::DeliverRegistrationConfirmation::Exhausted do
-        render "registrations/delivery_limit", status: :too_many_requests
+        render ::Views::Identity::DeliveryLimit.new, status: :too_many_requests
       end
       rescue_from Identity::DeliverRegistrationConfirmation::Failed do
         redirect_to registration_path, alert: I18n.t("identity.registration.delivery_failed"), status: :see_other

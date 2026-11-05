@@ -12,17 +12,18 @@ class PasswordResetsController < ApplicationController
   before_action :load_reset_user, only: [ :edit, :update ]
 
   rescue_from Identity::PasswordResetUnavailable do
-    render :unavailable, status: :unprocessable_entity
+    render ::Views::Identity::RecoveryUnavailable.new, status: :unprocessable_entity
   end
   rescue_from Identity::PasswordResetConflict do
-    render :conflict, status: :conflict
+    render ::Views::Identity::RecoveryConflict.new, status: :conflict
   end
   rescue_from Identity::RequestPasswordReset::Failed do
     @delivery_error = I18n.t("identity.recovery.delivery_failed")
-    render :new, status: :service_unavailable
+    render ::Views::Identity::RecoveryNew.new(delivery_error: @delivery_error), status: :service_unavailable
   end
 
   def new
+    render ::Views::Identity::RecoveryNew.new
   end
 
   def create
@@ -31,6 +32,7 @@ class PasswordResetsController < ApplicationController
   end
 
   def edit
+    render ::Views::Identity::RecoveryEdit.new(reset_user: @reset_user, token: @token)
   end
 
   def update
@@ -43,7 +45,7 @@ class PasswordResetsController < ApplicationController
     redirect_to new_session_path, notice: I18n.t("identity.recovery.completed"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @reset_user = error.record
-    render :edit, status: :unprocessable_entity
+    render ::Views::Identity::RecoveryEdit.new(reset_user: @reset_user, token: @token), status: :unprocessable_entity
   end
 
   private

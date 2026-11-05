@@ -1,11 +1,17 @@
 require "test_helper"
 
 class ScaffoldTest < ActionDispatch::IntegrationTest
-  test "home renders the Glutton page with Hotwire assets" do
+  test "root renders the Ratings entry screen with Hotwire assets" do
     get root_path
 
     assert_response :success
-    assert_select "h1", "Glutton"
+    assert_select "h1", I18n.t("ratings.browser.title")
+    assert_select 'html[lang="en"]'
+    assert_select "main#main-content"
+    assert_select "a.wordmark", "glutton."
+    assert_select 'button[data-controller="theme"][aria-pressed="false"]', I18n.t("ui.dark_mode")
+    assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
+    assert_no_match(/translation missing/i, response.body)
     assert_select "script[type=importmap]", count: 1
     assert_includes response.body, "@hotwired/turbo-rails"
     assert_includes response.body, "@hotwired/stimulus"

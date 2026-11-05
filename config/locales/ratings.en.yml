@@ -15,10 +15,9 @@ en:
       saved: Your rating has been saved.
       dismissed: This film has been dismissed from rating rotation.
       empty: You have no films waiting to be rated.
-      sign_in_required: Sign in or register to access your rating queue.
+      sign_in_required: Your session is no longer available. Return to Ratings to start a new guest session, or sign in to your account.
       correct_errors: Please correct the following errors.
       release_year: "Released in %{year}"
-      home: Home
       continue: Return to rating queue
     values:
       brilliant: Brilliant
