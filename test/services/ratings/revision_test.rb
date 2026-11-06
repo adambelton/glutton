@@ -7,7 +7,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     @film = Registry::Film.create!(title: "Revised rating")
     @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
     @original = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
-      value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Original evidence" ])
+      value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "Original evidence" ])
   end
 
   def revise(**options)
@@ -35,7 +35,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
       assert_equal [ "  New evidence! É 👻  " ], replacement.rating_expressions.pluck(:text)
       previous = replacement
     end
-    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, @original.reload.value
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, @original.reload.value
     assert_equal original_expression_id, @original.rating_expressions.sole.id
     assert_equal "Original evidence", @original.rating_expressions.sole.text
     assert_equal Library::LibraryFilm::RatingStatuses::RATED, library_film.rating_status

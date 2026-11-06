@@ -71,7 +71,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       end
       candidate ||= Ratings::RatingFilm.find_by!(user: @user, film: row.film)
       assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
-      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::I_ENJOYED_THAT }
+      post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::PRETTY_GOOD }
       assert_response :see_other
       get library_path(view: Library::Browse::Views::WATCHED)
       assert_select "a[href=?]", link, count: 0
@@ -163,7 +163,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       candidate = Ratings::RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
       original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
       current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
-        previous_rating_id: original.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "Current" ])
+        previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "Current" ])
       edit_link = edit_rating_path(film_id: watched.film_id)
       assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
         [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|

@@ -144,7 +144,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def submit(expression_texts: [ "Atmosphere", "  Ending!  " ])
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts:)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts:)
   end
 
   def rating_events
@@ -227,7 +227,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     rating = Timeout.timeout(5) { contender.value }
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
-    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, rating.reload.value
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, rating.reload.value
     assert_equal @user.id, rating_events.sole.payload["user_id"]
     assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
   end
@@ -245,7 +245,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
     assert_equal [ "Atmosphere", "  Ending!  " ], rating.reload.rating_expressions.pluck(:text)
-    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, rating.reload.value
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, rating.reload.value
     assert_equal @rating_film.id, rating.rating_film_id
     assert_equal @user.id, @rating_film.reload.user_id
     assert_equal expression_ids, rating.reload.rating_expressions.pluck(:id)

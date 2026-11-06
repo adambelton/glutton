@@ -17,7 +17,7 @@ This document distinguishes agreed behaviour from proposed implementation. Frame
 
 The viewer cycles through films in an explicit rating interface. They first indicate whether they have seen the film. Selecting **Haven’t seen it** persists confirmed-unseen status and excludes the film from subsequent rating prompts while that status remains. Offer **Add to watchlist** directly at this point, or continue to the next film. Confirmed-unseen status alone does not exclude a film from discovery; watchlist addition classifies it as To watch and does exclude it.
 
-For a seen film, the viewer chooses Brilliant, I Enjoyed That, Not For Me, or Garbage. They may add several individual, natural-language expressions. The interface encourages distinct ideas without forcing tags or stripping contextual meaning. They save the rating and expressions together.
+For a seen film, the viewer chooses Brilliant, Pretty Good, Not For Me, or Garbage. They may add several individual, natural-language expressions. The interface encourages distinct ideas without forcing tags or stripping contextual meaning. They save the rating and expressions together.
 
 Expressions are optional. Users who only rate films must receive useful recommendations. Extreme ratings provide stronger directional evidence than mild ratings; exact weights remain experimental.
 

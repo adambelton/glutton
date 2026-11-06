@@ -29,7 +29,7 @@ Use these names rather than strong/weak reinforcement, boosts or adjustments rel
 
 An overall rating supplies an implied score for every associated film quality unless applicable expression evidence says otherwise. Explicit evidence takes precedence over profile interpretation. Indifference can yield zero; dislike is distinct from indifference. Missing expression evidence does not imply either. Expressions may contradict the overall rating; do not mechanically multiply two negative values into positive preference evidence.
 
-The initial numeric examples are +1 for unexpressed I Enjoyed That and +2 for unexpressed Brilliant, and +3/+5 respectively with matching explicit praise. These are starting examples, not a complete approved weight table. Exact negative values, profile-informed values and contradictory-sentiment values remain for the scoring spec and evaluation.
+The initial numeric examples are +1 for unexpressed Pretty Good and +2 for unexpressed Brilliant, and +3/+5 respectively with matching explicit praise. These are starting examples, not a complete approved weight table. Exact negative values, profile-informed values and contradictory-sentiment values remain for the scoring spec and evaluation.
 
 ## Expression profile and recomputation
 

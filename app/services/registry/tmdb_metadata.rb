@@ -41,6 +41,16 @@ module Registry
       value if value.is_a?(Integer) && value >= 0
     end
 
+    def vote_count
+      value = @details["vote_count"]
+      value if value.is_a?(Integer) && value >= 0
+    end
+
+    def popularity
+      value = @details["popularity"]
+      value if value.is_a?(Numeric) && value.finite? && value >= 0
+    end
+
     def genre_names
       names("genres")
     end

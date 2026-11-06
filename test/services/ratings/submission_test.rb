@@ -9,7 +9,7 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
   end
 
   def submit(**options)
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "The ending", "The ending" ], **options)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "The ending", "The ending" ], **options)
   end
 
   test "all four choices save owned ratings and exact v1 facts without Library changes" do
@@ -41,8 +41,8 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "invalid choices fail without rating event or stream including coercible inputs" do
     coercible = Object.new
-    def coercible.to_s = Ratings::Rating::Values::I_ENJOYED_THAT
-    [ nil, "", "unknown", "I_ENJOYED_THAT", " i_enjoyed_that ", Ratings::Rating::Values::I_ENJOYED_THAT.to_sym, 1, false, [], {}, coercible ].each do |value|
+    def coercible.to_s = Ratings::Rating::Values::PRETTY_GOOD
+    [ nil, "", "unknown", "PRETTY_GOOD", " pretty_good ", Ratings::Rating::Values::PRETTY_GOOD.to_sym, 1, false, [], {}, coercible ].each do |value|
       assert_no_difference [ "Ratings::RatingExpression.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
         error = assert_raises(ActiveRecord::RecordInvalid) { submit(value:) }
         assert error.record.errors.of_kind?(:value, :inclusion)
@@ -52,12 +52,12 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
 
   test "duplicates reject identical and different values without another event" do
     rating = submit
-    [ Ratings::Rating::Values::I_ENJOYED_THAT, Ratings::Rating::Values::BRILLIANT ].each do |value|
+    [ Ratings::Rating::Values::PRETTY_GOOD, Ratings::Rating::Values::BRILLIANT ].each do |value|
       assert_no_difference [ "Ratings::RatingExpression.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(Ratings::AlreadyRated) { submit(value:) }
       end
     end
-    assert_equal Ratings::Rating::Values::I_ENJOYED_THAT, rating.reload.value
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, rating.reload.value
   end
 
   test "explicit submission accepts dismissal without changing candidate timestamps or flag" do

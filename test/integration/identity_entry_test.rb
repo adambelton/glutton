@@ -33,6 +33,26 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     post session_path, params: { email_address: user.email_address, password: @password, authenticity_token: csrf }
   end
 
+  test "the five requested horror examples appear in order without creating personal activity" do
+    [ [ 1091, "The Thing" ], [ 948, "Halloween" ], [ 9552, "The Exorcist" ], [ 814, "An American Werewolf in London" ] ].each do |tmdb_id, title|
+      Registry::Film.create!(tmdb_id:, title:)
+    end
+    Registry::Film.create!(tmdb_id: 419430, title: "Get Out")
+    assert_no_difference [ "Identity::User.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Library::LibraryFilm.count" ] do
+      get root_path
+      assert_response :success
+    end
+    panels = Nokogiri::HTML(response.body).css(".demo-frame")
+    assert_equal [ @film.title, "The Thing", "Halloween", "The Exorcist", "An American Werewolf in London" ], panels.map { |panel| panel.at_css("h2").text }
+    assert_select ".demo-dot", count: 5
+    panels.each do |panel|
+      assert_includes 2..3, panel.css(".expression-items li").size
+    end
+    assert_select '.demo-frame input[value="pretty_good"][checked]', count: 2
+    assert_select '.demo-frame input[value="i_enjoyed_that"]', count: 0
+    assert_select ".demo-frame form", count: 0
+  end
+
   test "curated examples reuse readonly rating fields without personal records or trailer actions" do
     another = Registry::Film.create!(title: "Another film", tmdb_id: 1091, tmdb_metadata: { details: { poster_path: "https://evil.test/poster.jpg" } })
     assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count" ] do

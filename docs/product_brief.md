@@ -58,7 +58,7 @@ The viewer cycles through horror films in an explicit rating interface. First th
 If they have seen it, they are presented with four ratings and optional expression inputs:
 
 1. **Brilliant** — strong positive evidence.
-2. **I Enjoyed That** — light positive evidence.
+2. **Pretty Good** — light positive evidence.
 3. **Not For Me** — light negative evidence.
 4. **Garbage** — strong negative evidence.
 
@@ -185,7 +185,7 @@ This deferral applies to admin vocabulary-gap discovery/testing. Interpreting ex
 
 Glutton uses **one recommendation process with two complementary sources of evidence**:
 
-1. **Rating-pattern evidence:** Each of the four ratings contributes positive or negative evidence for the qualities associated with the rated film. Brilliant/Garbage contribute more strongly than I Enjoyed That/Not For Me. A quality recurring across positively rated films accumulates positive evidence; recurring across negatively rated films accumulates negative evidence. Do not infer positive appreciation from mere exposure or frequency of watched films. Rating-only users must still receive useful recommendations.
+1. **Rating-pattern evidence:** Each of the four ratings contributes positive or negative evidence for the qualities associated with the rated film. Brilliant/Garbage contribute more strongly than Pretty Good/Not For Me. A quality recurring across positively rated films accumulates positive evidence; recurring across negatively rated films accumulates negative evidence. Do not infer positive appreciation from mere exposure or frequency of watched films. Rating-only users must still receive useful recommendations.
 2. **Explicit-expression evidence:** The user's actual words, classified against qualities with relevant sourced film context, identify more particular reasons for enjoyment or dislike. An expression may concern *how* a quality is presented, not simply the presence of a topic (e.g. liking **monstrous, non-romanticised vampires** does not establish an unrestricted liking for vampires). Preserve original wording and contextual meaning. Support matching multiple qualities without prematurely requiring compound or conditional-quality infrastructure.
 
 The **expressions profile is derived only from explicit expressions**, never from rating patterns or earlier inferred preference scores. It can become more precise as users express more. The **inferred preference profile** aggregates rating evidence and may use that expressions profile as an interpretive lens to attribute greater relevance to some of the qualities present in previously rated films. For example, an explicit appreciation of grotesque practical effects may make those qualities more plausible explanations for older positive ratings that had no expressions. New expressions should not be retroactively fabricated for those ratings.

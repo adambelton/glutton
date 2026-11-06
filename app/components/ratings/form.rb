@@ -52,7 +52,7 @@ module Ratings
         Ratings::Rating::Values::ALL.each do |value|
           div(class: "rating-choice") do
             id = "#{@prefix}rating-#{value}"
-            input(type: "radio", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly)
+            input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly)
             label(for: id) { t("ratings.values.#{value}") }
           end
         end

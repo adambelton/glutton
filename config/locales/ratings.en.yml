@@ -27,7 +27,7 @@ en:
       continue: Return to rating queue
     values:
       brilliant: Brilliant
-      i_enjoyed_that: I enjoyed that
+      pretty_good: Pretty Good
       not_for_me: Not For Me
       garbage: Garbage
     errors:

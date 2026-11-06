@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_06_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -298,7 +298,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_130000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["rating_film_id", "id"], name: "index_ratings_on_rating_film_id_and_id"
-    t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'i_enjoyed_that'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
+    t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'pretty_good'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
   end
 
   create_table "sessions", force: :cascade do |t|
