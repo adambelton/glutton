@@ -2,11 +2,11 @@ module Ratings
   class Rating < ApplicationRecord
     module Values
       BRILLIANT = "brilliant".freeze
-      I_ENJOYED_THAT = "i_enjoyed_that".freeze
+      PRETTY_GOOD = "pretty_good".freeze
       NOT_FOR_ME = "not_for_me".freeze
       GARBAGE = "garbage".freeze
 
-      ALL = [ BRILLIANT, I_ENJOYED_THAT, NOT_FOR_ME, GARBAGE ].freeze
+      ALL = [ BRILLIANT, PRETTY_GOOD, NOT_FOR_ME, GARBAGE ].freeze
     end
 
     MAX_EXPRESSIONS = 20

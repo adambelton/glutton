@@ -29,7 +29,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
 
   def revise(**attributes)
     patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id,
-      value: Ratings::Rating::Values::I_ENJOYED_THAT, expression_texts: [ "New thought" ], authenticity_token: edit }.merge(attributes)
+      value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "New thought" ], authenticity_token: edit }.merge(attributes)
   end
 
   test "edit reads latest rating and exact escaped expressions without any writes" do
@@ -111,7 +111,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       end
       revise(expression_texts: [ "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
       assert_response :unprocessable_entity
-      assert_select "input[checked][value=?]", Ratings::Rating::Values::I_ENJOYED_THAT
+      assert_select "input[checked][value=?]", Ratings::Rating::Values::PRETTY_GOOD
       [ nil, "text", [ { bad: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
         revise(expression_texts:)
         assert_response :unprocessable_entity

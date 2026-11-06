@@ -35,6 +35,16 @@ module Registry
       self
     end
 
+    def refresh_tmdb!(tmdb_data:)
+      self.title = tmdb_data.fetch(:title)
+      self.release_date = tmdb_data.fetch(:release_date)
+      self.tmdb_metadata = tmdb_data.fetch(:tmdb_metadata)
+      raise Registry::InvalidTmdbResponse, "TMDB metadata is incomplete" unless tmdb_metadata?
+
+      save!
+      self
+    end
+
     validates :title, presence: true
     validates :tmdb_id, numericality: { only_integer: true, greater_than: 0 }, uniqueness: true, allow_nil: true
     validates :wikidata_id, format: { with: /\AQ[1-9][0-9]*\z/ }, allow_nil: true

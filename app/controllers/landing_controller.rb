@@ -3,8 +3,10 @@ class LandingController < ApplicationController
 
   EXAMPLES = [
     { key: "alien", tmdb_id: 348, rating: Ratings::Rating::Values::BRILLIANT },
-    { key: "the_thing", tmdb_id: 1091, rating: Ratings::Rating::Values::I_ENJOYED_THAT },
-    { key: "get_out", tmdb_id: 419430, rating: Ratings::Rating::Values::NOT_FOR_ME }
+    { key: "the_thing", tmdb_id: 1091, rating: Ratings::Rating::Values::PRETTY_GOOD },
+    { key: "halloween", tmdb_id: 948, rating: Ratings::Rating::Values::BRILLIANT },
+    { key: "the_exorcist", tmdb_id: 9552, rating: Ratings::Rating::Values::NOT_FOR_ME },
+    { key: "american_werewolf", tmdb_id: 814, rating: Ratings::Rating::Values::PRETTY_GOOD }
   ].freeze
 
   def show

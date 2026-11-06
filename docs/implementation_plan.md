@@ -25,7 +25,13 @@ Development now contains 500 source-backed TMDB horror films, all with posters a
 
 - Explicit identity entry and return routing is implemented. Anonymous landing preview creates no identity; account forms/explicit guest entry gate product pages and retain safe requested resources. Without a target, guests go to Ratings and registered users to Library.
 
-- Ratings catalogue discovery is next; its scope will be prepared for owner review before implementation. Replenish only requested queue shortfalls from Registry, preserving oldest-first order, ratings/dismissals/holds and existing Library-event behavior. Admission should use an agreed popularity/familiarity signal and current shared Library exclusions; depends on explicit Identity entry/gating. No anonymous candidate creation, providers or recommendation scoring.
+- Rating choice naming/presentation is implemented. Native radio glyphs are hidden with selected/focus styling retained; “Pretty Good” now uses the saved pretty_good value and updated database constraint. No historical rating data required migration.
+
+- Five landing examples are implemented. Rotation uses Alien, The Thing, Halloween, The Exorcist and An American Werewolf in London, with localized sample expressions and the existing readonly controls.
+
+- Full TMDB metadata refresh is implemented. All 500 development films now have complete refreshed TMDB packets, vote counts, popularity and posters, with existing knowledge/personal state preserved. The Registry-owned operation retains full source responses and preserves Wikipedia, accepted qualities and evaluation history. This supplies stored vote-count/popularity inputs before Ratings admission.
+
+- Ratings catalogue discovery is next; implementation has not started. The admission signal is under review: validate likely-prior-viewing proxies before accepting vote count or popularity as the ordering policy. The owner selected a Registry metadata refresh prerequisite for the existing 500-film development catalogue; that refresh is complete. Replenish only requested queue shortfalls from Registry, preserving oldest-first order, ratings/dismissals/holds and existing Library-event behavior. Admission should use an agreed popularity/familiarity signal and current shared Library exclusions; depends on explicit Identity entry/gating. No anonymous candidate creation, providers or recommendation scoring.
 
 - [Edit existing quality definitions](tasks/quality_definition_editing.md): Deferred draft; implementation not started. Superuser-only editing of matching definitions/exclusions, preserving immutable names, accepted film associations and historical evaluation snapshots, with explicit stale-form protection. Category settings and manual film-quality changes follow as separate Registry outcomes; source refresh and reassessment remain later.
 

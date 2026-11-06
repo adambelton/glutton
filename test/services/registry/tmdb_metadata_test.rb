@@ -29,4 +29,19 @@ class Registry::TmdbMetadataTest < ActiveSupport::TestCase
     assert_nil Registry::TmdbMetadata.new("details" => { "runtime" => -1 }).runtime
     assert_equal "Source title", Registry::TmdbMetadata.new("original_title" => "Legacy", "details" => { "original_title" => "Source title" }).original_title
   end
+  test "ranking readers preserve usable zero and positive values without coercing invalid input" do
+    reader = Registry::TmdbMetadata.new("details" => { "vote_count" => 0, "popularity" => 0.0 })
+    assert_equal 0, reader.vote_count
+    assert_equal 0.0, reader.popularity
+    reader = Registry::TmdbMetadata.new("details" => { "vote_count" => 1000, "popularity" => 12.5 })
+    assert_equal 1000, reader.vote_count
+    assert_equal 12.5, reader.popularity
+    [ nil, -1, "10", [], {}, false ].each do |value|
+      reader = Registry::TmdbMetadata.new("details" => { "vote_count" => value, "popularity" => value })
+      assert_nil reader.vote_count
+      assert_nil reader.popularity
+    end
+    assert_nil Registry::TmdbMetadata.new("details" => { "vote_count" => 1.5 }).vote_count
+    assert_nil Registry::TmdbMetadata.new("details" => { "popularity" => Float::INFINITY }).popularity
+  end
 end

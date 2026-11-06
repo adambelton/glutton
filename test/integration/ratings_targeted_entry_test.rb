@@ -33,7 +33,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
 
   def rate(**attributes)
     token = csrf
-    post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::I_ENJOYED_THAT, authenticity_token: token }.merge(attributes)
+    post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::PRETTY_GOOD, authenticity_token: token }.merge(attributes)
   end
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do
@@ -92,7 +92,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     assert_select "h2", @film.title
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
     assert_select ".expression-items input[type=hidden][value=?]", text
-    assert_select "input[checked][value=?]", Ratings::Rating::Values::I_ENJOYED_THAT
+    assert_select "input[checked][value=?]", Ratings::Rating::Values::PRETTY_GOOD
     assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
     assert_select "script", text: /alert\(/, count: 0
     assert_select 'label[for="expression-draft"]'

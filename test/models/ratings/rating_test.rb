@@ -12,7 +12,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
 
   def insert(**attributes)
     Ratings::Rating.transaction(requires_new: true) do
-      Ratings::Rating.insert_all!([ { rating_film_id: @rating_film.id, value: Ratings::Rating::Values::I_ENJOYED_THAT }.merge(attributes) ])
+      Ratings::Rating.insert_all!([ { rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD }.merge(attributes) ])
     end
   end
 
@@ -21,6 +21,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::InvalidForeignKey) { insert(rating_film_id: -1) }
     assert_raises(ActiveRecord::NotNullViolation) { insert(value: nil) }
     assert_raises(ActiveRecord::StatementInvalid) { insert(value: "unknown") }
+    assert_raises(ActiveRecord::StatementInvalid) { insert(value: "i_enjoyed_that") }
     insert
     insert(value: Ratings::Rating::Values::BRILLIANT)
   end
@@ -31,7 +32,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     rating = @rating_film.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
     assert_equal @rating_film.id, rating.rating_film_id
     assert_not @rating_film.can_submit_rating?
-    assert_raises(Ratings::AlreadyRated) { @rating_film.submit_rating!(value: Ratings::Rating::Values::I_ENJOYED_THAT) }
+    assert_raises(Ratings::AlreadyRated) { @rating_film.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD) }
   end
 
   test "scopes compose over rating existence and dismissal with stable bounded selection" do
@@ -58,7 +59,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
 
   test "choice labels and validation and duplicate errors render with strict translations" do
     assert_equal :strict, Rails.application.config.i18n.raise_on_missing_translations
-    labels = [ "Brilliant", "I enjoyed that", "Not For Me", "Garbage" ]
+    labels = [ "Brilliant", "Pretty Good", "Not For Me", "Garbage" ]
     assert_equal labels, Ratings::Rating::Values::ALL.map { |value| I18n.t("ratings.values.#{value}", raise: true) }
     rating = Ratings::Rating.new
     assert_not rating.valid?
