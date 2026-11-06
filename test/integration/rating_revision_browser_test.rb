@@ -41,11 +41,25 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       assert_select 'input[name="_method"][value="patch"]'
       assert_select 'input[name="previous_rating_id"][value=?]', latest.id.to_s
       assert_select "input[checked][value=?]", latest.value
-      assert_select "textarea#expression-0", latest.rating_expressions.sole.text
+      assert_select ".expression-items input[type=hidden]", count: 1 do |inputs|
+        assert_equal latest.rating_expressions.sole.text, inputs.sole["value"]
+      end
       assert_select "script", text: /new/, count: 0
       assert_select "a[href=?]", new_rating_path
       assert_equal "no-store", response.headers["Cache-Control"]
     end
+  end
+
+  test "pending expression input blocks a revision without replacing the saved rating" do
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+      revise(expression_draft: "Still composing")
+      assert_response :unprocessable_entity
+      assert_select "textarea#expression-draft", "Still composing"
+      assert_equal @original.id, @candidate.reload.current_rating.id
+    end
+    revise(expression_draft: "", expression_texts: [ "Ready" ])
+    assert_response :see_other
+    assert_equal [ "Ready" ], @candidate.reload.current_rating.rating_expressions.pluck(:text)
   end
 
   test "replacement preserves original and candidate state without publishing and allows clearing expressions" do
@@ -91,7 +105,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       [ nil, "unknown", [], { bad: "value" } ].each do |value|
         revise(value:, expression_texts: [ "  Keep <script>this</script>  " ])
         assert_response :unprocessable_entity
-        assert_select "textarea#expression-0", "  Keep <script>this</script>  "
+        assert_select ".expression-items input[type=hidden][value=?]", "  Keep <script>this</script>  "
         assert_select "script", text: /this/, count: 0
         assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
       end
@@ -166,14 +180,14 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE, authenticity_token: token }
       assert_response :unauthorized
       get edit_rating_path(film_id: @film.id)
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
       @user.update!(created_at: Time.current)
       Identity::Session.where(user: @user).delete_all
       get edit_rating_path(film_id: @film.id)
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
       cookies.delete(:session_id)
       get edit_rating_path(film_id: @film.id)
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
       bind_user(@user)
       @user.update_columns(type: "UserDeleted")
       get edit_rating_path(film_id: @film.id)

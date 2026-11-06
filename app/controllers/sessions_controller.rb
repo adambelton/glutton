@@ -1,9 +1,16 @@
 class SessionsController < ApplicationController
+  allow_unauthenticated_access only: [ :new, :create, :destroy ]
+
   # Per worker; resets on restart. Use a shared store before multi-worker release.
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
 
   rate_limit to: 10, within: 3.minutes, store: RATE_LIMIT_STORE, only: :create,
     with: -> { render plain: I18n.t("identity.sessions.rate_limited"), status: :too_many_requests }
+
+  rescue_from Identity::AccountDeleted do
+    render ::Views::Identity::SignIn.new(error: @error, account_controls: false),
+      status: @error.present? ? :unprocessable_entity : :ok
+  end
 
   def new
     render ::Views::Identity::SignIn.new
@@ -18,7 +25,7 @@ class SessionsController < ApplicationController
 
     if new_session
       bind_session(new_session)
-      redirect_to root_path, status: :see_other
+      redirect_to entry_destination, status: :see_other
     else
       @error = I18n.t("identity.sessions.invalid_credentials")
       render ::Views::Identity::SignIn.new(error: @error), status: :unprocessable_entity

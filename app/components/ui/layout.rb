@@ -5,26 +5,43 @@ module UI
     end
 
     def view_template
+      user = current_user if @account_controls
       render Document.new(title: @title) do
         a(href: "#main-content", class: "skip-link") { t("ui.skip") }
         header(class: "ui-header") do
           div(class: "ui-width ui-header-inner") do
             a(href: root_path, class: "wordmark", aria: { label: t("ui.wordmark") }) { t("ui.wordmark") }
-            nav(aria: { label: t("ui.navigation") }, class: "ui-nav") do
-              a(href: new_rating_path) { t("ratings.browser.title") }
-              a(href: library_path) { t("library.browser.title") }
-              if @account_controls && current_user&.superuser?
-                a(href: registry_root_path) { t("registry.title") }
+            if user.present?
+              nav(aria: { label: t("ui.navigation") }, class: "ui-nav") do
+                a(href: new_rating_path) { t("ratings.browser.title") }
+                a(href: library_path) { t("library.browser.title") }
+                if user&.superuser?
+                  a(href: registry_root_path) { t("registry.title") }
+                end
               end
             end
             render ThemeToggle.new
-            if @account_controls
+            if user.present?
               details(class: "ui-account-menu") do
                 summary { t("ui.account") }
                 div(class: "ui-account-panel") do
-                  render Identity::AccountStatus.new(user: current_user)
+                  render Identity::AccountStatus.new(user:)
                 end
               end
+            else
+              div(class: "ui-auth-links") do
+                text_link(t("ui.log_in"), new_session_path)
+                text_link(t("ui.register"), new_registration_path)
+              end
+            end
+          end
+        end
+        if user&.can_register?
+          aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
+            div(class: "ui-width") do
+              span { t("identity.entry.guest_banner") }
+              plain " "
+              text_link(t("identity.entry.save_progress"), new_registration_path)
             end
           end
         end

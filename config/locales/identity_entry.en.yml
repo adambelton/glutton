@@ -1,0 +1,42 @@
+en:
+  identity:
+    entry:
+      title: Find your next obsession.
+      eyebrow: Films worth an appetite.
+      empty: Our film collection is getting ready. You can still get started.
+      continue_guest: Continue as guest
+      try_it_out: Try it out
+      guest_explanation: Try it without an account. Register later to keep your progress.
+      back: Back to browsing
+      poster: "Poster for %{title}"
+      no_poster: "Poster unavailable for %{title}"
+      attribution: Film information and posters from TMDB.
+      tmdb_disclaimer: This product uses the TMDB API but is not endorsed or certified by TMDB.
+      guest_banner_label: Guest account reminder
+      guest_banner: You are browsing as a guest.
+      save_progress: Register to save your progress.
+      demo:
+        description: Your rating is only the beginning. Tell us what stayed with you.
+        label: Example ratings
+        disclaimer: Example ratings and expressions
+        browse: Browse example ratings
+        select: "Show example %{position} of %{count}"
+        pause: Pause automatic cycling
+        resume: Resume automatic cycling
+        position: "Example %{position} of %{count}"
+        get_started: Make it yours.
+        examples:
+          alien:
+            expressions:
+              - I loved how slowly the tension builds.
+              - The industrial spaceship felt like a real, lived-in place.
+              - The crew felt like people rather than action heroes.
+          the_thing:
+            expressions:
+              - I loved never knowing who to trust.
+              - The practical creature effects were a bit much for me.
+          get_out:
+            expressions:
+              - The uneasy humour worked better for me than the horror.
+              - I prefer a less deliberate pace.
+              - I wanted more of the tension to come from the setting.

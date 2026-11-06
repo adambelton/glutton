@@ -3,6 +3,7 @@ require "uri"
 require "stringio"
 
 class RegistrationActivityProbeController < ApplicationController
+  allow_unauthenticated_access only: :create
   def create
     user = ensure_guest_user!
     render json: { id: user.id, superuser: user.superuser? }
@@ -21,10 +22,14 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
-      root "ratings#new"
+      root "landing#show"
+      namespace :registry do
+        root "films#index"
+      end
       resource :library, only: :show, controller: :library
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :password_reset, only: [ :new, :create, :edit, :update ]
+      resource :guest_session, only: :create
       resource :session, only: [ :new, :create, :destroy ]
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create
@@ -176,13 +181,14 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     token = email_token
     created = guest
     assert_equal created.id, registration.reload.guest_user_id
-    get root_path
+    get new_rating_path
     assert_response :success
     assert_select 'aside[role="status"]', text: /#{Regexp.escape(I18n.t("identity.registration.guest_temporary"))}/
     assert_select "aside", text: /#{Regexp.escape(I18n.l(registration.expires_at, format: :registration))}/
     get registration_path
     assert_response :success
-    assert_select "aside", count: 0
+    assert_select ".ui-reminder", count: 0
+    assert_select ".guest-banner", count: 1
     assert_select "p", text: I18n.t("identity.registration.verify_required"), count: 1
     old_session = Identity::Session.last
     confirm(token:)
@@ -332,7 +338,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm(token:)
     assert_response :unprocessable_entity
     assert Identity::PendingRegistration.exists?(registration.id)
-    assert_equal 1, Identity::UserGuest.count
+    assert_equal 0, Identity::UserGuest.count
     assert_equal 0, Identity::UserRegistered.count
     assert_nil registration.reload.guest_user_id
   end

@@ -14,6 +14,8 @@ Read `docs/implementation_plan.md`, the current working task record and relevant
 
 ## Object roles and behaviour
 
+- Prefer explicit `present?` checks for optional object presence (for example, `if user.present?` rather than `if user`). Keep boolean flags and meaningful predicates such as `active?` as boolean conditions; do not mechanically change nil/false/empty semantics.
+
 - Treat every object as a role. Name variables and arguments for the role the operation actually requires, at the appropriate specificity: a concrete class, a superclass, or behaviour shared through a module. Use `library_film` for film-specific work; use `library_content` when an implemented role spans library films and television shows. Do not invent broader roles or modules before concrete behaviour requires them.
 - Always trust a declared role unless there is a specific, documented reason not to. An internal argument named `user` is assumed to fulfil that role; do not redundantly guard it with `is_a?`, `instance_of?`, `kind_of?` or `respond_to?`. If an input is genuinely uncertain, express that uncertainty in its name and prefer validation of the behaviour actually required.
 - Be skeptical of class awareness, including class/type switches and disguised equivalents such as `registered?` when callers use them to select behaviour. Merely hiding a class test behind a predicate or capability flag does not fix misplaced behaviour.

@@ -11,6 +11,8 @@ Rails.application.routes.draw do
 
   resource :password_reset, only: [ :new, :create, :edit, :update ]
 
+  resource :guest_session, only: :create
+
   resource :session, only: [ :new, :create, :destroy ]
 
   resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings do
@@ -33,5 +35,5 @@ Rails.application.routes.draw do
   end
 
   # Defines the root path route ("/")
-  root "ratings#new"
+  root "landing#show"
 end

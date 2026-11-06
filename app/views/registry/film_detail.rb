@@ -62,8 +62,8 @@ module Views
       private
 
       def metadata
-        data = @film.tmdb_metadata.fetch("details", {})
-        if data.empty?
+        data = @film.tmdb_details
+        if @film.tmdb_metadata.fetch("details", {}).blank?
           empty(:no_metadata)
           return
         end
@@ -72,16 +72,17 @@ module Views
           a(href: "https://www.themoviedb.org/movie/#{@film.tmdb_id}", class: "back-link", rel: "noreferrer") { t(:view_tmdb) }
         end
         dl(class: "metadata-fields") do
-          field(:original_title, @film.tmdb_metadata["original_title"])
-          field(:tagline, data["tagline"])
-          field(:overview, data["overview"])
-          field(:runtime, data["runtime"] && t(:minutes, count: data["runtime"]))
-          field(:original_language, data["original_language"])
-          field(:status, data["status"])
-          field(:imdb_id, data["imdb_id"])
-          %w[genres production_companies production_countries spoken_languages].each do |key|
-            field(key, data.fetch(key, nil)&.filter_map { |entry| entry["english_name"].presence || entry["name"].presence }&.join(", "))
-          end
+          field(:original_title, data.original_title)
+          field(:tagline, data.tagline)
+          field(:overview, data.overview)
+          field(:runtime, data.runtime && t(:minutes, count: data.runtime))
+          field(:original_language, data.original_language)
+          field(:status, data.status)
+          field(:imdb_id, data.imdb_id)
+          field(:genres, data.genre_names.join(", "))
+          field(:production_companies, data.production_company_names.join(", "))
+          field(:production_countries, data.production_country_names.join(", "))
+          field(:spoken_languages, data.spoken_language_names.join(", "))
         end
       end
     end

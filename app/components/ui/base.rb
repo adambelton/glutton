@@ -5,6 +5,7 @@ module UI
     include Phlex::Rails::Helpers::ButtonTo
 
     register_value_helper :current_user
+    register_value_helper :browsing_path
     register_value_helper :current_pending_registration
     register_value_helper :flash
 

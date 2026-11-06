@@ -5,10 +5,9 @@ module Identity
     end
 
     def view_template
-      if @user
+      if @user.present?
         if @user.can_register?
           p { t("identity.sessions.guest_status") }
-          p { t("identity.registration.guest_temporary") }
           text_link(t("identity.sessions.sign_in"), new_session_path)
           text_link(t("identity.registration.title"), new_registration_path)
         else

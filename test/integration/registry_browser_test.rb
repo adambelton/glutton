@@ -16,6 +16,19 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     bind_user(@user)
   end
 
+  test "unusable optional TMDB data does not break Registry or shared rating presentation" do
+    film = Registry::Film.create!(title: "Raw metadata", tmdb_id: 999,
+      tmdb_metadata: { details: { overview: [], poster_path: 123, runtime: "117", genres: "Horror",
+        production_companies: [ false, { name: [] } ], production_countries: {}, spoken_languages: [ "English" ] } })
+    get registry_film_path(film)
+    assert_response :success
+    get new_rating_path(film_id: film.id)
+    assert_response :success
+    assert_select ".poster-placeholder"
+    assert_select ".rating-synopsis", count: 0
+    assert_select "h2", "Raw metadata"
+  end
+
   test "every list and detail requires a current superuser before looking for records" do
     cookies.delete("session_id")
     paths.each do |path|
@@ -81,7 +94,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
           assert_response :success
           assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
           assert_select "a.wordmark", "glutton."
-          assert_select 'button[data-controller="theme"][aria-pressed="false"]', I18n.t("registry.dark_mode")
+          assert_select 'button[data-controller="theme"][aria-pressed="false"][aria-label=?]', I18n.t("ui.dark_mode")
           assert_select "main#registry-content"
           assert_select "form", count: 0
           assert_select "script", text: /overview|quality|Current source/, count: 0
@@ -91,7 +104,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       end
     end
     assert_empty writes
-    get root_path
+    get library_path
     assert_select "header a[href=?]", registry_root_path
     get registry_film_path(@film)
     assert_select "h1", @film.title

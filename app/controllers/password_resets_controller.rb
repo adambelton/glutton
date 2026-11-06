@@ -1,6 +1,9 @@
 require "digest"
 
+
 class PasswordResetsController < ApplicationController
+  allow_unauthenticated_access only: [ :new, :create, :edit, :update ]
+
   # Per worker, as with sign-in. Shared abuse controls are required before multi-worker release.
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
 

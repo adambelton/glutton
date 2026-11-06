@@ -1,6 +1,7 @@
 require "test_helper"
 
 class PasswordRecoveryActivityProbeController < ApplicationController
+  allow_unauthenticated_access only: :create
   def create
     ensure_guest_user!
     head :no_content
@@ -157,6 +158,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       resource :registration_email, only: :create
       resource :registration_confirmation, only: [ :show, :create ]
       resource :password_reset, only: [ :new, :create, :edit, :update ]
+      resource :guest_session, only: :create
       resource :session, only: [ :new, :create, :destroy ]
       post "/password-recovery-activity", to: "password_recovery_activity_probe#create"
     end

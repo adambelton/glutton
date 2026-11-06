@@ -14,7 +14,6 @@ module Registry
     private
 
     def require_superuser
-      require_identity
       unless current_user.superuser?
         render ::Views::Registry::Message.new(key: :forbidden), status: :forbidden
       end

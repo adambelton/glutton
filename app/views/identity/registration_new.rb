@@ -15,7 +15,10 @@ module Views
             field(name: "registration[password_confirmation]", id: "registration_password_confirmation", label: t("identity.registration.password_confirmation"), type: :password, required: true, autocomplete: "new-password")
             submit(t("identity.registration.submit"))
           end
-          text_link(t("identity.sessions.sign_in"), new_session_path)
+          div(class: "ui-secondary-links") do
+            text_link(t("identity.sessions.sign_in"), new_session_path)
+            text_link(t("identity.entry.back"), browsing_path)
+          end
         end
       end
     end

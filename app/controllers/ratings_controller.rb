@@ -1,7 +1,4 @@
 class RatingsController < ApplicationController
-  before_action :ensure_guest_user!, only: :new
-  before_action :require_identity
-
   rescue_from Identity::Required, Ratings::IdentityUnavailable do
     render ::Views::Ratings::SignedOut.new, status: :unauthorized
   end
@@ -25,7 +22,7 @@ class RatingsController < ApplicationController
   end
 
   def create
-    read_rating_input
+    return render_invalid_rating unless read_rating_input
     rating = Ratings::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       value: @value, expression_texts: @expression_texts.reject(&:blank?))
     flash[:edited_film] = { id: rating.rating_film.film_id, title: rating.rating_film.film.title }
@@ -49,7 +46,7 @@ class RatingsController < ApplicationController
 
   def update
     @previous_rating_id = previous_rating_id_param
-    read_rating_input
+    return render_invalid_revision unless read_rating_input
     rating = Ratings::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       previous_rating_id: @previous_rating_id, value: @value, expression_texts: @expression_texts.reject(&:blank?))
     redirect_to edit_rating_path(film_id: rating.rating_film.film_id),
@@ -75,12 +72,12 @@ class RatingsController < ApplicationController
 
   def render_new(status: :ok)
     render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: params.key?(:film_id),
-      value: @value, expression_texts: @expression_texts, errors: @errors, edited_film: flash[:edited_film]), status:
+      value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, edited_film: flash[:edited_film]), status:
   end
 
   def render_edit(status: :ok)
     render ::Views::Ratings::Edit.new(rating_film: @rating_film, previous_rating_id: @previous_rating_id,
-      value: @value, expression_texts: @expression_texts, errors: @errors), status:
+      value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors), status:
   end
 
   def read_rating_input
@@ -91,6 +88,15 @@ class RatingsController < ApplicationController
       raise Ratings::InvalidExpressions
     end
     @expression_texts = texts
+    draft = params.fetch(:expression_draft, "")
+    raise Ratings::InvalidExpressions unless draft.is_a?(String)
+
+    @expression_draft = draft
+    if draft.present?
+      @errors = [ I18n.t("ratings.browser.unadded_expression") ]
+      return false
+    end
+    true
   end
 
   def previous_rating_id_param

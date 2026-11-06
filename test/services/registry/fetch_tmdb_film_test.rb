@@ -24,4 +24,12 @@ class Registry::FetchTmdbFilmTest < ActiveSupport::TestCase
     assert_equal "Local title", film.reload.title
     assert_equal({ "note" => "Keep" }, film.tmdb_metadata)
   end
+  test "optional metadata is retained without interpretation or mutation of the response" do
+    payload = { "id" => 348, "title" => "Alien", "poster_path" => 123, "unknown" => { "values" => [ nil, false, "" ] } }
+    data = Registry::FetchTmdbFilm.call(tmdb_id: 348, tmdb_client: tmdb_source(payload:))
+    assert_equal payload, data.dig(:tmdb_metadata, "details")
+    assert_nil Registry::TmdbMetadata.new(data.fetch(:tmdb_metadata)).poster_path
+    data.dig(:tmdb_metadata, "details", "unknown", "values") << "copy"
+    assert_equal [ nil, false, "" ], payload.dig("unknown", "values")
+  end
 end

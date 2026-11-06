@@ -1,6 +1,4 @@
 class LibraryController < ApplicationController
-  before_action :require_identity
-
   rescue_from Identity::Required, Library::IdentityUnavailable do
     render ::Views::Library::SignedOut.new, status: :unauthorized
   end

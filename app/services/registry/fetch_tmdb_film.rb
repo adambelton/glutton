@@ -26,13 +26,11 @@ module Registry
     def fetch_metadata
       payload = @tmdb_client.movie(tmdb_id: @tmdb_id)
       unless payload.is_a?(Hash) && payload["id"].is_a?(Integer) && payload["id"] == @tmdb_id &&
-          payload["title"].is_a?(String) && payload["title"].present? &&
-          (payload["original_title"].nil? || payload["original_title"].is_a?(String))
+          payload["title"].is_a?(String) && payload["title"].present?
         raise InvalidTmdbResponse, "TMDB returned invalid movie data"
       end
       date = TmdbReleaseDate.parse(payload["release_date"])
-      tmdb_metadata = { "fetched_at" => Time.current.utc.iso8601, "language" => "en-US", "details" => TmdbMetadata.from(payload) }
-      tmdb_metadata["original_title"] = payload["original_title"] unless payload["original_title"].nil?
+      tmdb_metadata = { "fetched_at" => Time.current.utc.iso8601, "language" => "en-US", "details" => payload.as_json }
       { title: payload.fetch("title"), release_date: date, tmdb_metadata: }
     end
   end
