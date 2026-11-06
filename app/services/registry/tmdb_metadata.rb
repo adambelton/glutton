@@ -1,31 +1,76 @@
 module Registry
+  # Read boundary for untrusted provider JSON, including older filtered packets.
+  # Storage retains the complete response; only fields consumed by Glutton are adapted.
   class TmdbMetadata
-    TEXT_FIELDS = %w[overview tagline original_language status homepage imdb_id].freeze
-    LIST_FIELDS = { "genres" => { "id" => Integer, "name" => String },
-      "production_companies" => { "id" => Integer, "name" => String, "origin_country" => String },
-      "production_countries" => { "iso_3166_1" => String, "name" => String },
-      "spoken_languages" => { "iso_639_1" => String, "name" => String, "english_name" => String } }.freeze
+    def initialize(metadata)
+      @metadata = metadata
+      @details = metadata.fetch("details", {})
+      @details = {} unless @details.is_a?(Hash)
+    end
 
-    def self.from(payload)
-      details = {}
-      TEXT_FIELDS.each do |key|
-        value = payload[key]
-        raise InvalidTmdbResponse, "Invalid TMDB #{key}" unless value.nil? || value.is_a?(String)
-        details[key] = value.presence
+    def original_title
+      text(@details.fetch("original_title", @metadata["original_title"]))
+    end
+
+    def overview
+      text(@details["overview"])
+    end
+
+    def tagline
+      text(@details["tagline"])
+    end
+
+    def original_language
+      text(@details["original_language"])
+    end
+
+    def status
+      text(@details["status"])
+    end
+
+    def imdb_id
+      text(@details["imdb_id"])
+    end
+
+    def poster_path
+      text(@details["poster_path"])
+    end
+
+    def runtime
+      value = @details["runtime"]
+      value if value.is_a?(Integer) && value >= 0
+    end
+
+    def genre_names
+      names("genres")
+    end
+
+    def production_company_names
+      names("production_companies")
+    end
+
+    def production_country_names
+      names("production_countries")
+    end
+
+    def spoken_language_names
+      names("spoken_languages", preferred: "english_name")
+    end
+
+    private
+
+    def text(value)
+      value.presence if value.is_a?(String)
+    end
+
+    def names(key, preferred: "name")
+      entries = @details[key]
+      return [] unless entries.is_a?(Array)
+
+      entries.filter_map do |entry|
+        next unless entry.is_a?(Hash)
+        text(entry[preferred]) || text(entry["name"])
       end
-      %w[runtime budget revenue].each do |key|
-        value = payload[key]
-        raise InvalidTmdbResponse, "Invalid TMDB #{key}" unless value.nil? || (value.is_a?(Integer) && value >= 0)
-        details[key] = value
-      end
-      LIST_FIELDS.each do |key, fields|
-        value = payload[key]
-        unless value.nil? || (value.is_a?(Array) && value.all? { |entry| entry.is_a?(Hash) && fields.all? { |field, role| entry[field].nil? || entry[field].is_a?(role) } })
-          raise InvalidTmdbResponse, "Invalid TMDB #{key}"
-        end
-        details[key] = value&.map { |entry| fields.keys.index_with { |field| entry[field] } }
-      end
-      details
     end
   end
 end

@@ -1,4 +1,6 @@
 class RegistrationEmailsController < ApplicationController
+  allow_unauthenticated_access only: :create
+
   include Identity::RegistrationRequests
 
   rate_limit to: 10, within: 3.minutes, scope: :registration_email,

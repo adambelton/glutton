@@ -135,19 +135,17 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_response :success
     Identity::Session.revoke(id: @authentication.id)
     get library_path
-    assert_response :unauthorized
-    assert_select "a[href=?]", new_session_path
-    assert_select "a[href=?]", new_registration_path
+    assert_redirected_to new_session_path
     cookies.delete(:session_id)
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       get library_path
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
     end
     @user = Identity::UserGuest.create!
     bind_user
     travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
       get library_path
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
     end
     bind_user
     @user.becomes!(Identity::UserDeleted).save!
@@ -186,14 +184,14 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       get edit_link
       assert_response :success
       assert_select 'input[name="previous_rating_id"][value=?]', current.id.to_s
-      assert_select "textarea", text: "Current"
+      assert_select ".expression-items .expression-copy", text: "Current"
       patch rating_path, params: { rating_film_id: candidate.id, previous_rating_id: current.id,
         value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Updated from Library" ] }
       assert_response :see_other
       get library_film_path(watched)
       get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
       assert_response :success
-      assert_select "textarea", text: "Updated from Library"
+      assert_select ".expression-items .expression-copy", text: "Updated from Library"
       assert_select 'input[name="previous_rating_id"][value=?]', candidate.ratings.order(:id).last.id.to_s
       assert_equal [ "Original" ], original.rating_expressions.pluck(:text)
     end

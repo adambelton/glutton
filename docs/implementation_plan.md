@@ -1,6 +1,6 @@
 # Glutton — Implementation progress
 
-Updated: 5 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 6 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
@@ -13,11 +13,19 @@ Updated: 5 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
+- Read-only Ratings interface is implemented. Reuse the actual film/rating/expression presentation for curated landing examples without personal records or interactive rating/trailer controls. The shared layout uses a one-third poster/two-thirds content split on desktop, two columns on tablet and one on phone, plus a single expression composer adding to an italicised removable list. Pending input must be explicitly added or cleared before saving. Recommendations/Library examples remain deferred.
+
+- Registry preview data is implemented. Registry supplies read-only films for landing examples and retains complete TMDB movie responses, with typed read adapters for consumed fields; full manual source refresh remains deferred.
+
 Regular initial quality assignment makes one bundled support request per film without automatic paragraph-evidence requests. Source/definition snapshots, probabilities, decisions and application provenance remain recorded; historical paragraph evidence remains readable. On-demand manual review remains deferred; prefer one request unless measured limits/cost justify splitting.
 
-Browser views use Phlex pages under `app/views/<domain>` and application-owned components under `app/components`, with shared brand typography/colour themes. Registry inspection is superuser-only; Ratings is the root destination with guest-session entry and optional registration. Email templates remain ERB. All manual local work uses `glutton_development`; automated tests use `glutton_test`.
+Browser views use Phlex pages under `app/views/<domain>` and application-owned components under `app/components`, with shared brand typography/colour themes. Registry inspection is superuser-only. Anonymous root now displays curated read-only Ratings examples with film posters/synopses; explicit account/guest entry gates product pages and preserves safe return URLs. Without a target, guests enter Ratings and registered users enter Library. Email templates remain ERB. All manual local work uses `glutton_development`; automated tests use `glutton_test`.
 
-Development contains 50 source-backed films with initial qualities, providing data for public-feature verification. Core Ratings, Library and Recommendations functionality takes priority over Registry editing.
+Development now contains 500 source-backed TMDB horror films, all with posters and initial qualities, following an owner-authorized clean Registry reload. The horror catalogue replacement is complete; cumulative TypeSafe usage remained below the approved $5 cap, including timeout reserves. Existing accounts and product activity were preserved. Core Ratings, Library and Recommendations functionality takes priority over Registry editing.
+
+- Explicit identity entry and return routing is implemented. Anonymous landing preview creates no identity; account forms/explicit guest entry gate product pages and retain safe requested resources. Without a target, guests go to Ratings and registered users to Library.
+
+- Ratings catalogue discovery is next; its scope will be prepared for owner review before implementation. Replenish only requested queue shortfalls from Registry, preserving oldest-first order, ratings/dismissals/holds and existing Library-event behavior. Admission should use an agreed popularity/familiarity signal and current shared Library exclusions; depends on explicit Identity entry/gating. No anonymous candidate creation, providers or recommendation scoring.
 
 - [Edit existing quality definitions](tasks/quality_definition_editing.md): Deferred draft; implementation not started. Superuser-only editing of matching definitions/exclusions, preserving immutable names, accepted film associations and historical evaluation snapshots, with explicit stale-form protection. Category settings and manual film-quality changes follow as separate Registry outcomes; source refresh and reassessment remain later.
 
@@ -70,14 +78,14 @@ A domain is not a table or screen. Rating/recommendation records describe their 
 
 ## Agreed navigation
 
-Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. Ratings is the default landing destination; there is no separate product homepage.
+Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. The agreed next design has a public anonymous landing preview and gated product pages. With no requested resource, identified guests default to Ratings and registered users default to Library; an explicit authorized resource target takes priority. This supersedes the earlier universal Ratings-root/no-homepage direction.
 
 - On mobile, use persistent bottom navigation with an icon and visible text label for each destination and a clear active state. Keep account/sign-in controls in the page header. Reserve content space for the navigation and device safe area so it never obscures forms, actions or the final list item. Use comfortable touch targets and verify keyboard/focus behaviour, zoom and narrow screens.
 - Library is one page. A labelled dropdown at the top selects Watchlist (the default), Watched or Not interested. Use the platform-native select on mobile; preserve the same control on desktop. Selection is reflected in the URL, so refresh, sharing and back/forward restore the selected view. A bare Library URL opens Watchlist; changing the view resets pagination.
 - On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with roomier film rows; keep the Library dropdown above the list. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-This is the agreed navigation design, not a claim that every destination is implemented. Ratings is now wired as the root page with automatic guest-session entry (registration optional), and the shared header includes implemented Ratings/Library destinations, a superuser-only Registry link and account controls; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and the complete mobile primary-navigation design remain separately scoped work.
+This is the agreed navigation design, not a claim that every destination is implemented. Login/registration/confirmation/recovery entry pages remain publicly reachable, and guest entry requires explicit interaction. Header account controls show Log in/Register when unauthenticated and Account when identified, including guests. Login also offers Continue as guest with the same return rules. Active guests see a thin registration reminder below the header to save progress; it disappears on completed registration. The theme toggle is icon-only with localized accessible labeling and preserved keyboard/persistence behavior. Landing examples are curated Ratings demonstrations that cycle every 10 seconds with clickable position dots and pause/resume reusing the shared readonly form; film posters are intended UI content; no decorative hero is planned. Ratings admission uses a deliberate popularity/familiarity order, still to be specified, while preserving the existing oldest-first unfinished queue. The root now provides the anonymous preview and identity-dependent redirects, and the authenticated header includes implemented Ratings/Library destinations, a superuser-only Registry link and account controls; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and the complete mobile primary-navigation design remain separately scoped work.
 
 ## Future Recommendations scoring work
 

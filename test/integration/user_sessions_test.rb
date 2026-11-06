@@ -1,6 +1,7 @@
 require "test_helper"
 
 class GuestSessionProbeController < ApplicationController
+  allow_unauthenticated_access only: [ :show, :create ]
   self.allow_forgery_protection = true
   protect_from_forgery with: :exception
 
@@ -19,13 +20,14 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     SessionsController.allow_forgery_protection = true
     SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
-      root "ratings#new"
+      root "landing#show"
       resource :library, only: :show, controller: :library
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create
       resource :registration_confirmation, only: [ :show, :create ]
       resource :password_reset, only: [ :new, :create, :edit, :update ]
+      resource :guest_session, only: :create
       resource :session, only: [ :new, :create, :destroy ]
       get "/identity-probe", to: "guest_session_probe#show"
       post "/identity-probe", to: "guest_session_probe#create"
@@ -49,16 +51,13 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     JSON.parse(client.response.body)
   end
 
-  test "Ratings landing starts one guest session and reuses it on repeat visits" do
-    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
-      get root_path
-      assert_response :success
-    end
-    guest_id = lookup.fetch("id")
+  test "anonymous landing does not start a guest session" do
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       get root_path
       assert_response :success
-      assert_equal guest_id, lookup.fetch("id")
+      assert_nil lookup.fetch("id")
+      get root_path
+      assert_response :success
     end
   end
 

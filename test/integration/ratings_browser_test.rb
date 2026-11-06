@@ -40,7 +40,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     rated.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
     candidate("Foreign", user: Identity::UserGuest.create!, created_at: 4.days.ago)
     next_candidate = candidate("Next film")
-    get root_path
+    get new_rating_path
     assert_select "a[href=?]", new_rating_path
     get new_rating_path
     assert_select "h2", "First film"
@@ -88,12 +88,12 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "script", text: /alert\(/, count: 0
     assert_select "h2", @candidate.film.title
-    assert_select "textarea#expression-0", text: text
+    assert_select ".expression-items input[type=hidden][value=?]", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::BRILLIANT
     assert_select '#rating-errors[role="alert"]'
     assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
-    assert_select 'label[for="expression-0"]'
-    assert_select "textarea[maxlength=?]", Ratings::RatingExpression::MAX_TEXT_LENGTH.to_s, count: Ratings::Rating::MAX_EXPRESSIONS
+    assert_select 'label[for="expression-draft"]'
+    assert_select "textarea[maxlength=?]", Ratings::RatingExpression::MAX_TEXT_LENGTH.to_s, count: 1
     assert_empty @candidate.ratings
   end
 
@@ -102,7 +102,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         rate(value:, expression_texts: [ "Keep this" ])
         assert_response :unprocessable_entity
-        assert_select "textarea#expression-0", "Keep this"
+        assert_select ".expression-item .expression-copy", "Keep this"
       end
     end
     [ nil, "text", { text: "text" }, [ { text: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
@@ -111,6 +111,42 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
         assert_response :unprocessable_entity
       end
     end
+  end
+
+  test "unadded drafts block saving and stay in the input until explicitly added or cleared" do
+    draft = "  <script>draft</script>\nÉerie 👻  "
+    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+      rate(expression_texts: [ "First thought" ], expression_draft: draft)
+      assert_response :unprocessable_entity
+      assert_select "#rating-errors", text: /#{Regexp.escape(I18n.t("ratings.browser.unadded_expression"))}/
+      assert_select "textarea#expression-draft" do |inputs|
+        assert_equal draft, inputs.sole.text
+      end
+      assert_select '.expression-items input[value="First thought"]', count: 1
+      assert_select ".expression-items input", count: 1
+      assert_select "script", text: "draft", count: 0
+    end
+    rate(expression_texts: [ "First thought", draft ], expression_draft: "")
+    assert_response :see_other
+    assert_equal [ "First thought", draft ], @candidate.reload.current_rating.rating_expressions.pluck(:text)
+  end
+
+  test "malformed drafts cannot write and pending input remains recoverable at the list limit" do
+    [ { bad: "shape" }, [ "text" ] ].each do |expression_draft|
+      assert_no_difference "Ratings::Rating.count" do
+        rate(expression_draft:)
+        assert_response :unprocessable_entity
+      end
+    end
+    assert_no_difference "Ratings::Rating.count" do
+      rate(expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS, "Existing"), expression_draft: "Extra")
+      assert_response :unprocessable_entity
+      assert_select "textarea#expression-draft", "Extra"
+      assert_select ".expression-items input", count: Ratings::Rating::MAX_EXPRESSIONS
+    end
+    rate(expression_draft: " ")
+    assert_response :see_other
+    assert_empty @candidate.reload.current_rating.rating_expressions
   end
 
   test "foreign missing and malformed candidates have the same unavailable response" do
@@ -143,25 +179,23 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "expired and revoked sessions cannot write but may start a fresh guest on Ratings entry" do
+  test "expired and revoked sessions cannot write or automatically create a guest" do
     token = csrf
     travel (Identity::UserGuest::EXPIRY_DURATION + 1.second) do
       assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
         assert_response :unauthorized
       end
-      assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+      assert_no_difference [ "Identity::UserGuest.count", "Identity::Session.count" ] do
         get new_rating_path
-        assert_response :success
-        assert_select "h2", text: @candidate.film.title, count: 0
+        assert_redirected_to new_session_path
       end
     end
     bind_user(@user)
     Identity::Session.where(user: @user).each { |authentication| Identity::Session.revoke(id: authentication.id) }
-    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+    assert_no_difference [ "Identity::UserGuest.count", "Identity::Session.count" ] do
       get new_rating_path
-      assert_response :success
-      assert_select "h2", text: @candidate.film.title, count: 0
+      assert_redirected_to new_session_path
     end
     bind_user(@user)
     # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.
@@ -180,7 +214,8 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     assert_not @candidate.reload.dismissed?
-    filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter("expression_texts" => [ "Private expression" ])
+    filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter("expression_texts" => [ "Private expression" ], "expression_draft" => "Private draft")
     assert_equal "[FILTERED]", filtered["expression_texts"]
+    assert_equal "[FILTERED]", filtered["expression_draft"]
   end
 end

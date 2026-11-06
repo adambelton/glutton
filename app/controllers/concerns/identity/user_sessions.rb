@@ -91,8 +91,10 @@ module Identity
       if user.can_register? && session[:pending_registration_id].present?
         pending = Identity::PendingRegistration.find_by(id: session[:pending_registration_id])
       end
+      destination = session[:entry_destination]
       registration_alert = flash[:alert]
       reset_session
+      session[:entry_destination] = destination if destination.present?
       flash.now[:alert] = registration_alert if user.can_register? && registration_alert.present?
       if user.can_register? && pending.present? && pending.active? && pending.guest_user_id == user.id
         session[:pending_registration_id] = pending.id

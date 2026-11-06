@@ -1,14 +1,20 @@
 en:
   ratings:
     browser:
+      unadded_expression: Add your expression to the list or clear the input before saving.
+      expression_draft: Add an expression
+      expression_placeholder: I loved how slowly the tension builds.
+      expression_add: Add
+      expression_remove: "Remove expression %{number}"
+      trailer: Trailer
       title: Rate films
       edit_title: Edit your rating
       edit_saved: "Edit your rating for %{title}"
       updated: Your updated rating has been saved.
       reload: Reload current rating
       choice: What did you think?
-      expressions: Your expressions (optional)
-      expression_help: "Share distinct thoughts in separate fields. Leave any unused fields blank. Up to %{count} expressions, each up to %{length} characters."
+      expressions: What stood out to you (optional)?
+      expression_help: "Add one thought at a time. Press Enter to add it, or Shift+Enter for a new line. Up to %{count} expressions, each up to %{length} characters."
       expression: "Expression %{number}"
       save: Save rating
       dismiss: Dismiss

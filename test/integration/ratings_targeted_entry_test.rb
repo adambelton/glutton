@@ -2,15 +2,17 @@ require "test_helper"
 
 class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   setup do
-    @forgery = RatingsController.allow_forgery_protection
-    RatingsController.allow_forgery_protection = true
+    @controllers = [ RatingsController, SessionsController, GuestSessionsController ]
+    @forgery = @controllers.to_h { |controller| [ controller, controller.allow_forgery_protection ] }
+    @controllers.each { |controller| controller.allow_forgery_protection = true }
+    GuestSessionsController::RATE_LIMIT_STORE.clear
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Selected <film>", release_date: Date.new(1982, 6, 25))
     bind_user
   end
 
   teardown do
-    RatingsController.allow_forgery_protection = @forgery
+    @forgery.each { |controller, enabled| controller.allow_forgery_protection = enabled }
   end
 
   def bind_user
@@ -89,12 +91,11 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     end
     assert_select "h2", @film.title
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
-    assert_select "textarea#expression-0", text: text
+    assert_select ".expression-items input[type=hidden][value=?]", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::I_ENJOYED_THAT
     assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
     assert_select "script", text: /alert\(/, count: 0
-    assert_select "details[open]"
-    assert_select 'label[for="expression-0"]'
+    assert_select 'label[for="expression-draft"]'
     assert_select "form[action=?]", rating_path
   end
 
@@ -147,11 +148,18 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     assert_equal 1, Ratings::RatingFilm.where(user: @user).count
   end
 
-  test "guest entry can rate a selected film without registration" do
+  test "explicit guest entry returns to a selected film without registration" do
     cookies.delete("session_id")
-    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ], 1 do
+    assert_no_difference [ "Identity::User.count", "Ratings::RatingFilm.count" ] do
       get new_rating_path(film_id: @film.id)
-      assert_response :success
+      assert_redirected_to new_session_path
+    end
+    get new_session_path
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ], 1 do
+      post guest_session_path, params: { authenticity_token: token }
+      assert_redirected_to new_rating_path(film_id: @film.id)
+      follow_redirect!
       assert_select "h2", @film.title
     end
     guest = Identity::Session.order(:id).last.user
@@ -164,7 +172,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     assert_equal guest.id, rating_film.reload.user_id
   end
 
-  test "writes reject expired sessions while targeted GET can start a separate fresh guest" do
+  test "writes and targeted GET never create a guest without explicit entry" do
     token = csrf
     post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT }
     assert_response :unprocessable_entity
@@ -173,16 +181,16 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
         post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
         assert_response :unauthorized
       end
-      assert_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ], 1 do
+      assert_no_difference [ "Identity::UserGuest.count", "Identity::Session.count", "Ratings::RatingFilm.count" ] do
         get new_rating_path(film_id: @film.id)
-        assert_response :success
+        assert_redirected_to new_session_path
       end
     end
     bind_user
     Identity::Session.where(user: @user).each { |authentication| Identity::Session.revoke(id: authentication.id) }
-    assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
+    assert_no_difference [ "Identity::UserGuest.count", "Identity::Session.count" ] do
       get new_rating_path(film_id: @film.id)
-      assert_response :success
+      assert_redirected_to new_session_path
     end
     bind_user
     # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.

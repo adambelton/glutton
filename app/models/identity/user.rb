@@ -8,6 +8,10 @@ module Identity
       super
     end
 
+    def default_entry_path
+      raise NotImplementedError
+    end
+
     def inactive_error
       nil
     end

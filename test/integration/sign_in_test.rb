@@ -137,7 +137,8 @@ class SignInTest < ActionDispatch::IntegrationTest
     other.post session_path, params: { email_address: replacement.email_address, password: "a long password phrase", authenticity_token: token(other) }
     assert_equal 303, other.response.status
     other.get root_path
-    assert_equal 200, other.response.status
+    assert_equal 302, other.response.status
+    assert_equal "http://www.example.com/library", other.response.location
   end
 
   test "failed prior-session revocation rolls back the issued replacement" do

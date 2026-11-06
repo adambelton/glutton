@@ -10,6 +10,10 @@ module Identity
     validates :password, length: { minimum: 15 }, allow_nil: true
     validates :password_confirmation, presence: true, if: -> { password.present? }
 
+    def default_entry_path
+      "/library"
+    end
+
     def grant_superuser!(actor:)
       raise Identity::SuperuserRequired unless actor.superuser?
       raise Identity::SuperuserAlreadyGranted if superuser?

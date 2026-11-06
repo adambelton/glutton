@@ -1,5 +1,7 @@
 class ApplicationController < ActionController::Base
   include Identity::UserSessions
+  include Identity::EntryNavigation
+  include Identity::Authentication
   layout false
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
@@ -7,10 +9,4 @@ class ApplicationController < ActionController::Base
 
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
-
-  private
-
-  def require_identity
-    raise Identity::Required unless current_user
-  end
 end

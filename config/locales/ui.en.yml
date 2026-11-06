@@ -3,6 +3,8 @@ en:
     wordmark: glutton.
     page_title: "%{title} · %{brand}"
     account: Account
+    log_in: Log in
+    register: Register
     dark_mode: Dark mode
     skip: Skip to content
     navigation: Main navigation

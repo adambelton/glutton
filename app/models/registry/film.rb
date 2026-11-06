@@ -6,6 +6,10 @@ module Registry
 
     scope :without_qualities, -> { where.missing(:film_qualities) }
 
+    def tmdb_details
+      TmdbMetadata.new(tmdb_metadata)
+    end
+
     def has_source_context?
       tmdb_metadata? && wikipedia_context?
     end

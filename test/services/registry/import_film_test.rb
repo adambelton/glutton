@@ -15,18 +15,20 @@ class Registry::ImportFilmTest < ActiveSupport::TestCase
   test "imports TMDB metadata and Wikipedia context ready for quality assessment" do
     freeze_time do
       payload = { id: 348, title: "Alien", original_title: "Alien", release_date: "1979-05-25",
-        overview: "The crew encounters danger", poster_path: "Unused", credits: [ "Unused" ] }
+        overview: "The crew encounters danger", poster_path: "/poster.jpg", credits: { cast: [ { name: "Sigourney Weaver", unknown: true } ] },
+        future_field: [ nil, false, 3.25, "" ], tagline: "" }
       film = assert_difference("Registry::Film.count", 1) { import(payload) }
       assert film.persisted?
       assert film.has_source_context?
       assert_equal "Q1", film.wikidata_id
       assert_equal "Q1", film.wikipedia_context.dig("wikidata_id")
       assert_equal [ "Alien", 348, Date.new(1979, 5, 25) ], [ film.title, film.tmdb_id, film.release_date ]
-      assert_equal "Alien", film.reload.tmdb_metadata["original_title"]
+      assert_equal "Alien", film.reload.tmdb_details.original_title
       assert_equal Time.current.utc.iso8601, film.tmdb_metadata.dig("fetched_at")
       assert_equal "The crew encounters danger", film.tmdb_metadata.dig("details", "overview")
+      assert_equal "/poster.jpg", film.tmdb_metadata.dig("details", "poster_path")
       assert_nil film.tmdb_metadata.dig("details", "runtime")
-      assert_not film.tmdb_metadata.dig("details").key?("credits")
+      assert_equal JSON.parse(JSON.generate(payload)), film.tmdb_metadata.fetch("details")
     end
   end
 
@@ -82,18 +84,19 @@ class Registry::ImportFilmTest < ActiveSupport::TestCase
     end
   end
 
-  test "invalid optional TMDB metadata is rejected atomically" do
+  test "malformed optional fields are stored without blocking valid film identity" do
     [ { overview: [] }, { runtime: -1 }, { runtime: "117" }, { genres: "Horror" },
       { genres: [ { id: "27", name: "Horror" } ] }, { production_countries: [ "US" ] } ].each do |changes|
-      assert_no_difference "Registry::Film.count" do
-        assert_raises(Registry::ImportIncomplete) { import({ id: 348, title: "Alien" }.merge(changes)) }
-      end
+      payload = { id: 348, title: "Alien" }.merge(changes)
+      film = import(payload)
+      assert_equal JSON.parse(JSON.generate(payload)), film.reload.tmdb_metadata.fetch("details")
+      film.destroy!
     end
   end
 
   test "invalid responses never write" do
     invalid = [ { id: "348" }, { id: 349 }, { id: nil }, { title: nil }, { title: " \t" }, { title: 9 },
-      { original_title: [] }, { release_date: [] }, { release_date: 1979 }, { release_date: "1979" },
+      { release_date: [] }, { release_date: 1979 }, { release_date: "1979" },
       { release_date: "2023-02-29" }, { release_date: "1979-13-01" }, { release_date: "1979-5-25" },
       { release_date: "1979-05-25T00:00:00Z" } ]
     invalid.each do |attributes|

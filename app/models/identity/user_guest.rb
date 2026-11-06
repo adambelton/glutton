@@ -9,6 +9,10 @@ module Identity
     scope :active, -> { where(arel_table[:created_at].gt(EXPIRY_DURATION.ago)) }
     scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
 
+    def default_entry_path
+      "/rating/new"
+    end
+
     def inactive_error
       Identity::GuestExpired.new unless active?
     end

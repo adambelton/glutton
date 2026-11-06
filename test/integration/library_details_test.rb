@@ -148,12 +148,12 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :unauthorized
       get library_film_path(@entry)
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
       @user.update!(created_at: Time.current)
       bind_user
       Identity::Session.revoke(id: @authentication.id)
       get library_film_path(@entry)
-      assert_response :unauthorized
+      assert_redirected_to new_session_path
       bind_user
       @user.becomes!(Identity::UserDeleted).save!
       get library_film_path(@entry)
