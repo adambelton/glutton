@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_07_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -303,6 +303,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_110000) do
     t.index ["rating_id", "quality_id"], name: "index_rating_qualities_on_rating_id_and_quality_id", unique: true
   end
 
+  create_table "rating_quality_evals", force: :cascade do |t|
+    t.bigint "rating_id", null: false
+    t.jsonb "output", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["rating_id"], name: "index_rating_quality_evals_on_rating_id"
+    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['expressions'::text, 'qualities'::text, 'calls'::text, 'decisions'::text]", name: "rating_quality_evals_completed_output"
+  end
+
   create_table "ratings", force: :cascade do |t|
     t.bigint "rating_film_id", null: false
     t.string "value", null: false
@@ -349,6 +358,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_110000) do
   add_foreign_key "rating_films", "users", on_delete: :cascade
   add_foreign_key "rating_qualities", "qualities"
   add_foreign_key "rating_qualities", "ratings", on_delete: :cascade
+  add_foreign_key "rating_quality_evals", "ratings", on_delete: :cascade
   add_foreign_key "ratings", "rating_films", on_delete: :cascade
   add_foreign_key "sessions", "users"
 end

@@ -43,7 +43,11 @@ en:
       ratings/rating: Rating
       ratings/rating_expression: Thought
       ratings/rating_film: Rating film
+      ratings/rating_quality_eval: Rating quality evaluation
     attributes:
+      ratings/rating_quality_eval:
+        rating: Rating
+        output: Evaluation output
       ratings/rating_expression:
         rating: Rating
         text: Thought
