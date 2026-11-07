@@ -44,7 +44,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     end
     row = candidate
     get new_rating_path
-    assert_select "h2", @film.title
+    assert_select "h2", "#{@film.title} (1982)"
     [ false, true ].product([ false, true ]).each do |held, dismissed|
       row.update!(held:, dismissed:)
       assert_no_changes -> { row.reload.updated_at } do
@@ -52,9 +52,8 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
         assert_response :success
       end
     end
-    assert_select "h2", @film.title
+    assert_select "h2", "#{@film.title} (1982)"
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
-    assert_select "p", "Released in 1982"
     assert_select "form[action=?]", rating_path
     assert_select 'form[action*="dismiss"]', count: 0
     assert_select "a[href=?]", new_rating_path
@@ -89,7 +88,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       rate(expression_texts: [ text, "x" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
       assert_response :unprocessable_entity
     end
-    assert_select "h2", @film.title
+    assert_select "h2", "#{@film.title} (1982)"
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
     assert_select ".expression-items input[type=hidden][value=?]", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::PRETTY_GOOD
@@ -160,7 +159,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       post guest_session_path, params: { authenticity_token: token }
       assert_redirected_to new_rating_path(film_id: @film.id)
       follow_redirect!
-      assert_select "h2", @film.title
+      assert_select "h2", "#{@film.title} (1982)"
     end
     guest = Identity::Session.order(:id).last.user
     rating_film = Ratings::RatingFilm.find_by!(user: guest, film: @film)
@@ -205,7 +204,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     Ratings::RatingFilm.create!(user: @user, film: @film)
     get new_rating_path
     assert_response :success
-    assert_select "h2", @film.title
+    assert_select "h2", "#{@film.title} (1982)"
     [ "", "0", "bad", [ @film.id.to_s ], { id: @film.id } ].each do |film_id|
       get new_rating_path, params: { film_id: }
       assert_response :not_found

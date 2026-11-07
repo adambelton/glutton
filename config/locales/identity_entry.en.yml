@@ -4,12 +4,10 @@ en:
       title: Find your next obsession.
       eyebrow: Films worth an appetite.
       empty: Our film collection is getting ready. You can still get started.
-      continue_guest: Continue as guest
+      continue_guest: Try it out as a guest
       try_it_out: Try it out
       guest_explanation: Try it without an account. Register later to keep your progress.
       back: Back to browsing
-      poster: "Poster for %{title}"
-      no_poster: "Poster unavailable for %{title}"
       attribution: Film information and posters from TMDB.
       tmdb_disclaimer: This product uses the TMDB API but is not endorsed or certified by TMDB.
       guest_banner_label: Guest account reminder
@@ -18,7 +16,6 @@ en:
       demo:
         description: Your rating is only the beginning. Tell us what stayed with you.
         label: Example ratings
-        disclaimer: Example ratings and expressions
         browse: Browse example ratings
         select: "Show example %{position} of %{count}"
         pause: Pause automatic cycling

@@ -1,5 +1,5 @@
 module Identity
-  class PendingDetails < UI::Base
+  class PendingDetails < Shared::Base
     def initialize(registration:)
       @registration = registration
     end

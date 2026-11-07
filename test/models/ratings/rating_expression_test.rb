@@ -31,7 +31,7 @@ class Ratings::RatingExpressionTest < ActiveSupport::TestCase
     expression = Ratings::RatingExpression.new
     assert_not expression.valid?
     assert_includes expression.errors.full_messages, "Rating must exist"
-    assert_includes expression.errors.full_messages, "Expression can't be blank"
+    assert_includes expression.errors.full_messages, "Thought can't be blank"
     expression.text = "x" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1)
     assert_not expression.valid?
     assert expression.errors.of_kind?(:text, :too_long)

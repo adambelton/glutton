@@ -78,7 +78,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     end
     get new_rating_path(film_id: @film.id)
     assert_response :success
-    assert_select "h2", @film.title
+    assert_select "h2", "#{@film.title} (2001)"
   end
 
   test "watched detail reads same-user actual ratings independent of candidate flags" do

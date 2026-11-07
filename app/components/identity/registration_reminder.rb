@@ -1,5 +1,5 @@
 module Identity
-  class RegistrationReminder < UI::Base
+  class RegistrationReminder < Shared::Base
     def initialize(registration:)
       @registration = registration
     end

@@ -1,4 +1,4 @@
-module UI
+module Shared
   class Layout < Base
     def initialize(title:, pending_reminder: true, account_controls: true)
       @title, @pending_reminder, @account_controls = title, pending_reminder, account_controls
@@ -21,17 +21,11 @@ module UI
               end
             end
             render ThemeToggle.new
-            if user.present?
-              details(class: "ui-account-menu") do
-                summary { t("ui.account") }
-                div(class: "ui-account-panel") do
-                  render Identity::AccountStatus.new(user:)
-                end
-              end
-            else
-              div(class: "ui-auth-links") do
-                text_link(t("ui.log_in"), new_session_path)
-                text_link(t("ui.register"), new_registration_path)
+            div(class: "ui-auth-links") do
+              if user.nil? || user.can_register?
+                render Identity::EntryActions.new(guest_entry: @account_controls && user.nil?)
+              else
+                render Shared::ActionButton.new(text: t("ui.log_out"), url: session_path, method: :delete)
               end
             end
           end
@@ -46,11 +40,11 @@ module UI
           end
         end
         div(class: "ui-width ui-content") do
+          render Toast.new(message: flash[:notice]) if flash[:notice].present?
           if @pending_reminder
             render Identity::RegistrationReminder.new(registration: current_pending_registration)
           end
           p(role: "alert", class: "ui-alert") { flash[:alert] } if flash[:alert].present?
-          p(role: "status", class: "ui-notice") { flash[:notice] } if flash[:notice].present?
           yield
         end
       end

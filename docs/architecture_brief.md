@@ -93,6 +93,20 @@ Qualities and quality categories are editable descriptive product data. Do not i
 
 Reprocessing replaces or supersedes an interpretation. It must not accumulate duplicate evidence. Running the same assessment or aggregation repeatedly with identical inputs must not amplify preference strength.
 
+### Cross-domain service communication
+
+Domains may read stable shared facts directly when the caller preserves access controls. For derived values or queries whose meaning depends on the source domain's rules or storage, use a named read operation owned by that domain. The owner defines the inputs, result, ordering where applicable, and freshness callers can rely on. The consuming domain decides how to use the result.
+
+Each domain owns changes to its durable state. When a fact from one domain should trigger a change in another, publish a domain event and let the receiving domain apply its own rules asynchronously.
+
+Ratings discovery uses Registry's named vote-count query for ordered film IDs. Registry owns how it derives that ordering. Ratings chooses the query and owns viewer eligibility and queue admission. Library changes that affect Ratings eligibility reach it through events.
+
+Place orchestration services in the domain that owns the workflow outcome and name them for that outcome. Keep them alongside the domain's other services. When several workflows share a capability, group them by that capability. The coordinator connects domain operations, and each operation retains its domain rules and transaction responsibilities. For example, `Ratings::NextCandidates` coordinates Registry ordering and Ratings queue admission.
+
+Place application components in the domain that owns what they present. Registry owns film links and posters. Shared holds the common document shell and general controls.
+
+Views and components can orchestrate presentation and call domain services directly when they need data to render. Use the same cross-domain read rules and preserve viewer access controls. Controllers handle HTTP input and dispatch user actions to the owning domain. Rendering uses read operations, and the domain services retain their rules and transaction responsibilities.
+
 ### Asynchronous domain events
 
 Owner decision, 21 October 2026: Library, Ratings and Recommendations coordinate through durable asynchronous domain events. This supersedes the synchronous-only design. The source commits its state and outbox event together; subscribers commit their own state and delivery receipt independently. Brief eventual consistency is acceptable. Delivery must survive crashes and retries, preserve stream ordering and prevent duplicate effects. No broker or independently deployed service is required. Foundation implements the durable outbox and subscriber receipts using GoodJob 4.22 in the same PostgreSQL database, with after-commit notification wakeups and a 30-second recovery sweep. Library/Ratings publication and consumers use this transport; deployment remains separate. See [operations](domain_event_operations.md).
@@ -329,7 +343,7 @@ Use standard Rails i18n locale entries for application UI, flash/error text, mai
 
 Owner-approved simplification supersedes the earlier Ratings seen/unseen question and presentation-history proposals: present a film for rating or dismissal. A dismissal only removes it from automatic Ratings rotation; it does not assert that the user has not seen it or change recommendation eligibility or Library classification. Store current queue/selection/dismissal on one RatingFilm per user/film, without presentation history or dismissal reasons. Later Library viewing evidence preserves explicit rating dismissal. The user can explicitly initiate rating from Library through the later targeted-entry task. Watchlist and not-interested-in-watching choices remain in Library and Recommendations; Ratings-flow action requests are deferred. 
 
-Ratings candidate ordering clarification: the owner subsequently approved oldest-first batches from a single persistent RatingFilm queue. Candidates admitted by future Library watched events and unfinished catalogue candidates use the same created_at/ID order; newly watched entries do not jump the queue. The row stores user, film, boolean dismissal and standard timestamps only. Selection records no presentation/current state. The ratings relationship supplies rated/unrated scopes; selection excludes rated rows. Catalogue replenishment fills only batch shortfalls under a separately approved policy, preserving all existing user/film records and dismissal. This supersedes earlier watched-first priority descriptions.
+Ratings candidate ordering clarification: the owner subsequently approved oldest-first batches from a single persistent RatingFilm queue. Candidate selection defaults to one film and supports explicitly requested batches. Candidates admitted by Library watched events and unfinished catalogue candidates use the same created_at/ID order; newly watched entries do not jump the queue. The row stores user, film, boolean dismissal and standard timestamps only. Selection records no presentation/current state. The ratings relationship supplies rated/unrated scopes; selection excludes rated rows. Catalogue replenishment fills only requested batch shortfalls under the per-user lock, preserving all existing user/film records, ratings, dismissal and holds. New films are admitted by descending typed TMDB vote count, missing/unusable counts last and Registry ID ascending on ties. Selection and admission use Ratings-owned queue state for viewer eligibility. Library watchlist and Not interested changes take effect when the Ratings subscriber applies the corresponding hold or dismissal. For this discovery implementation, Registry exposes a named vote-count ordering of film IDs. Ratings passes excluded IDs and a shortfall while holding the per-user lock. Registry performs the ordering over stored metadata in Ruby. This supersedes earlier watched-first priority descriptions.
 
 ## Mobile-first navigation — 26 October 2026
 
@@ -340,7 +354,7 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with roomier film rows; keep the Library dropdown above the list. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
+This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content still needs its own implementation; bounded first-visit Ratings discovery is ready for review. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
 
 ### Controller organisation
 

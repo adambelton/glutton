@@ -10,7 +10,7 @@ module Views
       end
 
       def shell(title:, active: nil, description: nil, &block)
-        render UI::Document.new(title:, body_class: "registry-page") do
+        render Shared::Document.new(title:, body_class: "registry-page") do
           a(href: "#registry-content", class: "skip-link") { t(:skip) }
           header(class: "registry-header") do
             div(class: "registry-header-inner") do
@@ -19,7 +19,7 @@ module Views
               a(href: registry_root_path, class: "registry-label") { t(:title) }
               span(class: "registry-access") { t(:internal) }
               div(class: "registry-header-actions") do
-                render UI::ThemeToggle.new
+                render Shared::ThemeToggle.new
                 a(href: root_path, class: "return-link") { t(:back_to_app) }
               end
             end

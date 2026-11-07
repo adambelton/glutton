@@ -13,7 +13,9 @@ module Views
             field(name: "password", id: "password", label: t("identity.sessions.password"), type: :password, required: true, autocomplete: "current-password")
             submit(t("identity.sessions.sign_in"))
           end
-          render UI::ActionButton.new(text: t("identity.entry.continue_guest"), url: guest_session_path)
+          div(class: "ui-guest-entry") do
+            render Shared::ActionButton.new(text: t("identity.entry.continue_guest"), url: guest_session_path)
+          end
           div(class: "ui-secondary-links") do
             text_link(t("identity.entry.back"), browsing_path)
             text_link(t("identity.registration.title"), new_registration_path)

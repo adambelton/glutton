@@ -1,12 +1,12 @@
 en:
   ratings:
     browser:
-      unadded_expression: Add your expression to the list or clear the input before saving.
-      expression_draft: Add an expression
+      film_details: Film details
+      film_year: "(%{year})"
+      unadded_expression: Add your thought to the list or clear the input before saving.
+      expression_draft: Add a thought
       expression_placeholder: I loved how slowly the tension builds.
-      expression_add: Add
-      expression_remove: "Remove expression %{number}"
-      trailer: Trailer
+      expression_remove: "Remove thought %{number}"
       title: Rate films
       edit_title: Edit your rating
       edit_saved: "Edit your rating for %{title}"
@@ -14,16 +14,14 @@ en:
       reload: Reload current rating
       choice: What did you think?
       expressions: What stood out to you (optional)?
-      expression_help: "Add one thought at a time. Press Enter to add it, or Shift+Enter for a new line. Up to %{count} expressions, each up to %{length} characters."
       expression: "Expression %{number}"
       save: Save rating
-      dismiss: Dismiss
+      dismiss: Dismiss film
       saved: Your rating has been saved.
       dismissed: This film has been dismissed from rating rotation.
       empty: You have no films waiting to be rated.
       sign_in_required: Your session is no longer available. Return to Ratings to start a new guest session, or sign in to your account.
       correct_errors: Please correct the following errors.
-      release_year: "Released in %{year}"
       continue: Return to rating queue
     values:
       brilliant: Brilliant
@@ -35,7 +33,7 @@ en:
       stale_rating: This rating has changed. Reload it before submitting a replacement.
       hold_unavailable: This film is already held from rating rotation.
       hold_release_unavailable: This film is not held from rating rotation.
-      invalid_expressions: Provide a list of no more than %{count} text expressions.
+      invalid_expressions: Provide no more than %{count} thoughts.
       already_rated: This film has already been rated.
       identity_unavailable: An active account is required to rate films.
       film_unavailable: This rating film is unavailable.
@@ -43,16 +41,16 @@ en:
   activerecord:
     models:
       ratings/rating: Rating
-      ratings/rating_expression: Rating expression
+      ratings/rating_expression: Thought
       ratings/rating_film: Rating film
     attributes:
       ratings/rating_expression:
         rating: Rating
-        text: Expression
+        text: Thought
       ratings/rating:
         rating_film: Rating film
         value: Rating
-        rating_expressions: Expressions
+        rating_expressions: Thoughts
       ratings/rating_film:
         user: User
         film: Film

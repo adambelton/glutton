@@ -54,7 +54,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     assert_equal [ unrated.id, newest.id ], owned.pending.order(:id).pluck(:id)
     assert_includes Ratings::RatingFilm.unrated.pluck(:id), foreign.id
     assert_equal [ unrated.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
-    assert_equal [ unrated.id, newest.id ], Ratings::NextCandidates.call(user_id: @user.id).map(&:id)
+    assert_equal [ unrated.id, newest.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 2).map(&:id)
   end
 
   test "choice labels and validation and duplicate errors render with strict translations" do

@@ -1,11 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["draft", "add", "list", "template"]
+  static targets = ["draft", "list", "template"]
   static values = { limit: Number, limitMessage: String, unaddedMessage: String, removeLabel: String }
 
   connect() {
-    this.addTarget.hidden = false
     this.form = this.element.closest("form")
     this.submitHandler = event => {
       if (this.draftTarget.value.trim()) {
@@ -23,7 +22,6 @@ export default class extends Controller {
 
   clearValidity() {
     this.draftTarget.setCustomValidity("")
-    this.addTarget.disabled = this.listTarget.children.length >= this.limitValue || !this.draftTarget.value.trim()
   }
 
   keydown(event) {
@@ -67,7 +65,6 @@ export default class extends Controller {
       button.setAttribute("aria-label", this.removeLabelValue.replace("%{number}", String(index + 1)))
     })
     const full = this.listTarget.children.length >= this.limitValue
-    this.addTarget.disabled = full || !this.draftTarget.value.trim()
     this.draftTarget.disabled = full && !this.draftTarget.value.trim()
   }
 

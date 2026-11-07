@@ -33,20 +33,55 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: csrf }.merge(attributes)
   end
 
+  test "source links sit between title and synopsis and use stored identities" do
+    overview = ("A film synopsis. " * 40).strip
+    film = Registry::Film.create!(title: "Linked film", tmdb_id: 348, release_date: Date.new(1979, 5, 25),
+      tmdb_metadata: { details: { overview: overview } },
+      wikipedia_context: { page_id: 123, article_url: "javascript:alert(1)" })
+    linked = Ratings::RatingFilm.create!(user: @user, film:)
+    get new_rating_path(film_id: film.id)
+    assert_response :success
+    assert_select ".rating-film-info" do
+      assert_select "h2", "Linked film (1979)"
+      assert_select "h2 + .rating-film-links + .rating-description .rating-synopsis", overview
+      assert_select 'a[href="https://www.themoviedb.org/movie/348"]', I18n.t("registry.film_presentation.tmdb")
+      assert_select "a[href=?]", "https://en.wikipedia.org/w/index.php?curid=123", text: I18n.t("registry.film_presentation.wikipedia")
+      assert_select "a", count: 2
+      assert_select "a[rel='noopener noreferrer'][target='_blank']", count: 2
+      assert_select ".muted", count: 0
+    end
+    assert_select 'input[name="rating_film_id"][value=?]', linked.id.to_s
+  end
+
+  test "missing and malformed source identities do not render source links" do
+    film = Registry::Film.create!(title: "Without sources", wikipedia_context: { page_id: "javascript:alert(1)" })
+    Ratings::RatingFilm.create!(user: @user, film:)
+    get new_rating_path(film_id: film.id)
+    assert_response :success
+    assert_select ".rating-film-links a", count: 0
+  end
+
   test "queue excludes ineligible and foreign rows and advances through save dismiss and empty" do
     candidate("Held", held: true, created_at: 4.days.ago)
     candidate("Dismissed", dismissed: true, created_at: 4.days.ago)
     rated = candidate("Rated", created_at: 4.days.ago)
     rated.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
-    candidate("Foreign", user: Identity::UserGuest.create!, created_at: 4.days.ago)
+    foreign = candidate("Foreign", user: Identity::UserGuest.create!, created_at: 4.days.ago)
     next_candidate = candidate("Next film")
     get new_rating_path
     assert_select "a[href=?]", new_rating_path
     get new_rating_path
-    assert_select "h2", "First film"
-    assert_select "form[action=?]", rating_path
+    assert_select "h2", "First film (1982)"
+    assert_select "form#rating-form[action=?]", rating_path
+    assert_select ".rating-interface .rating-actions" do
+      assert_select 'button[type="submit"][form="rating-form"].ui-submit', I18n.t("ratings.browser.save")
+      assert_select "form[action=?]", dismiss_rating_path do
+        assert_select "button", I18n.t("ratings.browser.dismiss")
+      end
+    end
+    assert_select "form#rating-form form", count: 0
     assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
-    assert_select "p", "Released in 1982"
+    assert_select ".rating-film-info .muted", count: 0
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do
@@ -57,13 +92,18 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_equal [ "  Atmosphere!\nÉerie 👻  ", "The ending" ], @candidate.ratings.sole.rating_expressions.pluck(:text)
     assert_equal Ratings::Events::RATING_SUBMITTED, DomainEvents::DomainEvent.last.name
     follow_redirect!
-    assert_select "h2", "Next film"
+    assert_select "h2", "Next film (1982)"
     assert_select '[role="status"]', I18n.t("ratings.browser.saved")
     assert_no_difference [ "DomainEvents::DomainEvent.count", "Ratings::Rating.count" ] do
       post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf }
     end
     assert_response :see_other
     assert next_candidate.reload.dismissed?
+    follow_redirect!
+    assert_select "h2", "Foreign (1982)"
+    admitted = Ratings::RatingFilm.where(user: @user).find_by!(film_id: foreign.film_id)
+    assert_not_equal foreign.id, admitted.id
+    post dismiss_rating_path, params: { rating_film_id: admitted.id, authenticity_token: csrf }
     follow_redirect!
     assert_select "p", I18n.t("ratings.browser.empty")
   end
@@ -87,7 +127,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     rate(expression_texts: [ text, "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
     assert_response :unprocessable_entity
     assert_select "script", text: /alert\(/, count: 0
-    assert_select "h2", @candidate.film.title
+    assert_select "h2", "#{@candidate.film.title} (1982)"
     assert_select ".expression-items input[type=hidden][value=?]", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::BRILLIANT
     assert_select '#rating-errors[role="alert"]'

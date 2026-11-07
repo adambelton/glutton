@@ -1,5 +1,5 @@
 module Registry
-  class SourceContext < UI::Base
+  class SourceContext < Shared::Base
     def initialize(context:, paragraphs: nil, prefix: "source", empty_message_key: "registry.no_context")
       @context = context
       @paragraphs = paragraphs || context.fetch("source_paragraphs", [])

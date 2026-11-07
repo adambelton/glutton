@@ -72,6 +72,19 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert candidate.held?
   end
 
+  test "automatic admission followed by waiting watchlist delivery preserves one held candidate" do
+    batch = contender = nil
+    Identity::User.transaction do
+      batch = Ratings::NextCandidates.call(user_id: @guest.id, limit: 1)
+      contender = blocked { deliver }
+    end
+    assert_equal :processed, Timeout.timeout(5) { contender.value }
+    assert_equal batch.first.id, candidate.id
+    assert candidate.held?
+    assert_equal 1, Ratings::RatingFilm.where(user: @guest, film: @film).count
+    assert_empty Ratings::NextCandidates.call(user_id: @guest.id)
+  end
+
   test "submission before waiting hold preserves saved evidence" do
     row = Ratings::RatingFilm.create!(user: @guest, film: @film)
     contender = rating = nil
