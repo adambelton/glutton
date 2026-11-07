@@ -29,7 +29,7 @@ module FilmLoadingSources
       http = Http.new(sources: self)
       @type_safe_client_class = Class.new do
         define_singleton_method(:new) do |**limits|
-          Registry::TypeSafeClient.new(token: "private-loading-test-key", http_class: http, **limits)
+          TypeSafeClient.new(token: "private-loading-test-key", http_class: http, **limits)
         end
       end
     end

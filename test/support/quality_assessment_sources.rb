@@ -11,6 +11,18 @@ module QualityAssessmentSources
       @requests = []
     end
 
+    def model
+      TypeSafeClient::CONFIGURATION.fetch("model")
+    end
+
+    def configuration
+      { "model" => model }
+    end
+
+    def input_cost(input_tokens:)
+      input_tokens * TypeSafeClient::CONFIGURATION.fetch("input_token_price_usd")
+    end
+
     def answer(state:, questions:, phase:)
       @requests << { state:, questions:, phase: }
       @before_answer&.call
@@ -25,7 +37,7 @@ module QualityAssessmentSources
         end
         [ id, answer ]
       end
-      { "model" => "jev-1.14.0", "answers" => answers, "usage" => { "input_tokens" => 100, "output_tokens" => 10 } }
+      { "model" => model, "answers" => answers, "usage" => { "input_tokens" => 100, "output_tokens" => 10 } }
     end
   end
 

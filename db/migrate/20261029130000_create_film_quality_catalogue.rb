@@ -39,7 +39,7 @@ class CreateFilmQualityCatalogue < ActiveRecord::Migration[8.1]
     end
     add_index :film_quality_evals, [ :id, :film_id ], unique: true
     add_check_constraint :film_quality_evals,
-      "jsonb_typeof(output) = 'object' AND output ?& ARRAY['assessed_at', 'source', 'definitions', 'categories', 'question_policy', 'selection_policy', 'evidence_policy', 'minimum_support', 'model', 'support', 'evidence', 'selected_quality_ids', 'input_tokens', 'calculated_cost_usd', 'calls', 'call_count', 'selection_decisions', 'status', 'usage_complete'] AND COALESCE(output->>'status' IN ('completed', 'failed'), false)",
+      "jsonb_typeof(output) = 'object' AND output ?& ARRAY['assessed_at', 'source', 'definitions', 'categories', 'question_policy', 'minimum_support', 'model', 'support', 'evidence', 'selected_quality_ids', 'input_tokens', 'calculated_cost_usd', 'calls', 'call_count', 'selection_decisions', 'status', 'usage_complete'] AND COALESCE(output->>'status' IN ('completed', 'failed'), false)",
       name: "film_quality_evals_completed_output"
     add_check_constraint :film_quality_evals,
       "jsonb_typeof(application) = 'object' AND COALESCE(application->>'status' IN ('pending', 'applied', 'failed'), false)",

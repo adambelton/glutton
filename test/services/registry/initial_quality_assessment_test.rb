@@ -23,7 +23,7 @@ class Registry::InitialQualityAssessmentTest < ActiveSupport::TestCase
     assert_equal 48, client.requests.sole.fetch(:questions).size
     assert client.requests.sole.fetch(:questions).values.all? { |question| question.fetch("type") == "noul" }
     assert_empty assessment.result.fetch("evidence")
-    assert_equal "not-collected-initial-assignment-v1", assessment.result.fetch("evidence_policy")
+    assert_empty assessment.result.keys & %w[selection_policy evidence_policy]
     assert_equal 48, assessment.result.fetch("support").size
   end
 

@@ -135,6 +135,20 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
   end
 
+  test "application uses score weights captured in the evaluation" do
+    snapshot = assessment_output.merge(question_policy: {
+      scores: {
+        explicitly_expressed: { brilliant: 7 },
+        unexpressed: { brilliant: 1 }
+      }
+    })
+    evaluation = record(snapshot)
+
+    evaluation.apply_quality_scores!
+
+    assert_equal({ @quality.id => 7, @other_quality.id => 1 }, scores(evaluation))
+  end
+
   private
 
   def scores(evaluation)

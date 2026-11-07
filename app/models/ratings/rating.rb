@@ -9,13 +9,6 @@ module Ratings
       ALL = [ BRILLIANT, PRETTY_GOOD, NOT_FOR_ME, GARBAGE ].freeze
     end
 
-    UNEXPRESSED_QUALITY_SCORES = {
-      Values::BRILLIANT => 2,
-      Values::PRETTY_GOOD => 1,
-      Values::NOT_FOR_ME => -1,
-      Values::GARBAGE => -2
-    }.freeze
-
     MAX_EXPRESSIONS = 20
 
     belongs_to :rating_film

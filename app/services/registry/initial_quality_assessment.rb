@@ -1,31 +1,27 @@
 module Registry
   class InitialQualityAssessment
-    MODEL = "jev-1.14.0".freeze
-    POLICY = "support-0.60-category-cap-id-ties-v1".freeze
-    EVIDENCE_POLICY = "not-collected-initial-assignment-v1".freeze
-    MINIMUM_SUPPORT = 0.60
-
     attr_reader :result
 
     def initialize(source:, definitions:, categories:, trace_id: nil)
       @source, @definitions, @categories = source, definitions, categories
-      @contract = JSON.parse(Rails.root.join("docs/film_qualities/matching.json").read)
+      @contract = JSON.parse(File.read(File.join(__dir__, "initial_quality_assessment.json")))
       @trace_id = trace_id
       @calls, @support, @selected_quality_ids = [], {}, []
       @selection_decisions = []
     end
 
     def call(client:)
-      state = {
+      available_state = {
         "film_title" => source.fetch("title"),
         "source_paragraphs" => source.fetch("wikipedia_context").fetch("source_paragraphs"),
         "evidence_policy" => @contract.fetch("evidence_policy")
       }
+      state = @contract.fetch("state_fields").index_with { |field| available_state.fetch(field) }
       questions = definitions.to_h do |definition|
         [ question_id(definition), {
-          "type" => "noul",
+          "type" => @contract.fetch("question_type"),
           "instructions" => @contract.fetch("question_template").gsub("{name}", definition.fetch("name")),
-          "criteria" => { "true" => definition.fetch("match_rule"),
+          "criteria" => { "true" => definition.fetch(@contract.fetch("true_criterion_field")),
             "false" => @contract.fetch("false_criterion_template").gsub("{not_sufficient}", definition.fetch("not_sufficient")) }
         } ]
       end
@@ -34,13 +30,13 @@ module Registry
       @selection_decisions = selection_decisions
       @selected_quality_ids = @selection_decisions.select { |decision| decision.fetch("selected") }
         .map { |decision| decision.fetch("quality_id") }
-      @result = build_result.merge("status" => "completed")
+      @result = build_result(client).merge("status" => "completed")
       self
     rescue AssignmentFailed => error
-      @result = build_result.merge("status" => "failed", "error" => { "reason" => error.reason.to_s })
+      @result = build_result(client).merge("status" => "failed", "error" => { "reason" => error.reason.to_s })
       raise
     rescue StandardError
-      @result = build_result.merge("status" => "failed", "error" => { "reason" => "unexpected_failure" })
+      @result = build_result(client).merge("status" => "failed", "error" => { "reason" => "unexpected_failure" })
       raise
     end
 
@@ -50,9 +46,9 @@ module Registry
 
     def answer(client:, state:, questions:, phase:)
       call = { "phase" => phase, "started_at" => Time.current.utc.iso8601,
-        "request" => { "model" => MODEL, "state" => state, "questions" => questions } }
+        "request" => { "model" => client.model, "state" => state, "questions" => questions } }
       @calls << call
-      response = client.answer(state:, questions:, phase:)
+      response = request_answers(client, state:, questions:, phase:)
       call.merge!("status" => "completed", "response" => response)
       response
     rescue AssignmentFailed => error
@@ -67,21 +63,28 @@ module Registry
       call["finished_at"] = Time.current.utc.iso8601
     end
 
-    def build_result
-      input_tokens = @calls.select { |call| call.fetch("status") == "completed" }
-        .sum { |call| call.fetch("response").fetch("usage").fetch("input_tokens") }
+    def request_answers(client, state:, questions:, phase:)
+      client.answer(state:, questions:, phase:)
+    rescue TypeSafeClient::Error => error
+      raise AssignmentFailed.new(reason: error.reason, provider_response: error.provider_response,
+        request_sent: error.request_sent), cause: nil
+    end
+
+    def build_result(client)
+      completed_calls = @calls.select { |call| call.fetch("status") == "completed" }
+      input_tokens = completed_calls.sum { |call| call.fetch("response").fetch("usage").fetch("input_tokens") }
       {
         "assessed_at" => Time.current.utc.iso8601, "source" => source,
         "definitions" => definitions, "categories" => categories,
-        "question_policy" => @contract, "selection_policy" => POLICY, "evidence_policy" => EVIDENCE_POLICY,
-        "minimum_support" => MINIMUM_SUPPORT,
-        "model" => MODEL, "trace_id" => @trace_id, "support" => @support, "evidence" => {},
+        "question_policy" => @contract,
+        "minimum_support" => @contract.fetch("minimum_support"), "configuration" => { "provider" => client.configuration },
+        "model" => completed_calls.last&.dig("response", "model") || client.model, "trace_id" => @trace_id, "support" => @support, "evidence" => {},
         "selected_quality_ids" => @selected_quality_ids,
         "calls" => @calls, "call_count" => @calls.count { |call| call.fetch("status") != "not_sent" },
         "selection_decisions" => @selection_decisions,
         "usage_complete" => @calls.all? { |call| call.fetch("status") == "completed" },
         "input_tokens" => input_tokens,
-        "calculated_cost_usd" => input_tokens * TypeSafeClient::INPUT_TOKEN_PRICE
+        "calculated_cost_usd" => client.input_cost(input_tokens:)
       }
     end
 
@@ -95,7 +98,7 @@ module Registry
           .sort_by { |definition| [ -@support.fetch(definition.fetch("id").to_s), definition.fetch("id") ] }
         ranked.each_with_index.map do |definition, index|
           quality_id = definition.fetch("id")
-          supported = @support.fetch(quality_id.to_s) >= MINIMUM_SUPPORT
+          supported = @support.fetch(quality_id.to_s) >= @contract.fetch("minimum_support")
           selected = supported && index < category.fetch("maximum_qualities")
           { "quality_id" => quality_id, "quality_category_id" => category.fetch("id"),
             "support" => @support.fetch(quality_id.to_s), "rank" => index + 1,
