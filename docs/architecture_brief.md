@@ -93,6 +93,8 @@ Qualities and quality categories are editable descriptive product data. Do not i
 
 Reprocessing replaces or supersedes an interpretation. It must not accumulate duplicate evidence. Running the same assessment or aggregation repeatedly with identical inputs must not amplify preference strength.
 
+Group constants that represent a set of model values in named modules so references carry the context of the value. For example, use `Rating::Values::BRILLIANT` and `RatingQuality::Classifications::UNEXPRESSED`.
+
 ### Cross-domain service communication
 
 Domains may read stable shared facts directly when the caller preserves access controls. For derived values or queries whose meaning depends on the source domain's rules or storage, use a named read operation owned by that domain. The owner defines the inputs, result, ordering where applicable, and freshness callers can rely on. The consuming domain decides how to use the result.

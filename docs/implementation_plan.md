@@ -9,7 +9,7 @@ Updated: 7 November 2026. This document describes current progress, agreed order
 - Registry: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; superuser-only read-only catalogue inspection is implemented; import/edit/refresh web entry points and bulk catalogue execution remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
-- Personal preference processing/scoring and recommendation selection/ranking/explanations remain to build. Historical research is not evidence of validated prediction accuracy.
+- Baseline Ratings scoring stores unexpressed scores per rating version and accepted film quality. Expression and profile scoring, recommendation selection, ranking and explanations remain to build. Historical research is not evidence of validated prediction accuracy.
 
 ## Current work
 
