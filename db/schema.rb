@@ -295,12 +295,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
   create_table "rating_qualities", force: :cascade do |t|
     t.bigint "rating_id", null: false
     t.bigint "quality_id", null: false
+    t.bigint "rating_quality_eval_id", null: false
     t.string "classification", null: false
     t.integer "score", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["quality_id"], name: "index_rating_qualities_on_quality_id"
-    t.index ["rating_id", "quality_id"], name: "index_rating_qualities_on_rating_id_and_quality_id", unique: true
+    t.index ["rating_id"], name: "index_rating_qualities_on_rating_id"
+    t.index ["rating_quality_eval_id", "quality_id"], name: "index_rating_qualities_on_evaluation_and_quality", unique: true
   end
 
   create_table "rating_quality_evals", force: :cascade do |t|
@@ -308,6 +310,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
     t.jsonb "output", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["id", "rating_id"], name: "index_rating_quality_evals_on_id_and_rating_id", unique: true
     t.index ["rating_id"], name: "index_rating_quality_evals_on_rating_id"
     t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['expressions'::text, 'qualities'::text, 'calls'::text, 'decisions'::text]", name: "rating_quality_evals_completed_output"
   end
@@ -357,6 +360,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
   add_foreign_key "rating_films", "films"
   add_foreign_key "rating_films", "users", on_delete: :cascade
   add_foreign_key "rating_qualities", "qualities"
+  add_foreign_key "rating_qualities", "rating_quality_evals", column: ["rating_quality_eval_id", "rating_id"], primary_key: ["id", "rating_id"], on_delete: :cascade
   add_foreign_key "rating_qualities", "ratings", on_delete: :cascade
   add_foreign_key "rating_quality_evals", "ratings", on_delete: :cascade
   add_foreign_key "ratings", "rating_films", on_delete: :cascade
