@@ -9,6 +9,7 @@ module Ratings
     end
 
     belongs_to :rating
+    belongs_to :rating_quality_eval
     belongs_to :quality, class_name: "Registry::Quality"
 
     validates :classification, inclusion: { in: Classifications::ALL }

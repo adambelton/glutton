@@ -1,6 +1,14 @@
 module Ratings
   class RatingQualityEval < ApplicationRecord
+    EXPLICIT_QUALITY_SCORES = {
+      Rating::Values::BRILLIANT => 5,
+      Rating::Values::PRETTY_GOOD => 3,
+      Rating::Values::NOT_FOR_ME => -3,
+      Rating::Values::GARBAGE => -5
+    }.freeze
+
     belongs_to :rating
+    has_many :rating_qualities
     attr_readonly :rating_id, :output
 
     validate :evaluation_output
@@ -13,7 +21,32 @@ module Ratings
       super || persisted?
     end
 
+    def apply_quality_scores!
+      quality_ids = output.fetch("qualities").keys.map(&:to_i)
+      decisions = output.fetch("decisions")
+      unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
+        raise QualityApplicationUnavailable
+      end
+      raise QualityApplicationUnavailable if rating_qualities.exists?
+
+      explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
+      transaction(requires_new: true) do
+        quality_ids.map do |quality_id|
+          classification, score = classify_quality(quality_id, explicit_ids)
+          rating_qualities.create!(rating:, quality_id:, classification:, score:)
+        end
+      end
+    end
+
     private
+
+    def classify_quality(quality_id, explicit_ids)
+      if explicit_ids.include?(quality_id)
+        [ RatingQuality::Classifications::EXPLICITLY_EXPRESSED, EXPLICIT_QUALITY_SCORES.fetch(rating.value) ]
+      else
+        [ RatingQuality::Classifications::UNEXPRESSED, Rating::UNEXPRESSED_QUALITY_SCORES.fetch(rating.value) ]
+      end
+    end
 
     def evaluation_output
       errors.add(:output, :invalid) unless valid_output?

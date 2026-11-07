@@ -25,11 +25,14 @@ Classification applies to a rating quality, not to the shared quality globally.
 | Implicitly expressed | The user's current expression profile provides applicable evidence, without a direct expression for this rating quality. | Rating and quality; interpreted using the current expression profile, with no rating expression. |
 | Explicitly expressed | An expression attached to this rating directly addresses the quality. | Rating, quality and supporting rating expressions. |
 
-Use these names rather than strong/weak reinforcement, boosts or adjustments relative to another score. Values are determined by evidence classification × actual rating strength, with the expressed preference informing direction or indifference. Classification identifies the evidence source; it does not itself identify positive or negative sentiment.
+Classification identifies the source of evidence. For the initial release, applicable expressions follow the direction of the overall rating. Explicit evidence takes precedence over profile interpretation, and the overall rating supplies the baseline for qualities without applicable interpreted evidence.
 
-An overall rating supplies an implied score for every associated film quality unless applicable expression evidence says otherwise. Explicit evidence takes precedence over profile interpretation. Indifference can yield zero; dislike is distinct from indifference. Missing expression evidence does not imply either. Expressions may contradict the overall rating; do not mechanically multiply two negative values into positive preference evidence.
-
-Unexpressed scores are +2 for Brilliant, +1 for Pretty Good, −1 for Not For Me and −2 for Garbage. Explicit praise examples of +3 and +5 for Pretty Good and Brilliant remain illustrative. Expression and profile weights require separate design and evaluation.
+| Rating | Unexpressed | Explicitly expressed |
+| --- | ---: | ---: |
+| Brilliant | +2 | +5 |
+| Pretty Good | +1 | +3 |
+| Not For Me | −1 | −3 |
+| Garbage | −2 | −5 |
 
 ## Expression profile and recomputation
 
@@ -43,7 +46,7 @@ Implicitly expressed qualities are interpreted against the user's current expres
 
 Ratings stores completed explicit assessments as immutable RatingQualityEval snapshots tied to a rating version. A snapshot contains the original expression text by ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured expressions, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. Provider adapters validate external responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
 
-Applying an assessment to RatingQuality and recording profile-based assessments are separate work. Future scoring will link generated results to their originating evaluation and preserve input versions, probabilities, processing decisions and application outcomes. Profile refresh supersedes eligible inferred interpretations while preserving explicit evidence. Baseline rows in rating_qualities belong to their submitted rating version.
+Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The future assessment service will acquire the rating-film lock, check freshness, record the evaluation and invoke score application. The model rejects duplicate application of the same evaluation. Profile-based assessments remain separate work. Profile refresh supersedes eligible inferred interpretations while preserving explicit evidence.
 
 Expression-profile synthesis/updates require an LLM call, with no assumed JEV gate. JEV handles quality judgments against the resulting profile and against original expressions. Durable evaluation evidence belongs in the application database; Langfuse supplies optional diagnostic traces. Both evaluation models record an assessment result in an immutable `output` snapshot and enforce required fields in the database. Ratings records completed assessments. Registry also records failed attempts and tracks application separately. FilmQualityEval remains separately owned by Registry; no shared product evaluation table/framework is required.
 
@@ -51,7 +54,7 @@ Expression-profile synthesis/updates require an LLM call, with no assumed JEV ga
 
 Aggregate the user's rating-quality points by quality. Score each eligible recommendation candidate by summing the user's points for its associated qualities. Repeated positive evidence across films raises the matching contribution; negative evidence reduces it. This is the proposed initial additive ranking model.
 
-Owner clarification, 28 October 2026: qualities and categories have equal **base** treatment initially (category multiplier conceptually 1). There is no additional multiplier for global importance, narrative centrality, category prestige or JEV confidence. This does not replace the rating-strength, expressed direction/indifference and evidence-classification rules above; those describe a user's evidence and can produce different contributions. Film-source support probabilities are not preference scores.
+Owner clarification, 28 October 2026: qualities and categories have equal **base** treatment initially (category multiplier conceptually 1). There is no additional multiplier for global importance, narrative centrality, category prestige or JEV confidence. This does not replace the rating-strength and evidence-classification rules above; those describe a user's evidence and can produce different contributions. Film-source support probabilities are not preference scores.
 
 System- or user-controlled category weighting is a possible later capability, not an implemented rule or approved control scheme. It must not introduce an assumed subgenre/theme priority now. Film-quality admission and category-specific selection ceilings remain Registry decisions; category weights cannot restore a relevant quality excluded upstream. See [current requirements](film_quality_requirements.md#equal-starting-weights-and-personal-preference).
 
@@ -72,11 +75,11 @@ Owner decision, 27 October 2026:
 
 The podcast/profile/review comparison is a consumer of these histories, not part of standalone film analysis. Use actual engine scores and explain their calculated positive/negative contributions. Comparing new expressions with the earlier expectation must not recompute that earlier expectation against the updated profile.
 
-Currentness still uses the highest Rating ID. Submission and replacement save baseline quality scores alongside the rating. The migration backfills current ratings using the accepted Registry associations at migration time. Earlier superseded ratings retain their original submissions and expressions. Supersession timestamps, expression profiles and reassessment remain planned.
+Currentness still uses the highest Rating ID. Submission and replacement save the rating and thoughts. Applying an evaluation creates its quality scores. Existing ratings can receive scores once evaluated. Earlier superseded ratings retain their original submissions and expressions. Supersession timestamps, expression profiles and reassessment remain planned.
 
 ## Source refresh and accepted quality changes
 
-Owner direction, 28 October 2026: a Wikipedia/source refresh alone does not trigger new rating-quality scoring. The proposed trigger is a deliberate accepted change to the qualities associated with a film, likely manually reviewed by the community. Definition/meaning changes can also require affected expression-link reassessment; category-only grouping edits do not.
+Owner direction, 28 October 2026: a Wikipedia/source refresh alone does not trigger new rating-quality scoring. A deliberate change to the accepted qualities associated with a film should trigger reassessment. Score application uses the quality IDs captured in its evaluation. Reassessment delivery remains future work. Definition/meaning changes can also require affected expression-link reassessment; category-only grouping edits do not.
 
 Ratings owns replacing its affected current derived contributions and retains prior historical score sets; Recommendations owns its saved contributions and subsequent recalculation. Preserve original rating values/expressions, avoid duplicate contributions and stale result replacement, and distinguish pending from completed outputs. Exact affected-input selection, acceptance and domain-event contracts remain for separately scoped tasks. No publisher/subscriber or scoring implementation is added by this documentation update.
 
@@ -84,6 +87,6 @@ Historical rating/recommendation quality records capture which qualities contrib
 
 ## Raw-expression capture boundary
 
-The current implementation provides RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. Original expressions can be saved even when the film has no accepted qualities. Baseline scoring stores the overall-rating evidence independently of the original expressions. Interpretation and profile processing remain separate work.
+The current implementation provides RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. Original expressions can be saved even when the film has no accepted qualities. During evaluation application, qualities without applicable evidence receive the overall-rating baseline. Interpretation and profile processing remain separate work.
 
 Documentation verification: reviewed against the owner decisions and raw-expression capture boundary; no runtime behaviour or numeric scoring implementation is claimed.

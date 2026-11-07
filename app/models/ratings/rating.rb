@@ -28,7 +28,6 @@ module Ratings
     scope :current, -> { where(id: Rating.group(:rating_film_id).select("MAX(id)")) }
 
     validate :recognized_value
-    after_create :record_unexpressed_quality_scores!
 
     def publish_event!
       DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
@@ -37,13 +36,6 @@ module Ratings
     end
 
     private
-
-    def record_unexpressed_quality_scores!
-      score = UNEXPRESSED_QUALITY_SCORES.fetch(value)
-      rating_film.film.film_qualities.pluck(:quality_id).each do |quality_id|
-        rating_qualities.create!(quality_id:, classification: RatingQuality::Classifications::UNEXPRESSED, score:)
-      end
-    end
 
     def recognized_value
       # External choices must match before Active Record's string coercion.
