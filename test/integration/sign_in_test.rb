@@ -35,8 +35,7 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert_includes header, "samesite=lax"
     assert_equal "no-store", response.headers["Cache-Control"]
     follow_redirect!
-    assert_select "p", text: "Signed in", count: 1
-    assert_not_includes response.body, "Signed in."
+    assert_select "header button", text: I18n.t("ui.log_out"), count: 1
     other = open_session
     sign_in(other)
     second = Identity::Session.last
@@ -46,7 +45,7 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert second.active?
     cookies[:session_id] = old_cookie
     get root_path
-    assert_select "p", text: "Signed in", count: 0
+    assert_select "header button", text: I18n.t("ui.log_out"), count: 0
     delete session_path, params: { authenticity_token: token }
     assert_response :see_other
     assert_equal 1, Identity::Session.count
