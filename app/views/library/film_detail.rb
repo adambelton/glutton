@@ -23,7 +23,7 @@ module Views
       private
 
       def action(text_key, label_key, url, method: :post)
-        render UI::ActionButton.new(text: t("library.detail.#{text_key}"), url:, method:,
+        render Shared::ActionButton.new(text: t("library.detail.#{text_key}"), url:, method:,
           aria: { label: t("library.detail.#{label_key}", title: @library_film.film.title) })
       end
     end

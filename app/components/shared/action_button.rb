@@ -1,4 +1,4 @@
-module UI
+module Shared
   class ActionButton < Base
     def initialize(text:, url:, method: :post, params: {}, **attrs)
       @text, @url, @method, @params, @attrs = text, url, method, params, attrs

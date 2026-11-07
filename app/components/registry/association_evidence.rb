@@ -1,5 +1,5 @@
 module Registry
-  class AssociationEvidence < UI::Base
+  class AssociationEvidence < Shared::Base
     def initialize(association:)
       @association = association
     end

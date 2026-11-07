@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        render UI::Layout.new(title: t("identity.entry.title")) do
+        render Shared::Layout.new(title: t("identity.entry.title")) do
           main(id: "main-content", tabindex: "-1", class: "landing-demo") do
             header(class: "demo-intro") do
               p(class: "preview-eyebrow") { t("identity.entry.eyebrow") }
@@ -16,7 +16,6 @@ module Views
             if @examples.present?
               section(class: "demo-browser", aria: { label: t("identity.entry.demo.label") },
                 data: { controller: "landing-examples", action: "mouseenter->landing-examples#stop mouseleave->landing-examples#start focusin->landing-examples#stop focusout->landing-examples#resume visibilitychange@document->landing-examples#start", "landing-examples-position-template-value": t("identity.entry.demo.position", position: "%{position}", count: @examples.size) }) do
-                p(class: "demo-disclaimer") { t("identity.entry.demo.disclaimer") }
                 @examples.each_with_index do |example, index|
                   article(class: "demo-frame", hidden: index != 0, aria: { label: example.fetch(:film).title }, data: { "landing-examples-target": "panel" }) do
                     render ::Ratings::Form.new(film: example.fetch(:film), value: example.fetch(:rating),
@@ -42,9 +41,7 @@ module Views
             section(class: "demo-entry", aria: { label: t("identity.entry.demo.get_started") }) do
               h2 { t("identity.entry.demo.get_started") }
               div(class: "preview-actions") do
-                text_link(t("ui.log_in"), new_session_path)
-                text_link(t("ui.register"), new_registration_path)
-                render UI::ActionButton.new(text: t("identity.entry.try_it_out"), url: guest_session_path)
+                render ::Identity::EntryActions.new
               end
               p(class: "muted") { t("identity.entry.guest_explanation") }
               p(class: "preview-attribution") do

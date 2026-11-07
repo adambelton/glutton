@@ -9,6 +9,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     @threads = []
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Concurrent Ratings film")
+    @catalogue_films = []
     @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
   end
 
@@ -17,7 +18,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     Identity::PendingRegistration.where(guest_user_id: @user.id).delete_all
     Identity::Session.where(user_id: @user.id).delete_all
     Identity::User.where(id: @user.id).delete_all
-    Registry::Film.where(id: @film.id).delete_all
+    Registry::Film.where(id: [ @film.id ] + @catalogue_films.map(&:id)).delete_all
   end
 
   def blocked(&operation)
@@ -39,8 +40,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     thread
   end
 
-  def candidates
-    Ratings::NextCandidates.call(user_id: @user.id)
+  def candidates(**options)
+    Ratings::NextCandidates.call(user_id: @user.id, **options)
   end
 
   def claim
@@ -58,6 +59,38 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal first.map(&:id), Timeout.timeout(5) { contender.value }.map(&:id)
     assert_equal 1, Ratings::RatingFilm.where(user: @user).count
+  end
+
+  def unqueued_film(votes:)
+    film = Registry::Film.create!(title: "Unqueued", tmdb_metadata: { details: { vote_count: votes } })
+    @catalogue_films << film
+    film
+  end
+
+  test "concurrent automatic requests fill the shortfall once and return the same batch" do
+    first_film = unqueued_film(votes: 100)
+    unqueued_film(votes: 50)
+    batch = contender = nil
+    Identity::User.transaction do
+      batch = candidates(limit: 2)
+      contender = blocked { candidates(limit: 2) }
+    end
+    assert_equal batch.map(&:id), Timeout.timeout(5) { contender.value }.map(&:id)
+    assert_equal 2, Ratings::RatingFilm.where(user: @user).count
+    assert_equal [ @film.id, first_film.id ], batch.map(&:film_id)
+  end
+
+  test "automatic admission and waiting targeted admission share one candidate" do
+    film = unqueued_film(votes: 100)
+    batch = contender = nil
+    Identity::User.transaction do
+      batch = candidates(limit: 2)
+      contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: film.id) }
+    end
+    assert_equal batch.last.id, Timeout.timeout(5) { contender.value }.id
+    assert_equal 1, Ratings::RatingFilm.where(user: @user, film:).count
+    assert_not batch.last.reload.held?
+    assert_not batch.last.dismissed?
   end
 
   def dismiss

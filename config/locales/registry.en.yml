@@ -1,5 +1,10 @@
 en:
   registry:
+    film_presentation:
+      tmdb: TMDB
+      wikipedia: Wikipedia
+      poster: "Poster for %{title}"
+      no_poster: "Poster unavailable for %{title}"
     import:
       incomplete: "Could not complete film import from %{stage}: %{reason}."
       stages:

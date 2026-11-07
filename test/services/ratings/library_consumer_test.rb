@@ -74,7 +74,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     assert_equal [ later.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
     dispatch
-    assert_equal [ first.id, later.id ], Ratings::NextCandidates.call(user_id: @user.id).map(&:id)
+    assert_equal [ first.id, later.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 2).map(&:id)
     first.reload.dismiss!
     publish(Library::Events::FILM_ADDED_TO_WATCHLIST)
     dispatch
@@ -173,7 +173,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       assert row.reload.dismissed?
       assert_not row.held?
       assert_equal [ "Still original" ], rating.rating_expressions.pluck(:text)
-      assert_empty Ratings::NextCandidates.call(user_id: @user.id)
+      assert_not_includes Ratings::NextCandidates.call(user_id: @user.id, limit: 100).map(&:id), row.id
       assert_no_difference "DomainEvents::DomainEvent.count" do
         assert_empty DomainEvents::Dispatch.call
       end

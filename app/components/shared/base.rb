@@ -1,4 +1,4 @@
-module UI
+module Shared
   class Base < Phlex::HTML
     include Phlex::Rails::Helpers::Routes
     include Phlex::Rails::Helpers::FormWith

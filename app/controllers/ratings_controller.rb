@@ -16,7 +16,7 @@ class RatingsController < ApplicationController
     if params.key?(:film_id)
       @rating_film = Ratings::PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
     else
-      @rating_film = Ratings::NextCandidates.call(user_id: current_user.id, limit: 1).first
+      @rating_film = Ratings::NextCandidates.call(user_id: current_user.id).first
     end
     render_new
   end

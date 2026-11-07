@@ -18,12 +18,99 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     Ratings::Dismiss.call(user_id: user.id, rating_film_id: rating_film.id)
   end
 
-  test "empty queue does not admit catalogue or library films" do
-    Library::LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Library only"))
-    Registry::Film.create!(title: "Catalogue only")
-    assert_no_difference [ "Ratings::RatingFilm.count", "Library::LibraryFilm.count" ] do
+  def catalogue_film(title, votes: nil)
+    Registry::Film.create!(title:, tmdb_metadata: { details: { vote_count: votes } })
+  end
+
+  test "empty queue admits catalogue and watched films without touching shared or personal evidence" do
+    film = catalogue_film("Catalogue", votes: 100)
+    watched = catalogue_film("Watched", votes: 50)
+    Library::LibraryFilmWatched.create!(user: @user, film: watched)
+    assert_no_difference [ "Registry::Film.count", "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+      assert_difference "Ratings::RatingFilm.count", 2 do
+        assert_equal [ film.id, watched.id ], candidates(limit: 2).map(&:film_id)
+      end
+    end
+  end
+
+  test "default automatic admission creates one row without a hidden buffer" do
+    7.times { |index| catalogue_film("Film #{index}", votes: index) }
+    assert_difference "Ratings::RatingFilm.count", 1 do
+      assert_equal 1, candidates.size
+    end
+    assert_no_difference "Ratings::RatingFilm.count" do
+      assert_equal 1, candidates.size
+    end
+  end
+
+  test "admission ranks valid vote counts descending with missing values last and stable ties" do
+    missing = catalogue_film("Missing")
+    malformed = catalogue_film("Malformed", votes: "99999")
+    low = catalogue_film("Zero", votes: 0)
+    first = catalogue_film("Tie first", votes: 100)
+    high = catalogue_film("Most voted", votes: 500)
+    second = catalogue_film("Tie second", votes: 100)
+    assert_difference "Ratings::RatingFilm.count", 6 do
+      assert_equal [ high, first, second, low, missing, malformed ].map(&:id), candidates(limit: 100).map(&:film_id)
+    end
+  end
+
+  test "only requested shortfalls are admitted and existing unfinished order stays authoritative" do
+    existing = candidate
+    low = catalogue_film("Lower", votes: 1)
+    high = catalogue_film("Higher", votes: 100)
+    assert_difference "Ratings::RatingFilm.count", 1 do
+      assert_equal [ existing.film_id, high.id ], candidates(limit: 2).map(&:film_id)
+    end
+    assert_no_difference "Ratings::RatingFilm.count" do
+      assert_equal [ existing.film_id, high.id ], candidates(limit: 2).map(&:film_id)
+    end
+    assert_difference "Ratings::RatingFilm.count", 1 do
+      assert_equal [ existing.film_id, high.id, low.id ], candidates(limit: 3).map(&:film_id)
+    end
+  end
+
+  test "Library classifications affect eligibility only after Ratings consumes their events" do
+    watchlisted = catalogue_film("Watchlisted", votes: 1000)
+    rejected = catalogue_film("Not interested", votes: 900)
+    Library::LibraryFilmToWatch.create!(user: @user, film: watchlisted)
+    Library::LibraryFilmNotInterested.create!(user: @user, film: rejected)
+    existing = Ratings::RatingFilm.create!(user: @user, film: watchlisted)
+
+    assert_equal existing.id, candidates(limit: 1).sole.id
+    assert_difference "Ratings::RatingFilm.count", 1 do
+      assert_equal [ watchlisted.id, rejected.id ], candidates(limit: 2).map(&:film_id)
+    end
+  end
+
+  test "removing Library exclusions does not silently release holds or restore dismissals" do
+    held_film = catalogue_film("Held", votes: 100)
+    dismissed_film = catalogue_film("Dismissed", votes: 90)
+    held = Ratings::RatingFilm.create!(user: @user, film: held_film, held: true)
+    dismissed = Ratings::RatingFilm.create!(user: @user, film: dismissed_film, dismissed: true)
+    watchlist = Library::LibraryFilmToWatch.create!(user: @user, film: held_film)
+    rejected = Library::LibraryFilmNotInterested.create!(user: @user, film: dismissed_film)
+    Library::RemoveFromWatchlist.call(user_id: @user.id, library_film_id: watchlist.id)
+    Library::RemoveNotInterested.call(user_id: @user.id, library_film_id: rejected.id)
+    assert_no_difference "Ratings::RatingFilm.count" do
       assert_empty candidates
     end
+    assert held.reload.held?
+    assert dismissed.reload.dismissed?
+  end
+
+  test "exhaustion preserves rated dismissed held rows and later catalogue films become available" do
+    rows = [ candidate(dismissed: true), candidate(held: true), candidate ]
+    rows.last.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD)
+    assert_no_difference "Ratings::RatingFilm.count" do
+      assert_empty candidates
+      assert_empty candidates
+    end
+    film = catalogue_film("Newly available", votes: 100)
+    assert_equal [ film.id ], candidates.map(&:film_id)
+    assert rows.first.reload.dismissed?
+    assert rows.second.reload.held?
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, rows.last.reload.current_rating.value
   end
 
   test "batches order by creation time then candidate id and isolate owners and dismissals" do
@@ -31,14 +118,17 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     first = candidate(created_at: 2.hours.ago)
     second = candidate(created_at: 2.hours.ago)
     candidate(dismissed: true, created_at: 1.day.ago)
-    candidate(user: Identity::UserGuest.create!, created_at: 1.day.ago)
+    foreign = candidate(user: Identity::UserGuest.create!, created_at: 1.day.ago)
     assert_equal [ first.id, second.id ], candidates(limit: 2).map(&:id)
-    assert_equal [ first.id, second.id, recent.id ], candidates.map(&:id)
+    batch = candidates(limit: 4)
+    assert_equal [ first.id, second.id, recent.id ], batch.first(3).map(&:id)
+    assert_equal foreign.film_id, batch.last.film_id
+    assert_equal @user.id, batch.last.user_id
   end
 
-  test "default batch is five and requested limits are bounded" do
+  test "explicit batch limits are bounded" do
     6.times { candidate }
-    assert_equal 5, candidates.size
+    assert_equal 5, candidates(limit: 5).size
     assert_equal 1, candidates(limit: 1).size
     assert_equal 6, candidates(limit: 100).size
     [ 0, -1, 101, nil, "5", 1.5 ].each do |limit|
@@ -52,8 +142,8 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     travel 1.hour
     second = candidate
     assert_no_difference "Ratings::RatingFilm.count" do
-      assert_equal [ first.id, second.id ], candidates.map(&:id)
-      assert_equal [ first.id, second.id ], candidates.map(&:id)
+      assert_equal [ first.id, second.id ], candidates(limit: 2).map(&:id)
+      assert_equal [ first.id, second.id ], candidates(limit: 2).map(&:id)
     end
     assert_equal original_update, first.reload.updated_at
     dismiss(first)

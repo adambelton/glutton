@@ -8,16 +8,14 @@ module Views
       end
 
       def view_template
-        page(title: t("ratings.browser.title")) do
+        page(title: t("ratings.browser.title"), heading_outside_card: true) do
           if @edited_film.present?
             p { text_link(t("ratings.browser.edit_saved", title: @edited_film["title"]), edit_rating_path(film_id: @edited_film["id"])) }
           end
           if @rating_film.present?
-            render ::Ratings::Form.new(film: @rating_film.film, rating_film_id: @rating_film.id, method: :post, value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors)
+            render ::Ratings::Form.new(film: @rating_film.film, rating_film_id: @rating_film.id, method: :post, value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, dismissible: !@targeted)
             if @targeted
               p { text_link(t("ratings.browser.continue"), new_rating_path) }
-            else
-              render UI::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film.id })
             end
           else
             p(class: "ui-empty") { t("ratings.browser.empty") }

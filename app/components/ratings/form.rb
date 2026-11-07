@@ -1,34 +1,28 @@
 module Ratings
-  class Form < UI::Base
-    def initialize(film:, rating_film_id: nil, method: :post, value: nil, expression_texts: [], expression_draft: nil, previous_rating_id: nil, errors: nil, readonly: false)
+  class Form < Shared::Base
+    def initialize(film:, rating_film_id: nil, method: :post, value: nil, expression_texts: [], expression_draft: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false)
       @film, @rating_film_id, @method, @value = film, rating_film_id, method, value
       @expression_texts, @previous_rating_id, @errors, @readonly = expression_texts, previous_rating_id, errors, readonly
       @expression_draft = expression_draft
+      @dismissible = dismissible
       @prefix = readonly ? "example-#{film.tmdb_id}-" : ""
     end
 
     def view_template
       div(class: "rating-interface") do
-        div(class: "rating-film-artwork") { render UI::FilmPoster.new(film: @film) }
-        div(class: "rating-film-info") do
-          h2 { @film.title }
-          p(class: "muted") { t("ratings.browser.release_year", year: @film.release_date.year) } if @film.release_date.present?
-          overview = @film.tmdb_details.overview
-          p(class: "rating-synopsis") { overview.truncate(350, separator: " ") } if overview.present?
-          span(class: "rating-trailer-icon", role: "img", aria: { label: t("ratings.browser.trailer") }) { "▷" }
-        end
-        div(class: "rating-interface-body") do
-          errors_section
-          if @readonly
-            rating_fields
-            expression_fields
-          else
-            form_with(url: rating_path, method: @method) do
-              input(type: "hidden", name: "rating_film_id", value: @rating_film_id)
-              input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
-              rating_fields
-              expression_fields
-              submit(t("ratings.browser.save"))
+        errors_section
+        if @readonly
+          div(class: "rating-workspace") { workspace }
+        else
+          form_with(url: rating_path, method: @method, id: "rating-form", class: "rating-workspace") do
+            input(type: "hidden", name: "rating_film_id", value: @rating_film_id)
+            input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
+            workspace
+          end
+          div(class: "rating-actions") do
+            render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit") { t("ratings.browser.save") }
+            if @dismissible
+              render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
             end
           end
         end
@@ -36,6 +30,28 @@ module Ratings
     end
 
     private
+
+    def workspace
+      div(class: "rating-film-info") do
+        div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
+        div(class: "rating-film-details") do
+          h2 do
+            plain @film.title
+            if @film.release_date.present?
+              plain " "
+              span(class: "rating-film-year") { t("ratings.browser.film_year", year: @film.release_date.year) }
+            end
+          end
+          render Registry::FilmLinks.new(film: @film)
+          div(class: "rating-description", tabindex: "0", role: "region", aria: { label: t("ratings.browser.film_details") }) do
+            overview = @film.tmdb_details.overview
+            p(class: "rating-synopsis") { overview } if overview.present?
+          end
+        end
+      end
+      rating_fields
+      expression_fields
+    end
 
     def errors_section
       return unless @errors.present?

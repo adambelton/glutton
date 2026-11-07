@@ -1,4 +1,4 @@
-module UI
+module Shared
   class Document < Base
     include Phlex::Rails::Helpers::CSRFMetaTags
     include Phlex::Rails::Helpers::CSPMetaTag

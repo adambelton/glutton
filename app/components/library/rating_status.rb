@@ -1,5 +1,5 @@
 module Library
-  class RatingStatus < UI::Base
+  class RatingStatus < Shared::Base
     def initialize(library_film:)
       @library_film = library_film
     end

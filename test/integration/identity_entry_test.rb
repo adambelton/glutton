@@ -9,7 +9,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     GuestSessionsController::RATE_LIMIT_STORE.clear
     Identity::RegistrationRequests::RATE_LIMIT_STORE.clear
     @film = Registry::Film.create!(title: "Preview <script>film</script>", tmdb_id: 348,
-      tmdb_metadata: { details: { poster_path: "/poster.jpg" } })
+      tmdb_metadata: { details: { poster_path: "/poster.jpg" } }, wikipedia_context: { page_id: 123 })
     @password = "a long password phrase"
   end
 
@@ -63,6 +63,9 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_select "header .ui-account-menu", count: 0
       assert_select "header a[href=?]", new_session_path
       assert_select "header a[href=?]", new_registration_path
+      assert_select "header form[action=?]", guest_session_path do
+        assert_select "button", I18n.t("identity.entry.try_it_out")
+      end
       assert_select "form[action=?]", guest_session_path
       assert_select ".guest-banner", count: 0
       assert_select 'button[data-controller="theme"][aria-label=?]', I18n.t("ui.dark_mode") do
@@ -74,7 +77,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_select ".demo-controls .demo-dot", count: 2
       assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 1
       assert_select ".demo-controls .demo-rotation", count: 1
-      assert_select ".demo-frame .expression-add[disabled]", count: 2
+      assert_select ".demo-disclaimer, .expression-add", count: 0
       assert_select ".demo-frame .expression-remove[disabled]", count: 5
       assert_select '.demo-browser input[name="rating_film_id"]', count: 0
       assert_select ".demo-browser .rating-choices[disabled]", count: 2
@@ -83,7 +86,10 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_equal 2, groups.size
       assert_select ".demo-browser textarea[disabled]", count: 2
       assert_select ".demo-browser .expression-item", count: 5
-      assert_select '.rating-trailer-icon[role="img"]', count: 2
+      assert_select ".demo-browser .rating-film-links", count: 2
+      assert_select '.demo-browser .rating-film-links a[target="_blank"][rel="noopener noreferrer"]', count: 3
+      assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.wikipedia")
+      assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.tmdb")
       assert_select '.demo-browser a[href*="trailer"]', count: 0
       ids = Nokogiri::HTML(response.body).css("[id]").map { |node| node["id"] }
       assert_equal ids.uniq, ids
@@ -104,8 +110,11 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_rating_path
     follow_redirect!
     assert_select ".guest-banner a[href=?]", new_registration_path
-    assert_select "summary", I18n.t("ui.account")
-    assert_select "header .ui-auth-links", count: 0
+    assert_select "header details", count: 0
+    assert_select "header a[href=?]", new_session_path
+    assert_select "header a[href=?]", new_registration_path
+    assert_select "header form[action=?]", session_path, count: 0
+    assert_select "header form[action=?]", guest_session_path, count: 0
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       enter_guest
       assert_redirected_to new_rating_path
@@ -122,6 +131,14 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_redirected_to library_path
     follow_redirect!
     assert_select ".guest-banner", count: 0
+    assert_select "header details", count: 0
+    assert_select "header a[href=?]", new_session_path, count: 0
+    assert_select "header a[href=?]", new_registration_path, count: 0
+    assert_select "header form[action=?]", guest_session_path, count: 0
+    assert_select "header form[action=?]", session_path do
+      assert_select 'input[name="_method"][value="delete"]'
+      assert_select "button", I18n.t("ui.log_out")
+    end
   end
 
   test "failed login retains guest alternative and the resource target" do
