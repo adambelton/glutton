@@ -7,7 +7,7 @@ module Registry
     def initialize(film_id:, client:, tracer_provider:)
       @film_id, @tracer_provider = film_id, tracer_provider
       @tracer = (tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.registry", "1")
-      @client = client || TypeSafeClient.new(tracer: @tracer)
+      @client = client || TypeSafeClient.new(tracer: @tracer, profile: :registry)
     end
 
     def call
@@ -20,7 +20,6 @@ module Registry
       result = nil
       @tracer.in_span("assign-initial-film-qualities", attributes: {
         "langfuse.trace.name" => "assign-initial-film-qualities",
-        "langfuse.version" => InitialQualityAssessment::POLICY,
         "langfuse.observation.type" => "span",
         "langfuse.trace.tags" => [ "registry", "initial-assignment" ],
         "langfuse.environment" => Rails.env.to_s,

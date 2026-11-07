@@ -68,7 +68,7 @@ module Registry
 
     def valid_output?
       return false unless output.is_a?(Hash) && %w[assessed_at source definitions categories question_policy
-        selection_policy evidence_policy minimum_support model support evidence selected_quality_ids
+        minimum_support model support evidence selected_quality_ids
         input_tokens calculated_cost_usd calls call_count selection_decisions status usage_complete].all? { |key| output.key?(key) }
       return false unless %w[completed failed].include?(output["status"])
       return false unless output["source"].is_a?(Hash) && output["source"]["wikipedia_context"].is_a?(Hash)

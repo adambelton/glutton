@@ -103,6 +103,10 @@ Each domain owns changes to its durable state. When a fact from one domain shoul
 
 Ratings discovery uses Registry's named vote-count query for ordered film IDs. Registry owns how it derives that ordering. Ratings chooses the query and owns viewer eligibility and queue admission. Library changes that affect Ratings eligibility reach it through events.
 
+When a task adds a workflow analogous to an existing one, compare the two entry points before implementation. Review service lifecycle, transaction ownership, provider adapters, failure handling, tracing and persisted evidence. Record intentional differences in the working task and exercise both paths when changing a shared contract.
+
+TypeSafe request handling is shared across Ratings and Registry. The TypeSafe adapter loads model, pricing, timeouts and workflow defaults from config/typesafe.json. Evaluation records capture the resolved settings, including operator overrides. Each domain loads its matching configuration and saves the settings with the evaluation. Domain assessments own question construction, decisions and evidence. Trace payload capture is opt-in. Registry retains its film-source trace payloads, and Ratings traces carry request counts and usage without expression text.
+
 Place orchestration services in the domain that owns the workflow outcome and name them for that outcome. Keep them alongside the domain's other services. When several workflows share a capability, group them by that capability. The coordinator connects domain operations, and each operation retains its domain rules and transaction responsibilities. For example, `Ratings::NextCandidates` coordinates Registry ordering and Ratings queue admission.
 
 Place application components in the domain that owns what they present. Registry owns film links and posters. Shared holds the common document shell and general controls.

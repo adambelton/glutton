@@ -29,7 +29,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
   teardown { @provider.shutdown }
 
   def client(http: Http.new)
-    Registry::TypeSafeClient.new(token: "private-test-key", http_class: http, tracer: @provider.tracer("glutton.registry", "1"), maximum_requests: 1)
+    TypeSafeClient.new(token: "private-test-key", http_class: http, tracer: @provider.tracer("glutton.registry", "1"), maximum_requests: 1, trace_payload: true)
   end
 
   test "assignment records exact requests answers usage cost and hierarchy without secrets" do
@@ -54,7 +54,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     end
     assert_equal root.trace_id.unpack1("H*"), result.fetch(:film_quality_eval).output.fetch("trace_id")
     root_output = JSON.parse(root.attributes.fetch("langfuse.observation.output"))
-    assert_equal Registry::InitialQualityAssessment::POLICY, root_output.fetch("selection_policy")
+    assert_empty root_output.keys & %w[selection_policy evidence_policy]
     assert_equal 0.6, root_output.fetch("minimum_support")
     assert_equal result.fetch(:film_quality_eval).output.fetch("support"), root_output.fetch("support")
     assert_equal result.fetch(:film_quality_eval).output.fetch("evidence"), root_output.fetch("evidence")
@@ -66,7 +66,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
       assert JSON.parse(span.attributes["langfuse.observation.input"]).fetch("questions").any?
       assert JSON.parse(span.attributes["langfuse.observation.output"]).fetch("answers").any?
       assert_equal({ "input" => 100, "output" => 10 }, JSON.parse(span.attributes["langfuse.observation.usage_details"]))
-      assert_in_delta 100 * Registry::TypeSafeClient::INPUT_TOKEN_PRICE, JSON.parse(span.attributes["langfuse.observation.cost_details"]).fetch("input")
+      assert_in_delta 100 * TypeSafeClient::CONFIGURATION.fetch("input_token_price_usd"), JSON.parse(span.attributes["langfuse.observation.cost_details"]).fetch("input")
     end
     spans.each do |span|
       refute_includes span.attributes.to_json, "private-test-key"
@@ -99,7 +99,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     film = imported_assignment_film
     assessment_quality
     http = Http.new
-    limited = Registry::TypeSafeClient.new(token: "private-test-key", http_class: http, maximum_requests: 0)
+    limited = TypeSafeClient.new(token: "private-test-key", http_class: http, maximum_requests: 0)
     assert_raises(Registry::AssignmentFailed) do
       Registry::AssignInitialFilmQualities.call(film_id: film.id, client: limited, tracer_provider: @provider)
     end
