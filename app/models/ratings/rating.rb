@@ -9,16 +9,25 @@ module Ratings
       ALL = [ BRILLIANT, PRETTY_GOOD, NOT_FOR_ME, GARBAGE ].freeze
     end
 
+    UNEXPRESSED_QUALITY_SCORES = {
+      Values::BRILLIANT => 2,
+      Values::PRETTY_GOOD => 1,
+      Values::NOT_FOR_ME => -1,
+      Values::GARBAGE => -2
+    }.freeze
+
     MAX_EXPRESSIONS = 20
 
     belongs_to :rating_film
     has_many :rating_expressions, -> { order(:id) }
+    has_many :rating_qualities
 
     accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
 
     scope :current, -> { where(id: Rating.group(:rating_film_id).select("MAX(id)")) }
 
     validate :recognized_value
+    after_create :record_unexpressed_quality_scores!
 
     def publish_event!
       DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
@@ -27,6 +36,13 @@ module Ratings
     end
 
     private
+
+    def record_unexpressed_quality_scores!
+      score = UNEXPRESSED_QUALITY_SCORES.fetch(value)
+      rating_film.film.film_qualities.pluck(:quality_id).each do |quality_id|
+        rating_qualities.create!(quality_id:, classification: RatingQuality::Classifications::UNEXPRESSED, score:)
+      end
+    end
 
     def recognized_value
       # External choices must match before Active Record's string coercion.

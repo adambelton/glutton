@@ -1,6 +1,6 @@
 # Ratings scoring design
 
-Status: Agreed conceptual design; scoring implementation deferred.  
+Status: Baseline scoring implemented. Expression and profile scoring remain planned.  
 Owner: Ratings  
 Decision dates: 22, 27 and 28 October 2026
 
@@ -13,7 +13,7 @@ This records the agreed scoring direction; original-expression capture is alread
 - Rating has many rating_qualities: derived scores for the qualities associated with the film.
 - RatingQuality belongs to Rating and references a quality. Expressions and rating qualities can have a many-to-many evidence relationship: several expressions can support one rating quality, and one expression can address several rating qualities. Supporting expressions must belong to the same rating. Settle join storage when implementing rating qualities.
 
-Explicit expression links identify direct evidence. Their absence does not distinguish unexpressed from implicitly expressed. Classification is an attribute on RatingQuality, with named constants, not STI: these are changing evidence states with the same behaviour and a straightforward score computation. These fields/evidence joins belong to the deferred scoring implementation, not raw-expression capture.
+Explicit expression links identify direct evidence. Their absence does not distinguish unexpressed from implicitly expressed. Classification is an attribute on RatingQuality, with named constants, not STI: these are changing evidence states with the same behaviour and a straightforward score computation. RatingQuality defines all three classifications. Baseline scoring writes unexpressed rows. Evidence joins and expression interpretation remain planned.
 
 ## Evidence classifications
 
@@ -29,7 +29,7 @@ Use these names rather than strong/weak reinforcement, boosts or adjustments rel
 
 An overall rating supplies an implied score for every associated film quality unless applicable expression evidence says otherwise. Explicit evidence takes precedence over profile interpretation. Indifference can yield zero; dislike is distinct from indifference. Missing expression evidence does not imply either. Expressions may contradict the overall rating; do not mechanically multiply two negative values into positive preference evidence.
 
-The initial numeric examples are +1 for unexpressed Pretty Good and +2 for unexpressed Brilliant, and +3/+5 respectively with matching explicit praise. These are starting examples, not a complete approved weight table. Exact negative values, profile-informed values and contradictory-sentiment values remain for the scoring spec and evaluation.
+Unexpressed scores are +2 for Brilliant, +1 for Pretty Good, −1 for Not For Me and −2 for Garbage. Explicit praise examples of +3 and +5 for Pretty Good and Brilliant remain illustrative. Expression and profile weights require separate design and evaluation.
 
 ## Expression profile and recomputation
 
@@ -41,7 +41,7 @@ Implicitly expressed qualities are interpreted against the user's current expres
 
 ## Planned evaluation persistence
 
-Future scoring work will introduce Ratings-owned RatingQualityEval records referenced by generated RatingQuality results. Profile-based and explicit-expression evaluations have distinct purposes and must preserve their actual input versions, questions, ordered calls/responses, probabilities, processing decisions and application outcomes. Re-evaluation creates new evidence rather than overwriting historical judgments. Profile refresh supersedes eligible inferred interpretations without replacing explicit evidence or counting prior interpretations again. Exact schemas and current-result selection belong to that scoped implementation; neither table is implemented yet.
+Future scoring work will introduce Ratings-owned RatingQualityEval records referenced by generated RatingQuality results. Profile-based and explicit-expression evaluations have distinct purposes and must preserve their actual input versions, questions, ordered calls/responses, probabilities, processing decisions and application outcomes. Re-evaluation creates new evidence rather than overwriting historical judgments. Profile refresh supersedes eligible inferred interpretations without replacing explicit evidence or counting prior interpretations again. Exact schemas and current-result selection belong to that scoped implementation; RatingQualityEval remains planned. Baseline rows in rating_qualities belong to their submitted rating version.
 
 Expression-profile synthesis/updates require an LLM call, with no assumed JEV gate. JEV handles quality judgments against the resulting profile and against original expressions. Durable evaluation evidence belongs in the application database; Langfuse supplies optional diagnostic traces. FilmQualityEval remains separately owned by Registry; no shared product evaluation table/framework is required.
 
@@ -70,7 +70,7 @@ Owner decision, 27 October 2026:
 
 The podcast/profile/review comparison is a consumer of these histories, not part of standalone film analysis. Use actual engine scores and explain their calculated positive/negative contributions. Comparing new expressions with the earlier expectation must not recompute that earlier expectation against the updated profile.
 
-Current implementation still uses highest Rating ID and immediate submission; supersession timestamps, rating qualities, expression profiles and the scoring engine are not yet implemented. Preserve the existing runtime behaviour until separately scoped work changes it.
+Currentness still uses the highest Rating ID. Submission and replacement save baseline quality scores alongside the rating. The migration backfills current ratings using the accepted Registry associations at migration time. Earlier superseded ratings retain their original submissions and expressions. Supersession timestamps, expression profiles and reassessment remain planned.
 
 ## Source refresh and accepted quality changes
 
@@ -82,6 +82,6 @@ Historical rating/recommendation quality records capture which qualities contrib
 
 ## Raw-expression capture boundary
 
-The current implementation provides RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. It adds no RatingQuality, score/classification columns, profile association, interpretation, processing jobs or new event payload fields. Those require separately scoped work. Original expressions can be saved before any film qualities or scoring process exist.
+The current implementation provides RatingExpression and Rating#rating_expressions, saving raw expressions atomically with the first rating and its existing event. Stable expression identities provide the eventual explicit-evidence references. Original expressions can be saved even when the film has no accepted qualities. Baseline scoring stores the overall-rating evidence independently of the original expressions. Interpretation and profile processing remain separate work.
 
 Documentation verification: reviewed against the owner decisions and raw-expression capture boundary; no runtime behaviour or numeric scoring implementation is claimed.
