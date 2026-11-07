@@ -73,6 +73,25 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects malformed snapshot contents even when all required fields are present" do
+    snapshot = record_evaluation.output
+
+    assert_no_difference "Registry::FilmQualityEval.count" do
+      malformed_fields = [
+        { "selected_quality_ids" => [ @quality.id.to_s ] },
+        { "calls" => [ nil ] },
+        { "source" => [] },
+        { "support" => { @quality.id.to_s => "0.95" } },
+        { "evidence" => { @quality.id.to_s => "P1" } }
+      ]
+      malformed_fields.each do |invalid_fields|
+        assert_raises(ActiveRecord::RecordInvalid) do
+          Registry::FilmQualityEval.create!(film: @film, output: snapshot.merge(invalid_fields))
+        end
+      end
+    end
+  end
+
   test "an application outcome is recorded once without changing the evaluation output" do
     evaluation = record_evaluation
     original_output = evaluation.output.deep_dup

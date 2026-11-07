@@ -21,6 +21,7 @@ module Ratings
     belongs_to :rating_film
     has_many :rating_expressions, -> { order(:id) }
     has_many :rating_qualities
+    has_many :rating_quality_evals
 
     accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
 

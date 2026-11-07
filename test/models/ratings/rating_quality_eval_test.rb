@@ -1,0 +1,94 @@
+require "test_helper"
+
+class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
+  setup do
+    film = Registry::Film.create!(title: "Assessed film")
+    category = quality_categories(:tone)
+    @quality = category.qualities.create!(name: "Dread", match_rule: "Sustained anticipation", not_sufficient: "A single jump scare")
+    @other_quality = category.qualities.create!(name: "Isolation")
+    [ @quality, @other_quality ].each { |quality| Registry::FilmQuality.create!(film:, quality:) }
+    @rating_film = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film:)
+    @rating = @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "The dread builds slowly." ])
+    @expression = @rating.rating_expressions.sole
+  end
+
+  test "completed evidence preserves ordered results and supporting inputs without changing baseline scores" do
+    snapshot = assessment_output
+    baseline = @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
+    evaluation = record(snapshot)
+
+    assert_equal snapshot.deep_stringify_keys, evaluation.reload.output
+    assert_equal baseline, @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
+    assert_equal @expression.text, @rating.rating_expressions.sole.text
+    assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
+  end
+
+  test "rejects supporting expressions from another rating and references to uncaptured qualities or results" do
+    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD,
+      expression_texts: [ "Different thought." ])
+    invalid_evidence = [
+      assessment_output(expression_id: revision.rating_expressions.sole.id),
+      assessment_output(quality_id: -1),
+      assessment_output(result_id: "missing")
+    ]
+
+    assert_no_difference "Ratings::RatingQualityEval.count" do
+      invalid_evidence.each do |snapshot|
+        assert_raises(ActiveRecord::RecordInvalid) do
+          record(snapshot)
+        end
+      end
+    end
+  end
+
+  test "separate assessments preserve identical evidence and survive revision" do
+    first = record(assessment_output)
+    second = record(assessment_output)
+    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD)
+
+    assert_equal [ first.id, second.id ], @rating.rating_quality_evals.order(:id).ids
+    assert_empty revision.rating_quality_evals
+  end
+
+  test "malformed question and result pairs fail at recording and direct creation" do
+    snapshot = assessment_output.merge(calls: [ [ { id: "q1", question: "Does the expression address dread?" } ] ])
+
+    assert_no_difference "Ratings::RatingQualityEval.count" do
+      assert_raises(ActiveRecord::RecordInvalid) { record(snapshot) }
+      assert_raises(ActiveRecord::RecordInvalid) { Ratings::RatingQualityEval.create!(rating: @rating, output: snapshot) }
+    end
+  end
+
+  test "database rejects output without the required snapshot fields" do
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Ratings::RatingQualityEval.transaction(requires_new: true) do
+        Ratings::RatingQualityEval.insert_all!([ { rating_id: @rating.id, output: {} } ])
+      end
+    end
+  end
+
+  private
+
+  def record(snapshot)
+    assessment = Struct.new(:result).new(snapshot)
+    Ratings::RatingQualityEval.record!(rating: @rating, assessment:)
+  end
+
+  def assessment_output(expression_id: @expression.id, quality_id: @quality.id, result_id: "q1")
+    {
+      expressions: { @expression.id.to_s => @expression.text },
+      qualities: {
+        @quality.id.to_s => { name: @quality.name, match_rule: @quality.match_rule, not_sufficient: @quality.not_sufficient },
+        @other_quality.id.to_s => { name: @other_quality.name, match_rule: nil, not_sufficient: nil }
+      },
+      calls: [ [
+        { id: "q1", question: "Does the expression address dread?", result: { probability: 0.95 } },
+        { id: "q2", question: "Does the expression address isolation?", result: { probability: 0.05 } }
+      ] ],
+      decisions: [
+        { quality_id:, applicable: true, supporting_expression_ids: [ expression_id ], result_ids: [ result_id ] },
+        { quality_id: @other_quality.id, applicable: false, supporting_expression_ids: [], result_ids: [ "q2" ] }
+      ]
+    }
+  end
+end
