@@ -7,7 +7,7 @@ module Ratings
     validate :evaluation_output
 
     def self.record!(rating:, assessment:)
-      create!(rating:, output: assessment.result)
+      create!(rating:, output: assessment.result.merge("score_weights" => RatingQuality.score_weights))
     end
 
     def readonly?
@@ -23,7 +23,7 @@ module Ratings
       raise QualityApplicationUnavailable if rating_qualities.exists?
 
       explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
-      scores = output.dig("question_policy", "scores") || ExplicitQualityAssessment.configuration.fetch("scores")
+      scores = output["score_weights"] || output.dig("question_policy", "scores") || RatingQuality.score_weights
       transaction(requires_new: true) do
         quality_ids.map do |quality_id|
           classification = classify_quality(quality_id, explicit_ids)
