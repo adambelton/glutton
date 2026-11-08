@@ -34,9 +34,9 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
   end
 
   test "fresh inactive or missing identity cannot load candidate" do
-    @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-    assert_raises(Ratings::IdentityUnavailable) { find }
-    @user.delete
-    assert_raises(Ratings::IdentityUnavailable) { find }
+    travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
+      assert_raises(Ratings::IdentityUnavailable) { find }
+    end
+    assert_raises(Ratings::IdentityUnavailable) { find(user_id: -1) }
   end
 end

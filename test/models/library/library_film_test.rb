@@ -26,19 +26,10 @@ class Library::LibraryFilmTest < ActiveSupport::TestCase
     assert Library::LibraryFilmToWatch.new.can_watch?
   end
 
-  test "watchlist addition error is present only when the action is denied" do
-    assert_nil Library::LibraryFilmNotInterested.new.watchlist_addition_error
-    assert_equal Library::WatchlistUnavailable, Library::LibraryFilmToWatch.new.watchlist_addition_error
-    assert_equal Library::WatchlistUnavailable, Library::LibraryFilmWatched.new.watchlist_addition_error
-  end
-
-  test "dismissal permission and error agree for supported entries" do
+  test "dismissal permission is specific to watchlist entries" do
     assert Library::LibraryFilmToWatch.new.can_mark_not_interested?
-    assert_nil Library::LibraryFilmToWatch.new.dismissal_error
     assert_not Library::LibraryFilmWatched.new.can_mark_not_interested?
-    assert_equal Library::DismissalUnavailable, Library::LibraryFilmWatched.new.dismissal_error
     assert_not Library::LibraryFilmNotInterested.new.can_mark_not_interested?
-    assert_equal Library::DismissalUnavailable, Library::LibraryFilmNotInterested.new.dismissal_error
   end
 
   test "subtypes share one user-film relationship" do

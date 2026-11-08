@@ -2,8 +2,8 @@ require "net/smtp"
 
 module Identity
   class DeliverRegistrationConfirmation
-    class Limited < StandardError; end
-    class Exhausted < Limited; end
+    Limited = PendingRegistration::ConfirmationDeliveryLimited
+    Exhausted = PendingRegistration::ConfirmationDeliveryExhausted
     class Failed < StandardError; end
 
     def self.call(pending_registration_id:)
@@ -12,12 +12,7 @@ module Identity
         registration = PendingRegistration.lock.find_by(id: pending_registration_id)
         raise RegistrationUnavailable unless registration.present? && registration.active?
         raise RegistrationUnavailable if UserRegistered.exists?(email_address: registration.email_address)
-        raise Exhausted if registration.confirmation_delivery_attempts >= 5
-        if registration.confirmation_delivery_attempted_at.present? && registration.confirmation_delivery_attempted_at > 60.seconds.ago
-          raise Limited
-        end
-        registration.update!(confirmation_delivery_attempts: registration.confirmation_delivery_attempts + 1,
-          confirmation_delivery_attempted_at: Time.current)
+        registration.reserve_confirmation_delivery!
         [ registration.email_address, RegistrationConfirmation.token_for(pending_registration_id: registration.id) ]
       end
       url = origin + Rails.application.routes.url_helpers.registration_confirmation_path(token:)

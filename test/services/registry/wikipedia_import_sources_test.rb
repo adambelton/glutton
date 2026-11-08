@@ -105,7 +105,7 @@ class Registry::WikipediaImportSourcesTest < ActiveSupport::TestCase
     ], context.fetch("source_paragraphs").map { |paragraph| paragraph.values_at("section", "text") }
     assert_equal %w[P1 P2 P3 P4 P5], context.fetch("source_paragraphs").map { |paragraph| paragraph.fetch("id") }
     http.visited.each do |host, request|
-      assert_equal Registry::ProviderRequest::USER_AGENT, request["User-Agent"]
+      assert_equal ProviderRequest::USER_AGENT, request["User-Agent"]
       assert_nil request["Authorization"] unless host == "api.themoviedb.org"
     end
     assert_equal 6, http.visited.size

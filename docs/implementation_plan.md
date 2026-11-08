@@ -13,6 +13,8 @@ Updated: 8 November 2026. This document describes current progress, agreed order
 
 ## Current work
 
+- **Application and test audit handoff.** The [8 November audit](audits/2026-11-08_application_and_test_audit.md) records the original findings. Scoped remediation covers the targeted Ratings form, Library and Identity model actions, shared provider transport and tracing, and regression coverage for browser interactions. Chrome also exposed a shared hidden-field parameter defect that affected Ratings dismissal. Repository CI now includes the browser suite and a Rails autoload check.
+
 - **Development event worker.** bin/dev runs the event-only worker with Rails and manages shared shutdown. Existing 12 queued rating submissions have converged to Library watched entries through normal delivery.
 
 - **Transient success notifications.** success toasts overlay the top right of the shared content below the header and dismiss after five seconds, pause during hover/focus and support manual dismissal. Persistent errors and reminders retained.

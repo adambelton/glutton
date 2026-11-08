@@ -1,15 +1,15 @@
 module Library
   class LibraryFilmWatched < LibraryFilm
-    def rating_status
-      rated? ? RatingStatuses::RATED : RatingStatuses::AWAITING_RATING
+    def rating_status(rated: rated?)
+      rated ? RatingStatuses::RATED : RatingStatuses::AWAITING_RATING
     end
 
-    def can_rate?
-      !rated?
+    def can_rate?(rated: rated?)
+      !rated
     end
 
-    def can_edit_rating?
-      rated?
+    def can_edit_rating?(rated: rated?)
+      rated
     end
 
     def rated?

@@ -13,7 +13,7 @@ module Views
             p { text_link(t("ratings.browser.edit_saved", title: @edited_film["title"]), edit_rating_path(film_id: @edited_film["id"])) }
           end
           if @rating_film.present?
-            render ::Ratings::Form.new(film: @rating_film.film, rating_film_id: @rating_film.id, method: :post, value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, dismissible: !@targeted)
+            render ::Ratings::Form.new(film: @rating_film.film, rating_film_id: @rating_film.id, method: :post, value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, dismissible: !@targeted, targeted: @targeted)
             if @targeted
               p { text_link(t("ratings.browser.continue"), new_rating_path) }
             end

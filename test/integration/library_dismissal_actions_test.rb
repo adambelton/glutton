@@ -134,18 +134,19 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
         public_send(verb, public_send(helper, @entry))
         assert_response :unprocessable_entity
       end
-      @user.update!(created_at: 25.hours.ago)
-      actions.each do |verb, helper|
-        public_send(verb, public_send(helper, @entry), params: { authenticity_token: csrf })
-        assert_response :unauthorized
+      travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
+        actions.each do |verb, helper|
+          public_send(verb, public_send(helper, @entry), params: { authenticity_token: csrf })
+          assert_response :unauthorized
+        end
       end
-      @user.update!(created_at: Time.current)
       bind_user
       Identity::Session.revoke(id: @authentication.id)
       post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :unauthorized
       bind_user
-      @user.becomes!(Identity::UserDeleted).save!
+      # Existing cookie with a deleted owner is a storage fixture for the unimplemented deletion transition.
+      @user.update_columns(type: "UserDeleted")
       delete remove_from_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :gone
     end

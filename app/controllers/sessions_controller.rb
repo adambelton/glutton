@@ -19,11 +19,11 @@ class SessionsController < ApplicationController
   def create
     new_session = Identity::Session.transaction do
       created_session = Identity::Authenticate.call(email_address: params[:email_address], password: params[:password])
-      Identity::Session.revoke(id: bound_session.id) if created_session && bound_session
+      Identity::Session.revoke(id: bound_session.id) if created_session.present? && bound_session.present?
       created_session
     end
 
-    if new_session
+    if new_session.present?
       bind_session(new_session)
       redirect_to entry_destination, status: :see_other
     else
@@ -33,7 +33,7 @@ class SessionsController < ApplicationController
   end
 
   def destroy
-    Identity::Session.revoke(id: bound_session.id) if bound_session
+    Identity::Session.revoke(id: bound_session.id) if bound_session.present?
     clear_identity_cookie
     reset_session
     redirect_to root_path, notice: I18n.t("identity.sessions.signed_out"), status: :see_other

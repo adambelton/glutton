@@ -61,6 +61,8 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     generations.each do |span|
       assert_equal root.span_id, span.parent_span_id
       assert_equal root.trace_id, span.trace_id
+      assert_equal [ "registry", "initial-assignment" ], span.attributes.fetch("langfuse.trace.tags")
+      assert_equal Rails.env.to_s, span.attributes.fetch("langfuse.environment")
       assert_equal "generation", span.attributes["langfuse.observation.type"]
       assert_equal "jev-1.14.0", span.attributes["langfuse.observation.model.name"]
       assert JSON.parse(span.attributes["langfuse.observation.input"]).fetch("questions").any?

@@ -3,6 +3,11 @@ require "digest"
 module Identity
   class PendingRegistration < ApplicationRecord
     EXPIRY_DURATION = 1.hour.freeze
+    CONFIRMATION_DELIVERY_LIMIT = 5
+    CONFIRMATION_DELIVERY_COOLDOWN = 60.seconds.freeze
+
+    class ConfirmationDeliveryLimited < StandardError; end
+    class ConfirmationDeliveryExhausted < ConfirmationDeliveryLimited; end
 
     belongs_to :guest_user, class_name: "Identity::User", optional: true
 
@@ -21,7 +26,7 @@ module Identity
     validates :password, length: { minimum: 15 }, allow_nil: true
     validates :password_confirmation, presence: true, if: -> { password.present? }
 
-    validates :confirmation_delivery_attempts, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: 5 }
+    validates :confirmation_delivery_attempts, numericality: { only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: CONFIRMATION_DELIVERY_LIMIT }
 
     validate :email_is_unregistered, on: :create
 
@@ -38,6 +43,15 @@ module Identity
       unless user.can_register? && (unattached? || guest_user_id == user.id)
         raise Identity::RegistrationConflict
       end
+    end
+
+    def reserve_confirmation_delivery!
+      raise ConfirmationDeliveryExhausted if confirmation_delivery_attempts >= CONFIRMATION_DELIVERY_LIMIT
+      if confirmation_delivery_attempted_at.present? && confirmation_delivery_attempted_at > CONFIRMATION_DELIVERY_COOLDOWN.ago
+        raise ConfirmationDeliveryLimited
+      end
+
+      update!(confirmation_delivery_attempts: confirmation_delivery_attempts + 1, confirmation_delivery_attempted_at: Time.current)
     end
 
     def expires_at

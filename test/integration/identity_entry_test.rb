@@ -53,47 +53,58 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select ".demo-frame form", count: 0
   end
 
-  test "curated examples reuse readonly rating fields without personal records or trailer actions" do
-    another = Registry::Film.create!(title: "Another film", tmdb_id: 1091, tmdb_metadata: { details: { poster_path: "https://evil.test/poster.jpg" } })
+  test "the anonymous preview offers explicit entry without creating personal records" do
     assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count" ] do
       get root_path
       assert_response :success
-      assert_select 'img[src="https://image.tmdb.org/t/p/w500/poster.jpg"]'
-      assert_select "h2", @film.title
-      assert_select "header .ui-account-menu", count: 0
-      assert_select "header a[href=?]", new_session_path
-      assert_select "header a[href=?]", new_registration_path
-      assert_select "header form[action=?]", guest_session_path do
-        assert_select "button", I18n.t("identity.entry.try_it_out")
-      end
-      assert_select "form[action=?]", guest_session_path
-      assert_select ".guest-banner", count: 0
-      assert_select 'button[data-controller="theme"][aria-label=?]', I18n.t("ui.dark_mode") do
-        assert_select 'span[aria-hidden="true"]'
-      end
-      assert_select ".poster-placeholder"
-      assert_select ".demo-frame", count: 2
-      assert_select ".demo-browser form", count: 0
-      assert_select ".demo-controls .demo-dot", count: 2
-      assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 1
-      assert_select ".demo-controls .demo-rotation", count: 1
-      assert_select ".demo-disclaimer, .expression-add", count: 0
-      assert_select ".demo-frame .expression-remove[disabled]", count: 5
-      assert_select '.demo-browser input[name="rating_film_id"]', count: 0
-      assert_select ".demo-browser .rating-choices[disabled]", count: 2
-      assert_select ".demo-browser fieldset[disabled] input[checked]", count: 2
-      groups = Nokogiri::HTML(response.body).css('.demo-frame input[type="radio"]').map { |node| node["name"] }.uniq
-      assert_equal 2, groups.size
-      assert_select ".demo-browser textarea[disabled]", count: 2
-      assert_select ".demo-browser .expression-item", count: 5
-      assert_select ".demo-browser .rating-film-links", count: 2
-      assert_select '.demo-browser .rating-film-links a[target="_blank"][rel="noopener noreferrer"]', count: 3
-      assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.wikipedia")
-      assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.tmdb")
-      assert_select '.demo-browser a[href*="trailer"]', count: 0
-      ids = Nokogiri::HTML(response.body).css("[id]").map { |node| node["id"] }
-      assert_equal ids.uniq, ids
     end
+    assert_select "header .ui-account-menu", count: 0
+    assert_select "header a[href=?]", new_session_path
+    assert_select "header a[href=?]", new_registration_path
+    assert_select "header form[action=?]", guest_session_path do
+      assert_select "button", I18n.t("identity.entry.try_it_out")
+    end
+    assert_select ".guest-banner", count: 0
+    assert_select 'button[data-controller="theme"][aria-label=?]', I18n.t("ui.dark_mode") do
+      assert_select 'span[aria-hidden="true"]'
+    end
+  end
+
+  test "curated rating controls are readonly and have distinct field groups" do
+    Registry::Film.create!(title: "Another film", tmdb_id: 1091)
+    get root_path
+    assert_response :success
+    assert_select ".demo-frame", count: 2
+    assert_select ".demo-browser form", count: 0
+    assert_select ".demo-controls .demo-dot", count: 2
+    assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 1
+    assert_select ".demo-controls .demo-rotation", count: 1
+    assert_select ".demo-disclaimer, .expression-add", count: 0
+    assert_select ".demo-frame .expression-remove[disabled]", count: 5
+    assert_select '.demo-browser input[name="rating_film_id"]', count: 0
+    assert_select ".demo-browser .rating-choices[disabled]", count: 2
+    assert_select ".demo-browser fieldset[disabled] input[checked]", count: 2
+    document = Nokogiri::HTML(response.body)
+    groups = document.css('.demo-frame input[type="radio"]').map { |node| node["name"] }.uniq
+    assert_equal 2, groups.size
+    assert_select ".demo-browser textarea[disabled]", count: 2
+    assert_select ".demo-browser .expression-item", count: 5
+    ids = document.css("[id]").map { |node| node["id"] }
+    assert_equal ids.uniq, ids
+  end
+
+  test "preview uses safe posters and external source links without trailer actions" do
+    Registry::Film.create!(title: "Another film", tmdb_id: 1091, tmdb_metadata: { details: { poster_path: "https://evil.test/poster.jpg" } })
+    get root_path
+    assert_response :success
+    assert_select 'img[src="https://image.tmdb.org/t/p/w500/poster.jpg"]'
+    assert_select "h2", @film.title
+    assert_select ".poster-placeholder"
+    assert_select ".demo-browser .rating-film-links", count: 2
+    assert_select '.demo-browser .rating-film-links a[target="_blank"][rel="noopener noreferrer"]', count: 3
+    assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.wikipedia")
+    assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.tmdb")
+    assert_select '.demo-browser a[href*="trailer"]', count: 0
   end
 
   test "protected resource returns after explicit guest entry and root then uses guest default" do

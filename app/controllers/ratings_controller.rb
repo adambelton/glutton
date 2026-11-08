@@ -13,7 +13,8 @@ class RatingsController < ApplicationController
 
   def new
     @expression_texts = []
-    if params.key?(:film_id)
+    @targeted = params.key?(:film_id)
+    if @targeted
       @rating_film = Ratings::PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
     else
       @rating_film = Ratings::NextCandidates.call(user_id: current_user.id).first
@@ -22,6 +23,7 @@ class RatingsController < ApplicationController
   end
 
   def create
+    @targeted = params[:targeted] == "1"
     return render_invalid_rating unless read_rating_input
     rating = Ratings::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       value: @value, expression_texts: @expression_texts.reject(&:blank?))
@@ -71,7 +73,7 @@ class RatingsController < ApplicationController
   private
 
   def render_new(status: :ok)
-    render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: params.key?(:film_id),
+    render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: @targeted,
       value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, edited_film: flash[:edited_film]), status:
   end
 

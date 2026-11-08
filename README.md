@@ -28,6 +28,8 @@ Setup prepares `glutton_development` and `glutton_test`, then clears development
 
 PostgreSQL must already be running. On this machine the existing service is Homebrew `postgresql@17`; if stopped, start it with `brew services start postgresql@17`. Installing Ruby or PostgreSQL is outside the setup script.
 
+Run the JavaScript system tests with `bin/rails test:system`. Rails uses headless Chrome through Selenium. Selenium Manager resolves Chrome and its matching driver. The tests also run in repository CI.
+
 ## Run and stop
 
 ```sh
