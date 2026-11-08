@@ -23,7 +23,7 @@ module Registry
       film = ImportFilm.call(tmdb_id: @tmdb_id, tmdb_client: @tmdb_client,
         wikidata_client: @wikidata_client, wikipedia_client: @wikipedia_client)
       tracer = (@tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.registry", "1")
-      client = @type_safe_client_class.new(tracer:, maximum_requests: @maximum_requests, maximum_cost_usd: @maximum_cost_usd)
+      client = @type_safe_client_class.new(tracer:, maximum_requests: @maximum_requests, maximum_cost_usd: @maximum_cost_usd, profile: :registry)
       result = AssignInitialFilmQualities.call(film_id: film.id, client:, tracer_provider: @tracer_provider)
       warnings = []
       if result.fetch(:film_qualities).empty?

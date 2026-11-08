@@ -1,0 +1,4 @@
+{
+  "unexpressed": { "brilliant": 2, "pretty_good": 1, "not_for_me": -1, "garbage": -2 },
+  "explicitly_expressed": { "brilliant": 5, "pretty_good": 3, "not_for_me": -3, "garbage": -5 }
+}

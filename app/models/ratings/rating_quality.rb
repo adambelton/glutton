@@ -8,6 +8,10 @@ module Ratings
       ALL = [ UNEXPRESSED, IMPLICITLY_EXPRESSED, EXPLICITLY_EXPRESSED ].freeze
     end
 
+    def self.score_weights
+      JSON.parse(Rails.root.join("config/ratings/quality_scores.json").read)
+    end
+
     belongs_to :rating
     belongs_to :rating_quality_eval
     belongs_to :quality, class_name: "Registry::Quality"

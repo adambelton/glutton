@@ -17,7 +17,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     baseline = @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
     evaluation = record(snapshot)
 
-    assert_equal snapshot.deep_stringify_keys, evaluation.reload.output
+    assert_equal snapshot.deep_stringify_keys, evaluation.reload.output.slice(*snapshot.keys.map(&:to_s))
     assert_equal baseline, @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
     assert_equal @expression.text, @rating.rating_expressions.sole.text
     assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
@@ -133,6 +133,26 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     evaluation.apply_quality_scores!
 
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
+  end
+
+  test "application uses the product score weights captured in the evaluation" do
+    evaluation = record(assessment_output)
+
+    assert_equal Ratings::RatingQuality.score_weights, evaluation.reload.output.fetch("score_weights")
+  end
+
+  test "application honors score weights captured by older assessments" do
+    snapshot = assessment_output.merge(question_policy: {
+      scores: {
+        explicitly_expressed: { brilliant: 7 },
+        unexpressed: { brilliant: 1 }
+      }
+    })
+    evaluation = Ratings::RatingQualityEval.create!(rating: @rating, output: snapshot)
+
+    evaluation.apply_quality_scores!
+
+    assert_equal({ @quality.id => 7, @other_quality.id => 1 }, scores(evaluation))
   end
 
   private

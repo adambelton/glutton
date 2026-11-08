@@ -1,12 +1,5 @@
 module Ratings
   class RatingQualityEval < ApplicationRecord
-    EXPLICIT_QUALITY_SCORES = {
-      Rating::Values::BRILLIANT => 5,
-      Rating::Values::PRETTY_GOOD => 3,
-      Rating::Values::NOT_FOR_ME => -3,
-      Rating::Values::GARBAGE => -5
-    }.freeze
-
     belongs_to :rating
     has_many :rating_qualities
     attr_readonly :rating_id, :output
@@ -14,7 +7,7 @@ module Ratings
     validate :evaluation_output
 
     def self.record!(rating:, assessment:)
-      create!(rating:, output: assessment.result)
+      create!(rating:, output: assessment.result.merge("score_weights" => RatingQuality.score_weights))
     end
 
     def readonly?
@@ -30,9 +23,11 @@ module Ratings
       raise QualityApplicationUnavailable if rating_qualities.exists?
 
       explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
+      scores = output["score_weights"] || output.dig("question_policy", "scores") || RatingQuality.score_weights
       transaction(requires_new: true) do
         quality_ids.map do |quality_id|
-          classification, score = classify_quality(quality_id, explicit_ids)
+          classification = classify_quality(quality_id, explicit_ids)
+          score = scores.fetch(classification).fetch(rating.value)
           rating_qualities.create!(rating:, quality_id:, classification:, score:)
         end
       end
@@ -42,9 +37,9 @@ module Ratings
 
     def classify_quality(quality_id, explicit_ids)
       if explicit_ids.include?(quality_id)
-        [ RatingQuality::Classifications::EXPLICITLY_EXPRESSED, EXPLICIT_QUALITY_SCORES.fetch(rating.value) ]
+        RatingQuality::Classifications::EXPLICITLY_EXPRESSED
       else
-        [ RatingQuality::Classifications::UNEXPRESSED, Rating::UNEXPRESSED_QUALITY_SCORES.fetch(rating.value) ]
+        RatingQuality::Classifications::UNEXPRESSED
       end
     end
 
@@ -58,6 +53,12 @@ module Ratings
       expressions, qualities, calls, decisions = output.values_at("expressions", "qualities", "calls", "decisions")
       return false unless valid_expressions?(expressions) && valid_qualities?(qualities)
       return false unless decisions.is_a?(Array) && decisions.present?
+
+      if expressions.empty?
+        return calls == [] && decisions.all? do |decision|
+          valid_decision?(decision, expressions, qualities, [])
+        end
+      end
 
       question_ids = assessment_question_ids(calls)
       return false unless question_ids
@@ -81,9 +82,11 @@ module Ratings
     end
 
     def valid_expressions?(expressions)
-      return false unless expressions.is_a?(Hash) && expressions.present?
+      return false unless expressions.is_a?(Hash)
 
       original_texts = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
+      return original_texts.empty? if expressions.empty?
+
       expressions.all? { |id, text| original_texts.key?(id) && original_texts.fetch(id) == text }
     end
 
@@ -102,7 +105,8 @@ module Ratings
       qualities.key?(quality_id.to_s) && [ true, false ].include?(applicable) &&
         supporting_ids.is_a?(Array) && applicable == supporting_ids.present? &&
         supporting_ids.all? { |id| expressions.key?(id.to_s) } &&
-        result_ids.is_a?(Array) && result_ids.present? && (result_ids - question_ids).empty?
+        result_ids.is_a?(Array) && (expressions.empty? ? result_ids.empty? : result_ids.present?) &&
+        (result_ids - question_ids).empty?
     end
   end
 end

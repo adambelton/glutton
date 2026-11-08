@@ -84,7 +84,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_07_120000) do
     t.index ["film_id"], name: "index_film_quality_evals_on_film_id"
     t.index ["id", "film_id"], name: "index_film_quality_evals_on_id_and_film_id", unique: true
     t.check_constraint "jsonb_typeof(application) = 'object'::text AND COALESCE((application ->> 'status'::text) = ANY (ARRAY['pending'::text, 'applied'::text, 'failed'::text]), false)", name: "film_quality_evals_application"
-    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['assessed_at'::text, 'source'::text, 'definitions'::text, 'categories'::text, 'question_policy'::text, 'selection_policy'::text, 'evidence_policy'::text, 'minimum_support'::text, 'model'::text, 'support'::text, 'evidence'::text, 'selected_quality_ids'::text, 'input_tokens'::text, 'calculated_cost_usd'::text, 'calls'::text, 'call_count'::text, 'selection_decisions'::text, 'status'::text, 'usage_complete'::text] AND COALESCE((output ->> 'status'::text) = ANY (ARRAY['completed'::text, 'failed'::text]), false)", name: "film_quality_evals_completed_output"
+    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['assessed_at'::text, 'source'::text, 'definitions'::text, 'categories'::text, 'question_policy'::text, 'minimum_support'::text, 'model'::text, 'support'::text, 'evidence'::text, 'selected_quality_ids'::text, 'input_tokens'::text, 'calculated_cost_usd'::text, 'calls'::text, 'call_count'::text, 'selection_decisions'::text, 'status'::text, 'usage_complete'::text] AND COALESCE((output ->> 'status'::text) = ANY (ARRAY['completed'::text, 'failed'::text]), false)", name: "film_quality_evals_completed_output"
   end
 
   create_table "films", force: :cascade do |t|

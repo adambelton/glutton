@@ -1,5 +1,6 @@
 {
   "version": "neutral-context-v0.2-2026-10-28",
+  "minimum_support": 0.60,
   "question_type": "noul",
   "question_template": "Do the supplied source_paragraphs support {name} in this film?",
   "true_criterion_field": "match_rule",

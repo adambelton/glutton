@@ -67,9 +67,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--collect', action='store_true')
     args = parser.parse_args()
-    vocabulary = read(BASE / 'vocabulary.json')['qualities']
-    contract = read(BASE / 'matching.json')
-    examples = read(BASE / 'examples.json')['examples']
+    inputs = {
+        'vocabulary.json': BASE / 'vocabulary.json',
+        'initial_quality_assessment.json': ROOT / 'app/services/registry/initial_quality_assessment.json',
+        'examples.json': BASE / 'examples.json',
+    }
+    vocabulary = read(inputs['vocabulary.json'])['qualities']
+    contract = read(inputs['initial_quality_assessment.json'])
+    examples = read(inputs['examples.json'])['examples']
     ledger_path = RAW / 'ledger.json'
     ledger = read(ledger_path) if ledger_path.exists() else []
     key = api_key() if args.collect else None
@@ -140,7 +145,7 @@ def main():
                 if 1 in rounds and 2 in rounds:
                     first, second = set(rounds[1]['selected']), set(rounds[2]['selected'])
                     comparisons.append({'film': film['film'], 'threshold': threshold, 'policy': policy, 'removed_between_fresh_rounds': sorted(first-second), 'added_between_fresh_rounds': sorted(second-first), 'jaccard': len(first & second) / len(first | second) if first | second else 1.0})
-    save(OUT, {'task': '053', 'fresh_repeat_comparisons': comparisons, 'model': MODEL, 'price_usd_per_input_million': .042, 'budget_usd': BUDGET, 'reserved_usd': len(ledger_evidence) * RESERVE, 'cost_usd': sum(e.get('cost_usd', 0) for e in ledger_evidence), 'input_file_sha256': {name: hashlib.sha256((BASE / name).read_bytes()).hexdigest() for name in ('vocabulary.json', 'matching.json', 'examples.json')}, 'category_vocabulary_sizes': dict(Counter(q['facet'] for q in vocabulary)), 'historical_labels_are_not_ground_truth': True, 'cases': cases, 'summaries': summaries})
+    save(OUT, {'task': '053', 'fresh_repeat_comparisons': comparisons, 'model': MODEL, 'price_usd_per_input_million': .042, 'budget_usd': BUDGET, 'reserved_usd': len(ledger_evidence) * RESERVE, 'cost_usd': sum(e.get('cost_usd', 0) for e in ledger_evidence), 'input_file_sha256': {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in inputs.items()}, 'category_vocabulary_sizes': dict(Counter(q['facet'] for q in vocabulary)), 'historical_labels_are_not_ground_truth': True, 'cases': cases, 'summaries': summaries})
     print('Evidence saved; complete fresh calls:', sum(e['status'] == 'complete' for e in ledger_evidence), 'cost_usd:', sum(e.get('cost_usd', 0) for e in ledger_evidence))
 
 if __name__ == '__main__':
