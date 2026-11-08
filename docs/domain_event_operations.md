@@ -4,7 +4,7 @@ Foundation delivery uses GoodJob 4.22 with PostgreSQL notifications, external wo
 
 ## Worker configuration
 
-Run `RAILS_ENV=production bin/jobs` with `JOB_DATABASE_URL` supplied securely through the process environment. It must point directly to the **same database** used by the web process. Do not use a transaction-mode PgBouncer endpoint: notifications and advisory locks require session connections. The worker sets its entire Active Record connection to this endpoint so handlers and receipts share transactions. Web processes can retain their own connection configuration.
+Run `RAILS_ENV=production bin/jobs --queues=domain_events` with `JOB_DATABASE_URL` supplied securely through the process environment. It must point directly to the **same database** used by the web process. Do not use a transaction-mode PgBouncer endpoint: notifications and advisory locks require session connections. The worker sets its entire Active Record connection to this endpoint so handlers and receipts share transactions. Web processes can retain their own connection configuration.
 
 The default worker has two execution threads and a five-connection Rails pool. Budget five connections per worker process, plus web connections and operational headroom. If increasing worker threads, increase its `RAILS_MAX_THREADS` connection limit accordingly; allow the execution threads plus three utility/headroom connections. This setting changes the pool for that process only. Start with one worker and measure backlog age, job duration, database load and connection use before scaling.
 
