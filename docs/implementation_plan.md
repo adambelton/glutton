@@ -1,6 +1,6 @@
 # Glutton — Implementation progress
 
-Updated: 7 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 8 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
@@ -9,7 +9,7 @@ Updated: 7 November 2026. This document describes current progress, agreed order
 - Registry: canonical film storage, TMDB search and complete metadata/Wikipedia import, editable quality categories and direct film-quality associations are implemented. The one-time plain-YAML seed loads 235 quality definitions and nine category defaults; names/IDs are used without separate keys. Initial per-film quality assignment, create-only loading orchestration and bounded warning-isolated batch entry points are implemented; superuser-only read-only catalogue inspection is implemented; import/edit/refresh web entry points and bulk catalogue execution remain to build.
 - Library: Watchlist, Watched and Not interested browsing/details/actions are implemented, with authoritative shared reads for current rating status and the agreed event reactions.
 - Ratings: candidate queue, dismissal/holds, first submission with original expressions, rating replacement/history, browser editing and targeted Library entry are implemented.
-- Ratings saves original expressions on submission. Applying an evaluation writes a complete set of rating qualities linked to that evaluation, with explicit scores or baseline scores as applicable. Explicit scores follow the overall rating’s direction. Ratings can run a bundled explicit assessment, then record and apply its scores. Ratings without expressions use a deterministic baseline. Automatic scheduling, profile scoring, recommendation selection, ranking and explanations remain to build.
+- Ratings saves original expressions on submission. Applying an evaluation writes a complete set of rating qualities linked to that evaluation, with explicit scores or baseline scores as applicable. Explicit scores follow the overall rating’s direction. Ratings can run a bundled explicit assessment, then record and apply its scores. Ratings without expressions use a deterministic baseline. Submission and revision now durably schedule assessment of the saved rating version on a dedicated Ratings queue. This is ready for review with stubbed-provider verification. Queue activation, profile scoring, recommendation selection, ranking and explanations remain open.
 
 ## Current work
 

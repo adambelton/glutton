@@ -10,6 +10,7 @@ module Ratings
 
         rating = rating_film.submit_rating!(value:, expression_texts:)
         rating.publish_event!
+        AssessRatingQualitiesJob.enqueue!(rating.id)
         rating
       end
     end
