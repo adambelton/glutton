@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_08_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -70,6 +70,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_110000) do
     t.datetime "updated_at", null: false
     t.index ["expression_profile_id", "id"], name: "index_expression_profile_evals_on_expression_profile_id_and_id", unique: true
     t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['evidence'::text, 'profile'::text, 'synthesis'::text, 'trace_id'::text] AND jsonb_typeof(output -> 'evidence'::text) = 'array'::text AND jsonb_typeof(output -> 'profile'::text) = 'string'::text AND ((output -> 'evidence'::text) = '[]'::jsonb AND (output ->> 'profile'::text) = ''::text AND (output -> 'synthesis'::text) = 'null'::jsonb OR (output -> 'evidence'::text) <> '[]'::jsonb AND (output ->> 'profile'::text) <> ''::text AND jsonb_typeof(output -> 'synthesis'::text) = 'object'::text)", name: "expression_profile_evals_completed_output"
+  end
+
+  create_table "expression_profile_refresh_requests", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.uuid "generation", default: -> { "gen_random_uuid()" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_expression_profile_refresh_requests_on_user_id", unique: true
   end
 
   create_table "expression_profile_revisions", force: :cascade do |t|
@@ -376,6 +384,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_110000) do
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
   add_foreign_key "expression_profile_evals", "expression_profiles", on_delete: :cascade
+  add_foreign_key "expression_profile_refresh_requests", "users", on_delete: :cascade
   add_foreign_key "expression_profile_revisions", "expression_profile_evals", column: ["expression_profile_id", "expression_profile_eval_id"], primary_key: ["expression_profile_id", "id"], on_delete: :cascade
   add_foreign_key "expression_profiles", "users", on_delete: :cascade
   add_foreign_key "film_qualities", "film_quality_evals", column: ["film_quality_eval_id", "film_id"], primary_key: ["id", "film_id"]

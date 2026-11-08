@@ -473,6 +473,18 @@ Registry::Film.without_qualities # films needing assessment or manual interventi
 The job logs localized structured warnings for each film with zero qualities, an assessment error or an unexpected per-film failure, then continues with later films. Zero supported qualities retain a completed evaluation with an empty accepted association list; an explicit later request may assess the film again. The review query also includes films not assessed yet. Insufficient coverage currently means zero, matching that query; no higher minimum or category quota is inferred. The job does not schedule itself or automatically process the catalogue.
 
 
+## Run a Ratings expression profile batch
+
+Open Rails console in the intended environment and run the pending batch.
+
+```ruby
+Ratings::RefreshExpressionProfiles.call
+```
+
+A submission or revision that changes expressions marks the viewer as pending. The migration seeds work for existing profiles and current expression owners. The batch returns current revision IDs and per-viewer failure reasons. Failed requests stay pending for a later run. If pending edits cancel out, the batch acknowledges the request without calling OpenAI.
+
+When eligible expressions have changed, the service sends the viewer's current expression text and film context to OpenAI. Use real viewer data only when that provider use is authorized.
+
 ## Library watched state
 
 Library uses `Library::LibraryFilm` backed by `library_films`, with `Library::LibraryFilmWatched` and a minimal `Library::LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist and dismissal actions use the same canonical relationship.

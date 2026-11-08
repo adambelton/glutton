@@ -20,7 +20,7 @@ The service captures the minimum inputs the assessment needs, including authorit
 
 ## Evidence and configuration
 
-Store the source versions and input snapshot, the questions or instructions used, validated responses, deterministic decisions and actual non-secret provider settings where applicable. The evidence must explain the saved result after the inputs or policy change. Keep scoring values and other product rules in the owning domain's models or model modules. Keep provider configuration with the adapter. Reuse the lifecycle pattern across domains while each domain retains its own evaluation model and result semantics.
+Store the source versions and input snapshot, the questions or instructions used, validated responses, deterministic decisions and actual non-secret provider settings where applicable. The evidence must explain the saved result after the inputs or policy change. Keep scoring values and other product rules in the owning domain's models or model modules. Keep provider configuration with the adapter. Load non-secret model settings and request limits from configuration files such as `config/typesafe.json` and `config/expression_profile_synthesis.json`. Reuse the lifecycle pattern across domains while each domain retains its own evaluation model and result semantics.
 
 ## Tracing and privacy
 
