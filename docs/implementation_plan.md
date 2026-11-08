@@ -113,6 +113,8 @@ Apply the [evaluation consistency check](ratings_scoring_design.md#consistency-c
 
 Within the later Ratings scoring implementation, add support for profile-based evaluations and link their results to the originating evaluation. Distinguish profile-based interpretation from direct expression evidence; capture exact input/profile/definition versions, ordered calls/questions/responses, probabilities, deterministic processing and application outcomes. Retain historical results, reject stale work and replace contributions without double counting. Profile-only changes do not replace directly expressed evidence. Preserve Ratings ownership and the existing [scoring design](ratings_scoring_design.md); this is a future scoped outcome, not a new working task or implemented schema.
 
+Initial scoring can use the latest completed profile. Each completed profile change triggers deferred reevaluation of all current ratings for that user. Refresh expression profiles periodically when expression evidence changes. The interval remains open.
+
 Expression-profile updates require an LLM call; no JEV gate is assumed. JEV evaluates rating qualities against profiles or explicit expressions. Application evidence belongs in the database, with optional Langfuse diagnostic links. Do not introduce a generic cross-domain evaluation table/framework.
 
 ## Release follow-up
