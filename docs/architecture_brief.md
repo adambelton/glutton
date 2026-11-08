@@ -113,6 +113,8 @@ Place application components in the domain that owns what they present. Registry
 
 Views and components can orchestrate presentation and call domain services directly when they need data to render. Use the same cross-domain read rules and preserve viewer access controls. Controllers handle HTTP input and dispatch user actions to the owning domain. Rendering uses read operations, and the domain services retain their rules and transaction responsibilities.
 
+AI workflows follow the [AI model services design](ai_model_services_design.md), which defines the responsibilities of orchestration services, assessments, provider adapters, evaluations and result models.
+
 ### Asynchronous domain events
 
 Owner decision, 21 October 2026: Library, Ratings and Recommendations coordinate through durable asynchronous domain events. This supersedes the synchronous-only design. The source commits its state and outbox event together; subscribers commit their own state and delivery receipt independently. Brief eventual consistency is acceptable. Delivery must survive crashes and retries, preserve stream ordering and prevent duplicate effects. No broker or independently deployed service is required. Foundation implements the durable outbox and subscriber receipts using GoodJob 4.22 in the same PostgreSQL database, with after-commit notification wakeups and a 30-second recovery sweep. Library/Ratings publication and consumers use this transport; deployment remains separate. See [operations](domain_event_operations.md).

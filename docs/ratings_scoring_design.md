@@ -36,7 +36,7 @@ Classification identifies the source of evidence. For the initial release, appli
 
 ## Expression profile and recomputation
 
-The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements. Refresh the profile periodically when the expression evidence has changed. The refresh interval remains open. Baseline and explicit scoring can proceed for each rating, and implicit scores catch up after a new profile is completed.
+The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements. Start with an hourly refresh for viewers who submitted or revised a rating during the scan window. Synthesize only when their current explicit expressions differ from the evidence used for the last applied profile. Identical replacement text for the same film and changes that cancel within the window require no synthesis. Synthesize from the full current set so superseded text stops contributing. Clear the applied profile without a provider call when no evidence remains. Baseline and explicit scoring can proceed for each rating, and implicit scores catch up after a new profile is completed.
 
 Score each rating using the evidence available when it is evaluated. As new evidence becomes available, reevaluate affected scores so they catch up over time. Initial scoring can start as soon as the rating is saved, and the timing of provider work depends on when the product needs the scores. Use the latest completed expression profile available when processing starts. Record the profile version used. Every completed profile change triggers reevaluation of all current ratings for that user. Reevaluation can run later. If the profile changes during initial evaluation, the affected rating still needs to be reevaluated against the newer version.
 
@@ -44,15 +44,11 @@ Profile changes trigger recomputation of eligible rating qualities: only unexpre
 
 Implicitly expressed qualities are interpreted against the user's current expression profile, rather than belonging to an individual expression. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during raw-expression capture. Later processing must prevent stale work from replacing newer results and distinguish pending recomputation from completed current results; the minimal freshness mechanism belongs in that task's spec.
 
+The later reassessment task must settle how to represent a classification or score change in RatingQuality storage and how to preserve the earlier result and its evaluation provenance.
+
 ### Consistency check before profile work
 
-Before implementing expression-profile synthesis or implicit scoring, compare the proposed workflow with Ratings explicit assessment and Registry initial assignment. Record any intentional differences in the working task before writing code.
-
-- Use an instance service to coordinate provider work, recording and application. Keep provider calls outside database locks, then check input freshness before writing results.
-- Keep configurable questions, thresholds and scoring rules with their owning domain. Use the shared provider adapter for the protocol it supports and keep model configuration with the adapter.
-- Save the inputs and their versions, actual settings, questions, results and decisions needed to explain the outcome. Link derived scores to the evaluation that produced them.
-- Compare trace structure, privacy, failure handling and retry behavior. Keep original expression text and provider payloads in the saved evidence, with counts, usage and evaluation linkage in Ratings traces.
-- Verify the agreed boundaries across the affected workflows. Profile recomputation must preserve explicit evidence and prevent stale or duplicate contributions.
+Apply the [AI model services design](ai_model_services_design.md) before implementing expression-profile synthesis or implicit scoring. Compare the proposed roles with Ratings explicit assessment and Registry initial assignment. Record intentional differences in the working task. Profile recomputation must preserve explicit evidence and prevent stale or duplicate contributions.
 
 ## Evaluation persistence
 

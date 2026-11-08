@@ -44,7 +44,11 @@ en:
       ratings/rating_expression: Thought
       ratings/rating_film: Rating film
       ratings/rating_quality_eval: Rating quality evaluation
+      ratings/expression_profile_eval: Expression profile evaluation
     attributes:
+      ratings/expression_profile_eval:
+        user: User
+        output: Evaluation output
       ratings/rating_quality_eval:
         rating: Rating
         output: Evaluation output

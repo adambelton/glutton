@@ -22,6 +22,9 @@ class AiConnectionCheckTest < ActiveSupport::TestCase
     assert_equal false, requests.first[:store]
     assert_equal 32, requests.first[:max_output_tokens]
     generation, root = @exporter.finished_spans
+    assert_equal "check-ai-connection", root.name
+    assert_equal "check-ai-connection", root.attributes.fetch("langfuse.trace.name")
+    assert_equal [ "connection-check" ], generation.attributes.fetch("langfuse.trace.tags")
     assert_equal root.span_id, generation.parent_span_id
     assert_equal root.trace_id, generation.trace_id
     assert_equal "generation", generation.attributes["langfuse.observation.type"]
