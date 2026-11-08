@@ -22,6 +22,13 @@ module Ratings
 
     validate :recognized_value
 
+    def request_profile_refresh_if_expressions_changed!(previous_rating:)
+      previous_texts = previous_rating&.rating_expressions&.pluck(:text) || []
+      return if rating_expressions.pluck(:text) == previous_texts
+
+      ExpressionProfileRefreshRequest.mark_pending!(user_id: rating_film.user_id)
+    end
+
     def publish_event!
       DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{rating_film.film_id}", name: Ratings::Events::RATING_SUBMITTED, schema_version: 1,

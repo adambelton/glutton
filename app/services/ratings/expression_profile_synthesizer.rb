@@ -1,22 +1,21 @@
 module Ratings
   class ExpressionProfileSynthesizer
-    MAXIMUM_INPUT_BYTES = 48_000
-    MAXIMUM_OUTPUT_TOKENS = 3_200
+    CONFIGURATION = JSON.parse(Rails.root.join("config/expression_profile_synthesis.json").read).freeze
 
-    def initialize(model:, effort:, openai_client: Rails.application.config.x.openai_client)
-      @model, @effort, @openai_client = model, effort, openai_client
+    def initialize(openai_client: Rails.application.config.x.openai_client)
+      @openai_client = openai_client
     end
 
     def call(expressions:, instructions:, schema:)
       input = JSON.generate(expressions)
-      fail_synthesis(:input_limit) if input.bytesize + instructions.bytesize + JSON.generate(schema).bytesize > MAXIMUM_INPUT_BYTES
+      fail_synthesis(:input_limit) if input.bytesize + instructions.bytesize + JSON.generate(schema).bytesize > CONFIGURATION.fetch("maximum_request_bytes")
 
       text, model, usage = openai_profile(input, instructions, schema)
       result = JSON.parse(text)
       fail_synthesis(:invalid_response) unless result.is_a?(Hash)
 
       { "paragraphs" => result["paragraphs"], "provider" => "openai", "model" => model, "usage" => usage,
-        "settings" => { "requested_model" => @model, "effort" => @effort, "max_output_tokens" => MAXIMUM_OUTPUT_TOKENS } }
+        "settings" => CONFIGURATION.except("model").merge("requested_model" => CONFIGURATION.fetch("model")) }
     rescue JSON::ParserError
       fail_synthesis(:invalid_response)
     end
@@ -26,8 +25,8 @@ module Ratings
     def openai_profile(input, instructions, schema)
       fail_synthesis(:provider_failure) unless @openai_client
 
-      response = @openai_client.responses.create(model: @model, instructions:, input:,
-        reasoning: { effort: @effort }, max_output_tokens: MAXIMUM_OUTPUT_TOKENS, store: false,
+      response = @openai_client.responses.create(model: CONFIGURATION.fetch("model"), instructions:, input:,
+        reasoning: { effort: CONFIGURATION.fetch("effort") }, max_output_tokens: CONFIGURATION.fetch("max_output_tokens"), store: false,
         truncation: :disabled, text: { format_: { type: "json_schema", name: "expression_profile", schema:, strict: true } })
       fail_synthesis(:invalid_response) unless response.status.to_s == "completed"
 

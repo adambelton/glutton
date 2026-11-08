@@ -58,8 +58,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
       Struct.new(:status, :output, :model, :usage).new(status: :completed, output: [ Struct.new(:type, :content).new(type: :message, content:) ],
         model: "resolved-luna", usage: Struct.new(:input_tokens, :output_tokens).new(input_tokens: 300, output_tokens: 40))
     end
-    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6-luna",
-      effort: "none", openai_client: Struct.new(:responses).new(responses:))
+    adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Struct.new(:responses).new(responses:))
 
     revision = Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
     output = revision.expression_profile_eval.output
@@ -67,6 +66,11 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal [ { "film_title" => "Dead Air", "source_paragraphs" => context.fetch("source_paragraphs"),
       "expressions" => expressions } ], JSON.parse(request.fetch(:input))
     assert_equal false, request.fetch(:store)
+    assert_equal "gpt-6.1-terra", request.fetch(:model)
+    assert_equal "low", request.dig(:reasoning, :effort)
+    assert_equal 3_200, request.fetch(:max_output_tokens)
+    assert_equal request.fetch(:model), output.dig("synthesis", "settings", "requested_model")
+    assert_equal request.dig(:reasoning, :effort), output.dig("synthesis", "settings", "effort")
     assert_equal [ 20, 20 ], output.fetch("evidence").pluck("source_revision_id")
     assert_equal "resolved-luna", output.dig("synthesis", "model")
     assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
@@ -93,8 +97,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     revise(rating, [ "The loud shocks worked." ])
     responses = Object.new
     responses.define_singleton_method(:create) { |**| Struct.new(:status).new(:incomplete) }
-    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6.1-terra",
-      effort: "low", openai_client: Struct.new(:responses).new(responses:))
+    adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Struct.new(:responses).new(responses:))
 
     assert_no_difference "Ratings::ExpressionProfileEval.count" do
       error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
@@ -106,8 +109,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   end
 
   test "an oversized synthesis input is rejected before contacting the provider" do
-    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6-luna",
-      effort: "none", openai_client: Object.new)
+    adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Object.new)
 
     error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
       adapter.call(expressions: [ "x" * 48_000 ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
