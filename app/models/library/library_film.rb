@@ -12,15 +12,15 @@ module Library
       AWAITING_RATING = "awaiting_rating".freeze
     end
 
-    def rating_status(rated: nil)
+    def rating_status
       nil
     end
 
-    def can_rate?(rated: nil)
+    def can_rate?
       false
     end
 
-    def can_edit_rating?(rated: nil)
+    def can_edit_rating?
       false
     end
 

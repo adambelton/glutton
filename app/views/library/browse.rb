@@ -28,7 +28,7 @@ module Views
                   end
                   if @view == ::Library::Browse::Views::WATCHED
                     div(class: "library-rating") do
-                      render ::Library::RatingStatus.new(library_film:, rated: @page.rated_film_ids.include?(library_film.film_id))
+                      render ::Library::RatingStatus.new(library_film:)
                     end
                   end
                 end
