@@ -138,8 +138,11 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
   test "application uses the product score weights captured in the evaluation" do
     evaluation = record(assessment_output)
 
-    assert_equal({ "unexpressed" => 2, "explicitly_expressed" => 5 },
-      evaluation.reload.output.fetch("score_weights").transform_values { |weights| weights.fetch("brilliant") })
+    weights = evaluation.reload.output.fetch("score_weights")
+    assert_equal 2, weights.dig("unexpressed", "brilliant")
+    assert_equal({ "brilliant" => 4, "pretty_good" => 2, "not_for_me" => -2, "garbage" => -4 },
+      weights.fetch("implicitly_expressed"))
+    assert_equal 5, weights.dig("explicitly_expressed", "brilliant")
   end
 
   test "application honors score weights captured by older assessments" do
