@@ -166,7 +166,8 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
     @user = Identity::UserGuest.create!
     event = publish
-    @user.becomes!(Identity::UserDeleted).save!
+    # Simulate a deleted owner with an existing event until Identity implements this transition.
+    @user.update_columns(type: "UserDeleted")
     assert_equal({ skipped: 1 }, dispatch)
     assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
     assert_empty Library::LibraryFilm.all

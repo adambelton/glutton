@@ -24,15 +24,17 @@ module Ratings
       return if qualities.empty?
 
       expressions = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
+      tags = [ "ratings", "explicit-assessment" ]
       @tracer.in_span("assess-rating-qualities", attributes: {
         "langfuse.trace.name" => "assess-rating-qualities",
         "langfuse.observation.type" => "span",
-        "langfuse.trace.tags" => [ "ratings", "explicit-assessment" ],
+        "langfuse.trace.tags" => tags,
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { rating_id: rating.id, expression_count: expressions.size, quality_count: qualities.size }.to_json
       }, record_exception: false) do |span|
         assessment = ExplicitQualityAssessment.new(expressions:, qualities:,
-          trace_id: (span.context.hex_trace_id if span.context.valid?)).call(client: @client)
+          trace_id: (span.context.hex_trace_id if span.context.valid?))
+        TypeSafeClient.with_trace_tags(tags) { assessment.call(client: @client) }
         evaluation = record_and_apply(rating_film, rating, assessment)
         span.set_attribute("rating_quality_eval_id", evaluation.id)
         evaluation

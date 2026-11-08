@@ -50,6 +50,12 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 
+group :test do
+  gem "capybara"
+  gem "selenium-webdriver"
+end
+
+
 group :development do
   # Generator only; generated components are application-owned source.
   gem "ruby_ui", "1.6.0", require: false

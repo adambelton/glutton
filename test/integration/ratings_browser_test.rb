@@ -24,13 +24,12 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title:, release_date: Date.new(1982, 6, 25)), **attributes)
   end
 
-  def csrf
-    get new_rating_path
+  def csrf_token
     Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
-  def rate(row = @candidate, **attributes)
-    post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: csrf }.merge(attributes)
+  def rate(row = @candidate, token:, **attributes)
+    post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }.merge(attributes)
   end
 
   test "source links sit between title and synopsis and use stored identities" do
@@ -76,6 +75,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select ".rating-interface .rating-actions" do
       assert_select 'button[type="submit"][form="rating-form"].ui-submit', I18n.t("ratings.browser.save")
       assert_select "form[action=?]", dismiss_rating_path do
+        assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
         assert_select "button", I18n.t("ratings.browser.dismiss")
       end
     end
@@ -85,7 +85,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do
-        rate(expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "", " \t", "The ending" ], user_id: next_candidate.user_id, held: true)
+        rate(token: csrf_token, expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "", " \t", "The ending" ], user_id: next_candidate.user_id, held: true)
       end
     end
     assert_response :see_other
@@ -95,7 +95,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "h2", "Next film (1982)"
     assert_select '[role="status"]', I18n.t("ratings.browser.saved")
     assert_no_difference [ "DomainEvents::DomainEvent.count", "Ratings::Rating.count" ] do
-      post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf }
+      post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf_token }
     end
     assert_response :see_other
     assert next_candidate.reload.dismissed?
@@ -103,7 +103,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "h2", "Foreign (1982)"
     admitted = Ratings::RatingFilm.where(user: @user).find_by!(film_id: foreign.film_id)
     assert_not_equal foreign.id, admitted.id
-    post dismiss_rating_path, params: { rating_film_id: admitted.id, authenticity_token: csrf }
+    post dismiss_rating_path, params: { rating_film_id: admitted.id, authenticity_token: csrf_token }
     follow_redirect!
     assert_select "p", I18n.t("ratings.browser.empty")
   end
@@ -114,7 +114,8 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     bind_user(@user)
     Ratings::Rating::Values::ALL.each do |value|
       row = candidate(value)
-      rate(row, value:)
+      get new_rating_path
+      rate(row, token: csrf_token, value:)
       assert_response :see_other
       assert_equal value, row.ratings.sole.value
       assert_empty row.ratings.sole.rating_expressions
@@ -122,9 +123,11 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "validation preserves choice and exact escaped expressions with associated errors" do
+    get new_rating_path
+    token = csrf_token
     @candidate.film.update!(title: "<script>alert('title')</script>")
     text = "  <script>alert('expression')</script>  "
-    rate(expression_texts: [ text, "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
+    rate(token:, expression_texts: [ text, "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
     assert_response :unprocessable_entity
     assert_select "script", text: /alert\(/, count: 0
     assert_select "h2", "#{@candidate.film.title} (1982)"
@@ -138,25 +141,29 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "malformed missing and oversized input never writes" do
+    get new_rating_path
+    token = csrf_token
     [ nil, "", "unknown", "x" * 10_000, [], { choice: "brilliant" } ].each do |value|
       assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        rate(value:, expression_texts: [ "Keep this" ])
+        rate(token:, value:, expression_texts: [ "Keep this" ])
         assert_response :unprocessable_entity
         assert_select ".expression-item .expression-copy", "Keep this"
       end
     end
     [ nil, "text", { text: "text" }, [ { text: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
       assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        rate(expression_texts:)
+        rate(token:, expression_texts:)
         assert_response :unprocessable_entity
       end
     end
   end
 
   test "unadded drafts block saving and stay in the input until explicitly added or cleared" do
+    get new_rating_path
+    token = csrf_token
     draft = "  <script>draft</script>\nÉerie 👻  "
     assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
-      rate(expression_texts: [ "First thought" ], expression_draft: draft)
+      rate(token:, expression_texts: [ "First thought" ], expression_draft: draft)
       assert_response :unprocessable_entity
       assert_select "#rating-errors", text: /#{Regexp.escape(I18n.t("ratings.browser.unadded_expression"))}/
       assert_select "textarea#expression-draft" do |inputs|
@@ -166,32 +173,35 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       assert_select ".expression-items input", count: 1
       assert_select "script", text: "draft", count: 0
     end
-    rate(expression_texts: [ "First thought", draft ], expression_draft: "")
+    rate(token:, expression_texts: [ "First thought", draft ], expression_draft: "")
     assert_response :see_other
     assert_equal [ "First thought", draft ], @candidate.reload.current_rating.rating_expressions.pluck(:text)
   end
 
   test "malformed drafts cannot write and pending input remains recoverable at the list limit" do
+    get new_rating_path
+    token = csrf_token
     [ { bad: "shape" }, [ "text" ] ].each do |expression_draft|
       assert_no_difference "Ratings::Rating.count" do
-        rate(expression_draft:)
+        rate(token:, expression_draft:)
         assert_response :unprocessable_entity
       end
     end
     assert_no_difference "Ratings::Rating.count" do
-      rate(expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS, "Existing"), expression_draft: "Extra")
+      rate(token:, expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS, "Existing"), expression_draft: "Extra")
       assert_response :unprocessable_entity
       assert_select "textarea#expression-draft", "Extra"
       assert_select ".expression-items input", count: Ratings::Rating::MAX_EXPRESSIONS
     end
-    rate(expression_draft: " ")
+    rate(token:, expression_draft: " ")
     assert_response :see_other
     assert_empty @candidate.reload.current_rating.rating_expressions
   end
 
   test "foreign missing and malformed candidates have the same unavailable response" do
     foreign = candidate("Private title", user: Identity::UserGuest.create!)
-    token = csrf
+    get new_rating_path
+    token = csrf_token
     [ foreign.id, Ratings::RatingFilm.maximum(:id) + 1, "#{@candidate.id}junk" ].each do |id|
       post dismiss_rating_path, params: { rating_film_id: id, authenticity_token: token, user_id: foreign.user_id }
       assert_response :not_found
@@ -203,24 +213,27 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "duplicates report failure and stale forms may still explicitly rate" do
-    token = csrf
-    @candidate.update!(held: true, dismissed: true)
+    get new_rating_path
+    token = csrf_token
+    @candidate.hold!
+    @candidate.dismiss!
     post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
     assert_response :see_other
     assert @candidate.reload.held?
     assert @candidate.dismissed?
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-      rate
+      rate(token:)
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("ratings.errors.already_rated")
-      post dismiss_rating_path, params: { rating_film_id: @candidate.id, authenticity_token: csrf }
+      post dismiss_rating_path, params: { rating_film_id: @candidate.id, authenticity_token: token }
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("ratings.errors.dismissal_unavailable")
     end
   end
 
   test "expired and revoked sessions cannot write or automatically create a guest" do
-    token = csrf
+    get new_rating_path
+    token = csrf_token
     travel (Identity::UserGuest::EXPIRY_DURATION + 1.second) do
       assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }

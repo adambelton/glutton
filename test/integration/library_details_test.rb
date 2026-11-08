@@ -144,18 +144,19 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       delete remove_from_watchlist_library_film_path(@entry)
       assert_response :unprocessable_entity
-      @user.update!(created_at: 25.hours.ago)
-      post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
-      assert_response :unauthorized
-      get library_film_path(@entry)
-      assert_redirected_to new_session_path
-      @user.update!(created_at: Time.current)
+      travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
+        post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
+        assert_response :unauthorized
+        get library_film_path(@entry)
+        assert_redirected_to new_session_path
+      end
       bind_user
       Identity::Session.revoke(id: @authentication.id)
       get library_film_path(@entry)
       assert_redirected_to new_session_path
       bind_user
-      @user.becomes!(Identity::UserDeleted).save!
+      # Existing cookie with a deleted owner is a storage fixture for the unimplemented deletion transition.
+      @user.update_columns(type: "UserDeleted")
       get library_film_path(@entry)
       assert_response :gone
     end

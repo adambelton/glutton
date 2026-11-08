@@ -6,7 +6,7 @@ module Library
         raise IdentityUnavailable unless user&.active?
 
         library_film = LibraryFilm.lock.find_by(user_id: user.id, id: library_film_id)
-        raise FilmUnavailable unless library_film
+        raise FilmUnavailable unless library_film.present?
         raise AlreadyWatched unless library_film.can_watch?
 
         library_film = library_film.becomes!(LibraryFilmWatched)

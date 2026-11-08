@@ -28,13 +28,7 @@ module Views
                   end
                   if @view == ::Library::Browse::Views::WATCHED
                     div(class: "library-rating") do
-                      if @page.rated_film_ids.include?(library_film.film_id)
-                        p { t("library.browser.rated") }
-                        text_link(t("library.browser.edit_rating"), edit_rating_path(film_id: library_film.film_id), aria: { label: t("library.browser.edit_film_rating", title: library_film.film.title) })
-                      else
-                        p { t("library.browser.awaiting_rating") }
-                        text_link(t("library.browser.rate"), new_rating_path(film_id: library_film.film_id), aria: { label: t("library.browser.rate_film", title: library_film.film.title) })
-                      end
+                      render ::Library::RatingStatus.new(library_film:, rated: @page.rated_film_ids.include?(library_film.film_id))
                     end
                   end
                 end

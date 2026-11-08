@@ -6,12 +6,9 @@ module Library
         raise IdentityUnavailable unless user&.active?
 
         library_film = LibraryFilm.lock.find_by(user_id: user.id, id: library_film_id)
-        raise FilmUnavailable unless library_film
-        raise NotOnWatchlist unless library_film.can_remove_from_watchlist?
+        raise FilmUnavailable unless library_film.present?
 
-        library_film.destroy!
-        library_film.publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST)
-        library_film
+        library_film.remove_from_watchlist!
       end
     end
   end

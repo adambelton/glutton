@@ -1,10 +1,10 @@
 module Ratings
   class Form < Shared::Base
-    def initialize(film:, rating_film_id: nil, method: :post, value: nil, expression_texts: [], expression_draft: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false)
+    def initialize(film:, rating_film_id: nil, method: :post, value: nil, expression_texts: [], expression_draft: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false, targeted: false)
       @film, @rating_film_id, @method, @value = film, rating_film_id, method, value
       @expression_texts, @previous_rating_id, @errors, @readonly = expression_texts, previous_rating_id, errors, readonly
       @expression_draft = expression_draft
-      @dismissible = dismissible
+      @dismissible, @targeted = dismissible, targeted
       @prefix = readonly ? "example-#{film.tmdb_id}-" : ""
     end
 
@@ -16,6 +16,7 @@ module Ratings
         else
           form_with(url: rating_path, method: @method, id: "rating-form", class: "rating-workspace") do
             input(type: "hidden", name: "rating_film_id", value: @rating_film_id)
+            input(type: "hidden", name: "targeted", value: "1") if @targeted
             input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
             workspace
           end

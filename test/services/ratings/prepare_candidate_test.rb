@@ -23,9 +23,14 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
   end
 
   test "reopening preserves every combination of flags and original timestamps" do
-    row = prepare
-    [ false, true ].product([ false, true ]).each do |held, dismissed|
-      row.update!(held:, dismissed:, created_at: 2.days.ago)
+    row = Ratings::RatingFilm.create!(user: @user, film: @film, created_at: 2.days.ago)
+    [
+      [ -> { }, false, false ],
+      [ -> { row.hold! }, true, false ],
+      [ -> { row.dismiss! }, true, true ],
+      [ -> { row.release_hold! }, false, true ]
+    ].each do |arrange, held, dismissed|
+      arrange.call
       assert_no_changes -> { row.reload.updated_at } do
         assert_equal row.id, prepare.id
       end
@@ -37,10 +42,10 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
   test "missing films and inactive or missing owners cannot admit candidates" do
     assert_no_difference "Ratings::RatingFilm.count" do
       assert_raises(Ratings::FilmUnavailable) { prepare(film_id: Registry::Film.maximum(:id) + 1) }
-      @user.update!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
-      assert_raises(Ratings::IdentityUnavailable) { prepare }
-      @user.delete
-      assert_raises(Ratings::IdentityUnavailable) { prepare }
+      travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
+        assert_raises(Ratings::IdentityUnavailable) { prepare }
+      end
+      assert_raises(Ratings::IdentityUnavailable) { prepare(user_id: -1) }
     end
   end
 

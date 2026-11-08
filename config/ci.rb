@@ -8,5 +8,7 @@ CI.run do
   step "Security: Gem audit", "bin/bundler-audit check --update"
   step "Security: Importmap vulnerability audit", "bin/importmap audit"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
+  step "Autoloading: Rails", "bin/rails zeitwerk:check RAILS_ENV=test"
   step "Tests: Rails", "bin/rails test"
+  step "Tests: Browser", "bin/rails test:system"
 end

@@ -309,24 +309,29 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, rating_events.count
   end
 
-  test "targeted and queue submissions serialize in either order" do
-    [ true, false ].each do |targeted_first|
-      contender = nil
-      Identity::User.transaction do
-        targeted_first ? submit_selected_film : submit
-        contender = blocked do
-          targeted_first ? submit : submit_selected_film
-        rescue Ratings::AlreadyRated
-          :already_rated
-        end
+  test "a targeted submission wins over a waiting queue submission" do
+    assert_first_submission_wins(first: method(:submit_selected_film), second: method(:submit),
+      expressions: [ "Selected film evidence" ])
+  end
+
+  test "a queue submission wins over a waiting targeted submission" do
+    assert_first_submission_wins(first: method(:submit), second: method(:submit_selected_film),
+      expressions: [ "Atmosphere", "  Ending!  " ])
+  end
+
+  def assert_first_submission_wins(first:, second:, expressions:)
+    contender = nil
+    Identity::User.transaction do
+      first.call
+      contender = blocked do
+        second.call
+      rescue Ratings::AlreadyRated
+        :already_rated
       end
-      assert_equal :already_rated, Timeout.timeout(5) { contender.value }
-      expected = targeted_first ? [ "Selected film evidence" ] : [ "Atmosphere", "  Ending!  " ]
-      assert_equal expected, @rating_film.ratings.sole.rating_expressions.pluck(:text)
-      assert_equal 1, rating_events.count
-      Ratings::Rating.where(rating_film: @rating_film).delete_all
-      DomainEvents::DomainEventStream.where(user: @user).delete_all
     end
+    assert_equal :already_rated, Timeout.timeout(5) { contender.value }
+    assert_equal expressions, @rating_film.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal 1, rating_events.count
   end
 
   test "targeted admission waiting across expiry leaves no candidate" do

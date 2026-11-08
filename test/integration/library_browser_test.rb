@@ -48,6 +48,10 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     get library_path(view: Library::Browse::Views::WATCHED)
     assert_select "p", text: "Awaiting rating", count: 5
     assert_select 'main a[href*="rating/new"]', count: 5
+    get library_film_path(rows.first)
+    assert_select "p", text: "Awaiting rating"
+    assert_select "a[href=?]", new_rating_path(film_id: rows.first.film_id)
+
     row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
     Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
     absent = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
@@ -57,6 +61,27 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "p", text: "Awaiting rating", count: 4
     assert_select "h3", count: 5
     assert_select "a[href=?]", new_rating_path(film_id: rows.last.film_id), count: 0
+  end
+
+  test "watched page rendering keeps database queries bounded as entries grow" do
+    entry
+    path = library_path(view: Library::Browse::Views::WATCHED)
+    get path # Warm lazy Rails lookups before measuring requests.
+    count_queries = lambda do
+      count = 0
+      subscriber = ->(_name, _start, _finish, _id, payload) do
+        count += 1 unless payload[:name].in?([ "SCHEMA", "TRANSACTION" ])
+      end
+      ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { get path }
+      assert_response :success
+      count
+    end
+
+    single_entry_queries = count_queries.call
+    assert_operator single_entry_queries, :>, 0
+    10.times { entry }
+    assert_equal single_entry_queries, count_queries.call
+    assert_select ".library-rating", count: 11
   end
 
   test "links admit missing candidates reuse held dismissed candidates and reject stale rated links" do
@@ -148,7 +173,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_redirected_to new_session_path
     end
     bind_user
-    @user.becomes!(Identity::UserDeleted).save!
+    # Existing cookie with a deleted owner is a storage fixture for the unimplemented deletion transition.
+    @user.update_columns(type: "UserDeleted")
     get library_path
     assert_response :gone
   end

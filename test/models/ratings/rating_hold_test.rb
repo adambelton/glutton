@@ -31,7 +31,8 @@ class Ratings::RatingHoldTest < ActiveSupport::TestCase
   end
 
   test "explicit rating preserves held and dismissed until asynchronous reaction" do
-    @row.update!(held: true, dismissed: true)
+    @row.hold!
+    @row.dismiss!
     Ratings::SubmitRating.call(user_id: @row.user_id, rating_film_id: @row.id, value: Ratings::Rating::Values::BRILLIANT)
     assert @row.reload.held?
     assert @row.dismissed?

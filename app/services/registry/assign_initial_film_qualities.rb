@@ -18,10 +18,11 @@ module Registry
         "wikidata_id" => film.wikidata_id, "wikipedia_context" => film.wikipedia_context }.deep_dup
       definitions, categories = capture_vocabulary
       result = nil
+      tags = [ "registry", "initial-assignment" ]
       @tracer.in_span("assign-initial-film-qualities", attributes: {
         "langfuse.trace.name" => "assign-initial-film-qualities",
         "langfuse.observation.type" => "span",
-        "langfuse.trace.tags" => [ "registry", "initial-assignment" ],
+        "langfuse.trace.tags" => tags,
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { source:, definitions:, categories: }.to_json
       }, record_exception: false) do |root|
@@ -29,7 +30,7 @@ module Registry
           trace_id: (root.context.hex_trace_id if root.context.valid?))
         assessment_error = nil
         begin
-          assessment.call(client: @client)
+          TypeSafeClient.with_trace_tags(tags) { assessment.call(client: @client) }
         rescue StandardError => error
           assessment_error = error
         end

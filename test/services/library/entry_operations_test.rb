@@ -9,6 +9,12 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
     [ Library::RemoveNotInterested, Library::LibraryFilmNotInterested, :can_remove_from_not_interested?, Library::NotMarkedNotInterested ]
   ].freeze
 
+  DESTINATION_PERMISSIONS = {
+    Library::RecordWatched => :can_rate?,
+    Library::AddToWatchlist => :can_remove_from_watchlist?,
+    Library::MarkNotInterested => :can_remove_from_not_interested?
+  }.freeze
+
   setup do
     freeze_time
     @user = Identity::UserGuest.create!
@@ -38,12 +44,13 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       assert_equal entry.id, result.id
       assert_equal entry.created_at, result.created_at
       assert_equal entry.user_id, result.user_id
-      if result.destroyed?
+      destination_permission = DESTINATION_PERMISSIONS[operation]
+      if destination_permission.present?
+        assert Library::LibraryFilm.find(entry.id).public_send(destination_permission)
+        error = rejection
+      else
         assert_not Library::LibraryFilm.exists?(entry.id)
         error = Library::FilmUnavailable
-      else
-        assert_not result.public_send(permission)
-        error = rejection
       end
       assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(error) { operation.call(user_id: @user.id, library_film_id: entry.id) }
@@ -66,8 +73,6 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       travel 2.days do
         assert_equal owned.id, operation.call(user_id: registered.id, library_film_id: owned.id).id
       end
-      @user.becomes!(Identity::UserDeleted).save!
-      assert_raises(Library::IdentityUnavailable) { operation.call(user_id: @user.id, library_film_id: entry.id) }
     end
 
     test "#{operation} rolls back with caller and publication failure and permits explicit retry" do

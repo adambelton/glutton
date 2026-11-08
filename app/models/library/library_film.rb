@@ -12,20 +12,40 @@ module Library
       AWAITING_RATING = "awaiting_rating".freeze
     end
 
-    def rating_status
+    def rating_status(rated: nil)
       nil
     end
 
-    def can_rate?
+    def can_rate?(rated: nil)
       false
     end
 
-    def can_edit_rating?
+    def can_edit_rating?(rated: nil)
       false
+    end
+
+    def remove_from_watchlist!
+      raise NotOnWatchlist unless can_remove_from_watchlist?
+
+      transaction do
+        destroy!
+        publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST)
+      end
+      self
     end
 
     def can_remove_from_watchlist?
       false
+    end
+
+    def remove_not_interested!
+      raise NotMarkedNotInterested unless can_remove_from_not_interested?
+
+      transaction do
+        destroy!
+        publish_event!(name: Events::FILM_DISMISSAL_REMOVED)
+      end
+      self
     end
 
     def can_remove_from_not_interested?
@@ -36,16 +56,8 @@ module Library
       false
     end
 
-    def watchlist_addition_error
-      Library::WatchlistUnavailable unless can_add_to_watchlist?
-    end
-
     def can_mark_not_interested?
       false
-    end
-
-    def dismissal_error
-      Library::DismissalUnavailable unless can_mark_not_interested?
     end
 
     def can_watch?
