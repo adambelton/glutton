@@ -55,10 +55,12 @@ module Ratings
     def capture_evidence
       RatingExpression.joins(rating: { rating_film: :film }).merge(Rating.current)
         .where(rating_films: { user_id: @user_id }).order(:id)
-        .pluck("rating_expressions.id", "ratings.id", "films.id", "films.title", "films.release_date", "rating_expressions.text")
-        .map do |expression_id, rating_id, film_id, title, release_date, text|
+        .pluck("rating_expressions.id", "ratings.id", "films.id", "films.title", "films.release_date", "rating_expressions.text", "films.wikipedia_context")
+        .map do |expression_id, rating_id, film_id, title, release_date, text, context|
           { "expression_id" => expression_id, "rating_id" => rating_id, "film_id" => film_id,
-            "film_title" => title, "film_release_date" => release_date&.iso8601, "text" => text }
+            "film_title" => title, "film_release_date" => release_date&.iso8601, "text" => text,
+            "source_paragraphs" => context.fetch("source_paragraphs", []),
+            "source_revision_id" => context["revision_id"], "source_revision_url" => context["revision_url"] }
         end
     end
 
@@ -66,10 +68,17 @@ module Ratings
       evidence.group_by { |expression| expression.fetch("film_id") }.transform_values { |expressions| expressions.pluck("text") }
     end
 
+    def synthesis_evidence(evidence)
+      evidence.group_by { |expression| expression.fetch("film_id") }.transform_values do |expressions|
+        expressions.map { |expression| expression.except("expression_id", "rating_id", "film_release_date") }
+      end
+    end
+
     def record_and_apply(current:, expression_texts:, assessment:)
       with_owner_lock do |user|
         expression_profile = ExpressionProfile.find_by(user:)
-        unless expression_profile&.current_revision&.id == current&.id && texts_by_film(capture_evidence) == expression_texts
+        unless expression_profile&.current_revision&.id == current&.id &&
+            synthesis_evidence(capture_evidence) == synthesis_evidence(assessment.result.fetch("evidence"))
           raise ExpressionProfileRefreshFailed.new(reason: :stale_inputs)
         end
 

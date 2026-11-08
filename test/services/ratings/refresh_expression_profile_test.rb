@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/film_import_sources"
 
 class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
+  include FilmImportSources
   setup do
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "A specific portrayal", release_date: Date.new(1982, 6, 25))
@@ -13,8 +15,8 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Other viewer" ])
 
-    revision = refresh do |expressions:|
-      assert_equal [ { "film_title" => @film.title, "film_release_date" => "1982-06-25", "text" => "  The quiet dread worked.\n" } ], expressions
+    revision = refresh do |expressions:, **|
+      assert_equal [ { "film_title" => @film.title, "source_paragraphs" => [], "expressions" => [ { "expression_id" => current.rating_expressions.sole.id, "text" => "  The quiet dread worked.\n" } ] } ], expressions
       synthesis("  Likes quiet dread in this portrayal.  ").merge("raw_response" => "private provider detail")
     end
 
@@ -30,9 +32,87 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal [ expression.slice("film_id", "text") ], revision.expression_texts
     assert_equal @film.id, expression.fetch("film_id")
     assert_equal "  The quiet dread worked.\n", expression.fetch("text")
-    assert_equal({ "provider" => "stub", "model" => "stub-model", "usage" => { "input" => 12, "output" => 4 } }, evaluation.output.fetch("synthesis"))
+    assert_equal synthesis.except("profile"), evaluation.output.fetch("synthesis").except("prompt")
     assert_raises(ActiveRecord::ReadOnlyRecord) { revision.save! }
     assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
+  end
+
+  test "OpenAI synthesizes from imported paragraphs and records the exact instructions" do
+    context = wikipedia_context(text: "The crew waits for a transmission.")
+    film = Registry::Film.new(tmdb_id: 348).import!(tmdb_data: { title: "Dead Air", release_date: nil,
+      tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
+    rating_film = Ratings::RatingFilm.create!(user: @user, film:)
+    rating = rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT,
+      expression_texts: [ "I liked the long wait.", "The anticipation worked." ])
+    expressions = rating.rating_expressions.order(:id).map { |expression| { "expression_id" => expression.id, "text" => expression.text } }
+    ids = expressions.pluck("expression_id")
+    request = nil
+    responses = Object.new
+    paragraphs = [
+      { "text" => "The viewer responds to dread built through anticipation.", "explanation" => "Both reactions connect the wait to anticipation.", "expression_ids" => ids },
+      { "text" => "In that setting, a long wait can be part of the appeal.", "explanation" => "The viewer explicitly praised the long wait.", "expression_ids" => [ ids.first ] }
+    ]
+    responses.define_singleton_method(:create) do |**payload|
+      request = payload
+      content = [ Struct.new(:type, :text).new(type: :output_text, text: JSON.generate("paragraphs" => paragraphs)) ]
+      Struct.new(:status, :output, :model, :usage).new(status: :completed, output: [ Struct.new(:type, :content).new(type: :message, content:) ],
+        model: "resolved-luna", usage: Struct.new(:input_tokens, :output_tokens).new(input_tokens: 300, output_tokens: 40))
+    end
+    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6-luna",
+      effort: "none", openai_client: Struct.new(:responses).new(responses:))
+
+    revision = Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
+    output = revision.expression_profile_eval.output
+
+    assert_equal [ { "film_title" => "Dead Air", "source_paragraphs" => context.fetch("source_paragraphs"),
+      "expressions" => expressions } ], JSON.parse(request.fetch(:input))
+    assert_equal false, request.fetch(:store)
+    assert_equal [ 20, 20 ], output.fetch("evidence").pluck("source_revision_id")
+    assert_equal "resolved-luna", output.dig("synthesis", "model")
+    assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
+    assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")
+    assert_equal paragraphs.pluck("text").join("\n\n"), revision.profile
+    assert_equal paragraphs, output.fetch("annotations")
+    assert_equal true, request.dig(:text, :format_, :strict)
+    assert_equal "json_schema", request.dig(:text, :format_, :type)
+
+    Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: rating_film.id, previous_rating_id: rating.id,
+      value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "I disliked the long wait." ])
+    assert_no_difference "Ratings::ExpressionProfileEval.count" do
+      error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
+        Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
+      end
+      assert_equal :invalid_response, error.reason
+    end
+    assert_equal revision, current_revision
+  end
+
+  test "an incomplete OpenAI response leaves the previous profile current" do
+    rating = submit([ "I liked the quiet dread." ])
+    revision = refresh { |**| synthesis }
+    revise(rating, [ "The loud shocks worked." ])
+    responses = Object.new
+    responses.define_singleton_method(:create) { |**| Struct.new(:status).new(:incomplete) }
+    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6.1-terra",
+      effort: "low", openai_client: Struct.new(:responses).new(responses:))
+
+    assert_no_difference "Ratings::ExpressionProfileEval.count" do
+      error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
+        Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
+      end
+      assert_equal :invalid_response, error.reason
+    end
+    assert_equal revision, current_revision
+  end
+
+  test "an oversized synthesis input is rejected before contacting the provider" do
+    adapter = Ratings::ExpressionProfileSynthesizer.new(model: "gpt-6-luna",
+      effort: "none", openai_client: Object.new)
+
+    error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
+      adapter.call(expressions: [ "x" * 48_000 ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
+    end
+    assert_equal :input_limit, error.reason
   end
 
   test "recording rejects an invalid evaluation snapshot" do
@@ -111,9 +191,9 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     another_rating_film = Ratings::RatingFilm.create!(user: @user, film: another_film)
     another_rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "The ending worked." ])
 
-    revision = refresh do |expressions:|
+    revision = refresh do |expressions:, **|
       assert_equal another_film.title, expressions.sole.fetch("film_title")
-      assert_equal "The ending worked.", expressions.sole.fetch("text")
+      assert_equal [ "The ending worked." ], expressions.sole.fetch("expressions").pluck("text")
       synthesis
     end
 
@@ -308,7 +388,15 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   end
 
   def refresh(tracer_provider: nil, &synthesizer)
-    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider:)
+    adapter = lambda do |expressions:, **options|
+      response = synthesizer.call(expressions:, **options)
+      profile = response.fetch("profile")
+      response.except("profile").merge("paragraphs" => [
+        { "text" => profile, "explanation" => "The viewer described this reaction.",
+          "expression_ids" => expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") } }
+      ])
+    end
+    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter, tracer_provider:)
   end
 
   def synthesis(profile = "Likes quiet dread.")
