@@ -2,6 +2,9 @@ require "json"
 
 # An explicit operational check, not the film-analysis generation workflow.
 class AiConnectionCheck
+  TRACE_NAME = "check-ai-connection".freeze
+  TRACE_TAGS = [ "connection-check" ].freeze
+
   INSTRUCTIONS = "Reply with exactly OK.".freeze
   INPUT = "Verify this API connection.".freeze
 
@@ -17,13 +20,13 @@ class AiConnectionCheck
 
     tracer = @provider.tracer("glutton.ai.connection-check", "1")
     common = {
-      "langfuse.trace.name" => "check-ai-connection",
+      "langfuse.trace.name" => TRACE_NAME,
       "langfuse.environment" => @environment,
-      "langfuse.trace.tags" => [ "connection-check" ],
+      "langfuse.trace.tags" => TRACE_TAGS,
       "langfuse.version" => "1"
     }
     result = nil
-    tracer.in_span("check-ai-connection", attributes: common.merge(
+    tracer.in_span(TRACE_NAME, attributes: common.merge(
       "langfuse.observation.type" => "span",
       "langfuse.observation.input" => { purpose: "Verify OpenAI and Langfuse connectivity", model: model }.to_json
     ), record_exception: false) do |root|

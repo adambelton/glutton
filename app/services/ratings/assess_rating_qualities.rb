@@ -1,5 +1,8 @@
 module Ratings
   class AssessRatingQualities
+    TRACE_NAME = "assess-rating-qualities".freeze
+    TRACE_TAGS = [ "ratings", "explicit-assessment" ].freeze
+
     def self.call(rating_id:, client: nil, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
       new(rating_id:, client:, tracer_provider:).call
     end
@@ -24,17 +27,16 @@ module Ratings
       return if qualities.empty?
 
       expressions = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
-      tags = [ "ratings", "explicit-assessment" ]
-      @tracer.in_span("assess-rating-qualities", attributes: {
-        "langfuse.trace.name" => "assess-rating-qualities",
+      @tracer.in_span(TRACE_NAME, attributes: {
+        "langfuse.trace.name" => TRACE_NAME,
         "langfuse.observation.type" => "span",
-        "langfuse.trace.tags" => tags,
+        "langfuse.trace.tags" => TRACE_TAGS,
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { rating_id: rating.id, expression_count: expressions.size, quality_count: qualities.size }.to_json
       }, record_exception: false) do |span|
         assessment = ExplicitQualityAssessment.new(expressions:, qualities:,
           trace_id: (span.context.hex_trace_id if span.context.valid?))
-        TypeSafeClient.with_trace_tags(tags) { assessment.call(client: @client) }
+        TypeSafeClient.with_trace_tags(TRACE_TAGS) { assessment.call(client: @client) }
         evaluation = record_and_apply(rating_film, rating, assessment)
         span.set_attribute("rating_quality_eval_id", evaluation.id)
         evaluation

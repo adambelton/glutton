@@ -1,5 +1,8 @@
 module Registry
   class AssignInitialFilmQualities
+    TRACE_NAME = "assign-initial-film-qualities".freeze
+    TRACE_TAGS = [ "registry", "initial-assignment" ].freeze
+
     def self.call(film_id:, client: nil, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
       new(film_id:, client:, tracer_provider:).call
     end
@@ -18,11 +21,10 @@ module Registry
         "wikidata_id" => film.wikidata_id, "wikipedia_context" => film.wikipedia_context }.deep_dup
       definitions, categories = capture_vocabulary
       result = nil
-      tags = [ "registry", "initial-assignment" ]
-      @tracer.in_span("assign-initial-film-qualities", attributes: {
-        "langfuse.trace.name" => "assign-initial-film-qualities",
+      @tracer.in_span(TRACE_NAME, attributes: {
+        "langfuse.trace.name" => TRACE_NAME,
         "langfuse.observation.type" => "span",
-        "langfuse.trace.tags" => tags,
+        "langfuse.trace.tags" => TRACE_TAGS,
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { source:, definitions:, categories: }.to_json
       }, record_exception: false) do |root|
@@ -30,7 +32,7 @@ module Registry
           trace_id: (root.context.hex_trace_id if root.context.valid?))
         assessment_error = nil
         begin
-          TypeSafeClient.with_trace_tags(tags) { assessment.call(client: @client) }
+          TypeSafeClient.with_trace_tags(TRACE_TAGS) { assessment.call(client: @client) }
         rescue StandardError => error
           assessment_error = error
         end

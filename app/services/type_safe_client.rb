@@ -1,11 +1,11 @@
 class TypeSafeClient
   CONFIGURATION = JSON.parse(Rails.root.join("config/typesafe.json").read).freeze
 
-  TRACE_TAGS = OpenTelemetry::Context.create_key("glutton.typesafe.trace_tags")
-  private_constant :TRACE_TAGS
+  TRACE_TAGS_KEY = OpenTelemetry::Context.create_key("glutton.typesafe.trace_tags")
+  private_constant :TRACE_TAGS_KEY
 
   def self.with_trace_tags(tags, &block)
-    OpenTelemetry::Context.with_value(TRACE_TAGS, tags, &block)
+    OpenTelemetry::Context.with_value(TRACE_TAGS_KEY, tags, &block)
   end
 
   class Error < StandardError
@@ -63,7 +63,7 @@ class TypeSafeClient
     @tracer.in_span(phase, attributes: {
       "langfuse.observation.type" => "generation",
       "langfuse.environment" => Rails.env.to_s,
-      "langfuse.trace.tags" => OpenTelemetry::Context.value(TRACE_TAGS),
+      "langfuse.trace.tags" => OpenTelemetry::Context.value(TRACE_TAGS_KEY),
       "langfuse.observation.model.name" => model,
       "langfuse.observation.input" => (@settings.fetch("trace_payload") ? payload : { question_count: questions.size }).to_json
     }.compact, record_exception: false) do |span|
