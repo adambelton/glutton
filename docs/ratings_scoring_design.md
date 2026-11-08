@@ -36,7 +36,9 @@ Classification identifies the source of evidence. For the initial release, appli
 
 ## Expression profile and recomputation
 
-The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements.
+The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements. Refresh the profile periodically when the expression evidence has changed. The refresh interval remains open. Baseline and explicit scoring can proceed for each rating, and implicit scores catch up after a new profile is completed.
+
+Score each rating using the evidence available when it is evaluated. As new evidence becomes available, reevaluate affected scores so they catch up over time. Initial scoring can start as soon as the rating is saved, and the timing of provider work depends on when the product needs the scores. Use the latest completed expression profile available when processing starts. Record the profile version used. Every completed profile change triggers reevaluation of all current ratings for that user. Reevaluation can run later. If the profile changes during initial evaluation, the affected rating still needs to be reevaluated against the newer version.
 
 Profile changes trigger recomputation of eligible rating qualities: only unexpressed and implicitly expressed qualities. They may move between those classifications as applicability changes. Explicitly expressed qualities retain their expression provenance and are unaffected by profile-only changes. Changes to their own rating or expressions are a separate reassessment concern.
 
