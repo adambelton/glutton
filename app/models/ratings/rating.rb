@@ -22,6 +22,14 @@ module Ratings
 
     validate :recognized_value
 
+    def can_assess_qualities_for?(profile_revision_id)
+      !current_rating_quality_eval&.covers_profile_revision?(profile_revision_id)
+    end
+
+    def can_apply_quality_evaluation?(evaluation)
+      evaluation.rating == self && can_assess_qualities_for?(evaluation.profile_revision_id)
+    end
+
     def request_profile_refresh_if_expressions_changed!(previous_rating:)
       previous_texts = previous_rating&.rating_expressions&.pluck(:text) || []
       return if rating_expressions.pluck(:text) == previous_texts
@@ -36,6 +44,10 @@ module Ratings
     end
 
     private
+
+    def current_rating_quality_eval
+      rating_quality_evals.joins(:rating_qualities).order(id: :desc).first
+    end
 
     def recognized_value
       # External choices must match before Active Record's string coercion.
