@@ -33,17 +33,15 @@ class CreateFilmQualityCatalogue < ActiveRecord::Migration[8.1]
   def create_film_quality_evals
     create_table :film_quality_evals do |t|
       t.references :film, null: false, foreign_key: true
+      t.jsonb :input, null: false, default: []
       t.jsonb :output, null: false
-      t.jsonb :application, null: false, default: { status: "pending" }
       t.timestamps
     end
     add_index :film_quality_evals, [ :id, :film_id ], unique: true
+    add_check_constraint :film_quality_evals, "jsonb_typeof(input) = 'array'", name: "film_quality_evals_input_calls"
     add_check_constraint :film_quality_evals,
       "jsonb_typeof(output) = 'object' AND output ?& ARRAY['assessed_at', 'source', 'definitions', 'categories', 'question_policy', 'minimum_support', 'model', 'support', 'evidence', 'selected_quality_ids', 'input_tokens', 'calculated_cost_usd', 'calls', 'call_count', 'selection_decisions', 'status', 'usage_complete'] AND COALESCE(output->>'status' IN ('completed', 'failed'), false)",
       name: "film_quality_evals_completed_output"
-    add_check_constraint :film_quality_evals,
-      "jsonb_typeof(application) = 'object' AND COALESCE(application->>'status' IN ('pending', 'applied', 'failed'), false)",
-      name: "film_quality_evals_application"
   end
 
   def create_film_qualities

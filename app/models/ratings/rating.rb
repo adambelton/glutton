@@ -26,19 +26,20 @@ module Ratings
       !current_rating_quality_eval&.covers_profile_revision?(profile_revision_id)
     end
 
-    def can_apply_quality_evaluation?(evaluation)
-      evaluation.rating == self && can_assess_qualities_for?(evaluation.profile_revision_id)
+    def apply_quality_evaluation!(evaluation:)
+      rating_film.with_lock(requires_new: true) do
+        raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == id
+        raise QualityApplicationUnavailable unless evaluation.persisted? && evaluation.rating == self
+        next unless can_assess_qualities_for?(evaluation.profile_revision_id)
+
+        ensure_explicit_evidence_current!(evaluation) if evaluation.profile_revision_id.present?
+        apply_quality_scores!(evaluation)
+        true
+      end
     end
 
     def quality_evidence_for_reassessment
       current_rating_quality_eval&.explicit_evidence_for_reassessment
-    end
-
-    def ensure_explicit_evidence_current!(evaluation)
-      applied = current_rating_quality_eval
-      return if applied&.explicit_source_id == evaluation.explicit_source_id
-
-      raise QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
     end
 
     def request_profile_refresh_if_expressions_changed!(previous_rating:)
@@ -55,6 +56,41 @@ module Ratings
     end
 
     private
+
+    def ensure_explicit_evidence_current!(evaluation)
+      applied = current_rating_quality_eval
+      return if applied&.explicit_source_id == evaluation.inherited_explicit_evaluation_id
+
+      raise QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
+    end
+
+    def apply_quality_scores!(evaluation)
+      evidence = evaluation.quality_evidence
+      carried_scores = carried_explicit_scores(evaluation)
+      evidence.fetch(:quality_ids).each do |quality_id|
+        classification = classify_quality(quality_id, evidence)
+        score = carried_scores.fetch(quality_id) { RatingQualityScores::ALL.fetch(classification).fetch(value) }
+        rating_qualities.create!(rating_quality_eval: evaluation, quality_id:, classification:, score:)
+      end
+    end
+
+    def carried_explicit_scores(evaluation)
+      source_id = evaluation.inherited_explicit_evaluation_id
+      return {} unless source_id.present?
+
+      rating_qualities.where(rating_quality_eval_id: source_id,
+        classification: RatingQuality::Classifications::EXPLICITLY_EXPRESSED).pluck(:quality_id, :score).to_h
+    end
+
+    def classify_quality(quality_id, evidence)
+      if evidence.fetch(:explicit_ids).include?(quality_id)
+        RatingQuality::Classifications::EXPLICITLY_EXPRESSED
+      elsif evidence.fetch(:implicit_ids).include?(quality_id)
+        RatingQuality::Classifications::IMPLICITLY_EXPRESSED
+      else
+        RatingQuality::Classifications::UNEXPRESSED
+      end
+    end
 
     def current_rating_quality_eval
       rating_quality_evals.joins(:rating_qualities).order(id: :desc).first

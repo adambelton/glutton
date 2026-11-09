@@ -6,28 +6,30 @@ module Ratings
       @openai_client = openai_client
     end
 
-    def call(expressions:, instructions:, schema:)
-      input = JSON.generate(expressions)
+    def call(input:, instructions:, schema:)
+      input = JSON.generate(input)
       fail_synthesis(:input_limit) if input.bytesize + instructions.bytesize + JSON.generate(schema).bytesize > CONFIGURATION.fetch("maximum_request_bytes")
 
-      text, model, usage = openai_profile(input, instructions, schema)
+      request = { model: CONFIGURATION.fetch("model"), instructions:, input:,
+        reasoning: { effort: CONFIGURATION.fetch("effort") }, max_output_tokens: CONFIGURATION.fetch("max_output_tokens"), store: false,
+        truncation: :disabled, text: { format: { type: "json_schema", name: "expression_profile", schema:, strict: true } } }
+      text, model, usage = openai_profile(request)
       result = JSON.parse(text)
       fail_synthesis(:invalid_response) unless result.is_a?(Hash)
 
       { "profile" => result["profile"], "conclusions" => result["conclusions"], "provider" => "openai", "model" => model, "usage" => usage,
-        "settings" => CONFIGURATION.except("model").merge("requested_model" => CONFIGURATION.fetch("model")) }
+        "request" => request, "response" => result, "settings" => CONFIGURATION.except("model").merge("requested_model" => CONFIGURATION.fetch("model")) }
     rescue JSON::ParserError
       fail_synthesis(:invalid_response)
     end
 
     private
 
-    def openai_profile(input, instructions, schema)
+    def openai_profile(request)
       fail_synthesis(:provider_failure) unless @openai_client
 
-      response = @openai_client.responses.create(model: CONFIGURATION.fetch("model"), instructions:, input:,
-        reasoning: { effort: CONFIGURATION.fetch("effort") }, max_output_tokens: CONFIGURATION.fetch("max_output_tokens"), store: false,
-        truncation: :disabled, text: { format_: { type: "json_schema", name: "expression_profile", schema:, strict: true } })
+      format = request.fetch(:text).fetch(:format)
+      response = @openai_client.responses.create(**request.merge(text: { format_: format }))
       fail_synthesis(:invalid_response) unless response.status.to_s == "completed"
 
       parts = response.output.select { |item| item.type.to_s == "message" }.flat_map(&:content)

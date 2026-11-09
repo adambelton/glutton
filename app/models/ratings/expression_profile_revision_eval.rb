@@ -1,29 +1,24 @@
 module Ratings
-  class ExpressionProfileEval < ApplicationRecord
+  class ExpressionProfileRevisionEval < ApplicationRecord
     belongs_to :expression_profile
-    attr_readonly :expression_profile_id, :output
+    attr_readonly :expression_profile_id, :input, :output
 
     validate :evaluation_output
 
     def self.record!(expression_profile:, assessment:)
-      create!(expression_profile:, output: assessment.result)
+      create!(expression_profile:, input: assessment.input, output: assessment.result)
     end
 
     def readonly?
       super || persisted?
     end
 
-    def apply_profile!
-      raise ExpressionProfileRefreshFailed.new(reason: :unrecorded_evaluation) unless persisted?
-
-      with_lock do
-        if ExpressionProfileRevision.exists?(expression_profile_eval_id: id)
-          raise ExpressionProfileRefreshFailed.new(reason: :already_applied)
-        end
-
-        expression_texts = output.fetch("evidence").map { |expression| expression.slice("film_id", "text") }
-        expression_profile.publish_revision!(expression_profile_eval: self, profile: output.fetch("profile"), expression_texts:)
-      end
+    def revision_attributes
+      {
+        profile: output.fetch("profile"),
+        annotations: output.fetch("annotations", []),
+        expression_texts: output.fetch("evidence").map { |expression| expression.slice("film_id", "text") }
+      }
     end
 
     private

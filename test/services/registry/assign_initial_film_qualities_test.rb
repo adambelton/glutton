@@ -26,12 +26,10 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal assessment_result, evaluation.output
     assert_equal film, evaluation.film
     assert_equal [ evaluation.id ], film.film_qualities.distinct.pluck(:film_quality_eval_id)
-    assert_equal client.requests.map { |request| request.fetch(:questions).deep_stringify_keys }, evaluation.output.fetch("calls").map { |call| call.dig("request", "questions") }
+    assert_equal client.requests.map { |request| request.fetch(:questions).deep_stringify_keys }, evaluation.input.map { |call| call.dig("request", "questions") }
     assert_equal 1, evaluation.output.fetch("call_count")
-    assert_equal client.requests.map { |request| request.fetch(:state).deep_stringify_keys }, evaluation.output.fetch("calls").map { |call| call.dig("request", "state") }
+    assert_equal client.requests.map { |request| request.fetch(:state).deep_stringify_keys }, evaluation.input.map { |call| call.dig("request", "state") }
     assert_equal 1, evaluation.output.fetch("calls").count { |call| call.fetch("status") == "completed" }
-    assert_equal "applied", evaluation.application.fetch("status")
-    assert_equal film.film_qualities.order(:id).ids, evaluation.application.fetch("film_quality_ids").sort
     assert_equal [ "selected", "selected", "below_threshold" ], evaluation.output.fetch("selection_decisions").sort_by { |decision| decision.fetch("quality_id") }.map { |decision| decision.fetch("reason") }
     assert_equal 100, assessment_result.fetch("input_tokens")
     assert_equal [ "quality-support" ], client.requests.map { |request| request.fetch(:phase) }
@@ -98,7 +96,6 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     error = assert_raises(Registry::AssignmentFailed) { Registry::AssignInitialFilmQualities.call(film_id: film.id, client:) }
     assert_equal :stale_inputs, error.reason
     assert_equal 1, film.film_quality_evals.count
-    assert_equal "stale_inputs", film.film_quality_evals.sole.application.fetch("reason")
     assert_empty film.reload.film_qualities
   end
 
@@ -158,9 +155,8 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal 1, evaluation.output.fetch("call_count")
     assert_equal [ "failed" ], evaluation.output.fetch("calls").map { |call| call.fetch("status") }
     assert_empty evaluation.output.fetch("support")
-    assert_equal "timeout", evaluation.application.fetch("reason")
     assert_equal [], evaluation.output.fetch("selected_quality_ids")
-    assert_raises(Registry::AssignmentFailed) { evaluation.apply_initial_qualities! }
+    assert_raises(Registry::AssignmentFailed) { film.apply_initial_qualities!(evaluation:) }
     assert_empty film.reload.film_qualities
   end
 
@@ -170,7 +166,8 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     source = film_source_snapshot(film:).merge("title" => "Older title")
     assessment = Registry::InitialQualityAssessment.new(source:, definitions: quality_definition_snapshots,
       categories: quality_category_snapshots).call(client: Client.new)
-    error = assert_raises(Registry::AssignmentFailed) { Registry::FilmQualityEval.record!(film:, assessment:).apply_initial_qualities! }
+    evaluation = Registry::FilmQualityEval.record!(film:, assessment:)
+    error = assert_raises(Registry::AssignmentFailed) { film.apply_initial_qualities!(evaluation:) }
     assert_equal :stale_inputs, error.reason
     assert_empty film.reload.film_qualities
   end
@@ -216,8 +213,7 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
         assert_raises(ActiveRecord::StatementInvalid) { Registry::AssignInitialFilmQualities.call(film_id: film.id, client: Client.new) }
       end
     end
-    assert_equal "failed", film.film_quality_evals.sole.application.fetch("status")
-    assert_equal "persistence_error", film.film_quality_evals.sole.application.fetch("reason")
+    assert_equal "completed", film.film_quality_evals.sole.output.fetch("status")
   ensure
     Registry::FilmQuality.skip_callback(:create, :after, callback, raise: false)
   end

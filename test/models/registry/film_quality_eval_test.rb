@@ -19,7 +19,6 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
   test "recording is separate from application and retained evidence survives vocabulary edits" do
     evaluation = record_evaluation
     assert_empty @film.reload.film_qualities
-    assert_equal "pending", evaluation.application.fetch("status")
     original_category_id = @quality.quality_category_id
     @quality.recategorise!(quality_category: quality_categories(:emotional_character))
     assert_equal original_category_id, evaluation.reload.output.fetch("definitions").sole.fetch("quality_category_id")
@@ -38,12 +37,11 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
       assert_not link.valid?
       assert link.errors.of_kind?(:film_quality_eval, :invalid)
     end
-    evaluation.apply_initial_qualities!
+    @film.apply_initial_qualities!(evaluation:)
     assert_equal evaluation, @film.film_qualities.sole.film_quality_eval
     link = @film.film_qualities.sole.reload
     assert_empty link.film_quality_eval.output.fetch("evidence")
-    assert_equal "applied", evaluation.reload.application.fetch("status")
-    assert_equal @film.film_qualities.ids, evaluation.application.fetch("film_quality_ids")
+    assert_equal [ link.id ], evaluation.film_qualities.ids
     assert_raises(ActiveRecord::DeleteRestrictionError) { @film.destroy! }
   end
 
@@ -64,11 +62,9 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
         Registry::FilmQualityEval.insert_all!([ { film_id: @film.id, output: {} } ])
       end
     end
-    [ {}, { "status" => nil }, { "status" => "unknown" } ].each do |application|
-      assert_raises(ActiveRecord::StatementInvalid) do
-        Registry::FilmQualityEval.transaction(requires_new: true) do
-          Registry::FilmQualityEval.insert_all!([ { film_id: @film.id, output: evaluation.output, application: } ])
-        end
+    assert_raises(ActiveRecord::StatementInvalid) do
+      Registry::FilmQualityEval.transaction(requires_new: true) do
+        Registry::FilmQualityEval.insert_all!([ { film_id: @film.id, input: {}, output: evaluation.output } ])
       end
     end
   end
@@ -92,22 +88,11 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "an application outcome is recorded once without changing the evaluation output" do
-    evaluation = record_evaluation
-    original_output = evaluation.output.deep_dup
-    evaluation.record_application_failure!(reason: :stale_inputs)
-    assert_equal "failed", evaluation.reload.application.fetch("status")
-    assert_equal "stale_inputs", evaluation.application.fetch("reason")
-    assert_equal original_output, evaluation.output
-    assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.apply_initial_qualities! }
-    assert_equal "failed", evaluation.reload.application.fetch("status")
-  end
-
   test "a removed selected quality prevents application instead of silently omitting it" do
     evaluation = record_evaluation
     @quality.destroy!
     error = assert_raises(Registry::AssignmentFailed) do
-      evaluation.apply_initial_qualities!
+      @film.apply_initial_qualities!(evaluation:)
     end
     assert_equal :stale_inputs, error.reason
     assert_empty @film.reload.film_qualities

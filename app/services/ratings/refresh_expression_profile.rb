@@ -26,13 +26,13 @@ module Ratings
         "langfuse.observation.type" => "span",
         "langfuse.observation.input" => { expression_count: evidence.size }.to_json
       }, record_exception: false) do |span|
-        assessment = ExpressionProfileAssessment.new(evidence:,
+        assessment = ExpressionProfileAssessment.new(evidence:, basis: current&.incremental_synthesis_basis,
           trace_id: (span.context.hex_trace_id if span.context.valid?), tracer: @tracer, trace_tags: TRACE_TAGS)
         assessment.call(synthesizer: @synthesizer)
         revision = record_and_apply(current:, expression_texts:, assessment:)
         span.set_attribute("expression_profile_id", revision.expression_profile_id)
         span.set_attribute("expression_profile_revision_id", revision.id)
-        span.set_attribute("expression_profile_eval_id", revision.expression_profile_eval_id)
+        span.set_attribute("expression_profile_revision_eval_id", revision.expression_profile_revision_eval_id)
         revision
       rescue StandardError
         span.status = OpenTelemetry::Trace::Status.error("Expression profile refresh failed")
@@ -85,8 +85,8 @@ module Ratings
         end
 
         expression_profile ||= ExpressionProfile.create!(user:)
-        evaluation = ExpressionProfileEval.record!(expression_profile:, assessment:)
-        revision = evaluation.apply_profile!
+        evaluation = ExpressionProfileRevisionEval.record!(expression_profile:, assessment:)
+        revision = expression_profile.publish_revision!(evaluation:)
         RatingQualityReassessmentRequest.mark_pending!(user:, revision:)
         ReassessRatingQualitiesJob.enqueue!(user_id: user.id, profile_revision_id: revision.id)
         revision

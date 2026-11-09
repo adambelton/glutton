@@ -12,11 +12,13 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     @expression = @rating.rating_expressions.sole
   end
 
-  test "recording atomically preserves the evidence and applies a complete score set" do
+  test "recording preserves evidence and Rating applies a complete score set" do
     snapshot = assessment_output
     evaluation = record(snapshot)
 
     assert_equal snapshot.deep_stringify_keys, evaluation.reload.output.slice(*snapshot.keys.map(&:to_s))
+    assert_empty scores(evaluation)
+    assert @rating.apply_quality_evaluation!(evaluation:)
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
     assert_equal [ [ "explicitly_expressed", 5 ], [ "unexpressed", 2 ] ],
       evaluation.rating_qualities.order(:quality_id).pluck(:classification, :score)
@@ -44,16 +46,16 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "an assessment for the same profile is skipped and a superseded rating cannot be scored" do
+  test "Rating skips the same profile and rejects a superseded rating" do
     evaluation = record(assessment_output)
-    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
-      assert_nil record(assessment_output)
+    assert @rating.apply_quality_evaluation!(evaluation:)
+    assert_no_difference "Ratings::RatingQuality.count" do
+      assert_nil @rating.apply_quality_evaluation!(evaluation:)
     end
 
     revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD)
-    error = assert_raises(Ratings::QualityAssessmentFailed) { record(assessment_output) }
+    error = assert_raises(Ratings::QualityAssessmentFailed) { @rating.apply_quality_evaluation!(evaluation:) }
     assert_equal :stale_rating, error.reason
-    assert_equal evaluation, @rating.rating_quality_evals.sole
     assert_empty revision.rating_quality_evals
   end
 
@@ -74,31 +76,23 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "conflicting decisions roll back the evaluation and scores" do
+  test "conflicting decisions cannot create scores" do
     snapshot = assessment_output
     snapshot[:decisions] << snapshot[:decisions].first.dup
+    evaluation = record(snapshot)
 
-    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
-      assert_raises(Ratings::QualityApplicationUnavailable) { record(snapshot) }
+    assert_no_difference "Ratings::RatingQuality.count" do
+      assert_raises(Ratings::QualityApplicationUnavailable) { @rating.apply_quality_evaluation!(evaluation:) }
     end
   end
 
-  test "application scores the captured qualities after Registry accepts another quality" do
-    snapshot = assessment_output
+  test "Rating scores the captured qualities after Registry accepts another quality" do
+    evaluation = record(assessment_output)
     quality = quality_categories(:tone).qualities.create!(name: "Unease")
     Registry::FilmQuality.create!(film: @rating_film.film, quality:)
 
-    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(record(snapshot)))
-  end
-
-  test "application uses the product score weights captured in the evaluation" do
-    evaluation = record(assessment_output)
-
-    weights = evaluation.reload.output.fetch("score_weights")
-    assert_equal 2, weights.dig("unexpressed", "brilliant")
-    assert_equal({ "brilliant" => 4, "pretty_good" => 2, "not_for_me" => -2, "garbage" => -4 },
-      weights.fetch("implicitly_expressed"))
-    assert_equal 5, weights.dig("explicitly_expressed", "brilliant")
+    assert @rating.apply_quality_evaluation!(evaluation:)
+    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
   end
 
   private
@@ -108,7 +102,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
   end
 
   def record(snapshot)
-    assessment = Struct.new(:result).new(snapshot)
+    assessment = Struct.new(:result, :input).new(snapshot, [])
     Ratings::RatingQualityEval.record!(rating: @rating, assessment:)
   end
 

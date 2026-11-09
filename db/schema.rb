@@ -63,15 +63,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
     t.check_constraint "subscriber::text <> ''::text", name: "event_delivery_subscriber"
   end
 
-  create_table "expression_profile_evals", force: :cascade do |t|
-    t.bigint "expression_profile_id", null: false
-    t.jsonb "output", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["expression_profile_id", "id"], name: "index_expression_profile_evals_on_expression_profile_id_and_id", unique: true
-    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['evidence'::text, 'profile'::text, 'synthesis'::text, 'trace_id'::text] AND jsonb_typeof(output -> 'evidence'::text) = 'array'::text AND jsonb_typeof(output -> 'profile'::text) = 'string'::text AND ((output -> 'evidence'::text) = '[]'::jsonb AND (output ->> 'profile'::text) = ''::text AND (output -> 'synthesis'::text) = 'null'::jsonb OR (output -> 'evidence'::text) <> '[]'::jsonb AND (output ->> 'profile'::text) <> ''::text AND jsonb_typeof(output -> 'synthesis'::text) = 'object'::text)", name: "expression_profile_evals_completed_output"
-  end
-
   create_table "expression_profile_refresh_requests", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.uuid "generation", default: -> { "gen_random_uuid()" }, null: false
@@ -80,15 +71,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
     t.index ["user_id"], name: "index_expression_profile_refresh_requests_on_user_id", unique: true
   end
 
+  create_table "expression_profile_revision_evals", force: :cascade do |t|
+    t.bigint "expression_profile_id", null: false
+    t.jsonb "input", default: [], null: false
+    t.jsonb "output", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expression_profile_id", "id"], name: "idx_on_expression_profile_id_id_7c7af83f06", unique: true
+    t.check_constraint "jsonb_typeof(input) = 'array'::text", name: "expression_profile_revision_evals_input_calls"
+    t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['evidence'::text, 'profile'::text, 'synthesis'::text, 'trace_id'::text] AND jsonb_typeof(output -> 'evidence'::text) = 'array'::text AND jsonb_typeof(output -> 'profile'::text) = 'string'::text AND ((output -> 'evidence'::text) = '[]'::jsonb AND (output ->> 'profile'::text) = ''::text AND (output -> 'synthesis'::text) = 'null'::jsonb OR (output -> 'evidence'::text) <> '[]'::jsonb AND (output ->> 'profile'::text) <> ''::text AND jsonb_typeof(output -> 'synthesis'::text) = 'object'::text)", name: "expression_profile_revision_evals_completed_output"
+  end
+
   create_table "expression_profile_revisions", force: :cascade do |t|
     t.bigint "expression_profile_id", null: false
-    t.bigint "expression_profile_eval_id", null: false
+    t.bigint "expression_profile_revision_eval_id", null: false
     t.text "profile", null: false
+    t.jsonb "annotations", default: [], null: false
     t.jsonb "expression_texts", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["expression_profile_eval_id"], name: "idx_on_expression_profile_eval_id_992bbf8635", unique: true
     t.index ["expression_profile_id", "id"], name: "idx_on_expression_profile_id_id_c34e33058c"
+    t.index ["expression_profile_revision_eval_id"], name: "idx_on_expression_profile_revision_eval_id_3e169bc668", unique: true
+    t.check_constraint "jsonb_typeof(annotations) = 'array'::text", name: "expression_profile_revisions_annotations"
   end
 
   create_table "expression_profiles", force: :cascade do |t|
@@ -112,13 +116,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
 
   create_table "film_quality_evals", force: :cascade do |t|
     t.bigint "film_id", null: false
+    t.jsonb "input", default: [], null: false
     t.jsonb "output", null: false
-    t.jsonb "application", default: {"status" => "pending"}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["film_id"], name: "index_film_quality_evals_on_film_id"
     t.index ["id", "film_id"], name: "index_film_quality_evals_on_id_and_film_id", unique: true
-    t.check_constraint "jsonb_typeof(application) = 'object'::text AND COALESCE((application ->> 'status'::text) = ANY (ARRAY['pending'::text, 'applied'::text, 'failed'::text]), false)", name: "film_quality_evals_application"
+    t.check_constraint "jsonb_typeof(input) = 'array'::text", name: "film_quality_evals_input_calls"
     t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['assessed_at'::text, 'source'::text, 'definitions'::text, 'categories'::text, 'question_policy'::text, 'minimum_support'::text, 'model'::text, 'support'::text, 'evidence'::text, 'selected_quality_ids'::text, 'input_tokens'::text, 'calculated_cost_usd'::text, 'calls'::text, 'call_count'::text, 'selection_decisions'::text, 'status'::text, 'usage_complete'::text] AND COALESCE((output ->> 'status'::text) = ANY (ARRAY['completed'::text, 'failed'::text]), false)", name: "film_quality_evals_completed_output"
   end
 
@@ -283,11 +287,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
   create_table "qualities", force: :cascade do |t|
     t.bigint "quality_category_id", null: false
     t.string "name", null: false
+    t.text "match_rule"
+    t.text "not_sufficient"
     t.integer "lock_version", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.text "match_rule"
-    t.text "not_sufficient"
     t.index "quality_category_id, lower((name)::text)", name: "qualities_category_name", unique: true
     t.index ["quality_category_id"], name: "index_qualities_on_quality_category_id"
     t.check_constraint "match_rule IS NULL AND not_sufficient IS NULL OR match_rule IS NOT NULL AND match_rule ~ '[^[:space:]]'::text AND not_sufficient IS NOT NULL AND not_sufficient ~ '[^[:space:]]'::text", name: "qualities_complete_definitions"
@@ -342,11 +346,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
 
   create_table "rating_quality_evals", force: :cascade do |t|
     t.bigint "rating_id", null: false
+    t.jsonb "input", default: [], null: false
     t.jsonb "output", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["id", "rating_id"], name: "index_rating_quality_evals_on_id_and_rating_id", unique: true
     t.index ["rating_id"], name: "index_rating_quality_evals_on_rating_id"
+    t.check_constraint "jsonb_typeof(input) = 'array'::text", name: "rating_quality_evals_input_calls"
     t.check_constraint "jsonb_typeof(output) = 'object'::text AND output ?& ARRAY['expressions'::text, 'qualities'::text, 'calls'::text, 'decisions'::text]", name: "rating_quality_evals_completed_output"
   end
 
@@ -377,12 +383,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
 
   create_table "users", force: :cascade do |t|
     t.string "type", null: false
+    t.boolean "superuser", default: false, null: false
     t.string "email_address"
     t.string "password_digest"
     t.datetime "email_confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.boolean "superuser", default: false, null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.check_constraint "NOT superuser OR type::text = 'UserRegistered'::text", name: "only_registered_users_can_be_superusers"
     t.check_constraint "type::text <> 'UserRegistered'::text OR email_address IS NOT NULL AND email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text AND password_digest IS NOT NULL AND password_digest::text ~ '[^[:space:]]'::text AND email_confirmed_at IS NOT NULL", name: "registered_users_require_credentials"
@@ -392,9 +398,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
-  add_foreign_key "expression_profile_evals", "expression_profiles", on_delete: :cascade
   add_foreign_key "expression_profile_refresh_requests", "users", on_delete: :cascade
-  add_foreign_key "expression_profile_revisions", "expression_profile_evals", column: ["expression_profile_id", "expression_profile_eval_id"], primary_key: ["expression_profile_id", "id"], on_delete: :cascade
+  add_foreign_key "expression_profile_revision_evals", "expression_profiles", on_delete: :cascade
+  add_foreign_key "expression_profile_revisions", "expression_profile_revision_evals", column: ["expression_profile_id", "expression_profile_revision_eval_id"], primary_key: ["expression_profile_id", "id"], on_delete: :cascade
   add_foreign_key "expression_profiles", "users", on_delete: :cascade
   add_foreign_key "film_qualities", "film_quality_evals", column: ["film_quality_eval_id", "film_id"], primary_key: ["id", "film_id"]
   add_foreign_key "film_qualities", "films"

@@ -100,7 +100,8 @@ class Ratings::RefreshExpressionProfilesTest < ActiveSupport::TestCase
   end
 
   def refresh(&response)
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       expression = expressions.sole.fetch("expressions").sole
       @calls << expression.fetch("text")
       response ? response.call(expression) : synthesis(expression)

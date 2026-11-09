@@ -49,7 +49,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     assert_equal evaluation.id, root.attributes.fetch("film_quality_eval_id")
     calls = evaluation.output.fetch("calls")
     generations.each_with_index do |generation, index|
-      assert_equal JSON.parse(generation.attributes.fetch("langfuse.observation.input")), calls[index].fetch("request")
+      assert_equal JSON.parse(generation.attributes.fetch("langfuse.observation.input")), evaluation.input.fetch(index).fetch("request")
       assert_equal JSON.parse(generation.attributes.fetch("langfuse.observation.output")), calls[index].fetch("response")
     end
     assert_equal root.trace_id.unpack1("H*"), result.fetch(:film_quality_eval).output.fetch("trace_id")
@@ -107,6 +107,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     end
     evaluation = film.film_quality_evals.sole
     assert_empty http.requests
+    assert_empty evaluation.input
     assert_equal 0, evaluation.output.fetch("call_count")
     assert_equal "not_sent", evaluation.output.fetch("calls").sole.fetch("status")
   end
@@ -122,7 +123,7 @@ class Registry::QualityAssignmentTraceTest < ActiveSupport::TestCase
     evaluation = film.film_quality_evals.sole
     assert_equal response, evaluation.output.fetch("calls").sole.fetch("response")
     assert_equal false, evaluation.output.fetch("usage_complete")
-    assert_equal "invalid_response", evaluation.application.fetch("reason")
+    assert_equal "invalid_response", evaluation.output.fetch("error").fetch("reason")
     assert_empty film.reload.film_qualities
   end
 end
