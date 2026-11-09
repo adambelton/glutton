@@ -1,16 +1,12 @@
 module Ratings
   class ExplicitQualityAssessment
-    def self.configuration
-      JSON.parse(File.read(File.join(__dir__, "explicit_quality_assessment.json")))
-    end
-
     attr_reader :result
 
     def initialize(expressions:, qualities:, trace_id:)
       @expressions = expressions
       @qualities = qualities
       @trace_id = trace_id
-      @contract = self.class.configuration
+      @contract = JSON.parse(File.read(File.join(__dir__, "explicit_quality_assessment.json")))
     end
 
     def call(client:)
