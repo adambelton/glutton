@@ -1,6 +1,6 @@
 # Ratings scoring design
 
-Status: Initial explicit, implicit and baseline scoring is ready for review. Profile refresh can be run manually. Hourly scheduling and automatic reassessment are planned.  
+Status: Initial scoring and reassessment after profile publication are implemented. Profile refresh can be run manually. Hourly scheduling is planned.  
 Owner: Ratings  
 Decision dates: 22, 27 and 28 October 2026
 
@@ -19,7 +19,7 @@ flowchart TD
     E -- Latest completed profile at job start --> B
     F["Registry's accepted qualities for this film"] --> B
     B --> G["Rating quality evaluation and complete score set"]
-    E -. Planned automatic reassessment .-> H["Reassess the viewer's current ratings"]
+    E --> H["Queue reassessment of the viewer's current ratings"]
     H --> G
 ```
 
@@ -131,20 +131,22 @@ The expression profile derives exclusively from explicit expressions. Rating val
 
 Synthesis receives the film title and stored Wikipedia paragraphs alongside the viewer's current original expressions. Film context helps resolve references. The viewer's expressions support the conclusions. The resulting profile is a coherent narrative that JEV can read as plain text. The synthesis evaluation stores an explanation and source expression IDs for each conclusion so a future viewer interface can show the evidence and link to the existing rating revision flow. Engineering uses unsupported conclusions as evaluation cases for prompt improvements.
 
-Score each rating using the evidence available when it is evaluated. As new evidence becomes available, reevaluate affected scores so they catch up over time. Initial scoring can start as soon as the rating is saved, and the timing of provider work depends on when the product needs the scores. Use the latest completed expression profile available when processing starts. Record the profile version used. The planned trigger will queue reevaluation of all current ratings for that user. If the profile changes during initial evaluation, the affected rating still needs to be reevaluated against the newer version.
+Score each rating using the evidence available when it is evaluated. As new evidence becomes available, reevaluate affected scores so they catch up over time. Initial scoring can start as soon as the rating is saved, and the timing of provider work depends on when the product needs the scores. Use the latest completed expression profile available when processing starts. Record the profile version used. Publishing a revision queues reevaluation of the viewer’s current ratings in the same transaction. If the profile changes during initial evaluation, the affected rating still needs to be reevaluated against the newer version.
 
 Profile changes trigger recomputation of eligible rating qualities: only unexpressed and implicitly expressed qualities. They may move between those classifications as applicability changes. Explicitly expressed qualities retain their expression provenance and are unaffected by profile-only changes. Changes to their own rating or expressions are a separate reassessment concern.
 
-Implicitly expressed qualities are interpreted against the user's current expression profile, rather than belonging to an individual expression. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during raw-expression capture. Later processing must prevent stale work from replacing newer results and distinguish pending recomputation from completed current results; the minimal freshness mechanism belongs in that task's spec.
+Implicitly expressed qualities are interpreted against the user's current expression profile, rather than belonging to an individual expression. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during raw-expression capture. Each viewer has one pending reassessment revision. Older queued jobs skip, and an in-flight job can acknowledge only its captured revision.
 
-### Planned profile-triggered reassessment
+### Reassessment after profile publication
 
-Automatic dispatch after profile publication and reuse of explicit evidence are follow-up work. Invoking the assessment service against a newer profile currently runs the full assessment.
+Each publication queues a wakeup on the Ratings assessment queue. The worker uses the queued revision ID to skip obsolete work. Each rating assessment captures the current profile when it starts and records that revision on its evaluation. Reassessment jobs for one viewer run serially. A newer publication leaves its own pending request even if an older job is still finishing. Failed work remains pending. After investigating the failure and checking the budget, an operator can enqueue the current pending revision with `Ratings::ReassessRatingQualitiesJob.enqueue!(user_id:, profile_revision_id:)`. Recovery skips ratings already assessed for that revision.
 
 ```mermaid
 flowchart TD
-    A["Publish a new immutable profile revision"] --> B["Queue assessments for the viewer's current ratings"]
-    B --> C{"Does the rating have an applied score set?"}
+    A["Publish a new immutable profile revision"] --> B["Replace pending revision and queue a wakeup"]
+    B --> P{"Is this still the pending revision?"}
+    P -- No --> S["Skip before calling JEV"]
+    P -- Yes --> C{"Does the rating have an applied score set?"}
     C -- Yes --> D["Carry forward explicit judgments and score values"]
     D --> E["Recheck implicit and baseline qualities against the new profile"]
     C -- No --> F["Run the full assessment including explicit checks"]
@@ -157,7 +159,7 @@ flowchart TD
 
 For a Brilliant rating, an explicit score of +5, an implicit score of +4, and a baseline score of +2 can become +5, +2, and +2 when the newer profile no longer supports the implicit judgment. The earlier rows stay linked to their original evaluation. The new evaluation records the source of any carried-forward explicit evidence.
 
-### Planned sequence when the newer assessment finishes first
+### When the newer assessment finishes first
 
 ```mermaid
 sequenceDiagram
@@ -186,11 +188,11 @@ Apply the [AI model services design](ai_model_services_design.md) before impleme
 
 Ratings stores completed assessments as immutable RatingQualityEval snapshots tied to a rating version. When a profile revision is captured, the snapshot also records its ID, text, and the implicit assessment evidence. A snapshot contains the original expression text by ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured expressions, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. The Ratings question template, criteria, cutoff and pair limit come from [explicit_quality_assessment.json](../app/services/ratings/explicit_quality_assessment.json). The `Ratings::RatingQualityScores` model module defines the default score weights. Ratings captures them when recording an evaluation. New evaluations apply their captured weights in the same transaction that records them. Historical scores remain stored with the evaluations that produced them. Explicit applicability uses an inclusive 0.60 threshold. Evaluations retain the actual threshold, assessment limits and non-secret provider settings alongside the questions, results and returned model. Provider adapters validate external responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
 
-Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The assessment service runs provider work before acquiring the rating-film lock. Under the lock, Ratings checks freshness, records the evaluation, and applies scores in one transaction. A candidate can apply if it is the first set or uses a strictly newer profile revision. Ratings without expressions can use implicit evidence when a profile is available. With neither evidence source, scoring uses the baseline. The planned profile-only reassessment will preserve existing explicit judgments.
+Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The assessment service runs provider work before acquiring the rating-film lock. Under the lock, Ratings checks freshness, records the evaluation, and applies scores in one transaction. A candidate can apply if it is the first set or uses a strictly newer profile revision. Ratings without expressions can use implicit evidence when a profile is available. With neither evidence source, scoring uses the baseline. Profile-only reassessment preserves existing explicit judgments.
 
 Submitting or revising a rating enqueues its ID on `ratings_assessment` in the same PostgreSQL transaction. The viewer can continue once that transaction commits. GoodJob serializes queued executions per rating version. Missing or superseded versions finish without applying scores, and an already applied profile revision skips provider work. Films with no accepted qualities require no evaluation. Provider failures and interrupted executions remain visible as failed jobs without an automatic provider retry because the previous request may already have been billed. An operator can explicitly enqueue a fresh job for a still-current rating after investigating the failure and checking the budget.
 
-The default development worker consumes only `domain_events`. Running a worker for `ratings_assessment` requires separate operational approval, including authorization to send real expressions to the provider. No existing-rating backfill is scheduled.
+The default development worker consumes only `domain_events`. Running a worker for `ratings_assessment` requires separate operational approval, including authorization to send real expressions to the provider. Existing ratings are reassessed when a new profile revision is published. There is no blanket backfill.
 
 Expression-profile synthesis/updates require an LLM call, with no assumed JEV gate. JEV handles quality judgments against the resulting profile and against original expressions. Durable evaluation evidence belongs in the application database. Langfuse can trace the Ratings workflow and provider generation using counts, model, usage and evaluation linkage. Expression text and provider bodies stay out of these traces. Both evaluation models record an assessment result in an immutable `output` snapshot and enforce required fields in the database. Ratings records completed assessments. Registry also records failed attempts and tracks application separately. FilmQualityEval remains separately owned by Registry; no shared product evaluation table/framework is required.
 
@@ -219,7 +221,7 @@ Owner decision, 27 October 2026:
 
 The podcast/profile/review comparison is a consumer of these histories, not part of standalone film analysis. Use actual engine scores and explain their calculated positive/negative contributions. Comparing new expressions with the earlier expectation must not recompute that earlier expectation against the updated profile.
 
-Currentness still uses the highest Rating ID. Submission and replacement save the rating and expressions. Applying an evaluation creates its quality scores. Existing ratings can receive scores once evaluated. Earlier superseded ratings retain their original submissions and expressions. Explicit supersession timestamps and automatic profile reassessment remain planned.
+Currentness still uses the highest Rating ID. Submission and replacement save the rating and expressions. Applying an evaluation creates its quality scores. Existing ratings can receive scores once evaluated. Earlier superseded ratings retain their original submissions and expressions. Explicit supersession timestamps remain planned.
 
 ## Source refresh and accepted quality changes
 

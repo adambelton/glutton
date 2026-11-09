@@ -7,12 +7,23 @@ module Ratings
     validate :evaluation_output
 
     def self.record!(rating:, assessment:)
-      evaluation = new(rating:, output: assessment.result.merge("score_weights" => RatingQualityScores::ALL))
+      output = assessment.result
+      scores = RatingQualityScores::ALL
+      if output.key?("explicit_source_evaluation_id")
+        source = rating.rating_quality_evals.find(output.fetch("explicit_source_evaluation_id"))
+        explicit = RatingQuality::Classifications::EXPLICITLY_EXPRESSED
+        weights = source.output["score_weights"] || source.output.dig("question_policy", "scores") || scores
+        scores = scores.merge(explicit => weights.fetch(explicit))
+        carried_scores = source.rating_qualities.where(classification: explicit).pluck(:quality_id, :score).to_h.transform_keys(&:to_s)
+        output = output.merge("carried_explicit_scores" => carried_scores)
+      end
+      evaluation = new(rating:, output: output.merge("score_weights" => scores))
       rating_film = rating.rating_film
       rating_film.with_lock(requires_new: true) do
         raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id
         next unless rating.can_apply_quality_evaluation?(evaluation)
 
+        rating.ensure_explicit_evidence_current!(evaluation) if evaluation.profile_revision_id.present?
         evaluation.save!
         apply_quality_scores!(evaluation)
         evaluation
@@ -26,6 +37,15 @@ module Ratings
     def covers_profile_revision?(revision_id)
       applied_revision_id = profile_revision_id
       revision_id.nil? || (applied_revision_id.present? && applied_revision_id >= revision_id)
+    end
+
+    def explicit_source_id
+      output["explicit_source_evaluation_id"] || id
+    end
+
+    def explicit_evidence_for_reassessment
+      output.slice("expressions", "qualities", "calls", "decisions", "question_policy", "minimum_support",
+        "configuration", "model", "usage").merge("explicit_source_evaluation_id" => explicit_source_id)
     end
 
     def readonly?
@@ -43,9 +63,10 @@ module Ratings
       explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
       implicit_ids = output.dig("implicit_assessment", "applicable_quality_ids") || []
       scores = output.fetch("score_weights")
+      carried_scores = output["carried_explicit_scores"] || {}
       output.fetch("qualities").keys.map(&:to_i).each do |quality_id|
         classification = classify_quality(quality_id, explicit_ids, implicit_ids)
-        score = scores.fetch(classification).fetch(rating.value)
+        score = carried_scores.fetch(quality_id.to_s) { scores.fetch(classification).fetch(rating.value) }
         evaluation.rating_qualities.create!(rating:, quality_id:, classification:, score:)
       end
     end
