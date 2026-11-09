@@ -124,7 +124,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
     synthesizer = lambda do |expressions:, **|
       ids = expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") }
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
-        "paragraphs" => [ { "text" => profile, "explanation" => "Source expression", "expression_ids" => ids } ] }
+        "profile" => profile, "conclusions" => [ { "anchor" => profile, "claim" => profile, "explanation" => "Source expression", "expression_ids" => ids } ] }
     end
     Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
   end

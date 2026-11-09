@@ -26,6 +26,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       namespace :registry do
         root "films#index"
       end
+      resource :account, only: :show, controller: :account
       resource :library, only: :show, controller: :library
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :password_reset, only: [ :new, :create, :edit, :update ]

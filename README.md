@@ -36,7 +36,7 @@ Run the JavaScript system tests with `bin/rails test:system`. Rails uses headles
 bin/dev
 ```
 
-`bin/dev` builds application styles, then starts Rails and an event-only GoodJob worker together against the same development database. The worker processes `domain_events` so rating submissions reach Library automatically; AI/provider queues are excluded. If either process exits, the other is stopped. While changing styles/components, run `bin/rails tailwindcss:watch` in a second terminal. Tests and asset precompilation also build Tailwind.
+`bin/dev` builds application styles, then starts Rails and a GoodJob worker together against the same development database. The worker processes `domain_events` and `ratings_assessment`, including rating scores and manually queued profile refreshes. If either process exits, the other is stopped. While changing styles/components, run `bin/rails tailwindcss:watch` in a second terminal. Tests and asset precompilation also build Tailwind.
 
 Open [Glutton](http://glutton.local:3000) (or [localhost](http://localhost:3000)) or the [health endpoint](http://localhost:3000/up). Stop the web server and its worker with **Ctrl-C**. To choose another port, use `bin/dev -p 3001`.
 
@@ -475,7 +475,13 @@ The job logs localized structured warnings for each film with zero qualities, an
 
 ## Run a Ratings expression profile batch
 
-Open Rails console in the intended environment and run the pending batch.
+GoodJob schedules profile refresh every 15 minutes on the UTC quarter hour in production. The production worker can process Ratings and domain events with `RAILS_ENV=production bin/jobs --queues=domain_events,ratings_assessment`. Use the direct database endpoint described in [domain event operations](docs/domain_event_operations.md). The profile schedule is disabled in development.
+
+An unfinished scheduled refresh job suppresses additional ticks. A missed tick leaves requests pending for the next run. Per-viewer failures stay pending and the scheduled job logs counts by failure reason.
+
+Superusers can open **Account → Expression profile** to see their own published profile, follow inline annotations to the evidence, and inspect pending changes. **Refresh expression profile** queues just their own pending work. The worker started by `bin/dev` processes these requests.
+
+For a manual console refresh, avoid running it alongside a refresh worker. Open Rails console in the intended environment and run the pending batch.
 
 ```ruby
 Ratings::RefreshExpressionProfiles.call

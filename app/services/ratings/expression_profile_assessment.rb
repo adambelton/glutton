@@ -3,13 +3,15 @@ module Ratings
     INSTRUCTIONS = File.read(File.join(__dir__, "expression_profile_prompt.txt")).freeze
 
     SCHEMA = {
-      type: "object", additionalProperties: false, required: %w[paragraphs],
+      type: "object", additionalProperties: false, required: %w[profile conclusions],
       properties: {
-        paragraphs: {
+        profile: { type: "string" },
+        conclusions: {
           type: "array", items: {
-            type: "object", additionalProperties: false, required: %w[text explanation expression_ids],
+            type: "object", additionalProperties: false, required: %w[anchor claim explanation expression_ids],
             properties: {
-              text: { type: "string" },
+              anchor: { type: "string" },
+              claim: { type: "string" },
               explanation: { type: "string" },
               expression_ids: { type: "array", items: { type: "integer" } }
             }
@@ -27,9 +29,9 @@ module Ratings
     end
 
     def call(synthesizer:)
-      paragraphs, synthesis = @evidence.empty? ? [ [], nil ] : synthesize(synthesizer)
-      @result = { "evidence" => @evidence, "profile" => paragraphs.pluck("text").join("\n\n"),
-        "annotations" => paragraphs, "synthesis" => synthesis, "trace_id" => @trace_id }
+      profile, annotations, synthesis = @evidence.empty? ? [ "", [], nil ] : synthesize(synthesizer)
+      @result = { "evidence" => @evidence, "profile" => profile,
+        "annotations" => annotations, "synthesis" => synthesis, "trace_id" => @trace_id }
       self
     end
 
@@ -49,10 +51,10 @@ module Ratings
         "langfuse.trace.tags" => @trace_tags,
         "langfuse.environment" => Rails.env.to_s
       }, record_exception: false) do |span|
-        paragraphs, synthesis = validated_synthesis(request_synthesis(synthesizer))
+        profile, annotations, synthesis = validated_synthesis(request_synthesis(synthesizer))
         span.set_attribute("langfuse.observation.model.name", synthesis.fetch("model"))
         span.set_attribute("langfuse.observation.usage_details", synthesis.fetch("usage").to_json)
-        [ paragraphs, synthesis ]
+        [ profile, annotations, synthesis ]
       rescue ExpressionProfileRefreshFailed
         span.status = OpenTelemetry::Trace::Status.error("Expression profile synthesis failed")
         span.set_attribute("langfuse.observation.level", "ERROR")
@@ -71,35 +73,39 @@ module Ratings
     def validated_synthesis(result)
       raise ExpressionProfileRefreshFailed.new(reason: :invalid_response) unless result.is_a?(Hash)
 
-      paragraphs, provider, model, usage = result.values_at("paragraphs", "provider", "model", "usage")
+      profile, conclusions, provider, model, usage = result.values_at("profile", "conclusions", "provider", "model", "usage")
       unless [ provider, model ].all? { |text| text.is_a?(String) && text.present? } &&
           usage.is_a?(Hash) && usage.values_at("input", "output").all? { |count| count.is_a?(Integer) && count >= 0 }
         raise ExpressionProfileRefreshFailed.new(reason: :invalid_response)
       end
 
-      paragraphs = validated_paragraphs(paragraphs)
+      invalid_response unless profile.is_a?(String) && profile.present? && profile.length <= MAXIMUM_PROFILE_LENGTH
+
+      annotations = validated_conclusions(profile, conclusions)
       provenance = result.slice("settings").merge(
         "prompt" => { "instructions" => INSTRUCTIONS, "sha256" => Digest::SHA256.hexdigest(INSTRUCTIONS), "schema" => SCHEMA })
-      [ paragraphs, provenance.merge("provider" => provider, "model" => model, "usage" => usage.slice("input", "output")) ]
+      [ profile, annotations, provenance.merge("provider" => provider, "model" => model, "usage" => usage.slice("input", "output")) ]
     end
 
-    def validated_paragraphs(paragraphs)
-      invalid_response unless paragraphs.is_a?(Array) && paragraphs.any?
+    def validated_conclusions(profile, conclusions)
+      invalid_response unless conclusions.is_a?(Array) && conclusions.any?
 
       evidence_ids = @evidence.pluck("expression_id").to_set
-      paragraphs = paragraphs.map do |paragraph|
-        invalid_response unless paragraph.is_a?(Hash)
-        content, explanation, ids = paragraph.values_at("text", "explanation", "expression_ids")
-        unless [ content, explanation ].all? { |text| text.is_a?(String) && text.present? } &&
+      previous_end = 0
+      conclusions.map do |conclusion|
+        invalid_response unless conclusion.is_a?(Hash)
+        anchor, claim, explanation, ids = conclusion.values_at("anchor", "claim", "explanation", "expression_ids")
+        unless [ anchor, claim, explanation ].all? { |text| text.is_a?(String) && text.present? } &&
             ids.is_a?(Array) && ids.any? && ids.all? { |id| id.is_a?(Integer) && evidence_ids.include?(id) }
           invalid_response
         end
 
-        { "text" => content.strip, "explanation" => explanation.strip, "expression_ids" => ids.uniq }
-      end
-      invalid_response if paragraphs.pluck("text").join("\n\n").length > MAXIMUM_PROFILE_LENGTH
+        start = profile.index(anchor)
+        invalid_response unless start && start >= previous_end && profile.index(anchor, start + 1).nil?
 
-      paragraphs
+        previous_end = start + anchor.length
+        { "claim" => claim.strip, "end_offset" => previous_end, "explanation" => explanation.strip, "expression_ids" => ids.uniq }
+      end
     end
 
     def invalid_response
