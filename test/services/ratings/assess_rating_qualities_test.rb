@@ -59,6 +59,48 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_nil assess(rating, no_call_client)
   end
 
+  test "a film with 28 qualities and three expressions fits the Ratings request guard" do
+    category = quality_categories(:tone)
+    26.times do |index|
+      quality = category.qualities.create!(name: "Additional quality #{index}",
+        match_rule: "A sustained sense of unease that changes how the viewer interprets the setting.",
+        not_sufficient: "An isolated surprise without an effect on the viewer’s sense of the setting.")
+      Registry::FilmQuality.create!(film: @film, quality:)
+    end
+    rating = submit([ "Dread builds slowly.", "The sound stood out.", "I liked the atmosphere." ])
+    http = Http.new(->(payload) { response(payload.fetch("questions")) })
+    client = TypeSafeClient.new(token: "test-token", http_class: http, profile: :ratings)
+
+    evaluation = assess(rating, client)
+
+    assert_equal 84, JSON.parse(http.requests.sole.body).fetch("questions").size
+    assert_equal 28, evaluation.rating_qualities.count
+  end
+
+  test "the largest supported rating splits oversized explicit requests without losing judgments" do
+    category = quality_categories(:tone)
+    26.times do |index|
+      quality = category.qualities.create!(name: "Additional quality #{index}",
+        match_rule: "A sustained sense of unease that changes how the viewer interprets the setting.",
+        not_sufficient: "An isolated surprise without an effect on the viewer’s sense of the setting.")
+      Registry::FilmQuality.create!(film: @film, quality:)
+    end
+    expressions = Array.new(Ratings::Rating::MAX_EXPRESSIONS, "👻" * Ratings::RatingExpression::MAX_TEXT_LENGTH)
+    rating = submit(expressions)
+    http = Http.new(lambda do |payload|
+      response(payload.fetch("questions")).merge("usage" => { "input_tokens" => JSON.generate(payload).bytesize / 2, "output_tokens" => 2 })
+    end)
+    client = TypeSafeClient.new(token: "test-token", http_class: http, profile: :ratings)
+
+    evaluation = assess(rating, client)
+
+    assert_equal 2, http.requests.size
+    sent = http.requests.map { |request| JSON.parse(request.body) }
+    assert_equal 560, sent.sum { |payload| payload.fetch("questions").size }
+    assert_equal sent, evaluation.input.pluck("request")
+    assert_equal 28, evaluation.rating_qualities.count
+  end
+
   test "assesses only qualities without direct evidence against the captured profile" do
     rating = submit([ "Dread builds slowly." ])
     revision = publish_profile

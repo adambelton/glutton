@@ -119,6 +119,12 @@ Operators can run `Ratings::RefreshExpressionProfiles.call` in Rails console to 
 
 Expression-profile updates require an LLM call; no JEV gate is assumed. JEV evaluates rating qualities against profiles or explicit expressions. Application evidence belongs in the database, with optional Langfuse diagnostic links. Do not introduce a generic cross-domain evaluation table/framework.
 
+## Future Ratings writing guidance
+
+Explore presenting rating expressions as optional **reflections**, with the feel of a private film journal. A light prompt such as “What stayed with you? What made it work or fall flat?” could help viewers explain what shaped their reaction. A note like “I liked the slow pace” is useful on its own. Adding that the quiet made each return to the house feel less safe gives the profile a condition it can use when interpreting other films. Try the wording with viewers and see whether it helps them write more informative reflections without adding friction to rating.
+
+The weekly podcast is a natural place to try this. Discuss the film, use follow-up questions to surface what shaped each host’s reaction, then let each host write their own reflections in Glutton. The discussion can reveal why the same quality worked for one person and fell flat for another.
+
 ## Release follow-up
 
 Complete the seed-first sequence above before later admin improvements. Admin viewing requires authorisation before exposure; manual source refresh changes no accepted qualities. Source/association changes do not themselves authorise downstream score mutations. Community editing, scheduled syncing, streaming integrations and speculative extra event consumers are not prerequisites.

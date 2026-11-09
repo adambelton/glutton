@@ -78,7 +78,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")
     assert_equal narrative, revision.profile
     evaluation = revision.expression_profile_revision_eval
-    assert_equal JSON.parse(JSON.generate(request.merge(text: { format: request.dig(:text, :format_) }))),
+    assert_equal JSON.parse(JSON.generate(request)),
       evaluation.input.sole.fetch("request")
     assert_equal({ "profile" => narrative, "conclusions" => conclusions }, output.fetch("provider_response"))
     assert_equal output.fetch("annotations"), revision.reload.annotations
@@ -86,8 +86,8 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal conclusions.map { |claim| narrative.index(claim.fetch("anchor")) + claim.fetch("anchor").length },
       output.fetch("annotations").pluck("end_offset")
     assert_equal conclusions.pluck("explanation"), output.fetch("annotations").pluck("explanation")
-    assert_equal true, request.dig(:text, :format_, :strict)
-    assert_equal "json_schema", request.dig(:text, :format_, :type)
+    assert_equal true, request.dig(:text, :format, :strict)
+    assert_equal "json_schema", request.dig(:text, :format, :type)
 
     Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: rating_film.id, previous_rating_id: rating.id,
       value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "I disliked the long wait." ])

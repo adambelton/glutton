@@ -1,6 +1,6 @@
 {
   "minimum_support": 0.60,
-  "maximum_pairs": 512,
+  "maximum_pairs": 560,
   "question_type": "noul",
   "question_template": "Does expressions[\"{expression_id}\"] address qualities[\"{quality_id}\"] as defined?",
   "criteria": {

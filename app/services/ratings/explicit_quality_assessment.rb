@@ -1,6 +1,6 @@
 module Ratings
   class ExplicitQualityAssessment
-    attr_reader :input, :response, :result
+    attr_reader :provider_calls, :result
 
     def initialize(expressions:, qualities:, trace_id:)
       @expressions = expressions
@@ -19,15 +19,27 @@ module Ratings
           "criteria" => @contract.fetch("criteria")
         }
       end
-      response = @response = answer(client, questions) if questions.present?
-      answers = response ? response.fetch("answers") : {}
-      exchanges = questions.map { |id, question| { "id" => id, "question" => question, "result" => answers.fetch(id) } }
+      configuration = client.configuration if questions.present?
+      @provider_calls = []
+      answers = {}
+      exchanges = if questions.present?
+        batches(pairs, questions, configuration).map do |request|
+          response = answer(client, request)
+          answers.merge!(response.fetch("answers"))
+          request.fetch("questions").map do |id, question|
+            { "id" => id, "question" => question, "result" => answers.fetch(id) }
+          end
+        end
+      else
+        []
+      end
+      responses = @provider_calls.pluck("response")
 
       @result = {
-        "expressions" => @expressions, "qualities" => @qualities, "calls" => exchanges.present? ? [ exchanges ] : [],
+        "expressions" => @expressions, "qualities" => @qualities, "calls" => exchanges,
         "decisions" => decisions(pairs, answers), "question_policy" => @contract, "minimum_support" => @contract.fetch("minimum_support"),
-        "configuration" => { "maximum_pairs" => @contract.fetch("maximum_pairs"), "provider" => (client.configuration if questions.present?) },
-        "model" => response&.fetch("model"), "usage" => response&.fetch("usage"), "trace_id" => @trace_id
+        "configuration" => { "maximum_pairs" => @contract.fetch("maximum_pairs"), "provider" => configuration },
+        "model" => responses.last&.fetch("model"), "usage" => combined_usage(responses), "trace_id" => @trace_id
       }
       self
     end
@@ -44,13 +56,34 @@ module Ratings
       end
     end
 
-    def answer(client, questions)
-      state = { expressions: @expressions, qualities: @qualities }
+    def batches(pairs, questions, configuration)
+      expression_ids = pairs.values.map(&:first).uniq
+      state = { expressions: @expressions.slice(*expression_ids), qualities: @qualities }
+      request = { "model" => configuration.fetch("model"), "state" => state, "questions" => questions }
+      maximum_bytes = configuration.fetch("maximum_request_bytes", Float::INFINITY)
+      return [ request ] if JSON.generate(request).bytesize <= maximum_bytes
+      raise QualityAssessmentFailed.new(reason: :too_large) if expression_ids.one?
+
+      left_ids = expression_ids.take(expression_ids.size / 2).to_set
+      left, right = pairs.partition { |_, (expression_id, _)| left_ids.include?(expression_id) }
+      [ left.to_h, right.to_h ].flat_map { |group| batches(group, questions.slice(*group.keys), configuration) }
+    end
+
+    def answer(client, request)
       phase = "assess-explicit-quality-evidence"
-      @input = { "phase" => phase, "request" => { "model" => client.configuration.fetch("model"), "state" => state, "questions" => questions } }
-      client.answer(state:, questions:, phase:)
+      response = client.answer(state: request.fetch("state"), questions: request.fetch("questions"), phase:)
+      @provider_calls << { "phase" => phase, "request" => request, "response" => response }
+      response
     rescue TypeSafeClient::Error => error
       raise QualityAssessmentFailed.new(reason: error.reason), cause: nil
+    end
+
+    def combined_usage(responses)
+      return if responses.empty?
+
+      %w[input_tokens output_tokens].index_with do |key|
+        responses.sum { |response| response.fetch("usage").fetch(key) }
+      end
     end
 
     def decisions(pairs, answers)
