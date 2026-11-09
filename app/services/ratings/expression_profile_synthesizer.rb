@@ -28,8 +28,7 @@ module Ratings
     def openai_profile(request)
       fail_synthesis(:provider_failure) unless @openai_client
 
-      format = request.fetch(:text).fetch(:format)
-      response = @openai_client.responses.create(**request.merge(text: { format_: format }))
+      response = @openai_client.responses.create(**request)
       fail_synthesis(:invalid_response) unless response.status.to_s == "completed"
 
       parts = response.output.select { |item| item.type.to_s == "message" }.flat_map(&:content)

@@ -1,6 +1,6 @@
 module Ratings
   class ImplicitQualityAssessment
-    attr_reader :input, :response
+    attr_reader :provider_calls
 
     def initialize(profile_revision_id:, profile:, qualities:)
       @profile_revision_id = profile_revision_id
@@ -11,7 +11,8 @@ module Ratings
 
     def call(client:)
       questions = build_questions
-      response = @response = answer(client, questions) if questions.present?
+      @provider_calls = []
+      response = answer(client, questions) if questions.present?
       answers = response&.fetch("answers") || {}
       exchanges = questions.map { |id, question| { "id" => id, "question" => question, "result" => answers.fetch(id) } }
 
@@ -43,8 +44,10 @@ module Ratings
     def answer(client, questions)
       state = { expression_profile: @profile, qualities: @qualities }
       phase = "assess-implicit-quality-evidence"
-      @input = { "phase" => phase, "request" => { "model" => client.configuration.fetch("model"), "state" => state, "questions" => questions } }
-      client.answer(state:, questions:, phase:)
+      request = { "model" => client.configuration.fetch("model"), "state" => state, "questions" => questions }
+      response = client.answer(state:, questions:, phase:)
+      @provider_calls << { "phase" => phase, "request" => request, "response" => response }
+      response
     rescue TypeSafeClient::Error => error
       raise QualityAssessmentFailed.new(reason: error.reason), cause: nil
     end

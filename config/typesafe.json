@@ -14,8 +14,8 @@
     "trace_payload": true
   },
   "ratings": {
-    "maximum_requests": 3,
-    "maximum_request_bytes": 24576,
+    "maximum_requests": 4,
+    "maximum_request_bytes": 196608,
     "maximum_response_bytes": 2097152
   }
 }

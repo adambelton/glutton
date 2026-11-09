@@ -19,7 +19,7 @@ module Ratings
         @explicit_evidence.merge("trace_id" => @trace_id)
       else
         explicit = ExplicitQualityAssessment.new(expressions: @expressions, qualities: @qualities, trace_id: @trace_id).call(client:)
-        capture_call(explicit)
+        capture_calls(explicit)
         explicit.result
       end
       @result = @result.merge("provider_responses" => @responses)
@@ -31,7 +31,7 @@ module Ratings
       else
         assessment = ImplicitQualityAssessment.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible)
         result = assessment.call(client:)
-        capture_call(assessment)
+        capture_calls(assessment)
         result
       end
       @result = @result.merge("implicit_assessment" => implicit)
@@ -40,11 +40,11 @@ module Ratings
 
     private
 
-    def capture_call(assessment)
-      return unless assessment.input.present?
-
-      @input << assessment.input
-      @responses << { "phase" => assessment.input.fetch("phase"), "response" => assessment.response }
+    def capture_calls(assessment)
+      assessment.provider_calls.each do |call|
+        @input << call.slice("phase", "request")
+        @responses << call.slice("phase", "response")
+      end
     end
 
     def eligible_qualities(result)
