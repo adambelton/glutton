@@ -39,7 +39,6 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_equal [ @quality ], film.qualities.to_a
     assert_equal [ evaluation.id ], result.fetch(:film_qualities).map(&:film_quality_eval_id)
     assert_equal film.id, evaluation.film_id
-    assert_equal "applied", evaluation.application.fetch("status")
     assert_equal 1, evaluation.output.fetch("call_count")
     assert_empty result.fetch(:warnings)
     assert_equal [ :tmdb, :external_ids, :wikidata, :wikipedia ], @sources.source_requests.map { |request| request.fetch(:phase) }
@@ -63,7 +62,6 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_not film.has_film_qualities?
     evaluation = film.film_quality_evals.sole
     assert_equal "failed", evaluation.output.fetch("status")
-    assert_equal "failed", evaluation.application.fetch("status")
     assert_equal 1, sources.assessment_requests.size
   end
 
@@ -74,7 +72,7 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     film = Registry::Film.find_by!(tmdb_id: TMDB_IDS.first)
     assert film.has_source_context?
     assert_not film.has_film_qualities?
-    assert_equal "persistence_error", film.film_quality_evals.sole.application.fetch("reason")
+    assert_equal "completed", film.film_quality_evals.sole.output.fetch("status")
   end
 
   test "zero supported qualities are warned rather than reported as complete coverage" do

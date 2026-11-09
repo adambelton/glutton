@@ -1,36 +1,51 @@
 module Ratings
   class RatingQualityAssessment
-    attr_reader :result
+    attr_reader :input, :result
 
-    def initialize(expressions:, qualities:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_result: nil)
+    def initialize(expressions:, qualities:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_assessment: nil)
       @qualities = qualities
       @profile_revision_id = profile_revision_id
       @profile = profile
       @expressions = expressions
       @trace_id = trace_id
       @explicit_evidence = explicit_evidence
-      @previous_result = previous_result
+      @previous_result = previous_assessment&.result
+      @input = previous_assessment&.input&.dup || []
+      @responses = @previous_result&.fetch("provider_responses")&.dup || []
     end
 
     def call(client:)
       @result = if @explicit_evidence.present?
         @explicit_evidence.merge("trace_id" => @trace_id)
       else
-        ExplicitQualityAssessment.new(expressions: @expressions, qualities: @qualities, trace_id: @trace_id).call(client:).result
+        explicit = ExplicitQualityAssessment.new(expressions: @expressions, qualities: @qualities, trace_id: @trace_id).call(client:)
+        capture_call(explicit)
+        explicit.result
       end
+      @result = @result.merge("provider_responses" => @responses)
       return self if @profile_revision_id.nil?
 
       eligible = eligible_qualities(@result)
       implicit = if @previous_result.present? && eligible == eligible_qualities(@previous_result)
         @previous_result.fetch("implicit_assessment")
       else
-        ImplicitQualityAssessment.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible).call(client:)
+        assessment = ImplicitQualityAssessment.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible)
+        result = assessment.call(client:)
+        capture_call(assessment)
+        result
       end
       @result = @result.merge("implicit_assessment" => implicit)
       self
     end
 
     private
+
+    def capture_call(assessment)
+      return unless assessment.input.present?
+
+      @input << assessment.input
+      @responses << { "phase" => assessment.input.fetch("phase"), "response" => assessment.response }
+    end
 
     def eligible_qualities(result)
       explicit_ids = result.fetch("decisions").select { |decision| decision.fetch("applicable") }.pluck("quality_id")

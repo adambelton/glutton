@@ -1,6 +1,6 @@
 module Registry
   class InitialQualityAssessment
-    attr_reader :result
+    attr_reader :input, :result
 
     def initialize(source:, definitions:, categories:, trace_id: nil)
       @source, @definitions, @categories = source, definitions, categories
@@ -8,6 +8,7 @@ module Registry
       @trace_id = trace_id
       @calls, @support, @selected_quality_ids = [], {}, []
       @selection_decisions = []
+      @input = []
     end
 
     def call(client:)
@@ -45,8 +46,8 @@ module Registry
     attr_reader :source, :definitions, :categories
 
     def answer(client:, state:, questions:, phase:)
-      call = { "phase" => phase, "started_at" => Time.current.utc.iso8601,
-        "request" => { "model" => client.model, "state" => state, "questions" => questions } }
+      call = { "phase" => phase, "started_at" => Time.current.utc.iso8601 }
+      @input << { "phase" => phase, "request" => { "model" => client.model, "state" => state, "questions" => questions } }
       @calls << call
       response = request_answers(client, state:, questions:, phase:)
       call.merge!("status" => "completed", "response" => response)
@@ -54,6 +55,7 @@ module Registry
     rescue AssignmentFailed => error
       call.merge!("status" => error.request_sent == false ? "not_sent" : "failed",
         "error" => { "reason" => error.reason.to_s })
+      @input.pop if error.request_sent == false
       call["response"] = error.provider_response unless error.provider_response.nil?
       raise
     rescue StandardError

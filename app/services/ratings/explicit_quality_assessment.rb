@@ -1,6 +1,6 @@
 module Ratings
   class ExplicitQualityAssessment
-    attr_reader :result
+    attr_reader :input, :response, :result
 
     def initialize(expressions:, qualities:, trace_id:)
       @expressions = expressions
@@ -19,7 +19,7 @@ module Ratings
           "criteria" => @contract.fetch("criteria")
         }
       end
-      response = answer(client, questions) if questions.present?
+      response = @response = answer(client, questions) if questions.present?
       answers = response ? response.fetch("answers") : {}
       exchanges = questions.map { |id, question| { "id" => id, "question" => question, "result" => answers.fetch(id) } }
 
@@ -45,8 +45,10 @@ module Ratings
     end
 
     def answer(client, questions)
-      client.answer(state: { expressions: @expressions, qualities: @qualities }, questions:,
-        phase: "assess-explicit-quality-evidence")
+      state = { expressions: @expressions, qualities: @qualities }
+      phase = "assess-explicit-quality-evidence"
+      @input = { "phase" => phase, "request" => { "model" => client.configuration.fetch("model"), "state" => state, "questions" => questions } }
+      client.answer(state:, questions:, phase:)
     rescue TypeSafeClient::Error => error
       raise QualityAssessmentFailed.new(reason: error.reason), cause: nil
     end

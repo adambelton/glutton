@@ -99,9 +99,10 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
           response(questions, { "expression_#{expression_id}_quality_#{@quality.id}" => 0.99 })
         end)
         # Record an initial assessment that started before the profile was published.
-        explicit = Ratings::ExplicitQualityAssessment.new(expressions: state.fetch(:expressions),
-          qualities: state.fetch(:qualities), trace_id: nil).call(client: initial_client)
-        initial = Ratings::RatingQualityEval.record!(rating:, assessment: explicit)
+        initial_assessment = Ratings::RatingQualityAssessment.new(expressions: state.fetch(:expressions),
+          qualities: state.fetch(:qualities), profile_revision_id: nil, profile: nil, trace_id: nil).call(client: initial_client)
+        initial = Ratings::RatingQualityEval.record!(rating:, assessment: initial_assessment)
+        rating.apply_quality_evaluation!(evaluation: initial)
         response(questions, { "expression_#{expression_id}_quality_#{@other_quality.id}" => 0.99 })
       else
         response(questions, questions.keys.index_with(0.99))
@@ -140,9 +141,10 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal [ -2, -1 ], evaluation.rating_qualities.order(:quality_id).pluck(:score)
     assert_nil assess(rating, no_call_client)
 
-    older_assessment = Struct.new(:result).new(evaluation.output)
-    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
-      assert_nil Ratings::RatingQualityEval.record!(rating:, assessment: older_assessment)
+    older_assessment = Struct.new(:result, :input).new(evaluation.output, [])
+    older_evaluation = Ratings::RatingQualityEval.record!(rating:, assessment: older_assessment)
+    assert_no_difference "Ratings::RatingQuality.count" do
+      assert_nil rating.apply_quality_evaluation!(evaluation: older_evaluation)
     end
   end
 
@@ -168,6 +170,7 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
   test "no expressions produce baseline rows and an empty call history" do
     evaluation = assess(submit([]), no_call_client)
 
+    assert_empty evaluation.input
     assert_empty evaluation.output.fetch("calls")
     assert_equal({ @quality.id => 2, @other_quality.id => 2 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
   end
@@ -259,6 +262,10 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal client.configuration, evaluation.reload.output.dig("configuration", "provider")
     assert_equal client.configuration, evaluation.output.dig("implicit_assessment", "configuration")
     assert_equal 2, http.requests.size
+    assert_equal http.requests.map { |request| JSON.parse(request.body) }, evaluation.input.pluck("request")
+    assert_equal evaluation.input.pluck("phase"), evaluation.output.fetch("provider_responses").pluck("phase")
+    assert_equal http.requests.map { |request| response(JSON.parse(request.body).fetch("questions")) },
+      evaluation.output.fetch("provider_responses").pluck("response")
     assert_includes http.requests.first.body, "Private expression for tracing test."
     assert_includes http.requests.last.body, revision.profile
     refute_includes spans.values.map(&:attributes).to_json, revision.profile
@@ -271,7 +278,8 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
   private
 
   def publish_profile
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       paragraph = {
         "anchor" => "The viewer enjoys slowly building dread.", "claim" => "Enjoys slowly building dread.",
         "explanation" => "The viewer described dread.",

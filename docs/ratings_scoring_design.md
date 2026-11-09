@@ -67,7 +67,8 @@ sequenceDiagram
     participant Queue as Assessment queue
     participant Job as Rating quality job
     participant JEV
-    participant Eval as RatingQualityEval
+    participant Eval as Rating quality evaluation
+    participant Rating as Rating aggregate
 
     Viewer->>Ratings: Submit or revise a rating
     Ratings->>Ratings: Save the rating version and original expressions
@@ -84,8 +85,9 @@ sequenceDiagram
         JEV-->>Job: Implicit judgments
     end
     Job->>Eval: Hand off one completed candidate
-    Eval->>Eval: Lock the rating film and ask Rating if the candidate can apply
-    Eval->>Eval: If accepted, save the evaluation and complete score set
+    Job->>Rating: Apply the recorded evaluation in the same transaction
+    Rating->>Rating: Lock the rating film and check candidate applicability
+    Rating->>Rating: If accepted, save the complete score set
 ```
 
 ### Choosing explicit, implicit, or baseline scores
@@ -111,7 +113,7 @@ flowchart TD
 
 ### Applying a score set
 
-`Rating` decides whether the candidate evaluation can apply. The evaluation records the evidence and creates the new `RatingQuality` rows in one transaction. Each row keeps its original evaluation link.
+`Rating` decides whether the candidate evaluation can apply and creates the new `RatingQuality` rows. The service records the evaluation and applies the rows in one transaction. Each row keeps its original evaluation link.
 
 ```mermaid
 flowchart TD
@@ -127,9 +129,9 @@ flowchart TD
 
 ## Expression profile and recomputation
 
-The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements. Record pending profile work when a viewer submits or revises a rating with changed expressions. The 15-minute GoodJob trigger processes these durable requests in production. Operators can run the same batch from Rails console. Synthesize only when their current explicit expressions differ from the evidence used for the last applied profile. Identical replacement text for the same film and changes that cancel within the window require no synthesis. Synthesize from the full current set so superseded text stops contributing. Clear the applied profile without a provider call when no evidence remains. Baseline and explicit scoring can proceed for each rating, and implicit scores catch up after a new profile is completed.
+The expression profile derives exclusively from explicit expressions. Rating values, derived quality scores and profile-informed inferences must never feed back into it as user statements. Record pending profile work when a viewer submits or revises a rating with changed expressions. The 15-minute GoodJob trigger processes these durable requests in production. Operators can run the same batch from Rails console. Synthesize only when their current explicit expressions differ from the evidence used for the last applied profile. Identical replacement text for the same film and changes that cancel within the window require no synthesis. For the first or a legacy profile, synthesize from the full current evidence. Later refreshes use the previous narrative and claims, plus added and removed expressions with their film context. Prior quotes identify which claims lost support. Only current expressions can support the new profile. If a removal leaves no surviving cited evidence and there are no additions, rebuild from the remaining current expressions. Clear the applied profile without a provider call when no evidence remains. Baseline and explicit scoring can proceed for each rating, and implicit scores catch up after a new profile is completed.
 
-Synthesis receives the film title and stored Wikipedia paragraphs alongside the viewer's current original expressions. Film context helps resolve references. The viewer's expressions support the conclusions. The synthesis returns a coherent plain-text narrative and a separate list of conclusions. JEV reads the saved narrative. The synthesis evaluation stores each standalone conclusion, its position in the narrative, an explanation of how the evidence supports or qualifies it, and its source expression IDs. The Account tab uses those positions to link the narrative to the evidence list and the existing rating revision flow. The tab is initially restricted to superusers and displays only their own profile and pending expression changes. Engineering uses unsupported conclusions as evaluation cases for prompt improvements.
+Synthesis receives the film title and stored Wikipedia paragraphs alongside the viewer's current original expressions. Film context helps resolve references. The viewer's expressions support the conclusions. The synthesis returns a coherent plain-text narrative and a separate list of conclusions. JEV reads the saved narrative. The published revision stores each standalone conclusion, its position in the narrative, an explanation of how the evidence supports or qualifies it, and its source expression IDs. The synthesis evaluation stores the sent request, received response, and captured source expressions. The Account tab uses those positions to link the narrative to the evidence list and the existing rating revision flow. The tab is initially restricted to superusers and displays only their own profile and pending expression changes. Engineering uses unsupported conclusions as evaluation cases for prompt improvements.
 
 The synthesis adapter keeps the full film context and uses a 4,000,000-byte application cap for serialized input, instructions, and schema. The 100 largest stored film contexts in the development catalogue total about 3.8 MB before expressions and request overhead. This is a request size guard, and OpenAI separately enforces the model's input token limit.
 
@@ -188,7 +190,7 @@ Apply the [AI model services design](ai_model_services_design.md) before impleme
 
 ## Evaluation persistence
 
-Ratings stores completed assessments as immutable RatingQualityEval snapshots tied to a rating version. When a profile revision is captured, the snapshot also records its ID, text, and the implicit assessment evidence. A snapshot contains the original expression text by ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured expressions, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. The Ratings question template, criteria, cutoff and pair limit come from [explicit_quality_assessment.json](../app/services/ratings/explicit_quality_assessment.json). The `Ratings::RatingQualityScores` model module defines the default score weights. Ratings captures them when recording an evaluation. New evaluations apply their captured weights in the same transaction that records them. Historical scores remain stored with the evaluations that produced them. Explicit applicability uses an inclusive 0.60 threshold. Evaluations retain the actual threshold, assessment limits and non-secret provider settings alongside the questions, results and returned model. Provider adapters validate external responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
+Ratings stores completed assessments as immutable RatingQualityEval snapshots tied to a rating version. When a profile revision is captured, the snapshot also records its ID, text, and the implicit assessment evidence. A snapshot contains the original expression text by ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured expressions, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. The Ratings question template, criteria, cutoff and pair limit come from [explicit_quality_assessment.json](../app/services/ratings/explicit_quality_assessment.json). The `Ratings::RatingQualityScores` model module defines the default score weights. Rating uses those weights when applying a score set. Historical scores remain stored with the evaluations that produced them. Explicit applicability uses an inclusive 0.60 threshold. Evaluations retain the actual threshold, assessment limits and non-secret provider settings alongside the questions, results and returned model. Provider adapters validate external responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
 
 Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The assessment service runs provider work before acquiring the rating-film lock. Under the lock, Ratings checks freshness, records the evaluation, and applies scores in one transaction. A candidate can apply if it is the first set or uses a strictly newer profile revision. Ratings without expressions can use implicit evidence when a profile is available. With neither evidence source, scoring uses the baseline. Profile-only reassessment preserves existing explicit judgments.
 
@@ -196,7 +198,7 @@ Submitting or revising a rating enqueues its ID on `ratings_assessment` in the s
 
 The development worker started by `bin/dev` consumes `domain_events` and `ratings_assessment`. Scheduled profile refresh is disabled in development. Existing ratings are reassessed when a new profile revision is published. There is no blanket backfill.
 
-Expression-profile synthesis/updates require an LLM call, with no assumed JEV gate. JEV handles quality judgments against the resulting profile and against original expressions. Durable evaluation evidence belongs in the application database. Langfuse can trace the Ratings workflow and provider generation using counts, model, usage and evaluation linkage. Expression text and provider bodies stay out of these traces. Both evaluation models record an assessment result in an immutable `output` snapshot and enforce required fields in the database. Ratings records completed assessments. Registry also records failed attempts and tracks application separately. FilmQualityEval remains separately owned by Registry; no shared product evaluation table/framework is required.
+Expression-profile synthesis/updates require an LLM call, with no assumed JEV gate. JEV handles quality judgments against the resulting profile and against original expressions. Durable evaluation evidence belongs in the application database. Langfuse can trace the Ratings workflow and provider generation using counts, model, usage and evaluation linkage. Expression text and provider bodies stay out of these traces. Both evaluation models record an assessment result in an immutable `output` snapshot and enforce required fields in the database. Ratings records completed assessments. Registry also records failed provider assessments. Its FilmQuality associations record what applied. FilmQualityEval remains separately owned by Registry; no shared product evaluation table/framework is required.
 
 ## Recommendation scoring
 

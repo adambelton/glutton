@@ -121,7 +121,8 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
   end
 
   def publish(profile)
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       ids = expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") }
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => profile, "conclusions" => [ { "anchor" => profile, "claim" => profile, "explanation" => "Source expression", "expression_ids" => ids } ] }

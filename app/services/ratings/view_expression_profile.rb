@@ -18,9 +18,9 @@ module Ratings
     def annotations(revision)
       return [] if revision.nil? || revision.legacy_annotations?
 
-      output = revision.expression_profile_eval.output
+      output = revision.expression_profile_revision_eval.output
       evidence = output.fetch("evidence").index_by { |expression| expression.fetch("expression_id") }
-      output.fetch("annotations", []).map do |annotation|
+      revision.annotations.map do |annotation|
         { claim: annotation.fetch("claim"), end_offset: annotation.fetch("end_offset"), explanation: annotation.fetch("explanation"),
           evidence: annotation.fetch("expression_ids").filter_map { |id| evidence[id] } }
       end
@@ -33,7 +33,7 @@ module Ratings
       saved = (revision&.expression_texts || []).group_by { |row| row.fetch("film_id") }
         .transform_values { |rows| rows.pluck("text") }
       titles = Registry::Film.where(id: current.keys | saved.keys).pluck(:id, :title).to_h
-      historical_titles = revision&.expression_profile_eval&.output&.fetch("evidence", [])&.to_h do |row|
+      historical_titles = revision&.expression_profile_revision_eval&.output&.fetch("evidence", [])&.to_h do |row|
         [ row.fetch("film_id"), row.fetch("film_title") ]
       end || {}
 

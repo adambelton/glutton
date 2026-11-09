@@ -2,32 +2,25 @@ module Ratings
   class RatingQualityEval < ApplicationRecord
     belongs_to :rating
     has_many :rating_qualities
-    attr_readonly :rating_id, :output
+    attr_readonly :rating_id, :input, :output
 
     validate :evaluation_output
 
     def self.record!(rating:, assessment:)
-      output = assessment.result
-      scores = RatingQualityScores::ALL
-      if output.key?("explicit_source_evaluation_id")
-        source = rating.rating_quality_evals.find(output.fetch("explicit_source_evaluation_id"))
-        explicit = RatingQuality::Classifications::EXPLICITLY_EXPRESSED
-        weights = source.output["score_weights"] || source.output.dig("question_policy", "scores") || scores
-        scores = scores.merge(explicit => weights.fetch(explicit))
-        carried_scores = source.rating_qualities.where(classification: explicit).pluck(:quality_id, :score).to_h.transform_keys(&:to_s)
-        output = output.merge("carried_explicit_scores" => carried_scores)
-      end
-      evaluation = new(rating:, output: output.merge("score_weights" => scores))
-      rating_film = rating.rating_film
-      rating_film.with_lock(requires_new: true) do
-        raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id
-        next unless rating.can_apply_quality_evaluation?(evaluation)
+      create!(rating:, input: assessment.input, output: assessment.result)
+    end
 
-        rating.ensure_explicit_evidence_current!(evaluation) if evaluation.profile_revision_id.present?
-        evaluation.save!
-        apply_quality_scores!(evaluation)
-        evaluation
+    def quality_evidence
+      decisions = output.fetch("decisions")
+      unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
+        raise QualityApplicationUnavailable
       end
+
+      {
+        quality_ids: output.fetch("qualities").keys.map(&:to_i),
+        explicit_ids: decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i),
+        implicit_ids: output.dig("implicit_assessment", "applicable_quality_ids") || []
+      }
     end
 
     def profile_revision_id
@@ -39,8 +32,12 @@ module Ratings
       revision_id.nil? || (applied_revision_id.present? && applied_revision_id >= revision_id)
     end
 
+    def inherited_explicit_evaluation_id
+      output["explicit_source_evaluation_id"]
+    end
+
     def explicit_source_id
-      output["explicit_source_evaluation_id"] || id
+      inherited_explicit_evaluation_id || id
     end
 
     def explicit_evidence_for_reassessment
@@ -51,36 +48,6 @@ module Ratings
     def readonly?
       super || persisted?
     end
-
-    def self.apply_quality_scores!(evaluation)
-      output = evaluation.output
-      rating = evaluation.rating
-      decisions = output.fetch("decisions")
-      unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
-        raise QualityApplicationUnavailable
-      end
-
-      explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
-      implicit_ids = output.dig("implicit_assessment", "applicable_quality_ids") || []
-      scores = output.fetch("score_weights")
-      carried_scores = output["carried_explicit_scores"] || {}
-      output.fetch("qualities").keys.map(&:to_i).each do |quality_id|
-        classification = classify_quality(quality_id, explicit_ids, implicit_ids)
-        score = carried_scores.fetch(quality_id.to_s) { scores.fetch(classification).fetch(rating.value) }
-        evaluation.rating_qualities.create!(rating:, quality_id:, classification:, score:)
-      end
-    end
-
-    def self.classify_quality(quality_id, explicit_ids, implicit_ids)
-      if explicit_ids.include?(quality_id)
-        RatingQuality::Classifications::EXPLICITLY_EXPRESSED
-      elsif implicit_ids.include?(quality_id)
-        RatingQuality::Classifications::IMPLICITLY_EXPRESSED
-      else
-        RatingQuality::Classifications::UNEXPRESSED
-      end
-    end
-    private_class_method :apply_quality_scores!, :classify_quality
 
     private
 

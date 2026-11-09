@@ -40,27 +40,17 @@ module Registry
           FilmQualityEval.record!(film: Film.lock.find(@film_id), assessment:)
         end
         root.set_attribute("film_quality_eval_id", film_quality_eval.id)
-        if assessment_error
-          film_quality_eval.record_application_failure!(reason: assessment.result.fetch("error").fetch("reason"))
-          raise assessment_error
-        end
-        begin
-          assigned_film = Film.transaction do
-            film = Film.lock.find(@film_id)
-            # These short table locks also protect against vocabulary membership phantoms.
-            Film.connection.execute("LOCK TABLE quality_categories, qualities IN SHARE MODE")
-            unless capture_vocabulary == [ definitions, categories ]
-              raise AssignmentFailed.new(reason: :stale_inputs)
-            end
-            film_quality_eval.apply_initial_qualities!
-            film
+        raise assessment_error if assessment_error
+
+        assigned_film = Film.transaction do
+          film = Film.lock.find(@film_id)
+          # These short table locks also protect against vocabulary membership phantoms.
+          Film.connection.execute("LOCK TABLE quality_categories, qualities IN SHARE MODE")
+          unless capture_vocabulary == [ definitions, categories ]
+            raise AssignmentFailed.new(reason: :stale_inputs)
           end
-        rescue AssignmentFailed => error
-          film_quality_eval.record_application_failure!(reason: error.reason)
-          raise
-        rescue StandardError
-          film_quality_eval.record_application_failure!(reason: :persistence_error)
-          raise
+          film.apply_initial_qualities!(evaluation: film_quality_eval)
+          film
         end
         evaluation_output = film_quality_eval.output
         root.set_attribute("langfuse.observation.output", evaluation_output.except("source", "definitions", "categories", "calls").merge("film_id" => assigned_film.id, "film_quality_eval_id" => film_quality_eval.id).to_json)

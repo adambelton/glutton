@@ -81,7 +81,8 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def publish(user)
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       id = expressions.sole.fetch("expressions").sole.fetch("expression_id")
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => "Enjoys quiet dread.", "conclusions" => [ { "anchor" => "Enjoys quiet dread.", "claim" => "Enjoys quiet dread.", "explanation" => "The source describes dread.", "expression_ids" => [ id ] } ] }

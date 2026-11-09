@@ -26,7 +26,8 @@ class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
     rating_film = Ratings::RatingFilm.create!(user:, film:)
     rating_film.submit_rating!(value: "brilliant", expression_texts: [ "I liked the quiet dread." ])
     calls = 0
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       calls += 1
       raise Ratings::ExpressionProfileRefreshFailed.new(reason: :provider_failure) if calls == 1
 
@@ -63,7 +64,8 @@ class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
     end
     cron = GoodJob::CronEntry.find(:ratings_expression_profile_refresh)
     requests = []
-    synthesizer = lambda do |expressions:, **|
+    synthesizer = lambda do |input:, **|
+      expressions = input.is_a?(Hash) ? input.fetch("added") : input
       expression = expressions.sole.fetch("expressions").sole
       requests << expression.fetch("text")
       cron.enqueue(Time.current)

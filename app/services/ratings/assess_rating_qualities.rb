@@ -59,15 +59,24 @@ module Ratings
     def assess_and_record(rating:, expressions:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
       assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision&.id,
         profile: profile_revision&.profile, trace_id:, explicit_evidence:).call(client: @client)
-      RatingQualityEval.record!(rating:, assessment:)
+      record_and_apply(rating:, assessment:)
     rescue QualityAssessmentFailed => error
       raise unless error.reason == :explicit_evidence_changed
       return unless rating.can_assess_qualities_for?(profile_revision.id)
 
       explicit_evidence = rating.quality_evidence_for_reassessment
       assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision.id,
-        profile: profile_revision.profile, trace_id:, explicit_evidence:, previous_result: assessment.result).call(client: @client)
-      RatingQualityEval.record!(rating:, assessment:)
+        profile: profile_revision.profile, trace_id:, explicit_evidence:, previous_assessment: assessment).call(client: @client)
+      record_and_apply(rating:, assessment:)
+    end
+
+    def record_and_apply(rating:, assessment:)
+      Rating.transaction(requires_new: true) do
+        evaluation = RatingQualityEval.record!(rating:, assessment:)
+        raise ActiveRecord::Rollback unless rating.apply_quality_evaluation!(evaluation:)
+
+        evaluation
+      end
     end
 
     def ensure_current!(rating_film, rating)

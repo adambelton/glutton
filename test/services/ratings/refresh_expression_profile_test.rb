@@ -22,7 +22,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
 
     assert_equal revision, current_revision
     assert_equal "Likes quiet dread in this portrayal.", revision.profile
-    evaluation = revision.expression_profile_eval
+    evaluation = revision.expression_profile_revision_eval
     assert_equal @user.id, revision.expression_profile.user_id
     assert_equal revision.expression_profile, evaluation.expression_profile
     assert_equal revision.profile, evaluation.output.fetch("profile")
@@ -62,7 +62,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Struct.new(:responses).new(responses:))
 
     revision = Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
-    output = revision.expression_profile_eval.output
+    output = revision.expression_profile_revision_eval.output
 
     assert_equal [ { "film_title" => "Dead Air", "source_paragraphs" => context.fetch("source_paragraphs"),
       "expressions" => expressions } ], JSON.parse(request.fetch(:input))
@@ -77,6 +77,11 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
     assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")
     assert_equal narrative, revision.profile
+    evaluation = revision.expression_profile_revision_eval
+    assert_equal JSON.parse(JSON.generate(request.merge(text: { format: request.dig(:text, :format_) }))),
+      evaluation.input.sole.fetch("request")
+    assert_equal({ "profile" => narrative, "conclusions" => conclusions }, output.fetch("provider_response"))
+    assert_equal output.fetch("annotations"), revision.reload.annotations
     assert_equal conclusions.pluck("claim"), output.fetch("annotations").pluck("claim")
     assert_equal conclusions.map { |claim| narrative.index(claim.fetch("anchor")) + claim.fetch("anchor").length },
       output.fetch("annotations").pluck("end_offset")
@@ -86,7 +91,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
 
     Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: rating_film.id, previous_rating_id: rating.id,
       value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "I disliked the long wait." ])
-    assert_no_difference "Ratings::ExpressionProfileEval.count" do
+    assert_no_difference "Ratings::ExpressionProfileRevisionEval.count" do
       error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
         Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
       end
@@ -98,8 +103,8 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   test "rejects an annotation whose anchor is ambiguous or missing" do
     submit([ "I like quiet dread." ])
     [ "Quiet dread", "Missing claim" ].each do |anchor|
-      synthesizer = lambda do |expressions:, **|
-        id = expressions.sole.fetch("expressions").sole.fetch("expression_id")
+      synthesizer = lambda do |input:, **|
+        id = input.sole.fetch("expressions").sole.fetch("expression_id")
         synthesis("Quiet dread works. Quiet dread unsettles.").merge("conclusions" => [
           { "anchor" => anchor, "claim" => "Enjoys dread.", "explanation" => "The viewer praised quiet dread.", "expression_ids" => [ id ] }
         ])
@@ -121,7 +126,8 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
       "film_title" => @film.title, "film_release_date" => nil, "text" => expression.text } ],
       "profile" => "Legacy narrative.", "trace_id" => nil, "synthesis" => synthesis.except("profile"),
       "annotations" => [ { "text" => "Legacy narrative.", "explanation" => "Old annotation", "expression_ids" => [ expression.id ] } ] }
-    old_revision = Ratings::ExpressionProfileEval.record!(expression_profile: profile, assessment: Struct.new(:result).new(output)).apply_profile!
+    evaluation = Ratings::ExpressionProfileRevisionEval.record!(expression_profile: profile, assessment: Struct.new(:result, :input).new(output, []))
+    old_revision = profile.publish_revision!(evaluation:)
     Ratings::ExpressionProfileRefreshRequest.find_by!(user: @user).acknowledge!
     synthesizer = lambda do |**|
       synthesis("The viewer likes quiet dread.").merge("conclusions" => [
@@ -133,7 +139,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     result = Ratings::RefreshExpressionProfiles.call(user_id: @user.id, synthesizer:)
 
     assert_equal current_revision.id, result.fetch(:revisions).fetch(@user.id)
-    assert_equal "Likes quiet dread.", current_revision.expression_profile_eval.output.fetch("annotations").sole.fetch("claim")
+    assert_equal "Likes quiet dread.", current_revision.expression_profile_revision_eval.output.fetch("annotations").sole.fetch("claim")
     assert_equal "Legacy narrative.", old_revision.reload.profile
     assert old_revision.legacy_annotations?
   end
@@ -146,7 +152,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     responses.define_singleton_method(:create) { |**| Struct.new(:status).new(:incomplete) }
     adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Struct.new(:responses).new(responses:))
 
-    assert_no_difference "Ratings::ExpressionProfileEval.count" do
+    assert_no_difference "Ratings::ExpressionProfileRevisionEval.count" do
       error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
         Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter)
       end
@@ -171,7 +177,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
         "expressions" => [ { "expression_id" => index + 1, "text" => "I liked the atmosphere." } ] }
     end
 
-    adapter.call(expressions:, instructions: Ratings::ExpressionProfileAssessment::INSTRUCTIONS,
+    adapter.call(input: expressions, instructions: Ratings::ExpressionProfileAssessment::INSTRUCTIONS,
       schema: Ratings::ExpressionProfileAssessment::SCHEMA)
 
     assert_equal expressions, captured_input
@@ -182,7 +188,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
 
     error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
       limit = Ratings::ExpressionProfileSynthesizer::CONFIGURATION.fetch("maximum_request_bytes")
-      adapter.call(expressions: [ "x" * limit ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
+      adapter.call(input: [ "x" * limit ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
     end
     assert_equal :input_limit, error.reason
   end
@@ -190,13 +196,13 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   test "recording rejects an invalid evaluation snapshot" do
     result = { "evidence" => [ { "text" => "Unlinked expression" } ], "profile" => "Profile",
       "synthesis" => synthesis.except("profile"), "trace_id" => nil }
-    assessment = Struct.new(:result).new(result)
+    assessment = Struct.new(:result, :input).new(result, [])
     submit([ "Evidence" ])
     expression_profile = refresh { |**| synthesis }.expression_profile
 
-    assert_no_difference "Ratings::ExpressionProfileEval.count" do
+    assert_no_difference "Ratings::ExpressionProfileRevisionEval.count" do
       error = assert_raises(ActiveRecord::RecordInvalid) do
-        Ratings::ExpressionProfileEval.record!(expression_profile:, assessment:)
+        Ratings::ExpressionProfileRevisionEval.record!(expression_profile:, assessment:)
       end
       assert error.record.errors.of_kind?(:output, :invalid)
     end
@@ -205,10 +211,10 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   test "a recorded evaluation cannot be applied twice" do
     submit([ "Evidence" ])
     revision = refresh { |**| synthesis }
-    evaluation = revision.expression_profile_eval
+    evaluation = revision.expression_profile_revision_eval
 
     assert_no_difference "Ratings::ExpressionProfileRevision.count" do
-      error = assert_raises(Ratings::ExpressionProfileRefreshFailed) { evaluation.apply_profile! }
+      error = assert_raises(Ratings::ExpressionProfileRefreshFailed) { revision.expression_profile.publish_revision!(evaluation:) }
       assert_equal :already_applied, error.reason
     end
     assert_equal revision, current_revision
@@ -226,8 +232,8 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     another_rating_film = Ratings::RatingFilm.create!(user: @user, film: another_film)
     another_rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
 
-    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
-      assert_no_queries_match(/"expression_profile_evals"/) do
+    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
+      assert_no_queries_match(/"expression_profile_revision_evals"/) do
         current = refresh { flunk "Unchanged evidence must skip synthesis" }
         assert_equal revision, current
         assert_equal "Likes quiet dread.", current.profile
@@ -264,13 +270,94 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     another_rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "The ending worked." ])
 
     revision = refresh do |expressions:, **|
-      assert_equal another_film.title, expressions.sole.fetch("film_title")
-      assert_equal [ "The ending worked." ], expressions.sole.fetch("expressions").pluck("text")
+      assert_equal another_film.title, expressions.fetch("added").sole.fetch("film_title")
+      assert_equal [ "The ending worked." ], expressions.fetch("added").sole.fetch("expressions").pluck("text")
       synthesis
     end
 
     assert_equal original.expression_profile_id, revision.expression_profile_id
     assert_equal revision, current_revision
+  end
+
+  test "incremental synthesis gets changed film context and maps each prior claim to surviving evidence" do
+    changed_film = Registry::Film.new(tmdb_id: 400).import!(tmdb_data: { title: "Changed film", release_date: nil,
+      tmdb_metadata: { "details" => {} } }, wikipedia_context: wikipedia_context(tmdb_id: 400, text: "Changed film context."))
+    unchanged_film = Registry::Film.new(tmdb_id: 401).import!(tmdb_data: { title: "Unchanged film", release_date: nil,
+      tmdb_metadata: { "details" => {} } }, wikipedia_context: wikipedia_context(tmdb_id: 401, wikidata_id: "Q2", text: "Unchanged film context."))
+    changed = Ratings::RatingFilm.create!(user: @user, film: changed_film)
+    unchanged = Ratings::RatingFilm.create!(user: @user, film: unchanged_film)
+    original_rating = changed.submit_rating!(value: "brilliant", expression_texts: [ "Slow pacing worked.", "The sound built dread." ])
+    unchanged.submit_rating!(value: "brilliant", expression_texts: [ "The setting felt personal." ])
+    original_ids = original_rating.rating_expressions.order(:id).ids
+    original = refresh { |**| synthesis("Dread works when sound builds tension.") }
+
+    revised = changed.revise_rating!(previous_rating_id: original_rating.id, value: "brilliant",
+      expression_texts: [ "The sound built dread.", "The gore distracted me." ])
+    retained_id, added_id = revised.rating_expressions.order(:id).ids
+    synthesizer = lambda do |input:, **|
+      assert_equal original.profile, input.dig("previous_profile", "narrative")
+      supporting = input.dig("previous_profile", "claims").sole.fetch("supporting_expressions")
+      assert_nil supporting.find { |quote| quote.fetch("previous_expression_id") == original_ids.first }.fetch("current_expression_id")
+      assert_equal retained_id, supporting.find { |quote| quote.fetch("previous_expression_id") == original_ids.last }.fetch("current_expression_id")
+      assert_equal [ added_id ], input.fetch("added").sole.fetch("expressions").pluck("expression_id")
+      assert_equal [ original_ids.first ], input.fetch("removed").sole.fetch("expressions").pluck("expression_id")
+      %w[added removed].each do |kind|
+        assert_equal changed_film.wikipedia_context.fetch("source_paragraphs"), input.fetch(kind).sole.fetch("source_paragraphs")
+      end
+      refute_includes JSON.generate(input), "Unchanged film context."
+      synthesis("Sound builds dread.").merge("conclusions" => [
+        { "anchor" => "Sound builds dread.", "claim" => "Responds to dread through sound.",
+          "explanation" => "The retained expression credits sound with building dread.", "expression_ids" => [ retained_id ] }
+      ])
+    end
+
+    revision = Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+
+    assert_equal [ retained_id ], revision.expression_profile_revision_eval.output.fetch("annotations").sole.fetch("expression_ids")
+    basis = revision.expression_profile_revision_eval.output.dig("synthesis", "basis")
+    assert_equal original.id, basis.fetch("previous_profile_revision_id")
+    assert_equal [ original_ids.first ], basis.fetch("removed_expression_ids")
+    assert_equal retained_id, basis.fetch("retained_expression_ids").fetch(original_ids.last.to_s)
+  end
+
+  test "a removed expression cannot be cited in an incremental revision" do
+    original_rating = submit([ "The sound worked.", "The pacing worked." ])
+    removed_id = original_rating.rating_expressions.order(:id).first.id
+    original = refresh { |**| synthesis }
+    revise(original_rating, [ "The pacing worked." ])
+    synthesizer = lambda do |**|
+      synthesis("Sound worked.").merge("conclusions" => [
+        { "anchor" => "Sound worked.", "claim" => "Likes the sound.", "explanation" => "The old expression praised sound.",
+          "expression_ids" => [ removed_id ] }
+      ])
+    end
+
+    error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
+      Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+    end
+
+    assert_equal :invalid_response, error.reason
+    assert_equal original, current_revision
+  end
+
+  test "falls back to current evidence when a removal leaves no citable prior support" do
+    rating = submit([ "The sound worked.", "The pacing worked." ])
+    first_id = rating.rating_expressions.order(:id).first.id
+    initial = lambda do |**|
+      synthesis("Sound worked.").merge("conclusions" => [
+        { "anchor" => "Sound worked.", "claim" => "Likes the sound.", "explanation" => "The expression praised the sound.",
+          "expression_ids" => [ first_id ] }
+      ])
+    end
+    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: initial, tracer_provider: nil)
+    replacement = revise(rating, [ "The pacing worked." ])
+
+    revision = refresh do |expressions:, **|
+      assert_equal [ replacement.rating_expressions.sole.id ], expressions.sole.fetch("expressions").pluck("expression_id")
+      synthesis("Pacing worked.")
+    end
+
+    assert_equal "Pacing worked.", revision.profile
   end
 
   test "removing the last expression records a cleared revision without synthesis" do
@@ -281,9 +368,9 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     cleared = refresh { flunk "Removed evidence must not trigger synthesis" }
 
     assert_equal cleared, current_revision
-    assert_empty cleared.expression_profile_eval.output.fetch("evidence")
+    assert_empty cleared.expression_profile_revision_eval.output.fetch("evidence")
     assert_empty cleared.profile
-    assert_nil cleared.expression_profile_eval.output.fetch("synthesis")
+    assert_nil cleared.expression_profile_revision_eval.output.fetch("synthesis")
     assert_equal "Likes quiet dread.", original.reload.profile
     assert_equal cleared, refresh { flunk "Unchanged empty evidence must skip synthesis" }
   end
@@ -299,7 +386,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal original.expression_profile, revision.expression_profile
     assert_equal [ original, revision ], expression_profile.revisions.order(:id).to_a
     assert_equal original.profile, revision.profile
-    assert_equal replacement.id, revision.expression_profile_eval.output.fetch("evidence").sole.fetch("rating_id")
+    assert_equal replacement.id, revision.expression_profile_revision_eval.output.fetch("evidence").sole.fetch("rating_id")
     assert_equal revision, refresh { flunk "The changed evidence has already been examined" }
   end
 
@@ -308,7 +395,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     original = refresh { |**| synthesis }
     revise(rating, [ "New evidence" ])
 
-    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
+    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
       error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
         refresh { |**| raise Timeout::Error, "private provider failure" }
       end
@@ -329,7 +416,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     failure = -> { raise ActiveRecord::StatementInvalid, "injected revision persistence failure" }
     Ratings::ExpressionProfileRevision.set_callback(:create, :after, failure)
 
-    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
+    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
       assert_raises(ActiveRecord::StatementInvalid) { refresh { |**| synthesis } }
     end
   ensure
@@ -343,7 +430,7 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     failure = -> { raise ActiveRecord::StatementInvalid, "injected profile persistence failure" }
     Ratings::ExpressionProfileRevision.set_callback(:create, :after, failure)
 
-    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
+    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
       assert_raises(ActiveRecord::StatementInvalid) { refresh { |**| synthesis("New profile") } }
     end
     assert_equal original, current_revision
@@ -361,13 +448,13 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
 
     assert_not Ratings::ExpressionProfile.exists?(revision.expression_profile_id)
     assert_not Ratings::ExpressionProfileRevision.exists?(revision.id)
-    assert_not Ratings::ExpressionProfileEval.exists?(revision.expression_profile_eval_id)
+    assert_not Ratings::ExpressionProfileRevisionEval.exists?(revision.expression_profile_revision_eval_id)
   end
 
   test "a rating revised during synthesis invalidates the result" do
     rating = submit([ "Old evidence" ])
 
-    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
+    assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
       error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
         refresh do |**|
           revise(rating, [ "New evidence" ])
@@ -393,13 +480,13 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal winner.expression_profile, Ratings::ExpressionProfile.sole
     assert_equal winner, Ratings::ExpressionProfileRevision.sole
     assert_equal "Competing profile", winner.profile
-    assert_equal winner.expression_profile_eval, Ratings::ExpressionProfileEval.sole
+    assert_equal winner.expression_profile_revision_eval, Ratings::ExpressionProfileRevisionEval.sole
   end
 
   test "an inactive viewer cannot synthesize or record a profile" do
     submit([ "Guest evidence" ])
     travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
-      assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileEval.count" ] do
+      assert_no_difference [ "Ratings::ExpressionProfile.count", "Ratings::ExpressionProfileRevision.count", "Ratings::ExpressionProfileRevisionEval.count" ] do
         assert_raises(Ratings::IdentityUnavailable) { refresh { flunk "Inactive viewer must skip synthesis" } }
       end
     end
@@ -420,19 +507,19 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     generation = spans.fetch("synthesize-expression-profile")
     assert_equal revision.expression_profile_id, root.attributes.fetch("expression_profile_id")
     assert_equal revision.id, root.attributes.fetch("expression_profile_revision_id")
-    assert_equal revision.expression_profile_eval_id, root.attributes.fetch("expression_profile_eval_id")
-    assert_equal root.trace_id.unpack1("H*"), revision.expression_profile_eval.output.fetch("trace_id")
+    assert_equal revision.expression_profile_revision_eval_id, root.attributes.fetch("expression_profile_revision_eval_id")
+    assert_equal root.trace_id.unpack1("H*"), revision.expression_profile_revision_eval.output.fetch("trace_id")
     assert_equal root.span_id, generation.parent_span_id
     assert_equal({ "input" => 12, "output" => 4 }, JSON.parse(generation.attributes.fetch("langfuse.observation.usage_details")))
     attributes = spans.values.map(&:attributes).to_json
     refute_includes attributes, "private original expression"
     refute_includes attributes, "private synthesized profile"
     refute_includes attributes, "private-provider-key"
-    refute_includes revision.expression_profile_eval.inspect, "private original expression"
-    refute_includes revision.expression_profile_eval.inspect, "private synthesized profile"
+    refute_includes revision.expression_profile_revision_eval.inspect, "private original expression"
+    refute_includes revision.expression_profile_revision_eval.inspect, "private synthesized profile"
     refute_includes revision.inspect, "private synthesized profile"
     refute_includes revision.inspect, "private original expression"
-    %w[output profile expression_texts].each do |attribute|
+    %w[input output profile annotations expression_texts].each do |attribute|
       assert_equal "[FILTERED]", ActiveRecord::Base.inspection_filter.filter_param(attribute, "private stored data")
     end
   ensure
@@ -460,12 +547,18 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   end
 
   def refresh(tracer_provider: nil, &synthesizer)
-    adapter = lambda do |expressions:, **options|
-      response = synthesizer.call(expressions:, **options)
+    adapter = lambda do |input:, **options|
+      response = synthesizer.call(expressions: input, **options)
+      ids = if input.is_a?(Hash)
+        input.fetch("added").flat_map { |film| film.fetch("expressions").pluck("expression_id") } +
+          input.fetch("previous_profile").fetch("claims").flat_map { |claim| claim.fetch("supporting_expressions").pluck("current_expression_id") }.compact
+      else
+        input.flat_map { |film| film.fetch("expressions").pluck("expression_id") }
+      end
       profile = response.fetch("profile").strip
       response.merge("profile" => profile, "conclusions" => [
         { "anchor" => profile, "claim" => profile, "explanation" => "The viewer described this reaction.",
-          "expression_ids" => expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") } }
+          "expression_ids" => ids }
       ])
     end
     Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer: adapter, tracer_provider:)

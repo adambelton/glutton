@@ -2,35 +2,31 @@ module Registry
   class FilmQualityEval < ApplicationRecord
     belongs_to :film
     has_many :film_qualities, dependent: :restrict_with_exception
-    attr_readonly :film_id, :output
+    attr_readonly :film_id, :input, :output
 
     validate :evaluation_output
 
     def self.record!(film:, assessment:)
-      create!(film:, output: assessment.result)
+      create!(film:, input: assessment.input, output: assessment.result)
     end
 
     def readonly?
       super || persisted?
     end
 
-    def apply_initial_qualities!
-      film.with_lock do
-        raise Registry::AssignmentFailed.new(reason: :unready_film) unless film.has_source_context?
-        raise Registry::AssignmentFailed.new(reason: :already_assigned) if film.has_film_qualities?
-        unless source_current?
-          raise Registry::AssignmentFailed.new(reason: :stale_inputs)
-        end
-        selected_qualities.each do |quality|
-          film_qualities.create!(film:, quality:)
-        end
-        finish_application!("status" => "applied", "film_quality_ids" => film_qualities.map(&:id))
+    def selected_quality_ids_for(film:)
+      unless film_id == film.id && output.fetch("status") == "completed"
+        raise AssignmentFailed.new(reason: :invalid_response)
       end
-      self
-    end
 
-    def record_application_failure!(reason:)
-      finish_application!("status" => "failed", "reason" => reason.to_s)
+      source = output.fetch("source")
+      unless source.fetch("title") == film.title && source.fetch("tmdb_id") == film.tmdb_id &&
+          source.fetch("tmdb_metadata") == film.tmdb_metadata && source.fetch("wikidata_id") == film.wikidata_id &&
+          source.fetch("wikipedia_context") == film.wikipedia_context
+        raise AssignmentFailed.new(reason: :stale_inputs)
+      end
+
+      output.fetch("selected_quality_ids")
     end
 
     def supports_association?(film_id:, quality_id:)
@@ -38,29 +34,6 @@ module Registry
     end
 
     private
-
-    def source_current?
-      source = output.fetch("source")
-      source.fetch("title") == film.title && source.fetch("tmdb_id") == film.tmdb_id &&
-        source.fetch("tmdb_metadata") == film.tmdb_metadata && source.fetch("wikidata_id") == film.wikidata_id &&
-        source.fetch("wikipedia_context") == film.wikipedia_context
-    end
-
-    def selected_qualities
-      raise Registry::AssignmentFailed.new(reason: :invalid_response) unless output.fetch("status") == "completed"
-      qualities = Quality.where(id: output.fetch("selected_quality_ids")).index_by(&:id)
-      output.fetch("selected_quality_ids").map do |quality_id|
-        qualities.fetch(quality_id) { raise Registry::AssignmentFailed.new(reason: :stale_inputs) }
-      end
-    end
-
-    def finish_application!(outcome)
-      now = Time.current
-      changed = self.class.where(id:, application: { "status" => "pending" }).update_all(
-        application: outcome.merge("recorded_at" => now.utc.iso8601), updated_at: now)
-      raise ActiveRecord::ReadOnlyRecord unless changed == 1
-      reload
-    end
 
     def evaluation_output
       errors.add(:output, :invalid) unless valid_output?

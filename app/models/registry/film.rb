@@ -18,6 +18,19 @@ module Registry
       film_qualities.exists?
     end
 
+    def apply_initial_qualities!(evaluation:)
+      with_lock(requires_new: true) do
+        raise AssignmentFailed.new(reason: :unready_film) unless has_source_context?
+        raise AssignmentFailed.new(reason: :already_assigned) if has_film_qualities?
+        selected_ids = evaluation.selected_quality_ids_for(film: self)
+        qualities = Quality.where(id: selected_ids).index_by(&:id)
+        selected_ids.each do |quality_id|
+          quality = qualities.fetch(quality_id) { raise AssignmentFailed.new(reason: :stale_inputs) }
+          film_qualities.create!(quality:, film_quality_eval: evaluation)
+        end
+      end
+    end
+
     def import!(tmdb_data:, wikipedia_context:)
       raise Registry::ImportIncomplete.new(stage: :persistence, reason: :existing_film) if persisted?
       unless Registry::WikipediaContext.usable?(wikipedia_context, tmdb_id:)
