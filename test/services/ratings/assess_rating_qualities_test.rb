@@ -241,9 +241,13 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
 
   def publish_profile
     synthesizer = lambda do |expressions:, **|
+      paragraph = {
+        "text" => "The viewer enjoys slowly building dread.",
+        "explanation" => "The viewer described dread.",
+        "expression_ids" => [ expressions.first.fetch("expressions").first.fetch("expression_id") ]
+      }
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
-        "paragraphs" => [{ "text" => "The viewer enjoys slowly building dread.", "explanation" => "The viewer described dread.",
-          "expression_ids" => [ expressions.first.fetch("expressions").first.fetch("expression_id") ] }] }
+        "paragraphs" => [ paragraph ] }
     end
     Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
   end
