@@ -30,6 +30,17 @@ module Ratings
       evaluation.rating == self && can_assess_qualities_for?(evaluation.profile_revision_id)
     end
 
+    def quality_evidence_for_reassessment
+      current_rating_quality_eval&.explicit_evidence_for_reassessment
+    end
+
+    def ensure_explicit_evidence_current!(evaluation)
+      applied = current_rating_quality_eval
+      return if applied&.explicit_source_id == evaluation.explicit_source_id
+
+      raise QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
+    end
+
     def request_profile_refresh_if_expressions_changed!(previous_rating:)
       previous_texts = previous_rating&.rating_expressions&.pluck(:text) || []
       return if rating_expressions.pluck(:text) == previous_texts

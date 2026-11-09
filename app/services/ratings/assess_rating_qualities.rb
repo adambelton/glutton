@@ -20,9 +20,9 @@ module Ratings
       ensure_current!(rating_film, rating)
       profile_revision = ExpressionProfile.find_by(user_id: rating_film.user_id)&.current_revision
       return unless rating.can_assess_qualities_for?(profile_revision&.id)
-      qualities = rating_film.film.qualities.order(:id).to_h do |quality|
-        [ quality.id.to_s, { "name" => quality.name, "match_rule" => quality.match_rule, "not_sufficient" => quality.not_sufficient } ]
-      end
+
+      explicit_evidence = rating.quality_evidence_for_reassessment
+      qualities = explicit_evidence&.fetch("qualities") || capture_qualities(rating_film)
       return if qualities.empty?
 
       expressions = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
@@ -33,11 +33,10 @@ module Ratings
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { rating_id: rating.id, expression_count: expressions.size, quality_count: qualities.size }.to_json
       }, record_exception: false) do |span|
-        assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision&.id,
-          profile: profile_revision&.profile,
-          trace_id: (span.context.hex_trace_id if span.context.valid?))
-        TypeSafeClient.with_trace_tags(TRACE_TAGS) { assessment.call(client: @client) }
-        evaluation = RatingQualityEval.record!(rating:, assessment:)
+        trace_id = span.context.hex_trace_id if span.context.valid?
+        evaluation = TypeSafeClient.with_trace_tags(TRACE_TAGS) do
+          assess_and_record(rating:, expressions:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
+        end
         span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
         evaluation
       rescue StandardError
@@ -50,6 +49,26 @@ module Ratings
     end
 
     private
+
+    def capture_qualities(rating_film)
+      rating_film.film.qualities.order(:id).to_h do |quality|
+        [ quality.id.to_s, { "name" => quality.name, "match_rule" => quality.match_rule, "not_sufficient" => quality.not_sufficient } ]
+      end
+    end
+
+    def assess_and_record(rating:, expressions:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
+      assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision&.id,
+        profile: profile_revision&.profile, trace_id:, explicit_evidence:).call(client: @client)
+      RatingQualityEval.record!(rating:, assessment:)
+    rescue QualityAssessmentFailed => error
+      raise unless error.reason == :explicit_evidence_changed
+      return unless rating.can_assess_qualities_for?(profile_revision.id)
+
+      explicit_evidence = rating.quality_evidence_for_reassessment
+      assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision.id,
+        profile: profile_revision.profile, trace_id:, explicit_evidence:, previous_result: assessment.result).call(client: @client)
+      RatingQualityEval.record!(rating:, assessment:)
+    end
 
     def ensure_current!(rating_film, rating)
       raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id

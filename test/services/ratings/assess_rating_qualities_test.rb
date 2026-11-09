@@ -86,6 +86,37 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_nil assess(rating, no_call_client)
   end
 
+  test "profile reassessment preserves explicit judgments when the initial evaluation publishes during JEV work" do
+    rating = submit([ "Dread builds slowly." ])
+    revision = publish_profile
+    expression_id = rating.rating_expressions.sole.id
+    initial = nil
+    phases = []
+    client = Client.new(lambda do |state:, questions:, phase:|
+      phases << phase
+      if phase == "assess-explicit-quality-evidence"
+        initial_client = Client.new(lambda do |questions:, **|
+          response(questions, { "expression_#{expression_id}_quality_#{@quality.id}" => 0.99 })
+        end)
+        # Record an initial assessment that started before the profile was published.
+        explicit = Ratings::ExplicitQualityAssessment.new(expressions: state.fetch(:expressions),
+          qualities: state.fetch(:qualities), trace_id: nil).call(client: initial_client)
+        initial = Ratings::RatingQualityEval.record!(rating:, assessment: explicit)
+        response(questions, { "expression_#{expression_id}_quality_#{@other_quality.id}" => 0.99 })
+      else
+        response(questions, questions.keys.index_with(0.99))
+      end
+    end)
+
+    result = Ratings::AssessRatingQualities.call(rating_id: rating.id, client:, tracer_provider: nil)
+
+    assert_equal [ "assess-explicit-quality-evidence", "assess-implicit-quality-evidence", "assess-implicit-quality-evidence" ], phases
+    assert_equal revision.id, result.profile_revision_id
+    assert_equal initial.id, result.output.fetch("explicit_source_evaluation_id")
+    assert_equal({ @quality.id => 5, @other_quality.id => 4 }, result.rating_qualities.pluck(:quality_id, :score).to_h)
+    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, initial.rating_qualities.pluck(:quality_id, :score).to_h)
+  end
+
   test "a newer cleared revision replaces an older applied profile and preserves score history" do
     previous = submit([ "Dread builds slowly." ])
     revision = publish_profile

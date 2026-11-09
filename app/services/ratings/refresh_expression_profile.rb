@@ -84,7 +84,10 @@ module Ratings
 
         expression_profile ||= ExpressionProfile.create!(user:)
         evaluation = ExpressionProfileEval.record!(expression_profile:, assessment:)
-        evaluation.apply_profile!
+        revision = evaluation.apply_profile!
+        RatingQualityReassessmentRequest.mark_pending!(user:, revision:)
+        ReassessRatingQualitiesJob.enqueue!(user_id: user.id, profile_revision_id: revision.id)
+        revision
       end
     end
   end
