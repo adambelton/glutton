@@ -109,9 +109,9 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal [ -2, -1 ], evaluation.rating_qualities.order(:quality_id).pluck(:score)
     assert_nil assess(rating, no_call_client)
 
-    older_attempt = Ratings::RatingQualityEval.record!(rating:, assessment: Struct.new(:result).new(evaluation.output))
-    assert_no_difference "Ratings::RatingQuality.count" do
-      assert_raises(Ratings::QualityApplicationUnavailable) { older_attempt.apply_quality_scores! }
+    older_assessment = Struct.new(:result).new(evaluation.output)
+    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
+      assert_nil Ratings::RatingQualityEval.record!(rating:, assessment: older_assessment)
     end
   end
 

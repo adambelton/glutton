@@ -32,8 +32,7 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal [ { subscriber: "projection", count: 1, oldest_age_seconds: 10 } ], status[:undiscovered]
     dispatch(consumer)
     receipt = delivery(event)
-    receipt.update!(attempts: 10)
-    receipt.record_failure!(ArgumentError.new("private failure"))
+    exhaust_delivery(receipt, consumer)
     status = DomainEvents::Status.call(subscriptions: [ consumer ])
     assert_equal 0, status[:undiscovered].first[:count]
     assert_equal [ [ receipt.id, "projection", "ArgumentError" ] ], status[:failed]
@@ -49,9 +48,8 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     travel 10.seconds
     assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
     receipt = delivery(event)
-    receipt.update!(attempts: DomainEvents::EventDelivery::MAX_ATTEMPTS)
-    receipt.record_failure!(ArgumentError.new)
-    assert_equal 10, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
+    exhaust_delivery(receipt, subscription { raise ArgumentError })
+    assert_equal (Time.current - receipt.created_at).to_i, DomainEvents::Status.call[:oldest_outstanding_age_seconds]
     receipt.retry!
     dispatch(subscription)
     assert_nil DomainEvents::Status.call[:oldest_outstanding_age_seconds]
@@ -242,5 +240,15 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
         DomainEvents::DomainEvent.insert_all!([ event.attributes.except("id").merge("id" => SecureRandom.uuid, "sequence" => 2, "payload" => []) ])
       end
     end
+  end
+
+  private
+
+  def exhaust_delivery(receipt, consumer)
+    (DomainEvents::EventDelivery::MAX_ATTEMPTS - 1).times do
+      travel_to receipt.reload.next_attempt_at
+      dispatch(consumer)
+    end
+    receipt.reload
   end
 end

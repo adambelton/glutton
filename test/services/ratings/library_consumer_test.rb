@@ -143,14 +143,21 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   end
 
   test "bad versions and identifiers retry without writes" do
-    [ { schema_version: 2 }, { payload: {} }, { payload: { user_id: @user.id + 1, film_id: @film.id } },
-      { payload: { user_id: @user.id, film_id: @film.id.to_s } },
-      { payload: { user_id: @user.id, film_id: @film.id + 1 } } ].each do |options|
-      outcome, receipt = deliver(publish(Library::Events::FILM_MARKED_WATCHED, **options))
+    malformed_events = [
+      -> { { schema_version: 2 } },
+      -> { { payload: {} } },
+      -> { { payload: { user_id: @user.id + 1, film_id: @film.id } } },
+      -> { { payload: { user_id: @user.id, film_id: @film.id.to_s } } },
+      -> { { payload: { user_id: @user.id, film_id: @film.id + 1 } } }
+    ]
+    malformed_events.each do |build_options|
+      @film = Registry::Film.create!(title: "Malformed Library event")
+      outcome, receipt = deliver(publish(Library::Events::FILM_MARKED_WATCHED, **build_options.call))
       assert_equal :retrying, outcome
+      assert_equal "ArgumentError", receipt.last_error_class
       assert_nil candidate
-      receipt.complete!(:skipped)
     end
+    @film = Registry::Film.create!(title: "Removed film")
     event = publish(Library::Events::FILM_MARKED_WATCHED)
     @film.delete
     outcome, receipt = deliver(event)

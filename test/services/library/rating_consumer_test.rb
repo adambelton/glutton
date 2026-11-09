@@ -113,15 +113,21 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "malformed identities and stream mismatches never create Library state" do
-    valid = { user_id: @user.id, film_id: @film.id }
-    [ {}, valid.merge(user_id: @user.id + 1), valid.merge(film_id: @film.id.to_s),
-      valid.merge(film_id: @film.id + 1), valid.merge(film_id: nil), valid.merge(film_id: -1) ].each do |payload|
+    payloads = [
+      ->(_) { {} },
+      ->(valid) { valid.merge(user_id: @user.id + 1) },
+      ->(valid) { valid.merge(film_id: @film.id.to_s) },
+      ->(valid) { valid.merge(film_id: @film.id + 1) },
+      ->(valid) { valid.merge(film_id: nil) },
+      ->(valid) { valid.merge(film_id: -1) }
+    ]
+    payloads.each do |build_payload|
+      @film = Registry::Film.create!(title: "Malformed rating event")
+      payload = build_payload.call(user_id: @user.id, film_id: @film.id)
       event = publish(payload:)
       delivery = DomainEvents::EventDelivery.create!(subscriber: @subscription.name, domain_event: event, next_attempt_at: Time.current)
       assert_equal :retrying, DomainEvents::Deliver.call(delivery_id: delivery.id, subscription: @subscription)
       assert_equal "ArgumentError", delivery.reload.last_error_class
-      # Clear the failed predecessor for the next independent malformed-contract case.
-      delivery.complete!(:skipped)
     end
     assert_empty Library::LibraryFilm.where(user: @user)
   end

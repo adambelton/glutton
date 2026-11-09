@@ -15,6 +15,8 @@ module Library
       rated?
     end
 
+    private
+
     def rated?
       rating_association = association(:rated_rating_film)
       rating_association.loaded? ? rating_association.target.present? : rating_association.scope.exists?

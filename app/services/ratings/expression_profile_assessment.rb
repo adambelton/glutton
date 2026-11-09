@@ -33,6 +33,8 @@ module Ratings
       self
     end
 
+    private
+
     def synthesis_input
       @evidence.group_by { |expression| expression.fetch("film_id") }.values.map do |film_expressions|
         film = film_expressions.first
@@ -40,8 +42,6 @@ module Ratings
           "expressions" => film_expressions.map { |expression| expression.slice("expression_id", "text") } }
       end
     end
-
-    private
 
     def synthesize(synthesizer)
       @tracer.in_span("synthesize-expression-profile", attributes: {

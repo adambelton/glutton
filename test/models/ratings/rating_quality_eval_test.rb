@@ -12,22 +12,25 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     @expression = @rating.rating_expressions.sole
   end
 
-  test "completed evidence preserves ordered results and supporting inputs without changing baseline scores" do
+  test "recording atomically preserves the evidence and applies a complete score set" do
     snapshot = assessment_output
-    baseline = @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
     evaluation = record(snapshot)
 
     assert_equal snapshot.deep_stringify_keys, evaluation.reload.output.slice(*snapshot.keys.map(&:to_s))
-    assert_equal baseline, @rating.rating_qualities.order(:quality_id).pluck(:quality_id, :score, :classification)
+    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
+    assert_equal [ [ "explicitly_expressed", 5 ], [ "unexpressed", 2 ] ],
+      evaluation.rating_qualities.order(:quality_id).pluck(:classification, :score)
     assert_equal @expression.text, @rating.rating_expressions.sole.text
     assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
   end
 
   test "rejects supporting expressions from another rating and references to uncaptured qualities or results" do
-    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD,
+    other_film = Registry::Film.create!(title: "Another film")
+    other_rating_film = Ratings::RatingFilm.create!(user: @rating_film.user, film: other_film)
+    other_rating = other_rating_film.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD,
       expression_texts: [ "Different thought." ])
     invalid_evidence = [
-      assessment_output(expression_id: revision.rating_expressions.sole.id),
+      assessment_output(expression_id: other_rating.rating_expressions.sole.id),
       assessment_output(quality_id: -1),
       assessment_output(result_id: "missing")
     ]
@@ -41,12 +44,16 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "separate assessments preserve identical evidence and survive revision" do
-    first = record(assessment_output)
-    second = record(assessment_output)
-    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD)
+  test "an assessment for the same profile is skipped and a superseded rating cannot be scored" do
+    evaluation = record(assessment_output)
+    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
+      assert_nil record(assessment_output)
+    end
 
-    assert_equal [ first.id, second.id ], @rating.rating_quality_evals.order(:id).ids
+    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD)
+    error = assert_raises(Ratings::QualityAssessmentFailed) { record(assessment_output) }
+    assert_equal :stale_rating, error.reason
+    assert_equal evaluation, @rating.rating_quality_evals.sole
     assert_empty revision.rating_quality_evals
   end
 
@@ -67,55 +74,21 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "application creates scores once for the same profile revision" do
-    first = record(assessment_output)
-    assert_empty @rating.rating_qualities
-    first_scores = first.apply_quality_scores!
-    assert_equal [ [ "explicitly_expressed", 5 ], [ "unexpressed", 2 ] ],
-      first.rating_qualities.order(:quality_id).pluck(:classification, :score)
-    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(first))
-    assert_equal [ @expression.id ], first_scores.first.rating_quality_eval.output.fetch("decisions").first.fetch("supporting_expression_ids")
-
-    second = record(assessment_output)
-    assert_no_difference "Ratings::RatingQuality.count" do
-      assert_raises(Ratings::QualityApplicationUnavailable) { second.apply_quality_scores! }
-      assert_raises(Ratings::QualityApplicationUnavailable) { first.apply_quality_scores! }
-    end
-    assert_empty second.rating_qualities
-    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(first))
-  end
-
-  test "conflicting evaluations leave the previously applied scores intact" do
+  test "conflicting decisions roll back the evaluation and scores" do
     snapshot = assessment_output
     snapshot[:decisions] << snapshot[:decisions].first.dup
-    conflicting = record(snapshot)
 
-    assert_no_difference "Ratings::RatingQuality.count" do
-      assert_raises(Ratings::QualityApplicationUnavailable) { conflicting.apply_quality_scores! }
+    assert_no_difference [ "Ratings::RatingQualityEval.count", "Ratings::RatingQuality.count" ] do
+      assert_raises(Ratings::QualityApplicationUnavailable) { record(snapshot) }
     end
-    applied = record(assessment_output)
-    applied.apply_quality_scores!
-    assert_equal 5, scores(applied).fetch(@quality.id)
-
-    revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::NOT_FOR_ME,
-      expression_texts: [ "The dread put me off." ])
-    assert_empty revision.rating_qualities
-
-    @rating = revision
-    @expression = revision.rating_expressions.sole
-    revision_evaluation = record(assessment_output)
-    revision_evaluation.apply_quality_scores!
-    assert_equal({ @quality.id => -3, @other_quality.id => -1 }, scores(revision_evaluation))
   end
 
   test "application scores the captured qualities after Registry accepts another quality" do
-    evaluation = record(assessment_output)
+    snapshot = assessment_output
     quality = quality_categories(:tone).qualities.create!(name: "Unease")
     Registry::FilmQuality.create!(film: @rating_film.film, quality:)
 
-    evaluation.apply_quality_scores!
-
-    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
+    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(record(snapshot)))
   end
 
   test "application uses the product score weights captured in the evaluation" do
@@ -126,20 +99,6 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     assert_equal({ "brilliant" => 4, "pretty_good" => 2, "not_for_me" => -2, "garbage" => -4 },
       weights.fetch("implicitly_expressed"))
     assert_equal 5, weights.dig("explicitly_expressed", "brilliant")
-  end
-
-  test "application honors score weights captured by older assessments" do
-    snapshot = assessment_output.merge(question_policy: {
-      scores: {
-        explicitly_expressed: { brilliant: 7 },
-        unexpressed: { brilliant: 1 }
-      }
-    })
-    evaluation = Ratings::RatingQualityEval.create!(rating: @rating, output: snapshot)
-
-    evaluation.apply_quality_scores!
-
-    assert_equal({ @quality.id => 7, @other_quality.id => 1 }, scores(evaluation))
   end
 
   private

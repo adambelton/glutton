@@ -37,7 +37,7 @@ module Ratings
           profile: profile_revision&.profile,
           trace_id: (span.context.hex_trace_id if span.context.valid?))
         TypeSafeClient.with_trace_tags(TRACE_TAGS) { assessment.call(client: @client) }
-        evaluation = RatingQualityEval.build_from_assessment(rating:, assessment:).record_and_apply!
+        evaluation = RatingQualityEval.record!(rating:, assessment:)
         span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
         evaluation
       rescue StandardError

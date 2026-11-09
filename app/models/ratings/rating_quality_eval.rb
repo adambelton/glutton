@@ -7,20 +7,15 @@ module Ratings
     validate :evaluation_output
 
     def self.record!(rating:, assessment:)
-      build_from_assessment(rating:, assessment:).tap(&:save!)
-    end
+      evaluation = new(rating:, output: assessment.result.merge("score_weights" => RatingQualityScores::ALL))
+      rating_film = rating.rating_film
+      rating_film.with_lock(requires_new: true) do
+        raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id
+        next unless rating.can_apply_quality_evaluation?(evaluation)
 
-    def self.build_from_assessment(rating:, assessment:)
-      new(rating:, output: assessment.result.merge("score_weights" => RatingQualityScores::ALL))
-    end
-
-    def record_and_apply!
-      with_application_lock do
-        next unless rating.can_apply_quality_evaluation?(self)
-
-        save!
-        apply_scores!
-        self
+        evaluation.save!
+        apply_quality_scores!(evaluation)
+        evaluation
       end
     end
 
@@ -37,29 +32,9 @@ module Ratings
       super || persisted?
     end
 
-    def apply_quality_scores!
-      raise QualityApplicationUnavailable unless persisted?
-
-      with_application_lock do
-        raise QualityApplicationUnavailable unless rating.can_apply_quality_evaluation?(self)
-
-        apply_scores!
-      end
-    end
-
-    private
-
-    def with_application_lock
-      rating_film = rating.rating_film
-      rating_film.with_lock(requires_new: true) do
-        raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id
-
-        yield
-      end
-    end
-
-    def apply_scores!
-      quality_ids = output.fetch("qualities").keys.map(&:to_i)
+    def self.apply_quality_scores!(evaluation)
+      output = evaluation.output
+      rating = evaluation.rating
       decisions = output.fetch("decisions")
       unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
         raise QualityApplicationUnavailable
@@ -67,15 +42,15 @@ module Ratings
 
       explicit_ids = decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i)
       implicit_ids = output.dig("implicit_assessment", "applicable_quality_ids") || []
-      scores = output["score_weights"] || output.dig("question_policy", "scores") || RatingQualityScores::ALL
-      quality_ids.map do |quality_id|
+      scores = output.fetch("score_weights")
+      output.fetch("qualities").keys.map(&:to_i).each do |quality_id|
         classification = classify_quality(quality_id, explicit_ids, implicit_ids)
         score = scores.fetch(classification).fetch(rating.value)
-        rating_qualities.create!(rating:, quality_id:, classification:, score:)
+        evaluation.rating_qualities.create!(rating:, quality_id:, classification:, score:)
       end
     end
 
-    def classify_quality(quality_id, explicit_ids, implicit_ids)
+    def self.classify_quality(quality_id, explicit_ids, implicit_ids)
       if explicit_ids.include?(quality_id)
         RatingQuality::Classifications::EXPLICITLY_EXPRESSED
       elsif implicit_ids.include?(quality_id)
@@ -84,6 +59,9 @@ module Ratings
         RatingQuality::Classifications::UNEXPRESSED
       end
     end
+    private_class_method :apply_quality_scores!, :classify_quality
+
+    private
 
     def evaluation_output
       errors.add(:output, :invalid) unless valid_output?
