@@ -73,7 +73,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_select "h2", "First film (1982)"
     assert_select "form#rating-form[action=?]", rating_path
     assert_select ".rating-interface .rating-actions" do
-      assert_select 'button[type="submit"][form="rating-form"].ui-submit', I18n.t("ratings.browser.save")
+      assert_select 'button[type="submit"][form="rating-form"].ui-submit[disabled]', I18n.t("ratings.browser.save")
       assert_select "form[action=?]", dismiss_rating_path do
         assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
         assert_select "button", I18n.t("ratings.browser.dismiss")

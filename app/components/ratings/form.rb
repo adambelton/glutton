@@ -9,7 +9,7 @@ module Ratings
     end
 
     def view_template
-      div(class: "rating-interface") do
+      div(class: "rating-interface", data: ({ controller: "rating-selection" } unless @readonly)) do
         errors_section
         if @readonly
           div(class: "rating-workspace") { workspace }
@@ -21,7 +21,8 @@ module Ratings
             workspace
           end
           div(class: "rating-actions") do
-            render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit") { t("ratings.browser.save") }
+            render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit",
+              disabled: !Ratings::Rating::Values::ALL.include?(@value), data: { rating_selection_target: "save" }) { t("ratings.browser.save") }
             if @dismissible
               render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
             end
@@ -64,12 +65,14 @@ module Ratings
     end
 
     def rating_fields
-      fieldset(disabled: @readonly, aria: { describedby: ("rating-errors" if @errors.present?) }, class: "rating-choices") do
+      fieldset(disabled: @readonly, aria: { describedby: ("rating-errors" if @errors.present?) }, class: "rating-choices",
+        data: ({ action: "change->rating-selection#update" } unless @readonly)) do
         legend { t("ratings.browser.choice") }
         Ratings::Rating::Values::ALL.each do |value|
           div(class: "rating-choice") do
             id = "#{@prefix}rating-#{value}"
-            input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly)
+            input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly,
+              data: ({ rating_selection_target: "choice" } unless @readonly))
             label(for: id) { t("ratings.values.#{value}") }
           end
         end
