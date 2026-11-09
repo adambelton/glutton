@@ -1,7 +1,7 @@
 module Ratings
   class AssessRatingQualities
     TRACE_NAME = "assess-rating-qualities".freeze
-    TRACE_TAGS = [ "ratings", "explicit-assessment" ].freeze
+    TRACE_TAGS = [ "ratings", "quality-assessment" ].freeze
 
     def self.call(rating_id:, client: nil, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
       new(rating_id:, client:, tracer_provider:).call
@@ -18,9 +18,8 @@ module Ratings
       rating = Rating.find(@rating_id)
       rating_film = rating.rating_film
       ensure_current!(rating_film, rating)
-      existing = rating.rating_quality_evals.order(id: :desc).first
-      return existing if existing.present?
-
+      profile_revision = ExpressionProfile.find_by(user_id: rating_film.user_id)&.current_revision
+      return unless rating.can_assess_qualities_for?(profile_revision&.id)
       qualities = rating_film.film.qualities.order(:id).to_h do |quality|
         [ quality.id.to_s, { "name" => quality.name, "match_rule" => quality.match_rule, "not_sufficient" => quality.not_sufficient } ]
       end
@@ -34,11 +33,12 @@ module Ratings
         "langfuse.environment" => Rails.env.to_s,
         "langfuse.observation.input" => { rating_id: rating.id, expression_count: expressions.size, quality_count: qualities.size }.to_json
       }, record_exception: false) do |span|
-        assessment = ExplicitQualityAssessment.new(expressions:, qualities:,
+        assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision&.id,
+          profile: profile_revision&.profile,
           trace_id: (span.context.hex_trace_id if span.context.valid?))
         TypeSafeClient.with_trace_tags(TRACE_TAGS) { assessment.call(client: @client) }
-        evaluation = record_and_apply(rating_film, rating, assessment)
-        span.set_attribute("rating_quality_eval_id", evaluation.id)
+        evaluation = RatingQualityEval.build_from_assessment(rating:, assessment:).record_and_apply!
+        span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
         evaluation
       rescue StandardError
         span.status = OpenTelemetry::Trace::Status.error("Rating quality assessment failed")
@@ -50,18 +50,6 @@ module Ratings
     end
 
     private
-
-    def record_and_apply(rating_film, rating, assessment)
-      rating_film.with_lock(requires_new: true) do
-        ensure_current!(rating_film, rating)
-        existing = rating.rating_quality_evals.order(id: :desc).first
-        next existing if existing.present?
-
-        evaluation = RatingQualityEval.record!(rating:, assessment:)
-        evaluation.apply_quality_scores!
-        evaluation
-      end
-    end
 
     def ensure_current!(rating_film, rating)
       raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == rating.id

@@ -56,7 +56,82 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal [ :expressions, :qualities ], requests.sole.fetch(:state).keys.sort
     assert_equal [ expressions.first.id ], evaluation.output.fetch("decisions").first.fetch("supporting_expression_ids")
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
-    assert_equal evaluation, assess(rating, no_call_client)
+    assert_nil assess(rating, no_call_client)
+  end
+
+  test "assesses only qualities without direct evidence against the captured profile" do
+    rating = submit([ "Dread builds slowly." ])
+    revision = publish_profile
+    phases = []
+    http = Http.new(lambda do |payload|
+      questions = payload.fetch("questions")
+      state = payload.fetch("state")
+      phases << state.keys
+      if state.key?("expressions")
+        response(questions, { "expression_#{rating.rating_expressions.sole.id}_quality_#{@quality.id}" => 0.60 })
+      else
+        assert_equal revision.profile, state.fetch("expression_profile")
+        assert_equal [ @other_quality.id.to_s ], state.fetch("qualities").keys
+        response(questions, questions.keys.index_with(0.60))
+      end
+    end)
+    client = TypeSafeClient.new(token: "test-token", http_class: http, profile: :ratings)
+
+    evaluation = assess(rating, client)
+
+    assert_equal 2, phases.size
+    assert_equal revision.id, evaluation.output.dig("implicit_assessment", "profile_revision_id")
+    assert_equal({ @quality.id => [ "explicitly_expressed", 5 ], @other_quality.id => [ "implicitly_expressed", 4 ] },
+      evaluation.rating_qualities.pluck(:quality_id, :classification, :score).to_h { |id, classification, score| [ id, [ classification, score ] ] })
+    assert_nil assess(rating, no_call_client)
+  end
+
+  test "a newer cleared revision replaces an older applied profile and preserves score history" do
+    previous = submit([ "Dread builds slowly." ])
+    revision = publish_profile
+    rating = @rating_film.revise_rating!(previous_rating_id: previous.id, value: Ratings::Rating::Values::NOT_FOR_ME)
+    client = Client.new(lambda do |state:, questions:, phase:|
+      assert_equal "assess-implicit-quality-evidence", phase
+      assert_equal revision.profile, state.fetch(:expression_profile)
+      cleared = publish_profile
+      assert_empty cleared.profile
+      response(questions, { @quality.id.to_s => 0.60, @other_quality.id.to_s => 0.59 })
+    end)
+
+    evaluation = assess(rating, client)
+
+    assert_equal revision.id, evaluation.output.dig("implicit_assessment", "profile_revision_id")
+    assert_equal({ @quality.id => -2, @other_quality.id => -1 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
+
+    next_evaluation = assess(rating, no_call_client)
+    assert_empty next_evaluation.output.dig("implicit_assessment", "calls")
+    assert_equal [ -1, -1 ], next_evaluation.rating_qualities.pluck(:score)
+    assert_equal [ -2, -1 ], evaluation.rating_qualities.order(:quality_id).pluck(:score)
+    assert_nil assess(rating, no_call_client)
+
+    older_attempt = Ratings::RatingQualityEval.record!(rating:, assessment: Struct.new(:result).new(evaluation.output))
+    assert_no_difference "Ratings::RatingQuality.count" do
+      assert_raises(Ratings::QualityApplicationUnavailable) { older_attempt.apply_quality_scores! }
+    end
+  end
+
+  test "an older assessment finishing last cannot publish over a newer profile revision" do
+    previous = submit([ "Dread builds slowly." ])
+    publish_profile
+    rating = @rating_film.revise_rating!(previous_rating_id: previous.id, value: Ratings::Rating::Values::BRILLIANT)
+    newer_evaluation = nil
+    client = Client.new(lambda do |questions:, **|
+      cleared = publish_profile
+      newer_evaluation = assess(rating, no_call_client)
+      assert_equal cleared.id, newer_evaluation.output.dig("implicit_assessment", "profile_revision_id")
+      response(questions, questions.keys.index_with(0.99))
+    end)
+
+    result = assess(rating, client)
+
+    assert_nil result
+    assert_equal newer_evaluation, rating.rating_quality_evals.sole
+    assert_equal [ 2, 2 ], newer_evaluation.rating_qualities.pluck(:score)
   end
 
   test "no expressions produce baseline rows and an empty call history" do
@@ -111,7 +186,7 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     end)
 
     actual = assess(rating, client)
-    assert_equal winner, actual
+    assert_nil actual
     assert_equal winner, rating.rating_quality_evals.sole
     assert_equal({ @quality.id => 2, @other_quality.id => 2 }, winner.rating_qualities.pluck(:quality_id, :score).to_h)
   end
@@ -128,26 +203,34 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     end
   end
 
-  test "assessment tracing links provider usage to the evaluation without exporting expressions" do
+  test "assessment tracing links provider usage to the evaluation without exporting expressions or profiles" do
     rating = submit([ "Private expression for tracing test." ])
+    revision = publish_profile
     exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
     provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter))
     http = Http.new(->(payload) { response(payload.fetch("questions")) })
-    client = TypeSafeClient.new(token: "private-test-key", http_class: http, tracer: provider.tracer("glutton.ratings", "1"))
+    client = TypeSafeClient.new(token: "private-test-key", http_class: http, profile: :ratings, tracer: provider.tracer("glutton.ratings", "1"))
 
     evaluation = Ratings::AssessRatingQualities.call(rating_id: rating.id, client:, tracer_provider: provider)
     spans = exporter.finished_spans.index_by(&:name)
     root = spans.fetch("assess-rating-qualities")
-    generation = spans.fetch("assess-explicit-quality-evidence")
-
-    assert_equal root.span_id, generation.parent_span_id
+    %w[assess-explicit-quality-evidence assess-implicit-quality-evidence].each do |name|
+      generation = spans.fetch(name)
+      assert_equal root.span_id, generation.parent_span_id
+      assert_equal root.trace_id, generation.trace_id
+      assert_equal Ratings::AssessRatingQualities::TRACE_TAGS, generation.attributes.fetch("langfuse.trace.tags")
+      assert_equal "jev-1.14.0", generation.attributes.fetch("langfuse.observation.model.name")
+      assert_equal({ "input" => 10, "output" => 2 }, JSON.parse(generation.attributes.fetch("langfuse.observation.usage_details")))
+    end
     assert_equal root.trace_id.unpack1("H*"), evaluation.output.fetch("trace_id")
     assert_equal evaluation.id, root.attributes.fetch("rating_quality_eval_id")
     assert_equal client.configuration, evaluation.reload.output.dig("configuration", "provider")
-    assert_equal "jev-1.14.0", generation.attributes.fetch("langfuse.observation.model.name")
-    assert_equal({ "input" => 10, "output" => 2 }, JSON.parse(generation.attributes.fetch("langfuse.observation.usage_details")))
-    assert_includes http.requests.sole.body, "Private expression for tracing test."
+    assert_equal client.configuration, evaluation.output.dig("implicit_assessment", "configuration")
+    assert_equal 2, http.requests.size
+    assert_includes http.requests.first.body, "Private expression for tracing test."
+    assert_includes http.requests.last.body, revision.profile
+    refute_includes spans.values.map(&:attributes).to_json, revision.profile
     refute_includes spans.values.map(&:attributes).to_json, "Private expression for tracing test."
     refute_includes spans.values.map(&:attributes).to_json, "private-test-key"
   ensure
@@ -155,6 +238,15 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
   end
 
   private
+
+  def publish_profile
+    synthesizer = lambda do |expressions:, **|
+      { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
+        "paragraphs" => [{ "text" => "The viewer enjoys slowly building dread.", "explanation" => "The viewer described dread.",
+          "expression_ids" => [ expressions.first.fetch("expressions").first.fetch("expression_id") ] }] }
+    end
+    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+  end
 
   def submit(expressions)
     @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: expressions)

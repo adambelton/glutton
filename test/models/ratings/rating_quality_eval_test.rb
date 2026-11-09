@@ -67,7 +67,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
   end
 
-  test "application creates final rating qualities and preserves earlier results" do
+  test "application creates scores once for the same profile revision" do
     first = record(assessment_output)
     assert_empty @rating.rating_qualities
     first_scores = first.apply_quality_scores!
@@ -76,25 +76,16 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(first))
     assert_equal [ @expression.id ], first_scores.first.rating_quality_eval.output.fetch("decisions").first.fetch("supporting_expression_ids")
 
-    snapshot = assessment_output
-    snapshot[:decisions].first.merge!(applicable: false, supporting_expression_ids: [])
-    snapshot[:decisions].last.merge!(applicable: true, supporting_expression_ids: [ @expression.id ])
-    second = record(snapshot)
-    assert_empty second.rating_qualities
-    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(first))
-    second.apply_quality_scores!
-    assert_equal({ @quality.id => 2, @other_quality.id => 5 }, scores(second))
-
-    assert_equal 5, first.rating_qualities.find_by!(quality_id: @quality.id).score
+    second = record(assessment_output)
     assert_no_difference "Ratings::RatingQuality.count" do
+      assert_raises(Ratings::QualityApplicationUnavailable) { second.apply_quality_scores! }
       assert_raises(Ratings::QualityApplicationUnavailable) { first.apply_quality_scores! }
     end
-    assert_equal({ @quality.id => 2, @other_quality.id => 5 }, scores(second))
+    assert_empty second.rating_qualities
+    assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(first))
   end
 
   test "conflicting evaluations leave the previously applied scores intact" do
-    applied = record(assessment_output)
-    applied.apply_quality_scores!
     snapshot = assessment_output
     snapshot[:decisions] << snapshot[:decisions].first.dup
     conflicting = record(snapshot)
@@ -102,6 +93,8 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     assert_no_difference "Ratings::RatingQuality.count" do
       assert_raises(Ratings::QualityApplicationUnavailable) { conflicting.apply_quality_scores! }
     end
+    applied = record(assessment_output)
+    applied.apply_quality_scores!
     assert_equal 5, scores(applied).fetch(@quality.id)
 
     revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::NOT_FOR_ME,
@@ -113,16 +106,6 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     revision_evaluation = record(assessment_output)
     revision_evaluation.apply_quality_scores!
     assert_equal({ @quality.id => -3, @other_quality.id => -1 }, scores(revision_evaluation))
-  end
-
-  test "a newer assessment without applicable decisions restores baseline scores" do
-    record(assessment_output).apply_quality_scores!
-    snapshot = assessment_output
-    snapshot[:decisions].first.merge!(applicable: false, supporting_expression_ids: [])
-
-    evaluation = record(snapshot)
-    assert_equal [ "unexpressed", "unexpressed" ], evaluation.apply_quality_scores!.map(&:classification)
-    assert_equal({ @quality.id => 2, @other_quality.id => 2 }, scores(evaluation))
   end
 
   test "application scores the captured qualities after Registry accepts another quality" do
