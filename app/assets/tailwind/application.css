@@ -320,6 +320,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .expression-list .expression-items { flex: 1; min-height: 0; height: 0; }
 .rating-actions { grid-column: 3; grid-row: 2; display: flex; justify-content: flex-end; align-items: flex-end; gap: 12px; }
 .ui-page .rating-actions .ui-submit { width: auto; margin: 0; }
+.ui-page .rating-actions .ui-submit:disabled { pointer-events: auto; cursor: not-allowed; background-color: var(--color-primary); }
 .rating-actions .ui-action-form { margin: 0; }
 .rating-actions .ui-action-button { min-height: 46px; }
 .rating-interface > .ui-errors { grid-column: 1 / -1; max-height: 120px; overflow-y: auto; }
