@@ -17,6 +17,7 @@ module Shared
                 a(href: library_path) { t("library.browser.title") }
                 if user&.superuser?
                   a(href: registry_root_path) { t("registry.title") }
+                  a(href: account_path) { t("account.title") }
                 end
               end
             end

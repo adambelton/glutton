@@ -19,6 +19,10 @@ Rails.application.routes.draw do
     post :dismiss
   end
 
+  resource :account, only: :show, controller: :account do
+    post :refresh_expression_profile
+  end
+
   resource :library, only: :show, controller: :library
 
   get "library/films/:id", to: "library#film", as: :library_film

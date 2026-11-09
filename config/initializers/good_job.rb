@@ -8,6 +8,11 @@ Rails.application.configure do
     domain_event_sweep: {
       cron: "*/30 * * * * *",
       class: "DispatchDomainEventsJob"
+    },
+    ratings_expression_profile_refresh: {
+      cron: "*/15 * * * * UTC",
+      class: "Ratings::RefreshExpressionProfilesJob",
+      enabled_by_default: -> { Rails.env.production? }
     }
   }
   config.good_job.preserve_job_records = true

@@ -109,7 +109,7 @@ class Ratings::RefreshExpressionProfilesTest < ActiveSupport::TestCase
   end
 
   def synthesis(expression)
-    { "paragraphs" => [ { "text" => expression.fetch("text"), "explanation" => "The viewer described the reaction.",
+    { "profile" => expression.fetch("text"), "conclusions" => [ { "anchor" => expression.fetch("text"), "claim" => expression.fetch("text"), "explanation" => "The viewer described the reaction.",
       "expression_ids" => [ expression.fetch("expression_id") ] } ],
       "provider" => "stub", "model" => "stub-model", "usage" => { "input" => 10, "output" => 5 } }
   end

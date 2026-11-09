@@ -368,3 +368,14 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 [data-theme="dark"] .theme-moon { display: none; }
 :is(a[href], button, summary, select, [role="button"], [role="switch"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]), .rating-choice label { cursor: pointer; }
 :is(button, input, select, a, [role="button"], [role="switch"]):is(:disabled, [aria-disabled="true"]), .rating-choice:has(input:disabled) label { cursor: default; }
+
+.account-tabs { border-bottom: 1px solid var(--glutton-border); }
+.account-tabs a { display: inline-block; padding: 10px 0; border-bottom: 2px solid currentColor; }
+.account-page section > p, .profile-narrative { margin-block: 12px; }
+.profile-narrative { white-space: pre-wrap; }
+.profile-annotation { color: var(--glutton-muted-foreground); text-decoration: underline; }
+.profile-evidence-list { list-style: decimal; padding-inline-start: 24px; }
+.profile-evidence-list > li { margin-block: 12px; scroll-margin-block-start: 16px; }
+.profile-evidence-list > li:target { outline: 2px solid var(--glutton-border); outline-offset: 4px; }
+.account-page ul { list-style: disc; padding-inline-start: 24px; }
+.account-page blockquote { white-space: pre-wrap; }

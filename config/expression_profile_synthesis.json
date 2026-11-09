@@ -1,6 +1,6 @@
 {
   "model": "gpt-6.1-terra",
   "effort": "low",
-  "maximum_request_bytes": 48000,
+  "maximum_request_bytes": 4000000,
   "max_output_tokens": 3200
 }

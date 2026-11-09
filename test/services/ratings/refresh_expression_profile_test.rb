@@ -48,13 +48,14 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     ids = expressions.pluck("expression_id")
     request = nil
     responses = Object.new
-    paragraphs = [
-      { "text" => "The viewer responds to dread built through anticipation.", "explanation" => "Both reactions connect the wait to anticipation.", "expression_ids" => ids },
-      { "text" => "In that setting, a long wait can be part of the appeal.", "explanation" => "The viewer explicitly praised the long wait.", "expression_ids" => [ ids.first ] }
+    narrative = "The viewer responds to dread built through anticipation. In that setting, a long wait can be part of the appeal."
+    conclusions = [
+      { "anchor" => "The viewer responds to dread built through anticipation.", "claim" => "Anticipation can build dread the viewer enjoys.", "explanation" => "Both reactions connect the wait to anticipation.", "expression_ids" => ids },
+      { "anchor" => "In that setting, a long wait can be part of the appeal.", "claim" => "A long wait can work when it builds dread.", "explanation" => "The viewer explicitly praised the long wait.", "expression_ids" => [ ids.first ] }
     ]
     responses.define_singleton_method(:create) do |**payload|
       request = payload
-      content = [ Struct.new(:type, :text).new(type: :output_text, text: JSON.generate("paragraphs" => paragraphs)) ]
+      content = [ Struct.new(:type, :text).new(type: :output_text, text: JSON.generate("profile" => narrative, "conclusions" => conclusions)) ]
       Struct.new(:status, :output, :model, :usage).new(status: :completed, output: [ Struct.new(:type, :content).new(type: :message, content:) ],
         model: "resolved-luna", usage: Struct.new(:input_tokens, :output_tokens).new(input_tokens: 300, output_tokens: 40))
     end
@@ -75,8 +76,11 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal "resolved-luna", output.dig("synthesis", "model")
     assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
     assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")
-    assert_equal paragraphs.pluck("text").join("\n\n"), revision.profile
-    assert_equal paragraphs, output.fetch("annotations")
+    assert_equal narrative, revision.profile
+    assert_equal conclusions.pluck("claim"), output.fetch("annotations").pluck("claim")
+    assert_equal conclusions.map { |claim| narrative.index(claim.fetch("anchor")) + claim.fetch("anchor").length },
+      output.fetch("annotations").pluck("end_offset")
+    assert_equal conclusions.pluck("explanation"), output.fetch("annotations").pluck("explanation")
     assert_equal true, request.dig(:text, :format_, :strict)
     assert_equal "json_schema", request.dig(:text, :format_, :type)
 
@@ -89,6 +93,49 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
       assert_equal :invalid_response, error.reason
     end
     assert_equal revision, current_revision
+  end
+
+  test "rejects an annotation whose anchor is ambiguous or missing" do
+    submit([ "I like quiet dread." ])
+    [ "Quiet dread", "Missing claim" ].each do |anchor|
+      synthesizer = lambda do |expressions:, **|
+        id = expressions.sole.fetch("expressions").sole.fetch("expression_id")
+        synthesis("Quiet dread works. Quiet dread unsettles.").merge("conclusions" => [
+          { "anchor" => anchor, "claim" => "Enjoys dread.", "explanation" => "The viewer praised quiet dread.", "expression_ids" => [ id ] }
+        ])
+      end
+      assert_no_difference "Ratings::ExpressionProfileRevision.count" do
+        error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
+          Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+        end
+        assert_equal :invalid_response, error.reason
+      end
+    end
+  end
+
+  test "a manual refresh regenerates an old annotation format without changing the original revision" do
+    rating = submit([ "The quiet made it unsettling." ])
+    expression = rating.rating_expressions.sole
+    profile = Ratings::ExpressionProfile.create!(user: @user)
+    output = { "evidence" => [ { "expression_id" => expression.id, "rating_id" => rating.id, "film_id" => @film.id,
+      "film_title" => @film.title, "film_release_date" => nil, "text" => expression.text } ],
+      "profile" => "Legacy narrative.", "trace_id" => nil, "synthesis" => synthesis.except("profile"),
+      "annotations" => [ { "text" => "Legacy narrative.", "explanation" => "Old annotation", "expression_ids" => [ expression.id ] } ] }
+    old_revision = Ratings::ExpressionProfileEval.record!(expression_profile: profile, assessment: Struct.new(:result).new(output)).apply_profile!
+    Ratings::ExpressionProfileRefreshRequest.find_by!(user: @user).acknowledge!
+    synthesizer = lambda do |**|
+      synthesis("The viewer likes quiet dread.").merge("conclusions" => [
+        { "anchor" => "quiet dread.", "claim" => "Likes quiet dread.", "explanation" => "Quiet helped make the film unsettling.",
+          "expression_ids" => [ expression.id ] }
+      ])
+    end
+
+    result = Ratings::RefreshExpressionProfiles.call(user_id: @user.id, synthesizer:)
+
+    assert_equal current_revision.id, result.fetch(:revisions).fetch(@user.id)
+    assert_equal "Likes quiet dread.", current_revision.expression_profile_eval.output.fetch("annotations").sole.fetch("claim")
+    assert_equal "Legacy narrative.", old_revision.reload.profile
+    assert old_revision.legacy_annotations?
   end
 
   test "an incomplete OpenAI response leaves the previous profile current" do
@@ -108,11 +155,34 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
     assert_equal revision, current_revision
   end
 
+  test "synthesis sends the full context for a large rating history" do
+    captured_input = nil
+    responses = Object.new
+    responses.define_singleton_method(:create) do |input:, **|
+      captured_input = JSON.parse(input)
+      content = Struct.new(:type, :text).new(type: :output_text, text: JSON.generate("profile" => "Profile", "conclusions" => []))
+      Struct.new(:status, :output, :model, :usage).new(status: :completed,
+        output: [ Struct.new(:type, :content).new(type: :message, content: [ content ]) ],
+        model: "stub", usage: Struct.new(:input_tokens, :output_tokens).new(input_tokens: 1, output_tokens: 1))
+    end
+    adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Struct.new(:responses).new(responses:))
+    expressions = Array.new(100) do |index|
+      { "film_title" => "Film #{index}", "source_paragraphs" => [ "Source text. " * 2_900 ],
+        "expressions" => [ { "expression_id" => index + 1, "text" => "I liked the atmosphere." } ] }
+    end
+
+    adapter.call(expressions:, instructions: Ratings::ExpressionProfileAssessment::INSTRUCTIONS,
+      schema: Ratings::ExpressionProfileAssessment::SCHEMA)
+
+    assert_equal expressions, captured_input
+  end
+
   test "an oversized synthesis input is rejected before contacting the provider" do
     adapter = Ratings::ExpressionProfileSynthesizer.new(openai_client: Object.new)
 
     error = assert_raises(Ratings::ExpressionProfileRefreshFailed) do
-      adapter.call(expressions: [ "x" * 48_000 ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
+      limit = Ratings::ExpressionProfileSynthesizer::CONFIGURATION.fetch("maximum_request_bytes")
+      adapter.call(expressions: [ "x" * limit ], instructions: "Describe this viewer.", schema: Ratings::ExpressionProfileAssessment::SCHEMA)
     end
     assert_equal :input_limit, error.reason
   end
@@ -392,9 +462,9 @@ class Ratings::RefreshExpressionProfileTest < ActiveSupport::TestCase
   def refresh(tracer_provider: nil, &synthesizer)
     adapter = lambda do |expressions:, **options|
       response = synthesizer.call(expressions:, **options)
-      profile = response.fetch("profile")
-      response.except("profile").merge("paragraphs" => [
-        { "text" => profile, "explanation" => "The viewer described this reaction.",
+      profile = response.fetch("profile").strip
+      response.merge("profile" => profile, "conclusions" => [
+        { "anchor" => profile, "claim" => profile, "explanation" => "The viewer described this reaction.",
           "expression_ids" => expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") } }
       ])
     end

@@ -14,7 +14,7 @@ module Ratings
       result = JSON.parse(text)
       fail_synthesis(:invalid_response) unless result.is_a?(Hash)
 
-      { "paragraphs" => result["paragraphs"], "provider" => "openai", "model" => model, "usage" => usage,
+      { "profile" => result["profile"], "conclusions" => result["conclusions"], "provider" => "openai", "model" => model, "usage" => usage,
         "settings" => CONFIGURATION.except("model").merge("requested_model" => CONFIGURATION.fetch("model")) }
     rescue JSON::ParserError
       fail_synthesis(:invalid_response)

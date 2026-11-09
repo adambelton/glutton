@@ -3,19 +3,21 @@ module Ratings
     TRACE_NAME = "refresh-expression-profile".freeze
     TRACE_TAGS = [ "ratings", "expression-profile" ].freeze
 
-    def self.call(user_id:, synthesizer:, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
-      new(user_id:, synthesizer:, tracer_provider:).call
+    def self.call(user_id:, synthesizer:, refresh_legacy: false, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
+      new(user_id:, synthesizer:, refresh_legacy:, tracer_provider:).call
     end
 
-    def initialize(user_id:, synthesizer:, tracer_provider:)
+    def initialize(user_id:, synthesizer:, refresh_legacy:, tracer_provider:)
       @user_id, @synthesizer, @tracer_provider = user_id, synthesizer, tracer_provider
+      @refresh_legacy = refresh_legacy
       @tracer = (tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.ratings", "1")
     end
 
     def call
       current, evidence = with_owner_lock { |user| [ ExpressionProfile.find_by(user:)&.current_revision, capture_evidence ] }
       expression_texts = texts_by_film(evidence)
-      return current if expression_texts == texts_by_film(current&.expression_texts || [])
+      unchanged = expression_texts == texts_by_film(current&.expression_texts || [])
+      return current if unchanged && !(@refresh_legacy && current&.legacy_annotations?)
 
       @tracer.in_span(TRACE_NAME, attributes: {
         "langfuse.trace.name" => TRACE_NAME,
