@@ -104,11 +104,11 @@ class Ratings::AssessRatingQualitiesJobTest < ActiveSupport::TestCase
   private
 
   def submit(value: Ratings::Rating::Values::BRILLIANT, expressions: [])
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value:, notes: expressions.join("\n\n").presence)
+    Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value:, notes: expressions.join("\n\n").presence)
   end
 
   def revise(rating)
-    Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
+    Ratings::RatingRecording::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
       previous_rating_id: rating.id, value: Ratings::Rating::Values::BRILLIANT)
   end
 

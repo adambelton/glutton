@@ -4,7 +4,7 @@ This is the retained starting material for selecting and reviewing film qualitie
 
 - [MASTER_LIST.md](MASTER_LIST.md): readable list of 235 provisional qualities, meanings and exclusions.
 - [vocabulary.json](vocabulary.json): the same data for future implementation. IDs, names, categories and definitions are unchanged from the latest test. No viewer-preference validation or accepted film associations are implied.
-- [initial_quality_assessment.json](../../app/services/registry/initial_quality_assessment.json): the current shared JEV question template and evidence policy. It preserves the tested independent contextual-support judgment without importance or category priorities.
+- [evaluate_initial_film_qualities.json](../../app/services/registry/quality_management/evaluate_initial_film_qualities.json): the current shared JEV question template and evidence policy. It preserves the tested independent contextual-support judgment without importance or category priorities.
 - [examples.json](examples.json): six source-provenanced uncapped examples, all 1,410 support probabilities and the 318 matched-candidate review records. These are historical examples for selection/review work, not production data or a new scoring rule.
 - [Findings and limitations](../research/film_quality_findings.md): compact experiment receipt and the decision to stop fine tuning as a prerequisite.
 

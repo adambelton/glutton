@@ -1,7 +1,7 @@
 namespace :identity do
   desc "Delete one bounded batch of expired guests and pending registrations"
   task cleanup_expired: :environment do
-    counts = Identity::CleanupExpiredAccounts.call
+    counts = Identity::AccountAdministration::CleanupExpiredAccounts.call
     puts "guests_deleted=#{counts.fetch(:guests_deleted)} pending_registrations_deleted=#{counts.fetch(:pending_registrations_deleted)}"
   rescue StandardError => error
     # Persistence exceptions may contain private row values. Do not print them.

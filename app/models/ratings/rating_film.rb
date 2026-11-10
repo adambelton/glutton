@@ -19,7 +19,7 @@ module Ratings
 
     def submit_rating!(value:, notes: nil)
       transaction do
-        raise Ratings::AlreadyRated unless can_submit_rating?
+        raise Ratings::Errors::AlreadyRated unless can_submit_rating?
 
         create_rating!(value:, notes:, previous_rating: nil)
       end
@@ -28,8 +28,8 @@ module Ratings
     def revise_rating!(previous_rating_id:, value:, notes: nil)
       transaction(requires_new: true) do
         previous_rating = ratings.order(id: :desc).first
-        raise Ratings::RevisionUnavailable unless previous_rating.present?
-        raise Ratings::StaleRating unless previous_rating.id == previous_rating_id
+        raise Ratings::Errors::RevisionUnavailable unless previous_rating.present?
+        raise Ratings::Errors::StaleRating unless previous_rating.id == previous_rating_id
 
         create_rating!(value:, notes:, previous_rating:)
       end
@@ -40,7 +40,7 @@ module Ratings
     end
 
     def hold!
-      raise Ratings::HoldUnavailable unless can_hold?
+      raise Ratings::Errors::HoldUnavailable unless can_hold?
 
       update!(held: true)
       self
@@ -51,7 +51,7 @@ module Ratings
     end
 
     def release_hold!
-      raise Ratings::HoldReleaseUnavailable unless can_release_hold?
+      raise Ratings::Errors::HoldReleaseUnavailable unless can_release_hold?
 
       update!(held: false)
       self
@@ -62,7 +62,7 @@ module Ratings
     end
 
     def dismiss!
-      raise Ratings::DismissalUnavailable unless can_dismiss?
+      raise Ratings::Errors::DismissalUnavailable unless can_dismiss?
 
       update!(dismissed: true)
       self
@@ -71,7 +71,7 @@ module Ratings
     private
 
     def create_rating!(value:, notes:, previous_rating:)
-      raise InvalidNotes unless notes.nil? || notes.is_a?(String)
+      raise Errors::InvalidNotes unless notes.nil? || notes.is_a?(String)
 
       rating = ratings.create!(value:, notes: notes&.gsub(/\r\n?/, "\n").presence)
       rating.request_profile_refresh_if_notes_changed!(previous_rating:)

@@ -16,9 +16,9 @@ class RegistrationsController < ApplicationController
     previous = current_pending_registration
     credentials = { email_address: nil, password: nil, password_confirmation: nil }.merge(
       params.expect(registration: [ :email_address, :password, :password_confirmation ]).to_h.symbolize_keys)
-    @registration = Identity::SubmitRegistration.call(previous_id: previous&.id, guest_user_id: current_user&.id, **credentials)
+    @registration = Identity::Registration::SubmitRegistration.call(previous_id: previous&.id, guest_user_id: current_user&.id, **credentials)
     session[:pending_registration_id] = @registration.id
-    Identity::DeliverRegistrationConfirmation.call(pending_registration_id: @registration.id)
+    Identity::Registration::DeliverRegistrationConfirmation.call(pending_registration_id: @registration.id)
     redirect_to registration_path, notice: I18n.t("identity.registration.accepted"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @registration = error.record
@@ -27,7 +27,7 @@ class RegistrationsController < ApplicationController
 
   def show
     @registration = current_pending_registration
-    raise Identity::RegistrationUnavailable if @registration.nil?
+    raise Identity::Errors::RegistrationUnavailable if @registration.nil?
 
     render ::Views::Identity::RegistrationPending.new(registration: @registration)
   end

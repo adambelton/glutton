@@ -15,16 +15,16 @@ module Identity
     end
 
     def grant_superuser!(actor:)
-      raise Identity::SuperuserRequired unless actor.superuser?
-      raise Identity::SuperuserAlreadyGranted if superuser?
+      raise Identity::Errors::SuperuserRequired unless actor.superuser?
+      raise Identity::Errors::SuperuserAlreadyGranted if superuser?
 
       update!(superuser: true)
       self
     end
 
     def revoke_superuser!(actor:)
-      raise Identity::SuperuserRequired unless actor.superuser?
-      raise Identity::SuperuserAlreadyRevoked unless superuser?
+      raise Identity::Errors::SuperuserRequired unless actor.superuser?
+      raise Identity::Errors::SuperuserAlreadyRevoked unless superuser?
 
       update!(superuser: false)
       self
@@ -35,7 +35,7 @@ module Identity
     end
 
     def reset_password!(password:, password_confirmation:)
-      raise Identity::PasswordResetUnavailable unless can_reset_password?
+      raise Identity::Errors::PasswordResetUnavailable unless can_reset_password?
 
       UserRegistered.transaction do
         assign_attributes(password:, password_confirmation:)

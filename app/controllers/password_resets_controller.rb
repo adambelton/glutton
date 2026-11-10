@@ -14,13 +14,13 @@ class PasswordResetsController < ApplicationController
   rate_limit to: 10, within: 3.minutes, store: RATE_LIMIT_STORE, name: :update_ip, only: :update, with: :limited
   before_action :load_reset_user, only: [ :edit, :update ]
 
-  rescue_from Identity::PasswordResetUnavailable do
+  rescue_from Identity::Errors::PasswordResetUnavailable do
     render ::Views::Identity::RecoveryUnavailable.new, status: :unprocessable_entity
   end
-  rescue_from Identity::PasswordResetConflict do
+  rescue_from Identity::Errors::PasswordResetConflict do
     render ::Views::Identity::RecoveryConflict.new, status: :conflict
   end
-  rescue_from Identity::RequestPasswordReset::Failed do
+  rescue_from Identity::Errors::PasswordResetDeliveryFailed do
     @delivery_error = I18n.t("identity.recovery.delivery_failed")
     render ::Views::Identity::RecoveryNew.new(delivery_error: @delivery_error), status: :service_unavailable
   end
@@ -30,7 +30,7 @@ class PasswordResetsController < ApplicationController
   end
 
   def create
-    Identity::RequestPasswordReset.call(email_address: params.permit(:email_address)[:email_address])
+    Identity::PasswordRecovery::RequestPasswordReset.call(email_address: params.permit(:email_address)[:email_address])
     redirect_to new_session_path, notice: I18n.t("identity.recovery.requested"), status: :see_other
   end
 
@@ -40,7 +40,7 @@ class PasswordResetsController < ApplicationController
 
   def update
     credentials = { password: nil, password_confirmation: nil }.merge(params.permit(:password, :password_confirmation).to_h.symbolize_keys)
-    user = Identity::ResetPassword.call(token: @token, **credentials)
+    user = Identity::PasswordRecovery::ResetPassword.call(token: @token, **credentials)
     if current_user&.id == user.id
       clear_identity_cookie
       reset_session
@@ -70,6 +70,6 @@ class PasswordResetsController < ApplicationController
 
   def load_reset_user
     @token = params[:token]
-    @reset_user = Identity::ResolvePasswordReset.call(token: @token, current_user_id: current_user&.id)
+    @reset_user = Identity::PasswordRecovery::ResolvePasswordReset.call(token: @token, current_user_id: current_user&.id)
   end
 end

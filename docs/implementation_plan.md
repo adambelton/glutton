@@ -1,6 +1,6 @@
 # Glutton — Implementation progress
 
-Updated: 8 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 10 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
@@ -12,6 +12,8 @@ Updated: 8 November 2026. This document describes current progress, agreed order
 - Ratings saves optional film notes on submission and durably queues assessment of the saved rating version. The assessment gives direct evidence from notes precedence, uses the latest completed profile for eligible qualities, and assigns baseline scores where neither applies. One evaluation records the evidence for each complete score set. Only a newer profile revision can supersede applied scores for the same rating version. Queue activation, recommendation ranking and explanations remain open.
 
 ## Current work
+
+- **Capability-oriented service organisation — Ready for review.** Services now use the agreed domain/capability namespaces, one errors namespace per domain and responsibility-based AI operation names. Service tests follow the capabilities; models, job identities, event contracts, provider requests and persistence semantics are preserved. [Organisation and naming](architecture_brief.md#service-organisation-and-naming) and the [AI composition guidance](ai_model_services_design.md) describe the conventions. [Ratings evidence-contract refinements](tasks/ratings_evidence_contract_refinements.md) remain a separate deferred task; no behavioural follow-up is implemented.
 
 - **Application and test audit handoff.** The [8 November audit](audits/2026-11-08_application_and_test_audit.md) records the original findings. Scoped remediation covers the targeted Ratings form, Library and Identity model actions, shared provider transport and tracing, and regression coverage for browser interactions. Chrome also exposed a shared hidden-field parameter defect that affected Ratings dismissal. Repository CI now includes the browser suite and a Rails autoload check.
 
@@ -115,7 +117,7 @@ Apply the [evaluation consistency check](ratings_scoring_design.md#consistency-c
 
 The [Ratings scoring design](ratings_scoring_design.md) documents initial scoring and how newer profile revisions can supersede a complete score set while retaining history. Profile publication queues reassessment for current ratings and keeps only the newest pending revision per viewer. Reassessment carries forward explicit judgments when an applied set exists. Defer batching until production usage provides evidence about reassessment cost or latency.
 
-Operators can run `Ratings::RefreshTasteProfiles.call` in Rails console to process durable pending requests. Rating submissions and revisions that change notes record pending work in the same transaction. GoodJob runs the same batch every 15 minutes on the Ratings assessment queue in production. The first successful refresh creates a Ratings-owned profile parent and its first immutable revision. Each revision stores its applied text and links to an immutable synthesis evaluation. The workflow uses current original notes, checks freshness before committing, and skips synthesis for empty or unchanged evidence. The OpenAI synthesis adapter returns an annotated narrative. GPT-6.1 Terra at low reasoning effort is the initial rollout choice. Initial scoring uses the latest completed profile. Reevaluation is queued immediately after profile publication.
+Operators can run `Ratings::TasteProfiling::ProcessProfileRefreshes.call` in Rails console to process durable pending requests. Rating submissions and revisions that change notes record pending work in the same transaction. GoodJob runs the same batch every 15 minutes on the Ratings assessment queue in production. The first successful refresh creates a Ratings-owned profile parent and its first immutable revision. Each revision stores its applied text and links to an immutable synthesis evaluation. The workflow uses current original notes, checks freshness before committing, and skips synthesis for empty or unchanged evidence. The OpenAI synthesis adapter returns an annotated narrative. GPT-6.1 Terra at low reasoning effort is the initial rollout choice. Initial scoring uses the latest completed profile. Reevaluation is queued immediately after profile publication.
 
 Taste-profile updates require an LLM call; no JEV gate is assumed. JEV evaluates rating qualities against profiles or direct film notes. Application evidence belongs in the database, with optional Langfuse diagnostic links. Do not introduce a generic cross-domain evaluation table/framework.
 

@@ -7,19 +7,19 @@ module Identity
 
     included do
       before_action :registration_headers
-      rescue_from Identity::RegistrationUnavailable do
+      rescue_from Identity::Errors::RegistrationUnavailable do
         render ::Views::Identity::RegistrationUnavailable.new, status: :unprocessable_entity
       end
-      rescue_from Identity::RegistrationConflict do
+      rescue_from Identity::Errors::RegistrationConflict do
         render ::Views::Identity::RegistrationConflict.new(warning: current_user&.sign_out_warning), status: :conflict
       end
-      rescue_from Identity::DeliverRegistrationConfirmation::Limited do
+      rescue_from Identity::Errors::ConfirmationDeliveryLimited do
         render plain: I18n.t("identity.registration.limited"), status: :too_many_requests
       end
-      rescue_from Identity::DeliverRegistrationConfirmation::Exhausted do
+      rescue_from Identity::Errors::ConfirmationDeliveryExhausted do
         render ::Views::Identity::DeliveryLimit.new, status: :too_many_requests
       end
-      rescue_from Identity::DeliverRegistrationConfirmation::Failed do
+      rescue_from Identity::Errors::RegistrationDeliveryFailed do
         redirect_to registration_path, alert: I18n.t("identity.registration.delivery_failed"), status: :see_other
       end
     end
@@ -36,7 +36,7 @@ module Identity
     end
 
     def reject_registered_registration
-      raise Identity::RegistrationConflict if current_user && !current_user.can_register?
+      raise Identity::Errors::RegistrationConflict if current_user && !current_user.can_register?
     end
   end
 end

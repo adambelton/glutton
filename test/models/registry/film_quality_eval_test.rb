@@ -10,7 +10,7 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
   end
 
   def record_evaluation
-    assessment = Registry::InitialQualityAssessment.new(source: film_source_snapshot(film: @film),
+    assessment = Registry::QualityManagement::EvaluateInitialFilmQualities.new(source: film_source_snapshot(film: @film),
       definitions: quality_definition_snapshots,
       categories: quality_category_snapshots).call(client: Client.new)
     Registry::FilmQualityEval.record!(film: @film, assessment:)
@@ -91,7 +91,7 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
   test "a removed selected quality prevents application instead of silently omitting it" do
     evaluation = record_evaluation
     @quality.destroy!
-    error = assert_raises(Registry::AssignmentFailed) do
+    error = assert_raises(Registry::Errors::AssignmentFailed) do
       @film.apply_initial_qualities!(evaluation:)
     end
     assert_equal :stale_inputs, error.reason
@@ -99,7 +99,7 @@ class Registry::FilmQualityEvalTest < ActiveSupport::TestCase
   end
 
   test "an uncompleted assessment cannot be recorded as a completed evaluation" do
-    assessment = Registry::InitialQualityAssessment.new(source: film_source_snapshot(film: @film),
+    assessment = Registry::QualityManagement::EvaluateInitialFilmQualities.new(source: film_source_snapshot(film: @film),
       definitions: [], categories: [])
     assert_raises(ActiveRecord::RecordInvalid) { Registry::FilmQualityEval.record!(film: @film, assessment:) }
     assert_empty @film.film_quality_evals

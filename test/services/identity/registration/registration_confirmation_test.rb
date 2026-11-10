@@ -1,0 +1,93 @@
+require "test_helper"
+
+module Identity
+  class RegistrationConfirmationTest < ActiveSupport::TestCase
+    def prepare(**attributes)
+      Registration::PrepareRegistration.call(email_address: "private-reader@example.test", password: "a long password phrase",
+        password_confirmation: "a long password phrase", **attributes)
+    end
+
+    def token_for(record)
+      Registration::RegistrationConfirmation.token_for(pending_registration_id: record.id)
+    end
+
+    test "issuance changes no identity or delivery and exposes no credentials" do
+      record = prepare
+      assert_no_difference [ "Identity::User.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
+        token = token_for(record)
+        assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+        definition = Identity::PendingRegistration.token_definitions.fetch(:email_confirmation)
+        payload = definition.message_verifier.verified(token, purpose: definition.full_purpose).to_json
+        [ record.email_address, record.password_digest, "a long password phrase" ].each { |marker| refute_includes payload, marker }
+      end
+    end
+
+    test "initial and reissued links expire at the original registration deadline" do
+      freeze_time
+      record = prepare
+      first = token_for(record)
+      deadline = record.expires_at
+      travel_to deadline - 1.second
+      reissued = token_for(record)
+      assert_equal deadline, record.reload.expires_at
+      [ first, reissued ].each do |token|
+        assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+      end
+      travel_to deadline
+      assert_not record.active?
+      assert_raises(Errors::RegistrationUnavailable) { token_for(record) }
+      [ first, reissued ].each do |token|
+        assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+        assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
+      end
+    end
+
+    test "pending and guest deadlines cap issuance and completion" do
+      freeze_time
+      direct = prepare
+      travel_to direct.expires_at - 1.second
+      token = token_for(direct)
+      travel_to direct.expires_at
+      assert_not direct.active?
+      assert_raises(Errors::RegistrationUnavailable) { token_for(direct) }
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
+      guest = Identity::UserGuest.create!
+      travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second
+      linked = prepare(guest_user_id: guest.id)
+      token = token_for(linked)
+      travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
+      assert_raises(Errors::RegistrationUnavailable) { token_for(linked) }
+    end
+
+    test "credential mutation replacement deletion and wrong purpose invalidate tokens" do
+      record = prepare
+      token = token_for(record)
+      record.update!(email_address: "changed@example.test")
+      assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+      token = token_for(record)
+      record.update!(password: "a replacement password", password_confirmation: "a replacement password")
+      assert_nil Identity::PendingRegistration.find_by_token_for(:email_confirmation, token)
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token: record.signed_id(purpose: :other)) }
+      token = token_for(record)
+      record.destroy!
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
+      assert_raises(Errors::RegistrationUnavailable) { token_for(record) }
+      guest = Identity::UserGuest.create!
+      linked = prepare(guest_user_id: guest.id)
+      token = token_for(linked)
+      prepare(guest_user_id: guest.id)
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
+    end
+
+    test "unchanged request can issue multiple tokens and completion invalidates all" do
+      record = prepare
+      first = token_for(record)
+      second = travel(1.second) { token_for(record) }
+      assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, first)
+      assert_equal record, Identity::PendingRegistration.find_by_token_for(:email_confirmation, second)
+      Registration::CompleteRegistration.call(token: second)
+      assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token: first) }
+    end
+  end
+end

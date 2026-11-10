@@ -7,7 +7,7 @@ module Registry
     scope :without_qualities, -> { where.missing(:film_qualities) }
 
     def tmdb_details
-      TmdbMetadata.new(tmdb_metadata)
+      Sources::TmdbMetadata.new(tmdb_metadata)
     end
 
     def has_source_context?
@@ -20,27 +20,27 @@ module Registry
 
     def apply_initial_qualities!(evaluation:)
       with_lock(requires_new: true) do
-        raise AssignmentFailed.new(reason: :unready_film) unless has_source_context?
-        raise AssignmentFailed.new(reason: :already_assigned) if has_film_qualities?
+        raise Errors::AssignmentFailed.new(reason: :unready_film) unless has_source_context?
+        raise Errors::AssignmentFailed.new(reason: :already_assigned) if has_film_qualities?
         selected_ids = evaluation.selected_quality_ids_for(film: self)
         qualities = Quality.where(id: selected_ids).index_by(&:id)
         selected_ids.each do |quality_id|
-          quality = qualities.fetch(quality_id) { raise AssignmentFailed.new(reason: :stale_inputs) }
+          quality = qualities.fetch(quality_id) { raise Errors::AssignmentFailed.new(reason: :stale_inputs) }
           film_qualities.create!(quality:, film_quality_eval: evaluation)
         end
       end
     end
 
     def import!(tmdb_data:, wikipedia_context:)
-      raise Registry::ImportIncomplete.new(stage: :persistence, reason: :existing_film) if persisted?
-      unless Registry::WikipediaContext.usable?(wikipedia_context, tmdb_id:)
-        raise Registry::ImportIncomplete.new(stage: :wikipedia, reason: :invalid_response)
+      raise Registry::Errors::ImportIncomplete.new(stage: :persistence, reason: :existing_film) if persisted?
+      unless Registry::Sources::WikipediaContext.usable?(wikipedia_context, tmdb_id:)
+        raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :invalid_response)
       end
       self.title = tmdb_data.fetch(:title)
       self.release_date = tmdb_data.fetch(:release_date)
       self.tmdb_metadata = tmdb_data.fetch(:tmdb_metadata)
       unless tmdb_metadata?
-        raise Registry::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response)
+        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response)
       end
       self.wikipedia_context = wikipedia_context
       self.wikidata_id = wikipedia_context.fetch("wikidata_id")
@@ -52,7 +52,7 @@ module Registry
       self.title = tmdb_data.fetch(:title)
       self.release_date = tmdb_data.fetch(:release_date)
       self.tmdb_metadata = tmdb_data.fetch(:tmdb_metadata)
-      raise Registry::InvalidTmdbResponse, "TMDB metadata is incomplete" unless tmdb_metadata?
+      raise Registry::Errors::InvalidTmdbResponse, "TMDB metadata is incomplete" unless tmdb_metadata?
 
       save!
       self
@@ -66,7 +66,7 @@ module Registry
     private
 
     def wikipedia_context?
-      Registry::WikipediaContext.usable?(wikipedia_context, tmdb_id:) && wikipedia_context["wikidata_id"] == wikidata_id
+      Registry::Sources::WikipediaContext.usable?(wikipedia_context, tmdb_id:) && wikipedia_context["wikidata_id"] == wikidata_id
     end
 
     def tmdb_metadata?

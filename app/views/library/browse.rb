@@ -10,7 +10,7 @@ module Views
           form_with(url: library_path, method: :get, class: "library-filter", data: { controller: "library-view" }) do
             label(for: "view") { t("library.browser.view") }
             render RubyUI::NativeSelect.new(name: "view", id: "view", class: "ui-select", data: { action: "change->library-view#change" }) do
-              ::Library::Browse::Views::ALL.each do |view|
+              ::Library::CollectionManagement::Browse::Views::ALL.each do |view|
                 render RubyUI::NativeSelectOption.new(value: view, selected: @view == view) { t("library.browser.views.#{view}") }
               end
             end
@@ -26,7 +26,7 @@ module Views
                     h3 { text_link(library_film.film.title, library_film_path(library_film)) }
                     p { t("library.browser.released", year: library_film.film.release_date.year) } if library_film.film.release_date
                   end
-                  if @view == ::Library::Browse::Views::WATCHED
+                  if @view == ::Library::CollectionManagement::Browse::Views::WATCHED
                     div(class: "library-rating") do
                       render ::Library::RatingStatus.new(library_film:)
                     end

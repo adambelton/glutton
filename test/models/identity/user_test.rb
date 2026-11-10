@@ -1,6 +1,10 @@
 require "test_helper"
 
 class Identity::UserTest < ActiveSupport::TestCase
+  test "the shared identity availability failure has a localized message" do
+    assert_equal I18n.t("identity.errors.unavailable", raise: true), Identity::Errors::Unavailable.new.message
+  end
+
   test "guest persists an identity and fixed expiry without credentials" do
     freeze_time do
       user = Identity::UserGuest.create!

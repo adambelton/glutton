@@ -2,13 +2,13 @@ require "test_helper"
 
 class Identity::NamespaceTokenTransitionTest < ActiveSupport::TestCase
   test "pre-namespace confirmation links are invalid while newly issued links resolve" do
-    registration = Identity::PrepareRegistration.call(email_address: "namespace@example.test",
+    registration = Identity::Registration::PrepareRegistration.call(email_address: "namespace@example.test",
       password: "a long password phrase", password_confirmation: "a long password phrase")
     old_token = legacy_token(record: registration, purpose: :email_confirmation, class_name: "PendingRegistration")
-    assert_raises(Identity::RegistrationUnavailable) do
+    assert_raises(Identity::Errors::RegistrationUnavailable) do
       Identity::PendingRegistration.resolve_confirmation!(token: old_token)
     end
-    new_token = Identity::RegistrationConfirmation.token_for(pending_registration_id: registration.id)
+    new_token = Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id: registration.id)
     assert_equal registration, Identity::PendingRegistration.resolve_confirmation!(token: new_token)
   end
 

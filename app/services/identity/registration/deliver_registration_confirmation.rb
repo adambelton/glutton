@@ -1,0 +1,29 @@
+require "net/smtp"
+
+module Identity
+  module Registration
+    class DeliverRegistrationConfirmation
+      def self.call(pending_registration_id:)
+        origin = validated_origin
+        recipient, token = PendingRegistration.transaction(requires_new: true) do
+          registration = PendingRegistration.lock.find_by(id: pending_registration_id)
+          raise Errors::RegistrationUnavailable unless registration.present? && registration.active?
+          raise Errors::RegistrationUnavailable if UserRegistered.exists?(email_address: registration.email_address)
+          registration.reserve_confirmation_delivery!
+          [ registration.email_address, RegistrationConfirmation.token_for(pending_registration_id: registration.id) ]
+        end
+        url = origin + Rails.application.routes.url_helpers.registration_confirmation_path(token:)
+        begin
+          AccountMailer.confirmation(recipient:, confirmation_url: url).deliver_now
+        rescue Net::SMTPError, Timeout::Error, IOError, SocketError, SystemCallError, OpenSSL::SSL::SSLError
+          raise Errors::RegistrationDeliveryFailed, cause: nil
+        end
+      end
+
+      def self.validated_origin
+        MailOrigin.call
+      end
+      private_class_method :validated_origin
+    end
+  end
+end

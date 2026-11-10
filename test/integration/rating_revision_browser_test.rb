@@ -32,7 +32,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "edit reads latest rating and exact escaped expressions without any writes" do
-    latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
+    latest = Ratings::RatingRecording::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
       previous_rating_id: @original.id, value: Ratings::Rating::Values::NOT_FOR_ME, notes: "  <script>new</script>\n  ")
     assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       get edit_rating_path(film_id: @film.id)
@@ -76,7 +76,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   test "validation retains original expected id and cannot retarget an intervening revision" do
     get edit_rating_path(film_id: @film.id)
     token = csrf_token
-    latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
+    latest = Ratings::RatingRecording::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
       previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE)
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       revise(token:, notes: { bad: "shape" })

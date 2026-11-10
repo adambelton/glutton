@@ -76,7 +76,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
   test "revocation applies to the same browser on its next request" do
     get registry_film_path(@film)
     assert_response :success
-    Identity::RevokeSuperuser.call(user_id: @user.id, actor_user_id: @user.id)
+    Identity::AccountAdministration::RevokeSuperuser.call(user_id: @user.id, actor_user_id: @user.id)
     get registry_film_path(@film)
     assert_response :forbidden
     assert Identity::Session.find(@authentication.id).active?
@@ -160,7 +160,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     film = Registry::Film.new(tmdb_id: 800003).import!(
       tmdb_data: { title: "Support-only film", release_date: nil, tmdb_metadata: { "details" => {} } },
       wikipedia_context: wikipedia_context(tmdb_id: 800003))
-    result = Registry::AssignInitialFilmQualities.call(film_id: film.id, client: QualityAssessmentSources::Client.new)
+    result = Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client: QualityAssessmentSources::Client.new)
     assert_empty result.fetch(:film_quality_eval).output.fetch("evidence")
     get registry_film_path(film)
     assert_response :success

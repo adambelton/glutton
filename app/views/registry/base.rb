@@ -75,7 +75,7 @@ module Views
 
       def pagination(page, path:)
         nav(class: "registry-pagination", aria: { label: t(:pagination) }) do
-          p { t(:page, number: page.number, total: [ (page.total.to_f / ::Registry::InspectCatalogue::PAGE_SIZE).ceil, 1 ].max) }
+          p { t(:page, number: page.number, total: [ (page.total.to_f / ::Registry::CatalogueQueries::InspectCatalogue::PAGE_SIZE).ceil, 1 ].max) }
           div do
             if page.number > 1
               render RubyUI::Link.new(href: "#{path}?page=#{page.number - 1}", variant: :outline, class: "min-h-11") { t(:previous) }

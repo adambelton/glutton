@@ -2,7 +2,7 @@ class AccountController < ApplicationController
   before_action :require_superuser
 
   def show
-    render Views::Account::Show.new(profile: Ratings::ViewTasteProfile.call(user_id: current_user.id))
+    render Views::Account::Show.new(profile: Ratings::TasteProfiling::ViewTasteProfile.call(user_id: current_user.id))
   end
 
   def refresh_taste_profile

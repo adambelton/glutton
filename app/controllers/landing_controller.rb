@@ -16,7 +16,7 @@ class LandingController < ApplicationController
       return
     end
 
-    films = Registry::PreviewFilms.call(tmdb_ids: EXAMPLES.map { |example| example.fetch(:tmdb_id) }).index_by(&:tmdb_id)
+    films = Registry::CatalogueQueries::PreviewFilms.call(tmdb_ids: EXAMPLES.map { |example| example.fetch(:tmdb_id) }).index_by(&:tmdb_id)
     examples = EXAMPLES.filter_map do |example|
       film = films[example.fetch(:tmdb_id)]
       example.merge(film:) if film.present?

@@ -41,14 +41,14 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def candidates(**options)
-    Ratings::NextCandidates.call(user_id: @user.id, **options)
+    Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id, **options)
   end
 
   def claim
-    pending = Identity::PrepareRegistration.call(email_address: "ratings-race@example.test", guest_user_id: @user.id,
+    pending = Identity::Registration::PrepareRegistration.call(email_address: "ratings-race@example.test", guest_user_id: @user.id,
       password: "a long password phrase", password_confirmation: "a long password phrase")
-    token = Identity::RegistrationConfirmation.token_for(pending_registration_id: pending.id)
-    Identity::CompleteRegistration.call(token:)
+    token = Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id: pending.id)
+    Identity::Registration::CompleteRegistration.call(token:)
   end
 
   test "concurrent reads return the same candidates without creating records" do
@@ -85,7 +85,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     batch = contender = nil
     Identity::User.transaction do
       batch = candidates(limit: 2)
-      contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: film.id) }
+      contender = blocked { Ratings::CandidateSelection::PrepareCandidate.call(user_id: @user.id, film_id: film.id) }
     end
     assert_equal batch.last.id, Timeout.timeout(5) { contender.value }.id
     assert_equal 1, Ratings::RatingFilm.where(user: @user, film:).count
@@ -94,7 +94,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def dismiss
-    Ratings::Dismiss.call(user_id: @user.id, rating_film_id: @rating_film.id)
+    Ratings::CandidateSelection::Dismiss.call(user_id: @user.id, rating_film_id: @rating_film.id)
   end
 
   test "concurrent dismissals have one winner and an explicit duplicate failure" do
@@ -104,7 +104,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       dismiss
       contender = blocked do
         dismiss
-      rescue Ratings::DismissalUnavailable
+      rescue Ratings::Errors::DismissalUnavailable
         :already_dismissed
       end
     end
@@ -118,7 +118,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         candidates
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
       travel Identity::UserGuest::EXPIRY_DURATION
@@ -135,10 +135,10 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         dismiss
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
-      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+      assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_not Identity::User.exists?(@user.id)
@@ -158,7 +158,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal @rating_film.id, Timeout.timeout(5) { contender.value }.id
     assert @rating_film.reload.dismissed?
     assert_empty candidates
-    assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_equal 0, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
   end
 
   test "claim winning against cleanup preserves dismissal" do
@@ -169,7 +169,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       claim
       travel Identity::UserGuest::EXPIRY_DURATION
-      contender = blocked { Identity::CleanupExpiredAccounts.call }
+      contender = blocked { Identity::AccountAdministration::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
     assert @rating_film.reload.dismissed?
@@ -177,7 +177,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def submit(notes: "Atmosphere\n\n  Ending!  ")
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes:)
+    Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes:)
   end
 
   def rating_events
@@ -192,7 +192,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       submit
       contender = blocked do
         submit(notes: "Losing submission")
-      rescue Ratings::AlreadyRated
+      rescue Ratings::Errors::AlreadyRated
         :already_rated
       end
     end
@@ -208,7 +208,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         submit
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
       travel Identity::UserGuest::EXPIRY_DURATION
@@ -225,10 +225,10 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         submit
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
-      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+      assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_not Ratings::RatingFilm.exists?(@rating_film.id)
@@ -241,7 +241,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     rating = submit
     assert_equal 1, rating_events.count
     travel Identity::UserGuest::EXPIRY_DURATION
-    assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     assert_not Ratings::Rating.exists?(rating.id)
     assert_not Ratings::RatingFilm.exists?(@rating_film.id)
     assert_empty rating_events
@@ -261,7 +261,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal "Atmosphere\n\n  Ending!  ", rating.reload.notes
     assert_equal Ratings::Rating::Values::PRETTY_GOOD, rating.reload.value
     assert_equal @user.id, rating_events.sole.payload["user_id"]
-    assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_equal 0, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
   end
 
   test "claim winning against cleanup retains saved rating and stream identity" do
@@ -272,7 +272,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       claim
       travel Identity::UserGuest::EXPIRY_DURATION
-      contender = blocked { Identity::CleanupExpiredAccounts.call }
+      contender = blocked { Identity::AccountAdministration::CleanupExpiredAccounts.call }
     end
     assert_equal 0, Timeout.timeout(5) { contender.value }[:guests_deleted]
     assert_equal "Atmosphere\n\n  Ending!  ", rating.reload.notes
@@ -284,8 +284,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def submit_selected_film
-    row = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
+    row = Ratings::CandidateSelection::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
+    Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
       value: Ratings::Rating::Values::BRILLIANT, notes: "Selected film evidence")
   end
 
@@ -296,7 +296,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       submit_selected_film
       contender = blocked do
         submit_selected_film
-      rescue Ratings::AlreadyRated
+      rescue Ratings::Errors::AlreadyRated
         :already_rated
       end
     end
@@ -322,7 +322,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       first.call
       contender = blocked do
         second.call
-      rescue Ratings::AlreadyRated
+      rescue Ratings::Errors::AlreadyRated
         :already_rated
       end
     end
@@ -338,7 +338,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         submit_selected_film
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
       travel Identity::UserGuest::EXPIRY_DURATION
@@ -352,8 +352,8 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     @rating_film.destroy!
     first = contender = nil
     Identity::User.transaction do
-      first = Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
-      contender = blocked { Ratings::PrepareCandidate.call(user_id: @user.id, film_id: @film.id) }
+      first = Ratings::CandidateSelection::PrepareCandidate.call(user_id: @user.id, film_id: @film.id)
+      contender = blocked { Ratings::CandidateSelection::PrepareCandidate.call(user_id: @user.id, film_id: @film.id) }
     end
     assert_equal first.id, Timeout.timeout(5) { contender.value }.id
     assert_equal [ first.id ], Ratings::RatingFilm.where(user: @user, film: @film).pluck(:id)
@@ -362,7 +362,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
   end
 
   def revise(previous_rating_id:)
-    Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
+    Ratings::RatingRecording::ReviseRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
       previous_rating_id:, value: Ratings::Rating::Values::BRILLIANT, notes: "Replacement evidence")
   end
 
@@ -373,7 +373,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       replacement = revise(previous_rating_id: original.id)
       contender = blocked do
         revise(previous_rating_id: original.id)
-      rescue Ratings::StaleRating
+      rescue Ratings::Errors::StaleRating
         :stale
       end
     end
@@ -391,7 +391,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         revise(previous_rating_id: original.id)
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
       travel Identity::UserGuest::EXPIRY_DURATION
@@ -418,7 +418,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     assert Ratings::Rating.exists?(replacement.id)
     assert_equal "Atmosphere\n\n  Ending!  ", original.notes
     assert_equal "Replacement evidence", replacement.notes
-    assert_equal 0, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+    assert_equal 0, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     assert_equal 1, rating_events.count
   end
 
@@ -431,10 +431,10 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
       @user.lock!
       contender = blocked do
         revise(previous_rating_id: replacement.id)
-      rescue Ratings::IdentityUnavailable
+      rescue Identity::Errors::Unavailable
         :inactive
       end
-      assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+      assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     end
     assert_equal :inactive, Timeout.timeout(5) { contender.value }
     assert_empty Ratings::Rating.where(rating_film_id: @rating_film.id)

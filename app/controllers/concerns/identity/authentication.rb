@@ -4,7 +4,7 @@ module Identity
 
     included do
       class_attribute :unauthenticated_actions, default: [].freeze
-      rescue_from Identity::Required, with: -> { head :unauthorized }
+      rescue_from Identity::Errors::Required, with: -> { head :unauthorized }
       before_action :require_identity
     end
 
@@ -28,7 +28,7 @@ module Identity
         remember_entry_destination
         redirect_to new_session_path
       else
-        raise Identity::Required
+        raise Identity::Errors::Required
       end
     end
   end

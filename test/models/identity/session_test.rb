@@ -27,12 +27,12 @@ class Identity::SessionTest < ActiveSupport::TestCase
     end
     [ 0.seconds, 1.second ].each do |offset|
       travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION + offset do
-        assert_raises(Identity::GuestExpired) { Identity::Session.resume(id: authentication.id, user_id: user.id) }
-        assert_raises(Identity::GuestExpired) { Identity::Session.resume(id: nil, user_id: user.id) }
+        assert_raises(Identity::Errors::GuestExpired) { Identity::Session.resume(id: authentication.id, user_id: user.id) }
+        assert_raises(Identity::Errors::GuestExpired) { Identity::Session.resume(id: nil, user_id: user.id) }
       end
     end
     deleted = Identity::UserDeleted.create!
-    assert_raises(Identity::AccountDeleted) { Identity::Session.resume(id: nil, user_id: deleted.id) }
+    assert_raises(Identity::Errors::AccountDeleted) { Identity::Session.resume(id: nil, user_id: deleted.id) }
   end
 
   test "guest issuance preserves account identity and deadline" do

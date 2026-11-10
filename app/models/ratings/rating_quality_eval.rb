@@ -13,7 +13,7 @@ module Ratings
     def quality_evidence
       decisions = output.fetch("decisions")
       unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
-        raise QualityApplicationUnavailable
+        raise Errors::QualityApplicationUnavailable
       end
 
       {

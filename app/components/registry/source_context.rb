@@ -31,7 +31,7 @@ module Registry
     private
 
     def external_link(label, url)
-      if WikipediaContext.https_url?(url)
+      if Sources::WikipediaContext.https_url?(url)
         a(href: url, rel: "noreferrer") { label }
       else
         span { label }

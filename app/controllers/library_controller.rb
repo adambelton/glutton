@@ -1,73 +1,73 @@
 class LibraryController < ApplicationController
-  rescue_from Identity::Required, Library::IdentityUnavailable do
+  rescue_from Identity::Errors::Required, Identity::Errors::Unavailable do
     render ::Views::Library::SignedOut.new, status: :unauthorized
   end
 
-  rescue_from Library::FilmUnavailable do
+  rescue_from Library::Errors::FilmUnavailable do
     @error = I18n.t("library.detail.unavailable")
     render ::Views::Library::Unavailable.new(error: @error), status: :not_found
   end
-  rescue_from Library::AlreadyWatched do
+  rescue_from Library::Errors::AlreadyWatched do
     @error = I18n.t("library.detail.watch_unavailable")
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
-  rescue_from Library::NotOnWatchlist do
+  rescue_from Library::Errors::NotOnWatchlist do
     @error = I18n.t("library.detail.not_on_watchlist")
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
 
-  rescue_from Library::DismissalUnavailable do
+  rescue_from Library::Errors::DismissalUnavailable do
     @error = I18n.t("library.detail.dismissal_unavailable")
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
-  rescue_from Library::WatchlistUnavailable do
+  rescue_from Library::Errors::WatchlistUnavailable do
     @error = I18n.t("library.detail.watchlist_unavailable")
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
-  rescue_from Library::NotMarkedNotInterested do
+  rescue_from Library::Errors::NotMarkedNotInterested do
     @error = I18n.t("library.detail.not_dismissed")
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
 
   def film
-    @library_film = Library::FindFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    @library_film = Library::CollectionManagement::FindFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
     render ::Views::Library::FilmDetail.new(library_film: @library_film)
   end
 
   def mark_watched
-    library_film = Library::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    library_film = Library::CollectionManagement::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_film_path(library_film), notice: I18n.t("library.detail.watched"), status: :see_other
   end
 
   def remove_from_watchlist
-    Library::RemoveFromWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    Library::CollectionManagement::RemoveFromWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path, notice: I18n.t("library.detail.removed"), status: :see_other
   end
 
   def mark_not_interested
-    library_film = Library::MarkNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    library_film = Library::CollectionManagement::MarkNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_film_path(library_film), notice: I18n.t("library.detail.dismissed"), status: :see_other
   end
 
   def add_to_watchlist
-    library_film = Library::AddToWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    library_film = Library::CollectionManagement::AddToWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_film_path(library_film), notice: I18n.t("library.detail.watchlisted"), status: :see_other
   end
 
   def remove_from_not_interested
-    Library::RemoveNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
-    redirect_to library_path(view: Library::Browse::Views::NOT_INTERESTED), notice: I18n.t("library.detail.removed_from_not_interested"), status: :see_other
+    Library::CollectionManagement::RemoveNotInterested.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_path(view: Library::CollectionManagement::Browse::Views::NOT_INTERESTED), notice: I18n.t("library.detail.removed_from_not_interested"), status: :see_other
   end
 
   def show
-    @view = params.fetch(:view, Library::Browse::Views::WATCHLIST)
+    @view = params.fetch(:view, Library::CollectionManagement::Browse::Views::WATCHLIST)
     page = params.fetch(:page, "1")
-    unless Library::Browse::Views::ALL.include?(@view) && page.is_a?(String) && page.match?(/\A[1-9]\d{0,8}\z/)
+    unless Library::CollectionManagement::Browse::Views::ALL.include?(@view) && page.is_a?(String) && page.match?(/\A[1-9]\d{0,8}\z/)
       render ::Views::Library::Invalid.new, status: :bad_request
       return
     end
     @page_number = page.to_i
-    @page = Library::Browse.call(user_id: current_user.id, view: @view, page: @page_number)
+    @page = Library::CollectionManagement::Browse.call(user_id: current_user.id, view: @view, page: @page_number)
     render ::Views::Library::Browse.new(view: @view, page: @page, page_number: @page_number)
   end
 
@@ -75,7 +75,7 @@ class LibraryController < ApplicationController
 
   def library_film_id_param
     id = params[:id]
-    raise Library::FilmUnavailable unless id.is_a?(String) && id.match?(/\A[1-9]\d*\z/)
+    raise Library::Errors::FilmUnavailable unless id.is_a?(String) && id.match?(/\A[1-9]\d*\z/)
 
     id
   end

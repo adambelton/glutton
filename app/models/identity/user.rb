@@ -25,11 +25,11 @@ module Identity
     end
 
     def grant_superuser!(actor:)
-      raise Identity::SuperuserUnavailable
+      raise Identity::Errors::SuperuserUnavailable
     end
 
     def revoke_superuser!(actor:)
-      raise Identity::SuperuserUnavailable
+      raise Identity::Errors::SuperuserUnavailable
     end
 
     def can_reset_password?
@@ -37,7 +37,7 @@ module Identity
     end
 
     def reset_password!(password:, password_confirmation:)
-      raise Identity::PasswordResetUnavailable
+      raise Identity::Errors::PasswordResetUnavailable
     end
 
     def can_register?

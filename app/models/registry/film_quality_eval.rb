@@ -16,14 +16,14 @@ module Registry
 
     def selected_quality_ids_for(film:)
       unless film_id == film.id && output.fetch("status") == "completed"
-        raise AssignmentFailed.new(reason: :invalid_response)
+        raise Errors::AssignmentFailed.new(reason: :invalid_response)
       end
 
       source = output.fetch("source")
       unless source.fetch("title") == film.title && source.fetch("tmdb_id") == film.tmdb_id &&
           source.fetch("tmdb_metadata") == film.tmdb_metadata && source.fetch("wikidata_id") == film.wikidata_id &&
           source.fetch("wikipedia_context") == film.wikipedia_context
-        raise AssignmentFailed.new(reason: :stale_inputs)
+        raise Errors::AssignmentFailed.new(reason: :stale_inputs)
       end
 
       output.fetch("selected_quality_ids")

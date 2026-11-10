@@ -14,7 +14,7 @@ module Identity
     end
 
     def inactive_error
-      Identity::GuestExpired.new unless active?
+      Identity::Errors::GuestExpired.new unless active?
     end
 
     def sign_out_warning

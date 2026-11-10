@@ -32,7 +32,7 @@ class Ratings::RefreshTasteProfilesJobTest < ActiveSupport::TestCase
     synthesizer = lambda do |input:, **|
       notes = input.fetch("note_changes").select { |change| change.fetch("after_rating_id") }
       calls += 1
-      raise Ratings::TasteProfileRefreshFailed.new(reason: :provider_failure) if calls == 1
+      raise Ratings::Errors::TasteProfileRefreshFailed.new(reason: :provider_failure) if calls == 1
 
       note = notes.sole
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },

@@ -26,7 +26,7 @@ class TasteProfileTest < ApplicationSystemTestCase
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => profile, "conclusions" => conclusions }
     end
-    Ratings::RefreshTasteProfile.call(user_id: user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
+    Ratings::TasteProfiling::RefreshTasteProfile.call(user_id: user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address

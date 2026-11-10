@@ -36,7 +36,7 @@ module FilmLoadingSources
 
     def movie(tmdb_id:)
       source_request(:tmdb, tmdb_id:)
-      raise Registry::TmdbUnavailable.new(reason: :timeout) if @import_failure_ids.include?(tmdb_id)
+      raise Registry::Errors::TmdbUnavailable.new(reason: :timeout) if @import_failure_ids.include?(tmdb_id)
       { "id" => tmdb_id, "title" => "Loading fixture #{tmdb_id}" }
     end
 
@@ -52,7 +52,7 @@ module FilmLoadingSources
 
     def context(title:, wikidata_id:, tmdb_id:)
       source_request(:wikipedia, tmdb_id:)
-      raise Registry::ImportIncomplete.new(stage: :wikipedia, reason: :missing_article) if @wikipedia_failure_ids.include?(tmdb_id)
+      raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :missing_article) if @wikipedia_failure_ids.include?(tmdb_id)
       @context_builder.call(tmdb_id:, wikidata_id:)
     end
 
@@ -69,7 +69,7 @@ module FilmLoadingSources
     end
 
     def call(tmdb_id:, maximum_requests:, maximum_cost_usd:)
-      Registry::LoadFilm.call(tmdb_id:, maximum_requests:, maximum_cost_usd:,
+      Registry::CatalogueMaintenance::LoadFilm.call(tmdb_id:, maximum_requests:, maximum_cost_usd:,
         tmdb_client: self, wikidata_client: self, wikipedia_client: self,
         type_safe_client_class: @type_safe_client_class, tracer_provider: @tracer_provider)
     end

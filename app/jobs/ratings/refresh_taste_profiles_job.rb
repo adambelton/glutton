@@ -13,7 +13,7 @@ module Ratings
         return unless user&.active? && user.superuser?
       end
 
-      failures = RefreshTasteProfiles.call(user_id:).fetch(:failures)
+      failures = TasteProfiling::ProcessProfileRefreshes.call(user_id:).fetch(:failures)
       if failures.present?
         Rails.logger.warn("Ratings taste profile refresh failures: #{failures.values.tally}")
       end

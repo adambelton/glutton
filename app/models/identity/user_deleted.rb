@@ -5,7 +5,7 @@ module Identity
     validates :email_address, :password_digest, :email_confirmed_at, inclusion: { in: [ nil ] }
 
     def inactive_error
-      Identity::AccountDeleted.new
+      Identity::Errors::AccountDeleted.new
     end
 
     def active?

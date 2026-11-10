@@ -5,14 +5,14 @@ module Registry
       assigned = []
       film_ids.each do |film_id|
         begin
-          result = AssignInitialFilmQualities.call(film_id:)
+          result = QualityManagement::AssignInitialFilmQualities.call(film_id:)
           count = result.fetch(:film_qualities).size
           if count.zero?
             warnings << report_warning(film_id:, reason: :no_qualities)
           else
             assigned << film_id
           end
-        rescue AssignmentFailed => error
+        rescue Errors::AssignmentFailed => error
           warnings << report_warning(film_id:, reason: :assessment_failed, detail: error.message)
         rescue StandardError
           # A failed film must not discard the rest of the batch. Keep exception text private.

@@ -168,14 +168,14 @@ require application translation loading.
 ## Registration confirmation provider
 
 Pending registrations expire one hour after creation (`Identity::PendingRegistration::EXPIRY_DURATION`).
-A linked guest must also remain active. `Identity::RegistrationConfirmation.token_for(pending_registration_id:)`
+A linked guest must also remain active. `Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id:)`
 issues a purpose-bound token valid only while that registration remains active;
 resending does not extend the original deadline. It does not send email. Tokens contain no
 email/password/digest, and credential changes or request replacement invalidate them.
-`Identity::CompleteRegistration.call(token:)` returns a fresh Session after atomically
+`Identity::Registration::CompleteRegistration.call(token:)` returns a fresh Session after atomically
 creating a confirmed registered account or upgrading the linked active guest,
 revoking old guest sessions and deleting the pending request. Expected invalid,
-expired/replayed or conflicting claims raise `Identity::RegistrationUnavailable`;
+expired/replayed or conflicting claims raise `Identity::Errors::RegistrationUnavailable`;
 unexpected persistence failures propagate after rollback.
 
 The registration browser flow consumes these Identity operations for initiation,
@@ -240,12 +240,12 @@ same rules as confirmation. Viewing `/password_reset/edit?token=…` only render
 form; a CSRF-protected PATCH changes the password. Rails-native tokens expire after
 15 minutes and become invalid when the password changes.
 
-`Identity::RequestPasswordReset.call(email_address:)` delivers synchronously outside
-database transactions. `Identity::ResetPassword.call(token:, password:,
+`Identity::PasswordRecovery::RequestPasswordReset.call(email_address:)` delivers synchronously outside
+database transactions. `Identity::PasswordRecovery::ResetPassword.call(token:, password:,
 password_confirmation:)` locks and revalidates the token, enforces existing password
 policy, and atomically changes the digest and deletes all target sessions. It returns
 the registered user without signing in. Invalid links raise
-`Identity::PasswordResetUnavailable`; invalid passwords raise `ActiveRecord::RecordInvalid`.
+`Identity::Errors::PasswordResetUnavailable`; invalid passwords raise `ActiveRecord::RecordInvalid`.
 A successful browser reset redirects to sign-in. Other signed-in accounts conflict;
 unrelated guests retain their identity and pending signup without merging activity.
 
@@ -264,21 +264,21 @@ from a trusted `bin/rails console`, identifying both the existing superuser acto
 and the target account:
 
 ```ruby
-Identity::GrantSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
-Identity::RevokeSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
+Identity::AccountAdministration::GrantSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
+Identity::AccountAdministration::RevokeSuperuser.call(user_id: verified_user_id, actor_user_id: acting_superuser_id)
 ```
 
 Both operations load and lock actor and target in ascending ID order, authorize
 the actor against current state and return the changed account. Ordinary, guest,
 expired, deleted, missing or revoked actors cannot authorize changes; unauthorized
-actors raise `Identity::SuperuserRequired`. Models also require an authorized actor.
+actors raise `Identity::Errors::SuperuserRequired`. Models also require an authorized actor.
 Self-revocation is allowed; no last-superuser protection is imposed. Deleted
 identities cannot retain superuser privilege. Registered-account deletion remains
 future work and must clear that flag atomically with anonymization and session
 revocation; it does not require a separate superuser actor.
-Missing, guest and deleted identities raise `Identity::SuperuserUnavailable`.
-Repeated grants raise `Identity::SuperuserAlreadyGranted`; repeated revocations
-raise `Identity::SuperuserAlreadyRevoked`. Other validation/database failures
+Missing, guest and deleted identities raise `Identity::Errors::SuperuserUnavailable`.
+Repeated grants raise `Identity::Errors::SuperuserAlreadyGranted`; repeated revocations
+raise `Identity::Errors::SuperuserAlreadyRevoked`. Other validation/database failures
 propagate. No email, seed, registration parameter or public endpoint grants access.
 
 Consumers can read `current_user&.superuser?` as internal privilege state.
@@ -316,7 +316,7 @@ guests. Guest sessions and pending registrations are deleted atomically with the
 guest; independently expired pending requests do not delete their account or sessions.
 Registered and deleted accounts are retained. Registered sessions have no age deadline.
 
-`Identity::CleanupExpiredAccounts.call(batch_size: 100)` accepts integer batch sizes
+`Identity::AccountAdministration::CleanupExpiredAccounts.call(batch_size: 100)` accepts integer batch sizes
 from 1 to 1,000. It rechecks lifecycle/deadlines under locks and uses the same
 owner-before-pending lock order as registration. Each candidate commits separately.
 A failure exits nonzero with a sanitized diagnostic, rolls back that candidate and
@@ -364,7 +364,7 @@ The separate TMDB API key is not used. Restart Rails/console after changing deve
 After applying migrations, explicitly import one already-selected movie ID from `bin/rails console`:
 
 ```ruby
-film = Registry::ImportFilm.call(tmdb_id: 348)
+film = Registry::CatalogueMaintenance::ImportFilm.call(tmdb_id: 348)
 ```
 
 Use the real import for development data as well.
@@ -377,9 +377,9 @@ Physical column order is `id`, `title`, `release_date`, `tmdb_id`, `tmdb_metadat
 
 The film retains title, nullable source release date, TMDB metadata/provenance in `tmdb_metadata`, a nullable indexed `wikidata_id`, and source material in `wikipedia_context`. That packet contains TMDB/Wikidata/page identity, language, title, revision ID/timestamp/URL, article/history URLs, retrieval time, licence name/URL and ordered `source_paragraphs` (`id`, `section`, `text`). The provider-specific JSON columns store their packets directly, without redundant `tmdb`/`wikipedia` wrappers. The Wikipedia packet retains its language-specific page/revision identity as provenance and its entity identity matches `wikidata_id`; the language-independent Wikidata identity can remain when context is purged. The current importer fetches English Wikipedia only; other languages can later resolve their articles through the same entity. Paragraph references P1… belong to that revision. Extraction preserves prose/order, normalises HTML entities/whitespace and removes citations, tables, navigation, reference/cast sections and standalone blockquotes. Readiness requires complete provenance and narrative under Plot, Synopsis, Story or Premise; it does not certify semantic completeness.
 
-Import creates a new film only. An existing TMDB identity raises `Registry::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
+Import creates a new film only. An existing TMDB identity raises `Registry::Errors::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
 
-Invalid selected IDs raise `Registry::InvalidTmdbId`. Known provider/coverage failures raise `Registry::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
+Invalid selected IDs raise `Registry::Errors::InvalidTmdbId`. Known provider/coverage failures raise `Registry::Errors::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
 
 Each client configures its fixed HTTPS host and response-size limit on the provider-agnostic `ProviderRequest`. The transport accepts host/path/parameters/headers, parses JSON and raises sanitized transport errors; clients own response shape, API error interpretation and import-stage translation. Adding a provider requires no transport registry or provider-specific branch. Requests use a descriptive User-Agent, 5-second connect and 10-second read/write timeouts, a 30-second total request limit, streamed body caps (TMDB 2 MiB, Wikimedia 8 MiB), and no automatic retries or HTTP redirects. API-level article redirects are accepted only with matching Wikidata identity and revision/page checks. Errors omit credentials and provider bodies.
 
@@ -390,8 +390,8 @@ This operation serves both future bulk catalogue loading and on-demand import. I
 From Rails console, using the same ignored `TMDB_API_READ_ACCESS_TOKEN` configuration:
 
 ```ruby
-page = Registry::SearchTmdbFilms.call(query: "The Thing")
-page = Registry::SearchTmdbFilms.call(query: "The Thing", page: 2, primary_release_year: 1982)
+page = Registry::Sources::SearchTmdbFilms.call(query: "The Thing")
+page = Registry::Sources::SearchTmdbFilms.call(query: "The Thing", page: 2, primary_release_year: 1982)
 page[:candidates]
 ```
 
@@ -402,17 +402,17 @@ Queries must be nonblank Strings of at most 200 characters after outer whitespac
 After explicitly choosing a candidate, pass its integer TMDB ID to the existing import operation; import still retrieves and validates details independently:
 
 ```ruby
-film = Registry::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
+film = Registry::CatalogueMaintenance::ImportFilm.call(tmdb_id: selected_candidate.fetch(:tmdb_id))
 ```
 
-Invalid inputs raise `Registry::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
+Invalid inputs raise `Registry::Errors::InvalidTmdbSearch` before credential lookup or HTTP. Search retains `TmdbConfigurationError`, `InvalidTmdbResponse` and `TmdbUnavailable` errors, with the same sanitized timeout/retry policy. Search 404 is `TmdbUnavailable` with reason `http_error`; the complete import wraps movie-details 404 as `ImportIncomplete` (`tmdb`, `not_found`). Queries, credentials and provider bodies are omitted from routine logs and errors. No UI or automatic import is included. Automated search checks use fake HTTP. Live title/year searches selected the five films used in the development import smoke test.
 
 ## Load canonical films with initial qualities
 
 Seed the quality vocabulary first and configure the existing TMDB, Wikipedia/Wikidata and TypeSafe credentials. `LoadFilm` coordinates the create-only source import and initial assignment in one call:
 
 ```ruby
-result = Registry::LoadFilm.call(
+result = Registry::CatalogueMaintenance::LoadFilm.call(
   tmdb_id: selected_candidate.fetch(:tmdb_id),
   maximum_requests: 1,
   maximum_cost_usd: 0.02
@@ -428,7 +428,7 @@ Request and cost limits apply to TypeSafe. They are required positive integer/fi
 For an explicit batch, supply the complete TMDB ID list and its limits:
 
 ```ruby
-summary = Registry::LoadFilms.call(
+summary = Registry::CatalogueMaintenance::LoadFilms.call(
   tmdb_ids: selected_tmdb_ids,
   maximum_films: 10,
   maximum_requests_per_film: 1,
@@ -449,7 +449,7 @@ The batch runs films independently in list order, reports each import/assessment
 Configure `TYPESAFE_API_KEY` in the ignored development environment and use the existing Langfuse configuration for tracing. The quality vocabulary must already be seeded and the film must have usable imported source data. From Rails console:
 
 ```ruby
-result = Registry::AssignInitialFilmQualities.call(film_id: film.id)
+result = Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id)
 result.fetch(:film_qualities)
 result.fetch(:film_quality_eval) # persisted evaluation, including request and response history
 result.fetch(:film_quality_eval).output # complete persisted judgments, policies, call history and usage/cost
@@ -495,14 +495,14 @@ When eligible expressions have changed, the service sends the viewer's current e
 
 Library uses `Library::LibraryFilm` backed by `library_films`, with `Library::LibraryFilmWatched` and a minimal `Library::LibraryFilmToWatch` STI subtype. One user/film relationship is enforced across types; an unclassified film has no relationship row. Watchlist and dismissal actions use the same canonical relationship.
 
-After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing film ID:
+After applying migrations, application code can call the synchronous Library operation with the trusted current-user ID obtained through Identity and an existing Library entry ID:
 
 ```ruby
-library_film = Library::RecordWatched.call(user_id: current_user.id, film_id: film.id)
+library_film = Library::CollectionManagement::RecordWatched.call(user_id: current_user.id, library_film_id: library_film.id)
 # => persisted library entry
 ```
 
-Recording a to-watch entry as watched preserves its ID, ownership, film and creation time, returning the watched object. The source model declares `can_watch?`; the service executes the transition. A request for an entry with `can_watch? == false` raises `Library::AlreadyWatched` without changes, including repeated or concurrent requests after a successful transition. The operation re-reads the user under its user-row lock and rejects inactive, missing or expired identities (`Library::IdentityUnavailable`); a missing film ID raises `Library::FilmUnavailable`. Both records are resolved inside the transaction; Film is read without a row lock. The STI root rejects direct construction without enumerating allowed subclasses. It scopes access to that user, performs no imports or Ratings calls, and composes with an outer caller transaction. Persistence failures roll back and propagate; an explicit retry may succeed once the cause is fixed.
+Recording a to-watch entry as watched preserves its ID, ownership, film and creation time, returning the watched object. The source model declares `can_watch?`; the service executes the transition. A request for an entry with `can_watch? == false` raises `Library::Errors::AlreadyWatched` without changes, including repeated or concurrent requests after a successful transition. The operation re-reads the user under its user-row lock and rejects inactive, missing or expired identities (`Identity::Errors::Unavailable`); a missing or unowned Library entry raises `Library::Errors::FilmUnavailable`. The user and Library entry are resolved and locked inside the transaction. The STI root rejects direct construction without enumerating allowed subclasses. It scopes access to that user, performs no imports or Ratings calls, and composes with an outer caller transaction. Persistence failures roll back and propagate; an explicit retry may succeed once the cause is fixed.
 
 Deleting a user physically removes only their dependent Library rows through the Library-owned foreign key; shared films are not cascaded. Existing guest cleanup and in-place registration are unchanged. A restrictive dependent preventing deletion still rolls back Identity/Library changes for that guest. Registered-account deletion and retention for future activity remain separate decisions.
 
