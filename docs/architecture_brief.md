@@ -5,7 +5,7 @@ Date: 18 October 2026
 
 ## 1. Purpose and architectural goals
 
-Glutton helps horror enthusiasts discover films through the qualities they enjoy and dislike. Personal ratings provide implicit evidence; optional expressions provide explicit context that improves scoring of subsequently rated films and, through later reassessment, previously rated films.
+Glutton helps horror enthusiasts discover films through the qualities they enjoy and dislike. Personal ratings provide implicit evidence; optional notes provide explicit context that improves scoring of subsequently rated films and, through later reassessment, previously rated films.
 
 The project should become a useful, sustainable product with real users. It also provides deliberate practice in domain-driven design, PostgreSQL performance, and managing domain complexity in Ruby on Rails. Architectural decisions should make domain rules and database behaviour understandable, while keeping implementation and operations manageable for an independent maintainer.
 
@@ -17,7 +17,7 @@ This document distinguishes agreed behaviour from proposed implementation. Frame
 
 The viewer cycles through films in an explicit rating interface. They first indicate whether they have seen the film. Selecting **Haven’t seen it** persists confirmed-unseen status and excludes the film from subsequent rating prompts while that status remains. Offer **Add to watchlist** directly at this point, or continue to the next film. Confirmed-unseen status alone does not exclude a film from discovery; watchlist addition classifies it as To watch and does exclude it.
 
-For a seen film, the viewer chooses Brilliant, Pretty Good, Not For Me, or Garbage. They may add several individual, natural-language expressions. The interface encourages distinct ideas without forcing tags or stripping contextual meaning. They save the rating and expressions together.
+For a seen film, the viewer chooses Brilliant, Pretty Good, Not For Me, or Garbage. They may record what they liked or disliked in one optional multiline field. They save the rating and notes together.
 
 Expressions are optional. Users who only rate films must receive useful recommendations. Extreme ratings provide stronger directional evidence than mild ratings; exact weights remain experimental.
 
@@ -63,7 +63,7 @@ Boundaries follow distinct activities and their language, not a generic user–f
 | --- | --- | --- |
 | Registry | Film identity, metadata/media, sourced context, editable quality categories/vocabulary and accepted film–quality associations | Shared knowledge independent of viewers |
 | Library | Canonical user–film relationship: watchlist, watched and not interested; library management | Does not own purpose-specific presentation histories, ratings or inferred preferences |
-| Ratings | Rating presentations and responses, ratings, original expressions, scoring, expressions profiles and inferred preferences | Rating submission, scoring and profile building are distinct capabilities; Ratings publishes completed-viewing facts and explicit Library action requests |
+| Ratings | Rating presentations and responses, ratings, original expressions, scoring, taste profiles and inferred preferences | Rating submission, scoring and profile building are distinct capabilities; Ratings publishes completed-viewing facts and explicit Library action requests |
 | Recommendations | Selection, eligibility, ranking, explanations, presentation and response history | Maintains projections from Library/Rating events; publishes response choices without owning Library state |
 
 Owner clarification, 26 October 2026: domain boundaries are ownership boundaries, not read-access barriers. All domains may read the shared database, including another domain’s models/scopes, while respecting session/user access controls. Each domain owns its mutations, invariants and lifecycle. Read-only presentation queries do not require event-derived copies or new provider/consumer tasks. Durable events remain the agreed mechanism for existing cross-domain state-changing reactions; this clarification does not replace those workflows. For example, Library derives rated/awaiting-rating display from Ratings-owned records without storing its own rated flag.
@@ -127,7 +127,7 @@ Source-backed film information is directly accessible; normal navigation is thro
 
 ## 6. Saving a rated film
 
-Scoring clarification, 22 October 2026: [Ratings scoring design](ratings_scoring_design.md) records the agreed unexpressed, implicitly expressed and explicitly expressed classifications, current-profile recomputation rules and proposed Rating/RatingExpression/RatingQuality relationships. Profile versions and evidence classifications follow that design. The current rating flow captures original expressions; scoring and profile processing remain deferred.
+Scoring clarification, 22 October 2026: [Ratings scoring design](ratings_scoring_design.md) records the agreed unexpressed, implicitly expressed and explicitly expressed classifications, current-profile recomputation rules and proposed Rating/RatingQuality relationships. Profile versions and evidence classifications follow that design. The current rating flow captures original expressions; scoring and profile processing remain deferred.
 
 ### Record the submission
 
@@ -137,7 +137,7 @@ Saving and assessment completion are distinct states. Provider failure must not 
 
 ### Branch A: quality scoring through JEV
 
-Use the rating, submitted expressions, relevant film knowledge and the applicable expressions profile to produce:
+Use the rating, submitted expressions, relevant film knowledge and the applicable taste profile to produce:
 
 1. Implicit quality evidence based on the rating, interpreted using that profile.
 2. Explicit quality evidence based on the expressions submitted for this film.
@@ -146,9 +146,9 @@ Record the actual profile/input versions used and reject stale work. Both kinds 
 
 Store implicit and explicit outputs separately enough to inspect and evaluate them. How JEV represents relevance, direction and strength, and how these outputs combine, must be established through experiments.
 
-### Branch B: expressions profile assessment
+### Branch B: taste profile assessment
 
-Use an LLM call to synthesize and update the expressions profile from original expressions, preserving their context. No JEV gate is assumed. Meaningful-change criteria, synthesis inputs, revision semantics and cadence remain for the Ratings implementation. Preserve original expressions and processing state so failures can be recovered without treating inferred quality scores as new user statements.
+Use an LLM call to synthesize and update the taste profile from original expressions, preserving their context. No JEV gate is assumed. Meaningful-change criteria, synthesis inputs, revision semantics and cadence remain for the Ratings implementation. Preserve original expressions and processing state so failures can be recovered without treating inferred quality scores as new user statements.
 
 Submissions without expressions do not require profile synthesis. Edits and deletions require reassessing the affected explicit evidence; an additions-only novelty check is insufficient for removing an earlier claim.
 
@@ -164,7 +164,7 @@ An expression contributes explicit evidence for its own film as soon as scoring 
 
 Refresh considers all relevant rated films, including the implicit assessment of the submission that caused the profile change. It recomputes from authoritative inputs and selected current revisions, preserving the distinction between direct expression evidence and inferred attribution.
 
-Track freshness through input revisions rather than a single ambiguous updated timestamp. Relevant changes include ratings, expressions, expressions profile, accepted film qualities, vocabulary and scoring method. Different changes may require different processing stages; a profile change need not require reclassifying unchanged expression text.
+Track freshness through input revisions rather than a single ambiguous updated timestamp. Relevant changes include ratings, expressions, taste profile, accepted film qualities, vocabulary and scoring method. Different changes may require different processing stages; a profile change need not require reclassifying unchanged expression text.
 
 The exact refresh cadence, material-change criteria and whether MVP offers a manual refresh control remain open. Coalesce superseded work, bound provider costs, and avoid claiming that recommendations incorporate a profile revision before the relevant processing completes.
 
@@ -312,7 +312,7 @@ Viewer submissions and profiles are private by default; sharing expressions as i
 
 Develop complete working slices:
 
-1. Validate a small catalogue subset; implement independent viewing status and library classification, confirmed-unseen exclusion from rating prompts, direct watchlist addition, spoiler-labelled film-information navigation, ratings and multiple expressions.
+1. Validate a small catalogue subset; implement independent viewing status and library classification, confirmed-unseen exclusion from rating prompts, direct watchlist addition, spoiler-labelled film-information navigation, ratings and optional film notes.
 2. Establish JEV scoring contracts and a rating-only recommendation baseline.
 3. Add explicit scoring and profile synthesis with recorded input/profile versions and the agreed evidence classifications.
 4. Add historical reassessment, freshness tracking and before/after ranking evaluation.
@@ -329,7 +329,7 @@ Workflow tests should cover retry/idempotency, concurrent profile updates, stale
 - Select production deployment and the job approach when deferred processing is introduced. Rails, PostgreSQL and server-rendered Hotwire are the implemented framework choices.
 - Define Ratings JEV assessment inputs and outputs, and validate required provider capabilities.
 - Define implicit/explicit aggregation and the initial recommendation ranking formula.
-- Define expressions profile structure, synthesis inputs and revision semantics.
+- Define taste profile structure, synthesis inputs and revision semantics.
 - Choose refresh cadence, material-change criteria and user-visible processing states.
 - Specify re-rating, expression editing/deletion and library-transition behaviour.
 - Agree source/evidence coverage, accepted film-quality changes and spoiler-safe presentation; specify source/evaluation purge and manual-edit provenance rules.

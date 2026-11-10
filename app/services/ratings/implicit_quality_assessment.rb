@@ -42,7 +42,7 @@ module Ratings
     end
 
     def answer(client, questions)
-      state = { expression_profile: @profile, qualities: @qualities }
+      state = { taste_profile: @profile, qualities: @qualities }
       phase = "assess-implicit-quality-evidence"
       request = { "model" => client.configuration.fetch("model"), "state" => state, "questions" => questions }
       response = client.answer(state:, questions:, phase:)

@@ -21,9 +21,9 @@ Values are rating choices, not numeric preference weights. Localized display lab
 
 ## Source operation and atomicity
 
-`Ratings::SubmitRating.call(user_id:, rating_film_id:, value:, expression_texts: [])` accepts an existing owned candidate and returns the saved Rating. It locks the fresh active owner, then the candidate. The models own submission permission, creation and original-expression validation. Rating has many rating_expressions, saved with it before publication. The operation publishes through the established `DomainEvents::Publish` contract within the same savepoint.
+`Ratings::SubmitRating.call(user_id:, rating_film_id:, value:, notes: nil)` accepts an existing owned candidate and returns the saved Rating. It locks the fresh active owner, then the candidate. The models own submission permission, creation and original-expression validation. Rating has many rating_expressions, saved with it before publication. The operation publishes through the established `DomainEvents::Publish` contract within the same savepoint.
 
-Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Malformed expression collections raise `Ratings::InvalidExpressions`; blank or overlong expressions and invalid rating values raise `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. Required valid values/references remain database constraints. First-submission duplicate rejection is model-owned and serialized by the owner/candidate locks.
+Missing/inactive owners raise `Ratings::IdentityUnavailable`; absent/foreign candidates raise `Ratings::FilmUnavailable`. A previously rated candidate raises `Ratings::AlreadyRated`, even for an identical value. Malformed notes raise `Ratings::InvalidNotes`; overlong notes and invalid rating values raise `ActiveRecord::RecordInvalid`; validation checks the original choice before string coercion. Required valid values/references remain database constraints. First-submission duplicate rejection is model-owned and serialized by the owner/candidate locks.
 
 A dismissed candidate may be explicitly rated. Its dismissal and creation time remain unchanged; automatic selection uses `pending` (unrated, not dismissed and not held). No Library change is performed synchronously. Revisions use the separate replacement operation below.
 
@@ -43,7 +43,7 @@ See [Foundation operations](domain_event_operations.md) for delivery recovery an
 
 ## Rating replacement
 
-`Ratings::ReviseRating.call(user_id:, rating_film_id:, previous_rating_id:, value:, expression_texts: [])` replaces an existing current rating. It locks the fresh active owner and exact owned candidate, then delegates replacement to RatingFilm. The result is a new Rating; the previous row retains its value and original expressions unchanged. Expressions are a complete replacement; omission supplies an empty set. Repeating the same value is permitted.
+`Ratings::ReviseRating.call(user_id:, rating_film_id:, previous_rating_id:, value:, notes: nil)` replaces an existing current rating. It locks the fresh active owner and exact owned candidate, then delegates replacement to RatingFilm. The result is a new Rating; the previous row retains its value and original notes unchanged. A revision replaces the notes in full. An omitted field produces a rating without notes. Repeating the same value is permitted.
 
 `Ratings::RatingFilm#ratings` retains history; `Ratings::RatingFilm#current_rating` and `Ratings::Rating.current` select the highest Rating ID for each candidate. This derives currentness without a stored flag, including when timestamps tie or are backdated. A nonunique (rating_film_id, id) index supports the relationship and latest-rating lookup. Existing single ratings remain current. Owner/candidate locking serializes writes; there is no database uniqueness constraint restricting rating history. The normal rating operation cannot be reused to bypass revision protection.
 

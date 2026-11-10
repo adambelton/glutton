@@ -1,7 +1,10 @@
 require "test_helper"
 require_relative "../../support/tmdb_http"
 
+require Rails.root.join("test/support/taste_profile_openai_stub")
+
 class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
+  include TasteProfileOpenaiStub
   Client = Struct.new(:handler) do
     def configuration
       { "model" => "jev-1.14.0" }
@@ -39,22 +42,21 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
 
   test "bundles expression and quality pairs and applies only judgments that meet the threshold" do
     rating = submit([ "Dread builds slowly.", "I liked the sound." ])
-    expressions = rating.rating_expressions.order(:id).to_a
     requests = []
     client = Client.new(lambda do |**request|
       requests << request
       response(request.fetch(:questions), {
-        "expression_#{expressions.first.id}_quality_#{@quality.id}" => 0.60,
-        "expression_#{expressions.last.id}_quality_#{@other_quality.id}" => 0.59
+        "notes_#{rating.id}_quality_#{@quality.id}" => 0.60,
+        "notes_#{rating.id}_quality_#{@other_quality.id}" => 0.59
       })
     end)
 
     evaluation = assess(rating, client)
 
     assert_equal 0.60, evaluation.reload.output.fetch("minimum_support")
-    assert_equal 4, requests.sole.fetch(:questions).size
-    assert_equal [ :expressions, :qualities ], requests.sole.fetch(:state).keys.sort
-    assert_equal [ expressions.first.id ], evaluation.output.fetch("decisions").first.fetch("supporting_expression_ids")
+    assert_equal 2, requests.sole.fetch(:questions).size
+    assert_equal [ :notes, :qualities ], requests.sole.fetch(:state).keys.sort
+    assert_equal [ rating.id ], evaluation.output.fetch("decisions").first.fetch("supporting_rating_ids")
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
     assert_nil assess(rating, no_call_client)
   end
@@ -73,11 +75,11 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
 
     evaluation = assess(rating, client)
 
-    assert_equal 84, JSON.parse(http.requests.sole.body).fetch("questions").size
+    assert_equal 28, JSON.parse(http.requests.sole.body).fetch("questions").size
     assert_equal 28, evaluation.rating_qualities.count
   end
 
-  test "the largest supported rating splits oversized explicit requests without losing judgments" do
+  test "maximum-length multiline notes fit in one request" do
     category = quality_categories(:tone)
     26.times do |index|
       quality = category.qualities.create!(name: "Additional quality #{index}",
@@ -85,8 +87,7 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
         not_sufficient: "An isolated surprise without an effect on the viewer’s sense of the setting.")
       Registry::FilmQuality.create!(film: @film, quality:)
     end
-    expressions = Array.new(Ratings::Rating::MAX_EXPRESSIONS, "👻" * Ratings::RatingExpression::MAX_TEXT_LENGTH)
-    rating = submit(expressions)
+    rating = submit([ "👻" * Ratings::Rating::MAX_NOTES_LENGTH ])
     http = Http.new(lambda do |payload|
       response(payload.fetch("questions")).merge("usage" => { "input_tokens" => JSON.generate(payload).bytesize / 2, "output_tokens" => 2 })
     end)
@@ -94,9 +95,9 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
 
     evaluation = assess(rating, client)
 
-    assert_equal 2, http.requests.size
+    assert_equal 1, http.requests.size
     sent = http.requests.map { |request| JSON.parse(request.body) }
-    assert_equal 560, sent.sum { |payload| payload.fetch("questions").size }
+    assert_equal 28, sent.sum { |payload| payload.fetch("questions").size }
     assert_equal sent, evaluation.input.pluck("request")
     assert_equal 28, evaluation.rating_qualities.count
   end
@@ -109,10 +110,10 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
       questions = payload.fetch("questions")
       state = payload.fetch("state")
       phases << state.keys
-      if state.key?("expressions")
-        response(questions, { "expression_#{rating.rating_expressions.sole.id}_quality_#{@quality.id}" => 0.60 })
+      if state.key?("notes")
+        response(questions, { "notes_#{rating.id}_quality_#{@quality.id}" => 0.60 })
       else
-        assert_equal revision.profile, state.fetch("expression_profile")
+        assert_equal revision.profile, state.fetch("taste_profile")
         assert_equal [ @other_quality.id.to_s ], state.fetch("qualities").keys
         response(questions, questions.keys.index_with(0.60))
       end
@@ -131,21 +132,21 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
   test "profile reassessment preserves explicit judgments when the initial evaluation publishes during JEV work" do
     rating = submit([ "Dread builds slowly." ])
     revision = publish_profile
-    expression_id = rating.rating_expressions.sole.id
+    rating_id = rating.id
     initial = nil
     phases = []
     client = Client.new(lambda do |state:, questions:, phase:|
       phases << phase
       if phase == "assess-explicit-quality-evidence"
         initial_client = Client.new(lambda do |questions:, **|
-          response(questions, { "expression_#{expression_id}_quality_#{@quality.id}" => 0.99 })
+          response(questions, { "notes_#{rating_id}_quality_#{@quality.id}" => 0.99 })
         end)
         # Record an initial assessment that started before the profile was published.
-        initial_assessment = Ratings::RatingQualityAssessment.new(expressions: state.fetch(:expressions),
+        initial_assessment = Ratings::RatingQualityAssessment.new(notes: state.fetch(:notes),
           qualities: state.fetch(:qualities), profile_revision_id: nil, profile: nil, trace_id: nil).call(client: initial_client)
         initial = Ratings::RatingQualityEval.record!(rating:, assessment: initial_assessment)
         rating.apply_quality_evaluation!(evaluation: initial)
-        response(questions, { "expression_#{expression_id}_quality_#{@other_quality.id}" => 0.99 })
+        response(questions, { "notes_#{rating_id}_quality_#{@other_quality.id}" => 0.99 })
       else
         response(questions, questions.keys.index_with(0.99))
       end
@@ -166,7 +167,7 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
     rating = @rating_film.revise_rating!(previous_rating_id: previous.id, value: Ratings::Rating::Values::NOT_FOR_ME)
     client = Client.new(lambda do |state:, questions:, phase:|
       assert_equal "assess-implicit-quality-evidence", phase
-      assert_equal revision.profile, state.fetch(:expression_profile)
+      assert_equal revision.profile, state.fetch(:taste_profile)
       cleared = publish_profile
       assert_empty cleared.profile
       response(questions, { @quality.id.to_s => 0.60, @other_quality.id.to_s => 0.59 })
@@ -220,7 +221,7 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
   test "a film with no accepted qualities requires no evaluation or request" do
     film = Registry::Film.create!(title: "Unclassified film")
     rating_film = Ratings::RatingFilm.create!(user: @user, film:)
-    rating = rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "A expression." ])
+    rating = rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "A expression.")
 
     assert_nil assess(rating, no_call_client)
     assert_empty rating.rating_quality_evals
@@ -321,20 +322,21 @@ class Ratings::AssessRatingQualitiesTest < ActiveSupport::TestCase
 
   def publish_profile
     synthesizer = lambda do |input:, **|
-      expressions = input.is_a?(Hash) ? input.fetch("added") : input
+      films = input.fetch("note_changes").select { |change| change.fetch("after_rating_id") }
+      note = films.first
       paragraph = {
         "anchor" => "The viewer enjoys slowly building dread.", "claim" => "Enjoys slowly building dread.",
         "explanation" => "The viewer described dread.",
-        "expression_ids" => [ expressions.first.fetch("expressions").first.fetch("expression_id") ]
+        "citations" => [ { "rating_id" => note.fetch("after_rating_id"), "quote" => note.fetch("after") } ]
       }
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => paragraph.fetch("anchor"), "conclusions" => [ paragraph ] }
     end
-    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+    Ratings::RefreshTasteProfile.call(user_id: @user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
   end
 
   def submit(expressions)
-    @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: expressions)
+    @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: expressions.join("\n\n").presence)
   end
 
   def assess(rating, client)

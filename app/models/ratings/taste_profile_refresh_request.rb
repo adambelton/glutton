@@ -1,5 +1,5 @@
 module Ratings
-  class ExpressionProfileRefreshRequest < ApplicationRecord
+  class TasteProfileRefreshRequest < ApplicationRecord
     belongs_to :user, class_name: "Identity::User"
 
     def self.mark_pending!(user_id:)

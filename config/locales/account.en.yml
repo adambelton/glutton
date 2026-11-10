@@ -2,19 +2,20 @@ en:
   account:
     title: Account
     sections: Account sections
-    profile: Expression profile
-    empty: Your expression profile will appear here once it has been built from your rating expressions.
+    profile: Glutton Profile
+    empty: Your Glutton Profile will appear here once it has been built from your film notes.
     supporting_evidence: "Supporting evidence %{number}"
-    legacy_profile: This profile was generated before individual claim annotations were available. Refresh it to see claim evidence.
     evidence_list: Claims and evidence
     evidence_marker: "[%{number}]"
+    earlier_rating_evidence: From an earlier rating version.
+    view_full_notes: View full notes
     edit_rating: "Edit rating for %{film}"
     pending: Pending evidence
-    no_pending_evidence: No expression changes since the last profile update.
+    no_pending_evidence: No notes changes since the last profile update.
     unknown_film: Unknown film
-    added: Added expressions
-    removed: Removed expressions
-    refresh: Refresh expression profile
-    refresh_queued: Expression profile refresh queued.
-    refresh_already_queued: An expression profile refresh is already queued.
-    refresh_failed: The expression profile refresh could not be queued. Try again.
+    added: Added notes
+    removed: Removed notes
+    refresh: Refresh Glutton Profile
+    refresh_queued: Glutton Profile refresh queued.
+    refresh_already_queued: A Glutton Profile refresh is already queued.
+    refresh_failed: The Glutton Profile refresh could not be queued. Try again.

@@ -19,7 +19,7 @@ module Views
                 @examples.each_with_index do |example, index|
                   article(class: "demo-frame", hidden: index != 0, aria: { label: example.fetch(:film).title }, data: { "landing-examples-target": "panel" }) do
                     render ::Ratings::Form.new(film: example.fetch(:film), value: example.fetch(:rating),
-                      expression_texts: t("identity.entry.demo.examples.#{example.fetch(:key)}.expressions"), readonly: true)
+                      notes: t("identity.entry.demo.examples.#{example.fetch(:key)}.notes"), readonly: true)
                   end
                 end
                 nav(class: "demo-controls", hidden: true, aria: { label: t("identity.entry.demo.browse") }, data: { "landing-examples-target": "controls" }) do

@@ -30,13 +30,13 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   test "retained rating creates watched with exact causal event and preserves original evidence" do
     candidate = Ratings::RatingFilm.create!(user: @user, film: @film)
     rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
-      value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Atmosphere" ])
+      value: Ratings::Rating::Values::BRILLIANT, notes: "Atmosphere")
     source = DomainEvents::DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED)
     assert_equal 1, DomainEvents::Status.call(subscriptions: [ @subscription ])[:undiscovered].sole[:count]
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count" ] do
+    assert_no_difference "Ratings::Rating.count" do
       assert_equal({ processed: 1 }, dispatch)
     end
-    assert_equal [ "Atmosphere" ], rating.reload.rating_expressions.pluck(:text)
+    assert_equal "Atmosphere", rating.reload.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, rating.value
     assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
     event = derived.sole

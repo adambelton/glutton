@@ -17,21 +17,21 @@ module Ratings
       !ratings.exists?
     end
 
-    def submit_rating!(value:, expression_texts: [])
+    def submit_rating!(value:, notes: nil)
       transaction do
         raise Ratings::AlreadyRated unless can_submit_rating?
 
-        create_rating!(value:, expression_texts:, previous_rating: nil)
+        create_rating!(value:, notes:, previous_rating: nil)
       end
     end
 
-    def revise_rating!(previous_rating_id:, value:, expression_texts: [])
+    def revise_rating!(previous_rating_id:, value:, notes: nil)
       transaction(requires_new: true) do
         previous_rating = ratings.order(id: :desc).first
         raise Ratings::RevisionUnavailable unless previous_rating.present?
         raise Ratings::StaleRating unless previous_rating.id == previous_rating_id
 
-        create_rating!(value:, expression_texts:, previous_rating:)
+        create_rating!(value:, notes:, previous_rating:)
       end
     end
 
@@ -70,15 +70,11 @@ module Ratings
 
     private
 
-    def create_rating!(value:, expression_texts:, previous_rating:)
-      # Check external values before nested attributes coerce expression text.
-      unless expression_texts.is_a?(Array) && expression_texts.size <= Rating::MAX_EXPRESSIONS &&
-          expression_texts.all? { |text| text.is_a?(String) }
-        raise Ratings::InvalidExpressions
-      end
+    def create_rating!(value:, notes:, previous_rating:)
+      raise InvalidNotes unless notes.nil? || notes.is_a?(String)
 
-      rating = ratings.create!(value:, rating_expressions_attributes: expression_texts.map { |text| { text: } })
-      rating.request_profile_refresh_if_expressions_changed!(previous_rating:)
+      rating = ratings.create!(value:, notes: notes&.gsub(/\r\n?/, "\n").presence)
+      rating.request_profile_refresh_if_notes_changed!(previous_rating:)
       rating
     end
   end

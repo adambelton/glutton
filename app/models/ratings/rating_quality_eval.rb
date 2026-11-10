@@ -41,7 +41,7 @@ module Ratings
     end
 
     def explicit_evidence_for_reassessment
-      output.slice("expressions", "qualities", "calls", "decisions", "question_policy", "minimum_support",
+      output.slice("notes", "qualities", "calls", "decisions", "question_policy", "minimum_support",
         "configuration", "model", "usage").merge("explicit_source_evaluation_id" => explicit_source_id)
     end
 
@@ -58,22 +58,22 @@ module Ratings
     def valid_output?
       return false unless output.is_a?(Hash) && rating.present?
 
-      expressions, qualities, calls, decisions = output.values_at("expressions", "qualities", "calls", "decisions")
-      return false unless valid_expressions?(expressions) && valid_qualities?(qualities)
+      notes, qualities, calls, decisions = output.values_at("notes", "qualities", "calls", "decisions")
+      return false unless valid_notes?(notes) && valid_qualities?(qualities)
       return false unless decisions.is_a?(Array) && decisions.present?
 
       return false unless valid_implicit_assessment?(qualities, decisions)
 
-      if expressions.empty?
+      if notes.empty?
         return calls == [] && decisions.all? do |decision|
-          valid_decision?(decision, expressions, qualities, [])
+          valid_decision?(decision, notes, qualities, [])
         end
       end
 
       question_ids = assessment_question_ids(calls)
       return false unless question_ids
 
-      decisions.all? { |decision| valid_decision?(decision, expressions, qualities, question_ids) }
+      decisions.all? { |decision| valid_decision?(decision, notes, qualities, question_ids) }
     end
 
     def valid_implicit_assessment?(qualities, decisions)
@@ -85,8 +85,8 @@ module Ratings
       revision_id, profile, calls, applicable_ids = implicit.values_at(
         "profile_revision_id", "profile", "calls", "applicable_quality_ids")
       return false unless revision_id.is_a?(Integer) && profile.is_a?(String) && applicable_ids.is_a?(Array)
-      return false unless ExpressionProfileRevision.joins(:expression_profile)
-        .exists?(id: revision_id, profile:, expression_profiles: { user_id: rating.rating_film.user_id })
+      return false unless TasteProfileRevision.joins(:taste_profile)
+        .exists?(id: revision_id, profile:, taste_profiles: { user_id: rating.rating_film.user_id })
       return false unless decisions.all? { |decision| decision.is_a?(Hash) }
 
       explicit_ids = decisions.select { |decision| decision["applicable"] }.pluck("quality_id").map(&:to_s)
@@ -124,13 +124,9 @@ module Ratings
         exchange["question"].present? && exchange.key?("result")
     end
 
-    def valid_expressions?(expressions)
-      return false unless expressions.is_a?(Hash)
-
-      original_texts = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
-      return original_texts.empty? if expressions.empty?
-
-      expressions.all? { |id, text| original_texts.key?(id) && original_texts.fetch(id) == text }
+    def valid_notes?(notes)
+      expected = rating.notes.present? ? { rating.id.to_s => rating.notes } : {}
+      notes == expected
     end
 
     def valid_qualities?(qualities)
@@ -140,15 +136,15 @@ module Ratings
       end
     end
 
-    def valid_decision?(decision, expressions, qualities, question_ids)
+    def valid_decision?(decision, notes, qualities, question_ids)
       return false unless decision.is_a?(Hash)
 
       quality_id, applicable, supporting_ids, result_ids = decision.values_at(
-        "quality_id", "applicable", "supporting_expression_ids", "result_ids")
+        "quality_id", "applicable", "supporting_rating_ids", "result_ids")
       qualities.key?(quality_id.to_s) && [ true, false ].include?(applicable) &&
         supporting_ids.is_a?(Array) && applicable == supporting_ids.present? &&
-        supporting_ids.all? { |id| expressions.key?(id.to_s) } &&
-        result_ids.is_a?(Array) && (expressions.empty? ? result_ids.empty? : result_ids.present?) &&
+        supporting_ids.all? { |id| notes.key?(id.to_s) } &&
+        result_ids.is_a?(Array) && (notes.empty? ? result_ids.empty? : result_ids.present?) &&
         (result_ids - question_ids).empty?
     end
   end

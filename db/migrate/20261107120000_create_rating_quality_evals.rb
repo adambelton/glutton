@@ -9,7 +9,7 @@ class CreateRatingQualityEvals < ActiveRecord::Migration[8.1]
 
     add_check_constraint :rating_quality_evals, "jsonb_typeof(input) = 'array'", name: "rating_quality_evals_input_calls"
     add_check_constraint :rating_quality_evals,
-      "jsonb_typeof(output) = 'object' AND output ?& ARRAY['expressions', 'qualities', 'calls', 'decisions']",
+      "jsonb_typeof(output) = 'object' AND output ?& ARRAY['notes', 'qualities', 'calls', 'decisions']",
       name: "rating_quality_evals_completed_output"
 
     add_index :rating_quality_evals, [ :id, :rating_id ], unique: true

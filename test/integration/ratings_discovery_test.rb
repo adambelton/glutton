@@ -37,7 +37,7 @@ class RatingsDiscoveryTest < ActionDispatch::IntegrationTest
       assert_select "h2", @film.title
     end
     post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::PRETTY_GOOD,
-      expression_texts: [ "A thought" ], authenticity_token: token }
+      notes: "A thought", authenticity_token: token }
     assert_response :see_other
     assert_difference "Ratings::RatingFilm.count", 1 do
       follow_redirect!
@@ -47,7 +47,7 @@ class RatingsDiscoveryTest < ActionDispatch::IntegrationTest
     post dismiss_rating_path, params: { rating_film_id: next_row.id, authenticity_token: token }
     follow_redirect!
     assert_select ".ui-empty", I18n.t("ratings.browser.empty")
-    assert_equal [ "A thought" ], row.reload.current_rating.rating_expressions.pluck(:text)
+    assert_equal "A thought", row.reload.current_rating.notes
   end
 
   test "registered viewers receive a candidate on direct Ratings navigation" do

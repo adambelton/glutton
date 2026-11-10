@@ -46,7 +46,7 @@ class Ratings::AssessRatingQualitiesJobTest < ActiveSupport::TestCase
     failing_adapter.define_singleton_method(:enqueue) { |_| raise ActiveJob::EnqueueError, "Queue write failed" }
     Job.queue_adapter = failing_adapter
 
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_raises(ActiveJob::EnqueueError) { submit(expressions: [ "Dread builds slowly." ]) }
     end
   end
@@ -104,7 +104,7 @@ class Ratings::AssessRatingQualitiesJobTest < ActiveSupport::TestCase
   private
 
   def submit(value: Ratings::Rating::Values::BRILLIANT, expressions: [])
-    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value:, expression_texts: expressions)
+    Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value:, notes: expressions.join("\n\n").presence)
   end
 
   def revise(rating)

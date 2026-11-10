@@ -9,9 +9,9 @@ Rails.application.configure do
       cron: "*/30 * * * * *",
       class: "DispatchDomainEventsJob"
     },
-    ratings_expression_profile_refresh: {
+    ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",
-      class: "Ratings::RefreshExpressionProfilesJob",
+      class: "Ratings::RefreshTasteProfilesJob",
       enabled_by_default: -> { Rails.env.production? }
     }
   }

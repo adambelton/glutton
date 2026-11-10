@@ -1,9 +1,8 @@
 module Ratings
   class Form < Shared::Base
-    def initialize(film:, rating_film_id: nil, method: :post, value: nil, expression_texts: [], expression_draft: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false, targeted: false)
+    def initialize(film:, rating_film_id: nil, method: :post, value: nil, notes: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false, targeted: false)
       @film, @rating_film_id, @method, @value = film, rating_film_id, method, value
-      @expression_texts, @previous_rating_id, @errors, @readonly = expression_texts, previous_rating_id, errors, readonly
-      @expression_draft = expression_draft
+      @notes, @previous_rating_id, @errors, @readonly = notes, previous_rating_id, errors, readonly
       @dismissible, @targeted = dismissible, targeted
       @prefix = readonly ? "example-#{film.tmdb_id}-" : ""
     end
@@ -52,7 +51,7 @@ module Ratings
         end
       end
       rating_fields
-      expression_fields
+      notes_field
     end
 
     def errors_section
@@ -79,8 +78,14 @@ module Ratings
       end
     end
 
-    def expression_fields
-      render ExpressionList.new(expression_texts: @expression_texts, expression_draft: @expression_draft, readonly: @readonly, prefix: @prefix, errors: @errors)
+    def notes_field
+      id = "#{@prefix}notes"
+      div(class: "rating-notes") do
+        label(for: id) { t("ratings.browser.notes") }
+        textarea(id:, name: "notes", rows: 8, maxlength: Rating::MAX_NOTES_LENGTH, class: "ui-input",
+          readonly: @readonly, placeholder: t("ratings.browser.notes_placeholder"),
+          aria: { describedby: ("rating-errors" if @errors.present?) }) { plain "\n#{@notes}" }
+      end
     end
   end
 end

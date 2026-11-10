@@ -34,16 +34,16 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
         @film = Registry::Film.create!(title: "State combination")
         row = Ratings::RatingFilm.create!(user: @user, film: @film, held:, dismissed:)
         rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
-          value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+          value: Ratings::Rating::Values::BRILLIANT, notes: "Original")
         created_at = row.created_at
         event = publish(name)
-        assert_no_difference([ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ]) { deliver(event) }
+        assert_no_difference([ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ]) { deliver(event) }
         row.reload
         assert_equal name == Library::Events::FILM_ADDED_TO_WATCHLIST, row.held?
         assert_equal dismissed || name == Library::Events::FILM_MARKED_NOT_INTERESTED, row.dismissed?
         assert_equal created_at, row.created_at
         assert_equal [ rating.id ], row.ratings.pluck(:id)
-        assert_equal [ "Original" ], rating.rating_expressions.pluck(:text)
+        assert_equal "Original", rating.notes
       end
     end
   end
@@ -174,12 +174,12 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       2.times { dispatch } if library_first
       row = candidate || Ratings::RatingFilm.create!(user: @user, film: @film)
       rating = Ratings::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
-        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Still original" ])
+        value: Ratings::Rating::Values::BRILLIANT, notes: "Still original")
       5.times { DomainEvents::Dispatch.call }
       assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
       assert row.reload.dismissed?
       assert_not row.held?
-      assert_equal [ "Still original" ], rating.rating_expressions.pluck(:text)
+      assert_equal "Still original", rating.notes
       assert_not_includes Ratings::NextCandidates.call(user_id: @user.id, limit: 100).map(&:id), row.id
       assert_no_difference "DomainEvents::DomainEvent.count" do
         assert_empty DomainEvents::Dispatch.call

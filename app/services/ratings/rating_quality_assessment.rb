@@ -2,11 +2,11 @@ module Ratings
   class RatingQualityAssessment
     attr_reader :input, :result
 
-    def initialize(expressions:, qualities:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_assessment: nil)
+    def initialize(notes:, qualities:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_assessment: nil)
       @qualities = qualities
       @profile_revision_id = profile_revision_id
       @profile = profile
-      @expressions = expressions
+      @notes = notes
       @trace_id = trace_id
       @explicit_evidence = explicit_evidence
       @previous_result = previous_assessment&.result
@@ -18,7 +18,7 @@ module Ratings
       @result = if @explicit_evidence.present?
         @explicit_evidence.merge("trace_id" => @trace_id)
       else
-        explicit = ExplicitQualityAssessment.new(expressions: @expressions, qualities: @qualities, trace_id: @trace_id).call(client:)
+        explicit = ExplicitQualityAssessment.new(notes: @notes, qualities: @qualities, trace_id: @trace_id).call(client:)
         capture_calls(explicit)
         explicit.result
       end

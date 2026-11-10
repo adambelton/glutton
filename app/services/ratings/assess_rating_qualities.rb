@@ -18,24 +18,24 @@ module Ratings
       rating = Rating.find(@rating_id)
       rating_film = rating.rating_film
       ensure_current!(rating_film, rating)
-      profile_revision = ExpressionProfile.find_by(user_id: rating_film.user_id)&.current_revision
+      profile_revision = TasteProfile.find_by(user_id: rating_film.user_id)&.current_revision
       return unless rating.can_assess_qualities_for?(profile_revision&.id)
 
       explicit_evidence = rating.quality_evidence_for_reassessment
       qualities = explicit_evidence&.fetch("qualities") || capture_qualities(rating_film)
       return if qualities.empty?
 
-      expressions = rating.rating_expressions.pluck(:id, :text).to_h.transform_keys(&:to_s)
+      notes = rating.notes.present? ? { rating.id.to_s => rating.notes } : {}
       @tracer.in_span(TRACE_NAME, attributes: {
         "langfuse.trace.name" => TRACE_NAME,
         "langfuse.observation.type" => "span",
         "langfuse.trace.tags" => TRACE_TAGS,
         "langfuse.environment" => Rails.env.to_s,
-        "langfuse.observation.input" => { rating_id: rating.id, expression_count: expressions.size, quality_count: qualities.size }.to_json
+        "langfuse.observation.input" => { rating_id: rating.id, notes_count: notes.size, quality_count: qualities.size }.to_json
       }, record_exception: false) do |span|
         trace_id = span.context.hex_trace_id if span.context.valid?
         evaluation = TypeSafeClient.with_trace_tags(TRACE_TAGS) do
-          assess_and_record(rating:, expressions:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
+          assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
         end
         span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
         evaluation
@@ -56,8 +56,8 @@ module Ratings
       end
     end
 
-    def assess_and_record(rating:, expressions:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
-      assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision&.id,
+    def assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
+      assessment = RatingQualityAssessment.new(notes:, qualities:, profile_revision_id: profile_revision&.id,
         profile: profile_revision&.profile, trace_id:, explicit_evidence:).call(client: @client)
       record_and_apply(rating:, assessment:)
     rescue QualityAssessmentFailed => error
@@ -65,7 +65,7 @@ module Ratings
       return unless rating.can_assess_qualities_for?(profile_revision.id)
 
       explicit_evidence = rating.quality_evidence_for_reassessment
-      assessment = RatingQualityAssessment.new(expressions:, qualities:, profile_revision_id: profile_revision.id,
+      assessment = RatingQualityAssessment.new(notes:, qualities:, profile_revision_id: profile_revision.id,
         profile: profile_revision.profile, trace_id:, explicit_evidence:, previous_assessment: assessment).call(client: @client)
       record_and_apply(rating:, assessment:)
     end

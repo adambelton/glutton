@@ -10,14 +10,14 @@ module Views
           nav(class: "account-tabs", aria: { label: t("account.sections") }) do
             a(href: account_path, aria: { current: "page" }) { t("account.profile") }
           end
-          section(aria: { labelledby: "expression-profile-heading" }) do
-            h2(id: "expression-profile-heading") { t("account.profile") }
+          section(aria: { labelledby: "taste-profile-heading" }) do
+            h2(id: "taste-profile-heading") { t("account.profile") }
             profile_content
           end
           section(aria: { labelledby: "pending-evidence-heading" }) do
             h2(id: "pending-evidence-heading") { t("account.pending") }
             pending_evidence
-            render Shared::ActionButton.new(text: t("account.refresh"), url: refresh_expression_profile_account_path)
+            render Shared::ActionButton.new(text: t("account.refresh"), url: refresh_taste_profile_account_path)
           end
         end
       end
@@ -44,7 +44,6 @@ module Views
           end
           plain narrative[offset..]
         end
-        p { t("account.legacy_profile") } if @profile[:legacy]
         evidence_list(annotations) if annotations.present?
       end
 
@@ -57,19 +56,43 @@ module Views
                 strong { annotation.fetch(:claim) }
                 p { annotation.fetch(:explanation) }
                 ul do
-                  annotation.fetch(:evidence).each do |expression|
-                    li do
-                      blockquote { expression.fetch("text") }
-                      p { expression.fetch("film_title") }
-                      text_link(t("account.edit_rating", film: expression.fetch("film_title")),
-                        edit_rating_path(film_id: expression.fetch("film_id")))
-                    end
+                  annotation.fetch(:evidence).each do |note|
+                    li { cited_note(note) }
                   end
                 end
               end
             end
           end
         end
+      end
+
+      def cited_note(note)
+        text = note.fetch("text")
+        citations = note.fetch("citations").sort_by { |citation| citation.fetch("start_offset") }
+        p { note.fetch("film_title") }
+        p { t("account.earlier_rating_evidence") } if note.fetch("earlier_version")
+        citations.each do |citation|
+          blockquote { text[citation.fetch("start_offset")...citation.fetch("end_offset")] }
+        end
+        details do
+          summary { t("account.view_full_notes") }
+          blockquote { highlighted_notes(text, citations) }
+        end
+        text_link(t("account.edit_rating", film: note.fetch("film_title")), edit_rating_path(film_id: note.fetch("film_id")))
+      end
+
+      def highlighted_notes(text, citations)
+        cursor = 0
+        citations.each do |citation|
+          ending = citation.fetch("end_offset")
+          next if ending <= cursor
+
+          start = [ cursor, citation.fetch("start_offset") ].max
+          plain text[cursor...start]
+          mark { text[start...ending] }
+          cursor = ending
+        end
+        plain text[cursor..]
       end
 
       def pending_evidence
@@ -80,16 +103,16 @@ module Views
 
         @profile[:changes].each do |change|
           h3 { change[:title] || t("account.unknown_film") }
-          expression_list("account.added", change.fetch(:added))
-          expression_list("account.removed", change.fetch(:removed))
+          notes_list("account.added", change.fetch(:added))
+          notes_list("account.removed", change.fetch(:removed))
         end
       end
 
-      def expression_list(label, expressions)
-        return if expressions.empty?
+      def notes_list(label, notes)
+        return if notes.empty?
 
         p { t(label) }
-        ul { expressions.each { |expression| li { expression } } }
+        ul { notes.each { |note| li { note } } }
       end
     end
   end

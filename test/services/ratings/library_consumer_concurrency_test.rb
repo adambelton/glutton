@@ -90,12 +90,12 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     contender = rating = nil
     Identity::User.transaction do
       rating = Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
-        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+        value: Ratings::Rating::Values::BRILLIANT, notes: "Original")
       contender = blocked { deliver }
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
     assert candidate.held?
-    assert_equal [ "Original" ], rating.rating_expressions.pluck(:text)
+    assert_equal "Original", rating.notes
     assert_empty Ratings::NextCandidates.call(user_id: @guest.id)
   end
 
@@ -177,7 +177,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
   def submit_selected_film
     row = Ratings::PrepareCandidate.call(user_id: @guest.id, film_id: @film.id)
     Ratings::SubmitRating.call(user_id: @guest.id, rating_film_id: row.id,
-      value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Selected film evidence" ])
+      value: Ratings::Rating::Values::BRILLIANT, notes: "Selected film evidence")
   end
 
   test "targeted admission before waiting Library delivery preserves one candidate and evidence" do
@@ -190,7 +190,7 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, Ratings::RatingFilm.where(user: @guest, film: @film).count
     assert_equal rating.rating_film_id, candidate.id
     assert candidate.held?
-    assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal "Selected film evidence", candidate.ratings.sole.notes
     assert_equal 1, DomainEvents::DomainEvent.where(name: Ratings::Events::RATING_SUBMITTED).joins(:domain_event_stream)
       .where(domain_event_streams: { user_id: @guest.id }).count
   end
@@ -205,6 +205,6 @@ class Ratings::LibraryConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, Ratings::RatingFilm.where(user: @guest, film: @film).count
     assert_equal rating.rating_film_id, candidate.id
     assert candidate.held?
-    assert_equal [ "Selected film evidence" ], candidate.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal "Selected film evidence", candidate.ratings.sole.notes
   end
 end
