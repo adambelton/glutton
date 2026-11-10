@@ -30,10 +30,9 @@ module Ratings
         implicit = if @previous_result.present? && eligible == eligible_qualities(@previous_result)
           @previous_result.fetch("implicit_assessment")
         else
-          assessment = EvaluateImplicitQualities.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible)
-          result = assessment.call(client:)
+          assessment = EvaluateImplicitQualities.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible).call(client:)
           capture_calls(assessment)
-          result
+          assessment.result
         end
         @result = @result.merge("implicit_assessment" => implicit)
         self
