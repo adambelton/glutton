@@ -88,7 +88,7 @@ class TasteProfileLiveTest < ActiveSupport::TestCase
   end
 
   def refresh
-    revision = Ratings::RefreshTasteProfile.call(user_id: @user.id, client: @client, tracer_provider: nil)
+    revision = Ratings::TasteProfiling::RefreshTasteProfile.call(user_id: @user.id, client: @client, tracer_provider: nil)
     puts "Live profile #{revision.id}: #{revision.profile}"
     revision
   end

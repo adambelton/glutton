@@ -53,7 +53,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     end
 
     revision = @rating_film.revise_rating!(previous_rating_id: @rating.id, value: Ratings::Rating::Values::PRETTY_GOOD)
-    error = assert_raises(Ratings::QualityAssessmentFailed) { @rating.apply_quality_evaluation!(evaluation:) }
+    error = assert_raises(Ratings::Errors::QualityAssessmentFailed) { @rating.apply_quality_evaluation!(evaluation:) }
     assert_equal :stale_rating, error.reason
     assert_empty revision.rating_quality_evals
   end
@@ -81,7 +81,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     evaluation = record(snapshot)
 
     assert_no_difference "Ratings::RatingQuality.count" do
-      assert_raises(Ratings::QualityApplicationUnavailable) { @rating.apply_quality_evaluation!(evaluation:) }
+      assert_raises(Ratings::Errors::QualityApplicationUnavailable) { @rating.apply_quality_evaluation!(evaluation:) }
     end
   end
 

@@ -32,7 +32,7 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     rating = @rating_film.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
     assert_equal @rating_film.id, rating.rating_film_id
     assert_not @rating_film.can_submit_rating?
-    assert_raises(Ratings::AlreadyRated) { @rating_film.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD) }
+    assert_raises(Ratings::Errors::AlreadyRated) { @rating_film.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD) }
   end
 
   test "scopes compose over rating existence and dismissal with stable bounded selection" do
@@ -53,8 +53,8 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     assert_equal [ dismissed.id ], owned.unrated.dismissed.pluck(:id)
     assert_equal [ unrated.id, newest.id ], owned.pending.order(:id).pluck(:id)
     assert_includes Ratings::RatingFilm.unrated.pluck(:id), foreign.id
-    assert_equal [ unrated.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
-    assert_equal [ unrated.id, newest.id ], Ratings::NextCandidates.call(user_id: @user.id, limit: 2).map(&:id)
+    assert_equal [ unrated.id ], Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id, limit: 1).map(&:id)
+    assert_equal [ unrated.id, newest.id ], Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id, limit: 2).map(&:id)
   end
 
   test "choice labels and validation and duplicate errors render with strict translations" do
@@ -65,6 +65,6 @@ class Ratings::RatingTest < ActiveSupport::TestCase
     assert_not rating.valid?
     assert_includes rating.errors.full_messages, "Rating film must exist"
     assert_includes rating.errors.full_messages, "Rating is not included in the list"
-    assert_equal I18n.t("ratings.errors.already_rated", raise: true), Ratings::AlreadyRated.new.message
+    assert_equal I18n.t("ratings.errors.already_rated", raise: true), Ratings::Errors::AlreadyRated.new.message
   end
 end

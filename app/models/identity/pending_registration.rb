@@ -6,9 +6,6 @@ module Identity
     CONFIRMATION_DELIVERY_LIMIT = 5
     CONFIRMATION_DELIVERY_COOLDOWN = 60.seconds.freeze
 
-    class ConfirmationDeliveryLimited < StandardError; end
-    class ConfirmationDeliveryExhausted < ConfirmationDeliveryLimited; end
-
     belongs_to :guest_user, class_name: "Identity::User", optional: true
 
     scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
@@ -31,24 +28,24 @@ module Identity
     validate :email_is_unregistered, on: :create
 
     def self.resolve_confirmation!(token:)
-      raise Identity::RegistrationUnavailable unless token.is_a?(String) && token.present?
+      raise Identity::Errors::RegistrationUnavailable unless token.is_a?(String) && token.present?
 
       registration = find_by_token_for(:email_confirmation, token)
-      raise Identity::RegistrationUnavailable unless registration&.active?
+      raise Identity::Errors::RegistrationUnavailable unless registration&.active?
 
       registration
     end
 
     def authorize_confirmation!(user:)
       unless user.can_register? && (unattached? || guest_user_id == user.id)
-        raise Identity::RegistrationConflict
+        raise Identity::Errors::RegistrationConflict
       end
     end
 
     def reserve_confirmation_delivery!
-      raise ConfirmationDeliveryExhausted if confirmation_delivery_attempts >= CONFIRMATION_DELIVERY_LIMIT
+      raise Errors::ConfirmationDeliveryExhausted if confirmation_delivery_attempts >= CONFIRMATION_DELIVERY_LIMIT
       if confirmation_delivery_attempted_at.present? && confirmation_delivery_attempted_at > CONFIRMATION_DELIVERY_COOLDOWN.ago
-        raise ConfirmationDeliveryLimited
+        raise Errors::ConfirmationDeliveryLimited
       end
 
       update!(confirmation_delivery_attempts: confirmation_delivery_attempts + 1, confirmation_delivery_attempted_at: Time.current)
@@ -73,10 +70,10 @@ module Identity
     end
 
     def attach_to!(user:)
-      raise Identity::RegistrationUnavailable unless user.can_register? && active?
+      raise Identity::Errors::RegistrationUnavailable unless user.can_register? && active?
       if (guest_user_id.present? && guest_user_id != user.id) ||
           self.class.where(guest_user_id: user.id).where.not(id:).exists?
-        raise Identity::RegistrationConflict
+        raise Identity::Errors::RegistrationConflict
       end
 
       update!(guest_user_id: user.id) if guest_user_id.nil?

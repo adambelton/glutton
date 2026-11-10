@@ -1,12 +1,12 @@
 namespace :domain_events do
   desc "Report domain-event backlog counts and failures without payloads"
   task status: :environment do
-    puts JSON.generate(DomainEvents::Status.call)
+    puts JSON.generate(DomainEvents::Delivery::Status.call)
   end
 
   desc "Poll one bounded batch of domain events"
   task dispatch: :environment do
-    puts JSON.generate(DomainEvents::Dispatch.call)
+    puts JSON.generate(DomainEvents::Delivery::Dispatch.call)
   rescue StandardError => error
     warn "Event dispatch failed (#{error.class.name}); polling can be retried."
     exit 1

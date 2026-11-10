@@ -20,7 +20,7 @@ class Registry::FilmTest < ActiveSupport::TestCase
       wikipedia_context.merge("source_paragraphs" => [ { "id" => "P1", "section" => "Reception", "text" => "Critics praised the film." } ]) ].each do |context|
       film = Registry::Film.new(tmdb_id: 348)
       assert_no_difference "Registry::Film.count" do
-        error = assert_raises(Registry::ImportIncomplete) do
+        error = assert_raises(Registry::Errors::ImportIncomplete) do
           film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
         end
         assert_equal [ :wikipedia, :invalid_response ], [ error.stage, error.reason ]
@@ -65,7 +65,7 @@ class Registry::FilmTest < ActiveSupport::TestCase
   test "import refuses to change a persisted film" do
     film = Registry::Film.create!(title: "Local title", tmdb_id: 348, tmdb_metadata: { note: "Keep" }, wikipedia_context: { note: "Keep source" })
     timestamp = film.updated_at
-    error = assert_raises(Registry::ImportIncomplete) do
+    error = assert_raises(Registry::Errors::ImportIncomplete) do
       film.import!(tmdb_data: {}, wikipedia_context: wikipedia_context)
     end
     assert_equal [ :persistence, :existing_film ], [ error.stage, error.reason ]
@@ -78,7 +78,7 @@ class Registry::FilmTest < ActiveSupport::TestCase
   test "invalid context cannot create a partially imported film" do
     film = Registry::Film.new(tmdb_id: 348)
     assert_no_difference "Registry::Film.count" do
-      assert_raises(Registry::ImportIncomplete) do
+      assert_raises(Registry::Errors::ImportIncomplete) do
         film.import!(tmdb_data: { title: "Alien", release_date: nil, tmdb_metadata: {} }, wikipedia_context: {})
       end
     end

@@ -46,7 +46,7 @@ class Ratings::RatingPersistenceTest < ActiveSupport::TestCase
     assert @rating_film.can_dismiss?
     @rating_film.dismiss!
     assert_not @rating_film.can_dismiss?
-    assert_raises(Ratings::DismissalUnavailable) { @rating_film.dismiss! }
+    assert_raises(Ratings::Errors::DismissalUnavailable) { @rating_film.dismiss! }
     assert_equal [ @rating_film.id ], Ratings::RatingFilm.where(user: @user).dismissed.pluck(:id)
     assert_equal [ second.id ], Ratings::RatingFilm.where(user: @user).pending.pluck(:id)
   end
@@ -58,7 +58,7 @@ class Ratings::RatingPersistenceTest < ActiveSupport::TestCase
     assert_includes empty.errors.full_messages, "User must exist"
     assert_includes empty.errors.full_messages, "Film must exist"
     assert_includes empty.errors.full_messages, "Dismissed is not included in the list"
-    [ Ratings::IdentityUnavailable, Ratings::FilmUnavailable, Ratings::DismissalUnavailable ].each do |error|
+    [ Ratings::Errors::FilmUnavailable, Ratings::Errors::DismissalUnavailable ].each do |error|
       assert_equal I18n.t("ratings.errors.#{error.name.demodulize.underscore}", raise: true), error.new.message
     end
   end

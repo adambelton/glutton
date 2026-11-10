@@ -26,8 +26,8 @@ module Ratings
 
     def apply_quality_evaluation!(evaluation:)
       rating_film.with_lock(requires_new: true) do
-        raise QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == id
-        raise QualityApplicationUnavailable unless evaluation.persisted? && evaluation.rating == self
+        raise Errors::QualityAssessmentFailed.new(reason: :stale_rating) unless rating_film.ratings.maximum(:id) == id
+        raise Errors::QualityApplicationUnavailable unless evaluation.persisted? && evaluation.rating == self
         next unless can_assess_qualities_for?(evaluation.profile_revision_id)
 
         ensure_explicit_evidence_current!(evaluation) if evaluation.profile_revision_id.present?
@@ -47,7 +47,7 @@ module Ratings
     end
 
     def publish_event!
-      DomainEvents::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
+      DomainEvents::Publication::Publish.call(user_id: rating_film.user_id, publisher: Ratings::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{rating_film.film_id}", name: Ratings::Events::RATING_SUBMITTED, schema_version: 1,
         payload: { user_id: rating_film.user_id, film_id: rating_film.film_id, rating_id: id, value: })
     end
@@ -58,7 +58,7 @@ module Ratings
       applied = current_rating_quality_eval
       return if applied&.explicit_source_id == evaluation.inherited_explicit_evaluation_id
 
-      raise QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
+      raise Errors::QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
     end
 
     def apply_quality_scores!(evaluation)

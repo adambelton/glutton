@@ -19,7 +19,7 @@ class Identity::PendingRegistrationTest < ActiveSupport::TestCase
       refute_equal "a long password phrase", record.password_digest
       refute record.has_attribute?(:password)
       refute record.has_attribute?(:password_confirmation)
-      assert_nil Identity::Authenticate.call(email_address: record.email_address, password: "a long password phrase")
+      assert_nil Identity::Authentication::Authenticate.call(email_address: record.email_address, password: "a long password phrase")
     end
   end
 

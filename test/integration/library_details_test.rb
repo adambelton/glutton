@@ -82,7 +82,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
   end
 
   test "watched detail reads same-user actual ratings independent of candidate flags" do
-    Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
+    Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     row = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
@@ -130,7 +130,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       post mark_watched_library_film_path(id), params: { authenticity_token: csrf }
       assert_response :not_found
     end
-    Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
+    Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       delete remove_from_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict

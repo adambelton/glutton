@@ -15,7 +15,7 @@ class Registry::FilmQualityTest < ActiveSupport::TestCase
     @film.film_qualities.create!(quality: @quality)
     assert_equal [ @quality ], @film.reload.qualities.to_a
     assert_equal [ @film ], @quality.films.to_a
-    error = assert_raises(Registry::ImportIncomplete) { @film.import!(tmdb_data: {}, wikipedia_context: {}) }
+    error = assert_raises(Registry::Errors::ImportIncomplete) { @film.import!(tmdb_data: {}, wikipedia_context: {}) }
     assert_equal :existing_film, error.reason
     assert_equal @quality, @film.reload.qualities.sole
     assert_equal "Metadata", @film.tmdb_metadata.dig("details", "overview")

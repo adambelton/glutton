@@ -2,10 +2,10 @@ require "test_helper"
 
 class Library::RetentionTest < ActiveSupport::TestCase
   def claim(guest)
-    pending = Identity::PrepareRegistration.call(email_address: "library-claim@example.test", guest_user_id: guest.id,
+    pending = Identity::Registration::PrepareRegistration.call(email_address: "library-claim@example.test", guest_user_id: guest.id,
       password: "a long password phrase", password_confirmation: "a long password phrase")
-    token = Identity::RegistrationConfirmation.token_for(pending_registration_id: pending.id)
-    Identity::CompleteRegistration.call(token:)
+    token = Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id: pending.id)
+    Identity::Registration::CompleteRegistration.call(token:)
   end
 
   test "cleanup deletes only expired guest relationships and preserves shared films and other owners" do
@@ -17,7 +17,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
     [ guest, active, registered ].each { |user| Library::LibraryFilmWatched.create!(user:, film:) }
     session = Identity::Session.create!(user: guest)
     travel Identity::UserGuest::EXPIRY_DURATION / 2 + 1.second do
-      assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::CleanupExpiredAccounts.call)
+      assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::AccountAdministration::CleanupExpiredAccounts.call)
       assert_not Identity::User.exists?(guest.id)
       assert_not Identity::Session.exists?(session.id)
       assert_not Library::LibraryFilm.exists?(user_id: guest.id)
@@ -47,7 +47,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
     connection.execute("CREATE TABLE library_cleanup_blocker (user_id bigint REFERENCES users(id))")
     connection.execute("INSERT INTO library_cleanup_blocker VALUES (#{guest.id})")
     travel Identity::UserGuest::EXPIRY_DURATION / 2 + 1.second do
-      assert_raises(ActiveRecord::InvalidForeignKey) { Identity::CleanupExpiredAccounts.call }
+      assert_raises(ActiveRecord::InvalidForeignKey) { Identity::AccountAdministration::CleanupExpiredAccounts.call }
     end
     assert Identity::User.exists?(guest.id)
     assert Identity::Session.exists?(session.id)
@@ -55,8 +55,8 @@ class Library::RetentionTest < ActiveSupport::TestCase
     assert Registry::Film.exists?(film.id)
   end
 
-  [ [ Library::LibraryFilmToWatch, Library::RemoveFromWatchlist ],
-    [ Library::LibraryFilmNotInterested, Library::RemoveNotInterested ] ].each do |model, removal|
+  [ [ Library::LibraryFilmToWatch, Library::CollectionManagement::RemoveFromWatchlist ],
+    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::RemoveNotInterested ] ].each do |model, removal|
     test "claim and cleanup preserve the existing-entry contract for #{model}" do
       freeze_time
       guest = Identity::UserGuest.create!
@@ -66,8 +66,8 @@ class Library::RetentionTest < ActiveSupport::TestCase
       expired = Identity::UserGuest.create!
       expired_entry = model.create!(user: expired, film:)
       travel Identity::UserGuest::EXPIRY_DURATION do
-        assert_raises(Library::IdentityUnavailable) { removal.call(user_id: expired.id, library_film_id: expired_entry.id) }
-        assert_equal 1, Identity::CleanupExpiredAccounts.call[:guests_deleted]
+        assert_raises(Identity::Errors::Unavailable) { removal.call(user_id: expired.id, library_film_id: expired_entry.id) }
+        assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
         assert_not Library::LibraryFilm.exists?(expired_entry.id)
         assert Registry::Film.exists?(film.id)
         assert_equal original.created_at, Library::LibraryFilm.find(original.id).created_at

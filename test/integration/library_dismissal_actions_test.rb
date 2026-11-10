@@ -74,7 +74,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
         delete remove_from_not_interested_library_film_path(@entry), params: { authenticity_token: csrf }
       end
     end
-    assert_redirected_to library_path(view: Library::Browse::Views::NOT_INTERESTED)
+    assert_redirected_to library_path(view: Library::CollectionManagement::Browse::Views::NOT_INTERESTED)
     follow_redirect!
     assert_select '[role="status"]', I18n.t("library.detail.removed_from_not_interested")
     assert rating_film.reload.held?
@@ -107,7 +107,7 @@ class LibraryDismissalActionsTest < ActionDispatch::IntegrationTest
       assert_response :conflict
     end
     post add_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
-    Library::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
+    Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     get library_film_path(@entry)
     assert_select "main form", count: 0
     assert_select "p", "Awaiting rating"

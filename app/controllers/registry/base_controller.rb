@@ -3,7 +3,7 @@ module Registry
     before_action :require_superuser
     before_action :validate_browsing_parameters
 
-    rescue_from Identity::Required do
+    rescue_from Identity::Errors::Required do
       redirect_to new_session_path
     end
 

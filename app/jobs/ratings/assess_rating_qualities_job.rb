@@ -14,8 +14,8 @@ module Ratings
     end
 
     def perform(rating_id)
-      AssessRatingQualities.call(rating_id:)
-    rescue QualityAssessmentFailed => error
+      QualityScoring::ScoreRatingQualities.call(rating_id:)
+    rescue Errors::QualityAssessmentFailed => error
       raise unless error.reason == :stale_rating
     rescue ActiveRecord::RecordNotFound
       raise if Rating.exists?(rating_id)

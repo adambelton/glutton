@@ -45,9 +45,9 @@ class Identity::GuestSessionRequestsTest < ActionController::TestCase
 
   test "attachment failure rolls back the new guest and retains the pending registration" do
     pending = prepare_registration
-    with_failure(Identity::AttachRegistration, :call, Identity::RegistrationConflict.new) do
+    with_failure(Identity::Registration::AttachRegistration, :call, Identity::Errors::RegistrationConflict.new) do
       assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
-        assert_raises(Identity::RegistrationConflict) { post :create, session: { pending_registration_id: pending.id } }
+        assert_raises(Identity::Errors::RegistrationConflict) { post :create, session: { pending_registration_id: pending.id } }
       end
     end
     assert_nil pending.reload.guest_user_id
@@ -71,7 +71,7 @@ class Identity::GuestSessionRequestsTest < ActionController::TestCase
   private
 
   def prepare_registration
-    Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
+    Identity::Registration::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase")
   end
 
@@ -138,7 +138,7 @@ class Identity::PendingRegistrationRequestsTest < ActionController::TestCase
   tests RegistrationsController
 
   test "an anonymous browser can see its unattached request but loses access once it is linked" do
-    pending = Identity::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
+    pending = Identity::Registration::PrepareRegistration.call(email_address: "pending@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase")
     get :show, session: { pending_registration_id: pending.id }
     assert_response :success

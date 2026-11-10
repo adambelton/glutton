@@ -62,7 +62,7 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 
 ## Handler organisation
 
-Production reactions use `ReceivingDomain::EventHandlers::PublishingDomain::EventName`. Keep a single ordered subscription for related reactions whose order matters. Library uses `Library::ConsumeRatingsEvent` and Ratings uses `Ratings::ConsumeLibraryEvent` for shared validation/loading and explicit dispatch. Handlers mutate only the receiving domain through its model actions/permissions. Use explicit top-level publisher constants where nested namespaces would shadow them.
+Production reactions use `ReceivingDomain::EventHandlers::PublishingDomain::EventName`. Keep a single ordered subscription for related reactions whose order matters. Library uses `Library::EventHandlers::ConsumeRatingsEvent` and Ratings uses `Ratings::EventHandlers::ConsumeLibraryEvent` for shared validation/loading and explicit dispatch. Handlers mutate only the receiving domain through its model actions/permissions. Use explicit top-level publisher constants where nested namespaces would shadow them.
 
 ## Future contracts
 

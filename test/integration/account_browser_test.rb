@@ -65,7 +65,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     get account_path
     assert_select "#profile-evidence-1 blockquote", rating.notes
     assert_select "#profile-evidence-1 p", text: I18n.t("account.earlier_rating_evidence"), count: 0
-    evidence = Ratings::ViewTasteProfile.call(user_id: user.id).fetch(:annotations).sole.fetch(:evidence).sole
+    evidence = Ratings::TasteProfiling::ViewTasteProfile.call(user_id: user.id).fetch(:annotations).sole.fetch(:evidence).sole
     assert_equal identical.id, evidence.fetch("rating_id")
     assert_equal [ rating.id ], assessed.reload.annotations.sole.fetch("citations").pluck("rating_id")
     assert_equal [ rating.id ], assessed.taste_profile_revision_eval.output.fetch("evidence").pluck("rating_id")
@@ -118,6 +118,6 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => "Enjoys quiet dread.", "conclusions" => [ { "anchor" => "Enjoys quiet dread.", "claim" => "Enjoys quiet dread.", "explanation" => "The source describes dread.", "citations" => [ { "rating_id" => note.fetch("after_rating_id"), "quote" => note.fetch("after") } ] } ] }
     end
-    Ratings::RefreshTasteProfile.call(user_id: user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
+    Ratings::TasteProfiling::RefreshTasteProfile.call(user_id: user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
   end
 end

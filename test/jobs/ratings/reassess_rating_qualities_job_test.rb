@@ -105,7 +105,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
       response(questions)
     end
 
-    assert_instance_of Ratings::QualityAssessmentFailed, perform_revision(revision).unhandled_error
+    assert_instance_of Ratings::Errors::QualityAssessmentFailed, perform_revision(revision).unhandled_error
     assert_equal revision.id, Request.sole.taste_profile_revision_id
     assert_equal 1, [ @target, @other_target ].sum { |rating| rating.rating_quality_evals.count }
 
@@ -130,7 +130,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => profile, "conclusions" => [ { "anchor" => profile, "claim" => profile, "explanation" => "Source expression", "citations" => citations } ] }
     end
-    Ratings::RefreshTasteProfile.call(user_id: @user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
+    Ratings::TasteProfiling::RefreshTasteProfile.call(user_id: @user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
   end
 
   def jobs

@@ -9,17 +9,17 @@ module Ratings
 
     def publish_revision!(evaluation:)
       unless evaluation.persisted? && evaluation.taste_profile == self
-        raise TasteProfileRefreshFailed.new(reason: :unrecorded_evaluation)
+        raise Errors::TasteProfileRefreshFailed.new(reason: :unrecorded_evaluation)
       end
 
       with_lock(requires_new: true) do
         if revisions.exists?(taste_profile_revision_eval: evaluation)
-          raise TasteProfileRefreshFailed.new(reason: :already_applied)
+          raise Errors::TasteProfileRefreshFailed.new(reason: :already_applied)
         end
 
         attributes = evaluation.revision_attributes
         if attributes.fetch(:notes).empty? && !revisions.exists?
-          raise TasteProfileRefreshFailed.new(reason: :missing_initial_evidence)
+          raise Errors::TasteProfileRefreshFailed.new(reason: :missing_initial_evidence)
         end
 
         revisions.create!(taste_profile_revision_eval: evaluation, **attributes)

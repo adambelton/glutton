@@ -1,5 +1,7 @@
 en:
   identity:
+    errors:
+      unavailable: An active account is required.
     entry:
       title: Find your next obsession.
       eyebrow: Films worth an appetite.

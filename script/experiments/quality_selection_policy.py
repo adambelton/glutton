@@ -69,7 +69,8 @@ def main():
     args = parser.parse_args()
     inputs = {
         'vocabulary.json': BASE / 'vocabulary.json',
-        'initial_quality_assessment.json': ROOT / 'app/services/registry/initial_quality_assessment.json',
+        # Keep the historical report checksum key while following the renamed asset.
+        'initial_quality_assessment.json': ROOT / 'app/services/registry/quality_management/evaluate_initial_film_qualities.json',
         'examples.json': BASE / 'examples.json',
     }
     vocabulary = read(inputs['vocabulary.json'])['qualities']

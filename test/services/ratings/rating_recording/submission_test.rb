@@ -1,0 +1,164 @@
+require "test_helper"
+
+class Ratings::SubmissionTest < ActiveSupport::TestCase
+  setup do
+    freeze_time
+    @user = Identity::UserGuest.create!
+    @film = Registry::Film.create!(title: "Rating submission")
+    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
+  end
+
+  def submit(**options)
+    Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes: "  Atmosphere!\nÉerie 👻  \n\nThe ending\n\nThe ending", **options)
+  end
+
+  test "all four choices save owned ratings and exact v1 facts without Library changes" do
+    Ratings::Rating::Values::ALL.each_with_index do |value, index|
+      candidate = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Choice #{index}"))
+      rating = nil
+      assert_no_difference "Library::LibraryFilm.count" do
+        assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
+          rating = submit(rating_film_id: candidate.id, value:)
+        end
+      end
+      assert_equal "  Atmosphere!\nÉerie 👻  \n\nThe ending\n\nThe ending", rating.reload.notes
+      assert_equal value, rating.reload.value
+      assert_equal candidate.id, rating.rating_film_id
+      event = DomainEvents::DomainEvent.find_by!(name: Ratings::Events::RATING_SUBMITTED, payload: {
+        user_id: @user.id, film_id: candidate.film_id, rating_id: rating.id, value:
+      })
+      stream = event.domain_event_stream
+      assert_equal @user.id, stream.user_id
+      assert_equal Ratings::Events::PUBLISHING_DOMAIN, stream.publisher
+      assert_equal "film:#{candidate.film_id}", stream.stream_key
+      assert_equal 1, event.schema_version
+      assert_equal 1, event.sequence
+      assert_equal event.id, event.correlation_id
+      assert_nil event.causation_id
+      assert_equal Time.current, event.occurred_at
+    end
+  end
+
+  test "invalid choices fail without rating event or stream including coercible inputs" do
+    coercible = Object.new
+    def coercible.to_s = Ratings::Rating::Values::PRETTY_GOOD
+    [ nil, "", "unknown", "PRETTY_GOOD", " pretty_good ", Ratings::Rating::Values::PRETTY_GOOD.to_sym, 1, false, [], {}, coercible ].each do |value|
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
+        error = assert_raises(ActiveRecord::RecordInvalid) { submit(value:) }
+        assert error.record.errors.of_kind?(:value, :inclusion)
+      end
+    end
+  end
+
+  test "duplicates reject identical and different values without another event" do
+    rating = submit
+    [ Ratings::Rating::Values::PRETTY_GOOD, Ratings::Rating::Values::BRILLIANT ].each do |value|
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+        assert_raises(Ratings::Errors::AlreadyRated) { submit(value:) }
+      end
+    end
+    assert_equal Ratings::Rating::Values::PRETTY_GOOD, rating.reload.value
+  end
+
+  test "explicit submission accepts dismissal without changing candidate timestamps or flag" do
+    @rating_film.dismiss!
+    created_at, updated_at = @rating_film.created_at, @rating_film.updated_at
+    travel 1.hour
+    submit
+    assert @rating_film.reload.dismissed?
+    assert_equal created_at, @rating_film.created_at
+    assert_equal updated_at, @rating_film.updated_at
+    assert_empty Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id)
+  end
+
+  test "missing foreign and inactive identities fail without writes" do
+    other = Identity::UserGuest.create!
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+      assert_raises(Ratings::Errors::FilmUnavailable) { submit(user_id: other.id) }
+      assert_raises(Ratings::Errors::FilmUnavailable) { submit(rating_film_id: -1) }
+      deleted = Identity::UserDeleted.create!
+      travel Identity::UserGuest::EXPIRY_DURATION
+      [ @user.id, deleted.id, -1 ].each do |user_id|
+        assert_raises(Identity::Errors::Unavailable) { submit(user_id:) }
+      end
+    end
+  end
+
+  test "caller rollback removes both rating and event" do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
+      Ratings::Rating.transaction(requires_new: true) do
+        submit
+        raise ActiveRecord::Rollback
+      end
+    end
+    assert @rating_film.can_submit_rating?
+  end
+
+  test "publication failure rolls back source and leaves outer transaction usable" do
+    connection = DomainEvents::DomainEvent.connection
+    connection.execute("ALTER TABLE domain_events ADD CONSTRAINT ratings_test_block_publication CHECK (name <> 'RatingSubmitted')")
+    Ratings::Rating.transaction do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count" ] do
+        assert_raises(ActiveRecord::StatementInvalid) { submit }
+      end
+      assert @rating_film.can_submit_rating?
+      assert_equal [ @rating_film.id ], Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id).map(&:id)
+    end
+  ensure
+    connection&.execute("ALTER TABLE domain_events DROP CONSTRAINT IF EXISTS ratings_test_block_publication")
+  end
+
+  test "selection and dismissal do not publish rating events" do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+      Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id)
+      Ratings::CandidateSelection::Dismiss.call(user_id: @user.id, rating_film_id: @rating_film.id)
+    end
+  end
+
+  test "omitted and empty expressions preserve rating only submission" do
+    rating = Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id, value: Ratings::Rating::Values::BRILLIANT)
+    assert_nil rating.reload.notes
+    other = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "No expressions"))
+    assert_nil submit(rating_film_id: other.id, notes: nil).reload.notes
+  end
+
+  test "malformed notes fail without persistence or coercion" do
+    coercible = Object.new
+    def coercible.to_s = "Private notes"
+    [ {}, [ "text" ], :text, coercible ].each do |notes|
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+        assert_raises(Ratings::Errors::InvalidNotes) { submit(notes:) }
+      end
+    end
+  end
+
+  test "overlong notes fail atomically and the Unicode limit is inclusive" do
+    maximum = "é" * Ratings::Rating::MAX_NOTES_LENGTH
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+      assert_raises(ActiveRecord::RecordInvalid) { submit(notes: maximum + "é") }
+    end
+    assert_equal maximum, submit(notes: maximum).reload.notes
+  end
+
+  test "duplicate failure takes precedence and preserves original expressions" do
+    rating = submit
+    text = rating.notes
+    [ nil, "replacement" ].each do |notes|
+      assert_raises(Ratings::Errors::AlreadyRated) { submit(notes:) }
+      assert_equal text, rating.reload.notes
+    end
+  end
+
+  test "expression database failure rolls back rating and earlier expressions with usable outer transaction" do
+    connection = Ratings::Rating.lease_connection
+    connection.execute("ALTER TABLE ratings ADD CONSTRAINT ratings_test_block_expression CHECK (notes <> 'blocked')")
+    Ratings::Rating.transaction do
+      assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+        assert_raises(ActiveRecord::StatementInvalid) { submit(notes: "blocked") }
+      end
+      assert_equal "valid", submit(notes: "valid").reload.notes
+    end
+  ensure
+    connection&.execute("ALTER TABLE ratings DROP CONSTRAINT IF EXISTS ratings_test_block_expression")
+  end
+end

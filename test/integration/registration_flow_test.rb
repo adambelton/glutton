@@ -101,11 +101,11 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirm
     user = Identity::Session.last.user
     authentication_id = Identity::Session.last.id
-    Identity::GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    Identity::AccountAdministration::GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id)
     post "/registration-activity-probe", params: { authenticity_token: csrf }
     assert_response :success
     assert_equal true, JSON.parse(response.body).fetch("superuser")
-    Identity::RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    Identity::AccountAdministration::RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id)
     post "/registration-activity-probe", params: { authenticity_token: csrf }
     assert_response :success
     assert_equal false, JSON.parse(response.body).fetch("superuser")
@@ -164,7 +164,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     confirmation_token = email_token
     old_cookie = cookies[:session_id]
     travel Identity::UserGuest::EXPIRY_DURATION
-    assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Identity::CleanupExpiredAccounts.call)
+    assert_equal({ guests_deleted: 1, pending_registrations_deleted: 1 }, Identity::AccountAdministration::CleanupExpiredAccounts.call)
     cookies[:session_id] = old_cookie
     get registration_confirmation_path(token: confirmation_token)
     assert_response :unprocessable_entity
@@ -442,9 +442,9 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     delete session_path, params: { authenticity_token: old_csrf }
     assert_response :unprocessable_entity
     assert Identity::Session.last.active?
-    registration = Identity::PrepareRegistration.call(email_address: "secure@example.test", password: "a long password phrase",
+    registration = Identity::Registration::PrepareRegistration.call(email_address: "secure@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase")
-    token = Identity::RegistrationConfirmation.token_for(pending_registration_id: registration.id)
+    token = Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id: registration.id)
     secure = ActionDispatch::Integration::Session.new(ActionDispatch::SSL.new(Rails.application))
     secure.https!
     confirm(secure, token:)

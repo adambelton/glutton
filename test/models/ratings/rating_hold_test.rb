@@ -7,15 +7,15 @@ class Ratings::RatingHoldTest < ActiveSupport::TestCase
 
   test "hold and release are explicit model actions independent of dismissal" do
     assert_not @row.held?
-    assert_raises(Ratings::HoldReleaseUnavailable) { @row.release_hold! }
+    assert_raises(Ratings::Errors::HoldReleaseUnavailable) { @row.release_hold! }
     @row.dismiss!
     @row.hold!
     assert @row.reload.held?
-    assert_raises(Ratings::HoldUnavailable) { @row.hold! }
+    assert_raises(Ratings::Errors::HoldUnavailable) { @row.hold! }
     @row.release_hold!
     assert_not @row.reload.held?
     assert @row.dismissed?
-    assert_raises(Ratings::DismissalUnavailable) { @row.dismiss! }
+    assert_raises(Ratings::Errors::DismissalUnavailable) { @row.dismiss! }
   end
 
   test "held is a required boolean in validation and storage" do
@@ -26,14 +26,14 @@ class Ratings::RatingHoldTest < ActiveSupport::TestCase
       Ratings::RatingFilm.transaction(requires_new: true) { @row.update_columns(held: nil) }
     end
     assert_equal "Held", Ratings::RatingFilm.human_attribute_name(:held)
-    assert_equal I18n.t("ratings.errors.hold_unavailable", raise: true), Ratings::HoldUnavailable.new.message
-    assert_equal I18n.t("ratings.errors.hold_release_unavailable", raise: true), Ratings::HoldReleaseUnavailable.new.message
+    assert_equal I18n.t("ratings.errors.hold_unavailable", raise: true), Ratings::Errors::HoldUnavailable.new.message
+    assert_equal I18n.t("ratings.errors.hold_release_unavailable", raise: true), Ratings::Errors::HoldReleaseUnavailable.new.message
   end
 
   test "explicit rating preserves held and dismissed until asynchronous reaction" do
     @row.hold!
     @row.dismiss!
-    Ratings::SubmitRating.call(user_id: @row.user_id, rating_film_id: @row.id, value: Ratings::Rating::Values::BRILLIANT)
+    Ratings::RatingRecording::SubmitRating.call(user_id: @row.user_id, rating_film_id: @row.id, value: Ratings::Rating::Values::BRILLIANT)
     assert @row.reload.held?
     assert @row.dismissed?
     assert_not Ratings::RatingFilm.pending.exists?(@row.id)

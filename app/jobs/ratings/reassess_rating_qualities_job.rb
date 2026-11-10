@@ -30,8 +30,8 @@ module Ratings
     private
 
     def reassess(rating)
-      AssessRatingQualities.call(rating_id: rating.id)
-    rescue QualityAssessmentFailed => error
+      QualityScoring::ScoreRatingQualities.call(rating_id: rating.id)
+    rescue Errors::QualityAssessmentFailed => error
       raise unless error.reason == :stale_rating
     rescue ActiveRecord::RecordNotFound
       raise if Rating.exists?(rating.id)

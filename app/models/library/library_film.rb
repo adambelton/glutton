@@ -25,7 +25,7 @@ module Library
     end
 
     def remove_from_watchlist!
-      raise NotOnWatchlist unless can_remove_from_watchlist?
+      raise Errors::NotOnWatchlist unless can_remove_from_watchlist?
 
       transaction do
         destroy!
@@ -39,7 +39,7 @@ module Library
     end
 
     def remove_not_interested!
-      raise NotMarkedNotInterested unless can_remove_from_not_interested?
+      raise Errors::NotMarkedNotInterested unless can_remove_from_not_interested?
 
       transaction do
         destroy!
@@ -69,7 +69,7 @@ module Library
     end
 
     def publish_event!(name:, correlation_id: nil, causation_id: nil)
-      DomainEvents::Publish.call(user_id:, publisher: Library::Events::PUBLISHING_DOMAIN,
+      DomainEvents::Publication::Publish.call(user_id:, publisher: Library::Events::PUBLISHING_DOMAIN,
         stream_key: "film:#{film_id}", name:, schema_version: 1,
         payload: { user_id:, film_id: }, correlation_id:, causation_id:)
     end

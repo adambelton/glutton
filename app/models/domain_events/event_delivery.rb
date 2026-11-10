@@ -47,7 +47,7 @@ module DomainEvents
     end
 
     def retry!
-      raise DomainEvents::RetryUnavailable, "Only failed deliveries can be retried" unless status == Statuses::FAILED
+      raise DomainEvents::Errors::RetryUnavailable, "Only failed deliveries can be retried" unless status == Statuses::FAILED
 
       update!(status: Statuses::PENDING, attempts: 0, next_attempt_at: Time.current, last_error_class: nil)
     end

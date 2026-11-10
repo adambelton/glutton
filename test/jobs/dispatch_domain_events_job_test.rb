@@ -11,14 +11,14 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
     prepare_events
     @old_adapter = DispatchDomainEventsJob.queue_adapter
     DispatchDomainEventsJob.queue_adapter = GoodJob::Adapter.new(execution_mode: :external)
-    @old_subscriptions = DomainEvents::Subscriptions.method(:all)
+    @old_subscriptions = DomainEvents::Delivery::Subscriptions.method(:all)
     registrations = [ subscription ]
-    DomainEvents::Subscriptions.define_singleton_method(:all) { registrations }
+    DomainEvents::Delivery::Subscriptions.define_singleton_method(:all) { registrations }
     @job_ids = GoodJob::Job.pluck(:id)
   end
 
   teardown do
-    DomainEvents::Subscriptions.define_singleton_method(:all, @old_subscriptions)
+    DomainEvents::Delivery::Subscriptions.define_singleton_method(:all, @old_subscriptions)
     DispatchDomainEventsJob.queue_adapter = @old_adapter
     Identity::User.where(id: @user.id).delete_all
     EventEffect.connection.drop_table(:event_effects)
@@ -81,8 +81,8 @@ class DispatchDomainEventsJobTest < ActiveSupport::TestCase
         EventEffect.create!(event_id: event.id, subscriber: "projection", value: 1)
         Process.kill("KILL", Process.pid)
       end
-      registration = DomainEvents::Subscription.new(name: "projection", publisher: "test_domain", event_names: ["Changed"], handler:)
-      DomainEvents::Subscriptions.define_singleton_method(:all) { [registration] }
+      registration = DomainEvents::Delivery::Subscription.new(name: "projection", publisher: "test_domain", event_names: ["Changed"], handler:)
+      DomainEvents::Delivery::Subscriptions.define_singleton_method(:all) { [registration] }
       GoodJob.perform_inline("domain_events", limit: 1)
     RUBY_SCRIPT
     # Use the current test worker database when Rails tests run in parallel.

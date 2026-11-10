@@ -7,7 +7,7 @@ class SessionsController < ApplicationController
   rate_limit to: 10, within: 3.minutes, store: RATE_LIMIT_STORE, only: :create,
     with: -> { render plain: I18n.t("identity.sessions.rate_limited"), status: :too_many_requests }
 
-  rescue_from Identity::AccountDeleted do
+  rescue_from Identity::Errors::AccountDeleted do
     render ::Views::Identity::SignIn.new(error: @error, account_controls: false),
       status: @error.present? ? :unprocessable_entity : :ok
   end
@@ -18,7 +18,7 @@ class SessionsController < ApplicationController
 
   def create
     new_session = Identity::Session.transaction do
-      created_session = Identity::Authenticate.call(email_address: params[:email_address], password: params[:password])
+      created_session = Identity::Authentication::Authenticate.call(email_address: params[:email_address], password: params[:password])
       Identity::Session.revoke(id: bound_session.id) if created_session.present? && bound_session.present?
       created_session
     end

@@ -15,7 +15,7 @@ class RegistrationConfirmationsController < ApplicationController
   end
 
   def create
-    new_session = Identity::CompleteBrowserRegistration.call(token: params[:token], current_user_id: current_user&.id)
+    new_session = Identity::Registration::CompleteBrowserRegistration.call(token: params[:token], current_user_id: current_user&.id)
     bind_session(new_session)
     redirect_to entry_destination, notice: I18n.t("identity.registration.completed"), status: :see_other
   end

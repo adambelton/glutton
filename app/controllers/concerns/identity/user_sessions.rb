@@ -6,7 +6,7 @@ module Identity
       helper_method :current_user, :current_pending_registration
       before_action :prevent_identity_caching
 
-      rescue_from Identity::AccountDeleted do
+      rescue_from Identity::Errors::AccountDeleted do
         session.delete(:pending_registration_id)
         render ::Views::Identity::Deleted.new, status: :gone
       end
@@ -21,7 +21,7 @@ module Identity
       @current_user = Identity::Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
       clear_identity_cookie unless @current_user
       @current_user
-    rescue Identity::GuestExpired
+    rescue Identity::Errors::GuestExpired
       clear_identity_cookie
       nil
     end
@@ -31,7 +31,7 @@ module Identity
       if user.present?
         pending = current_pending_registration
         if user.can_register? && pending.present? && pending.guest_user_id.nil?
-          Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: user.id)
+          Identity::Registration::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: user.id)
         end
         return user
       end
@@ -40,13 +40,13 @@ module Identity
       authentication = Identity::Session.transaction do
         guest = Identity::UserGuest.create!
         if pending.present?
-          Identity::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: guest.id)
+          Identity::Registration::AttachRegistration.call(pending_registration_id: pending.id, guest_user_id: guest.id)
         end
         Identity::Session.create!(user: guest)
       end
       bind_session(authentication)
       @current_user
-    rescue Identity::RegistrationUnavailable
+    rescue Identity::Errors::RegistrationUnavailable
       # A link may expire or be consumed while guest creation waits for locks.
       pending = Identity::PendingRegistration.find_by(id: session[:pending_registration_id])
       raise if pending.present? && pending.active?

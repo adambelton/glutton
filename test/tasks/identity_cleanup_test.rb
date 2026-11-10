@@ -33,7 +33,7 @@ class IdentityCleanupTest < ActiveSupport::TestCase
     [ "ActiveRecord::StatementInvalid", "ArgumentError" ].each do |error_class|
       script = <<~CODE
         Rails.application.load_tasks
-        Identity::CleanupExpiredAccounts.define_singleton_method(:call) { raise #{error_class}, "private-email@example.test private-password private-token" }
+        Identity::AccountAdministration::CleanupExpiredAccounts.define_singleton_method(:call) { raise #{error_class}, "private-email@example.test private-password private-token" }
         Rake::Task["identity:cleanup_expired"].invoke
       CODE
       stdout, stderr, status = command("runner", script)
