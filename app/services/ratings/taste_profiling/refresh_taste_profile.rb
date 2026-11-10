@@ -29,7 +29,7 @@ module Ratings
           assessment = GenerateTasteProfile.new(evidence:, basis: current&.incremental_synthesis_basis,
             trace_id: (span.context.hex_trace_id if span.context.valid?), tracer: @tracer, trace_tags: TRACE_TAGS)
           assessment.call(client: @client)
-          revision = record_and_apply(current:, notes:, assessment:)
+          revision = record_and_apply(current:, assessment:)
           span.set_attribute("taste_profile_id", revision.taste_profile_id)
           span.set_attribute("taste_profile_revision_id", revision.id)
           span.set_attribute("taste_profile_revision_eval_id", revision.taste_profile_revision_eval_id)
@@ -76,7 +76,7 @@ module Ratings
         end
       end
 
-      def record_and_apply(current:, notes:, assessment:)
+      def record_and_apply(current:, assessment:)
         with_owner_lock do |user|
           taste_profile = TasteProfile.find_by(user:)
           unless taste_profile&.current_revision&.id == current&.id &&

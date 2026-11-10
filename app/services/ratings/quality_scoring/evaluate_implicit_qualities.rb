@@ -1,7 +1,7 @@
 module Ratings
   module QualityScoring
     class EvaluateImplicitQualities
-      attr_reader :provider_calls
+      attr_reader :provider_calls, :result
 
       def initialize(profile_revision_id:, profile:, qualities:)
         @profile_revision_id = profile_revision_id
@@ -17,7 +17,7 @@ module Ratings
         answers = response&.fetch("answers") || {}
         exchanges = questions.map { |id, question| { "id" => id, "question" => question, "result" => answers.fetch(id) } }
 
-        {
+        @result = {
           "profile_revision_id" => @profile_revision_id, "profile" => @profile,
           "calls" => exchanges.present? ? [ exchanges ] : [], "question_policy" => @contract,
           "applicable_quality_ids" => answers.filter_map do |id, result|
@@ -26,6 +26,7 @@ module Ratings
           "configuration" => (client.configuration if response.present?),
           "model" => response&.fetch("model"), "usage" => response&.fetch("usage")
         }
+        self
       end
 
       private
