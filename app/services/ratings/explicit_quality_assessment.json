@@ -2,9 +2,9 @@
   "minimum_support": 0.60,
   "maximum_pairs": 560,
   "question_type": "noul",
-  "question_template": "Does expressions[\"{expression_id}\"] address qualities[\"{quality_id}\"] as defined?",
+  "question_template": "Does notes[\"{rating_id}\"] address qualities[\"{quality_id}\"] as defined?",
   "criteria": {
-    "true": "The expression describes or directly refers to the defined quality.",
-    "false": "The expression concerns something else or only matches the quality's exclusion."
+    "true": "The notes describe or directly refer to the defined quality.",
+    "false": "The notes concern something else or only match the quality's exclusion."
   }
 }

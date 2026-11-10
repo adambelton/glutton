@@ -1,12 +1,12 @@
 module Ratings
-  class ExpressionProfileRevisionEval < ApplicationRecord
-    belongs_to :expression_profile
-    attr_readonly :expression_profile_id, :input, :output
+  class TasteProfileRevisionEval < ApplicationRecord
+    belongs_to :taste_profile
+    attr_readonly :taste_profile_id, :input, :output
 
     validate :evaluation_output
 
-    def self.record!(expression_profile:, assessment:)
-      create!(expression_profile:, input: assessment.input, output: assessment.result)
+    def self.record!(taste_profile:, assessment:)
+      create!(taste_profile:, input: assessment.input, output: assessment.result)
     end
 
     def readonly?
@@ -17,7 +17,7 @@ module Ratings
       {
         profile: output.fetch("profile"),
         annotations: output.fetch("annotations", []),
-        expression_texts: output.fetch("evidence").map { |expression| expression.slice("film_id", "text") }
+        notes: output.fetch("evidence").map { |notes| notes.slice("film_id", "text") }
       }
     end
 
@@ -31,7 +31,7 @@ module Ratings
       return false unless output.is_a?(Hash) && %w[evidence profile synthesis trace_id].all? { |key| output.key?(key) }
 
       evidence, profile, synthesis = output.values_at("evidence", "profile", "synthesis")
-      return false unless evidence.is_a?(Array) && evidence.all? { |expression| valid_expression?(expression) }
+      return false unless evidence.is_a?(Array) && evidence.all? { |notes| valid_note?(notes) }
 
       if evidence.empty?
         profile == "" && synthesis.nil?
@@ -40,11 +40,11 @@ module Ratings
       end
     end
 
-    def valid_expression?(expression)
-      expression.is_a?(Hash) &&
-        expression.values_at("expression_id", "rating_id", "film_id").all? { |id| id.is_a?(Integer) && id.positive? } &&
-        expression["film_title"].is_a?(String) && expression["text"].is_a?(String) && expression["text"].present? &&
-        expression.key?("film_release_date")
+    def valid_note?(notes)
+      notes.is_a?(Hash) &&
+        notes.values_at("rating_id", "film_id").all? { |id| id.is_a?(Integer) && id.positive? } &&
+        notes["film_title"].is_a?(String) && notes["text"].is_a?(String) && notes["text"].present? &&
+        notes.key?("film_release_date")
     end
 
     def valid_synthesis?(synthesis)

@@ -46,7 +46,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_equal [ @film.title, "The Thing", "Halloween", "The Exorcist", "An American Werewolf in London" ], panels.map { |panel| panel.at_css("h2").text }
     assert_select ".demo-dot", count: 5
     panels.each do |panel|
-      assert_includes 2..3, panel.css(".expression-items li").size
+      assert_equal 1, panel.css("textarea[readonly]").size
     end
     assert_select '.demo-frame input[value="pretty_good"][checked]', count: 2
     assert_select '.demo-frame input[value="i_enjoyed_that"]', count: 0
@@ -80,15 +80,14 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 1
     assert_select ".demo-controls .demo-rotation", count: 1
     assert_select ".demo-disclaimer, .expression-add", count: 0
-    assert_select ".demo-frame .expression-remove[disabled]", count: 5
+    assert_select ".demo-frame textarea[readonly]", count: 2
     assert_select '.demo-browser input[name="rating_film_id"]', count: 0
     assert_select ".demo-browser .rating-choices[disabled]", count: 2
     assert_select ".demo-browser fieldset[disabled] input[checked]", count: 2
     document = Nokogiri::HTML(response.body)
     groups = document.css('.demo-frame input[type="radio"]').map { |node| node["name"] }.uniq
     assert_equal 2, groups.size
-    assert_select ".demo-browser textarea[disabled]", count: 2
-    assert_select ".demo-browser .expression-item", count: 5
+    assert_select ".demo-browser textarea[readonly]", count: 2
     ids = document.css("[id]").map { |node| node["id"] }
     assert_equal ids.uniq, ids
   end

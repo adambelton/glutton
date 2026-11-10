@@ -1,5 +1,5 @@
 module Ratings
-  class RefreshExpressionProfilesJob < ApplicationJob
+  class RefreshTasteProfilesJob < ApplicationJob
     include GoodJob::ActiveJobExtensions::Concurrency
 
     queue_as :ratings_assessment
@@ -13,9 +13,9 @@ module Ratings
         return unless user&.active? && user.superuser?
       end
 
-      failures = RefreshExpressionProfiles.call(user_id:).fetch(:failures)
+      failures = RefreshTasteProfiles.call(user_id:).fetch(:failures)
       if failures.present?
-        Rails.logger.warn("Ratings expression profile refresh failures: #{failures.values.tally}")
+        Rails.logger.warn("Ratings taste profile refresh failures: #{failures.values.tally}")
       end
     end
   end

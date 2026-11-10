@@ -1,6 +1,9 @@
 require "test_helper"
 
+require Rails.root.join("test/support/taste_profile_openai_stub")
+
 class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
+  include TasteProfileOpenaiStub
   Job = Ratings::ReassessRatingQualitiesJob
   Request = Ratings::RatingQualityReassessmentRequest
 
@@ -21,17 +24,17 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
   end
 
   test "only the newest pending revision reassesses each current rating after a backlog" do
-    source = @source.submit_rating!(value: "brilliant", expression_texts: [ "Original expression" ])
+    source = @source.submit_rating!(value: "brilliant", notes: "Original expression")
     first = publish("Original profile")
-    @source.revise_rating!(previous_rating_id: source.id, value: "brilliant", expression_texts: [ "New expression" ])
+    @source.revise_rating!(previous_rating_id: source.id, value: "brilliant", notes: "New expression")
     newest = publish("New profile")
-    assert_equal newest.id, Request.sole.expression_profile_revision_id
+    assert_equal newest.id, Request.sole.taste_profile_revision_id
     assert_equal 2, jobs.count
 
     Job.enqueue!(user_id: @user.id, profile_revision_id: newest.id)
     requests = []
     stub_provider do |state:, questions:, **|
-      requests << state.fetch(:expression_profile)
+      requests << state.fetch(:taste_profile)
       assert perform_revision(newest).retried? if requests.one?
       response(questions)
     end
@@ -52,20 +55,20 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
   end
 
   test "an older running job cannot acknowledge the newer pending revision" do
-    source = @source.submit_rating!(value: "brilliant", expression_texts: [ "Original expression" ])
+    source = @source.submit_rating!(value: "brilliant", notes: "Original expression")
     first = publish("Original profile")
     newest = nil
     stub_provider do |state:, questions:, **|
-      if state.fetch(:expression_profile) == first.profile
+      if state.fetch(:taste_profile) == first.profile
         assert_nil newest
-        @source.revise_rating!(previous_rating_id: source.id, value: "brilliant", expression_texts: [ "New expression" ])
+        @source.revise_rating!(previous_rating_id: source.id, value: "brilliant", notes: "New expression")
         newest = publish("New profile")
       end
       response(questions)
     end
 
     assert_nil perform_revision(first).unhandled_error
-    assert_equal newest.id, Request.sole.expression_profile_revision_id
+    assert_equal newest.id, Request.sole.taste_profile_revision_id
     assert_equal 1, [ @target, @other_target ].sum { |rating| rating.rating_quality_evals.count }
     assert_nil perform_revision(newest).unhandled_error
     assert_empty Request.all
@@ -75,8 +78,8 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
   end
 
   test "publication rollback leaves no pending request or durable job, and unchanged evidence adds no work" do
-    @source.submit_rating!(value: "brilliant", expression_texts: [ "Original expression" ])
-    Ratings::ExpressionProfile.transaction(requires_new: true) do
+    @source.submit_rating!(value: "brilliant", notes: "Original expression")
+    Ratings::TasteProfile.transaction(requires_new: true) do
       publish("Original profile")
       assert_equal 1, Request.count
       assert_equal 1, jobs.count
@@ -84,7 +87,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
     end
     assert_empty Request.all
     assert_empty jobs
-    assert_empty Ratings::ExpressionProfileRevision.all
+    assert_empty Ratings::TasteProfileRevision.all
 
     revision = publish("Original profile")
     assert_equal revision, publish("Unused profile")
@@ -92,7 +95,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
   end
 
   test "failure retains pending work and recovery skips ratings that already applied" do
-    @source.submit_rating!(value: "brilliant", expression_texts: [ "Original expression" ])
+    @source.submit_rating!(value: "brilliant", notes: "Original expression")
     revision = publish("Original profile")
     calls = 0
     stub_provider do |questions:, **|
@@ -103,7 +106,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
     end
 
     assert_instance_of Ratings::QualityAssessmentFailed, perform_revision(revision).unhandled_error
-    assert_equal revision.id, Request.sole.expression_profile_revision_id
+    assert_equal revision.id, Request.sole.taste_profile_revision_id
     assert_equal 1, [ @target, @other_target ].sum { |rating| rating.rating_quality_evals.count }
 
     Job.enqueue!(user_id: @user.id, profile_revision_id: revision.id)
@@ -122,12 +125,12 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
 
   def publish(profile)
     synthesizer = lambda do |input:, **|
-      expressions = input.is_a?(Hash) ? input.fetch("added") : input
-      ids = expressions.flat_map { |film| film.fetch("expressions").pluck("expression_id") }
+      expressions = input.fetch("note_changes").select { |change| change.fetch("after_rating_id") }
+      citations = expressions.map { |note| { "rating_id" => note.fetch("after_rating_id"), "quote" => note.fetch("after") } }
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
-        "profile" => profile, "conclusions" => [ { "anchor" => profile, "claim" => profile, "explanation" => "Source expression", "expression_ids" => ids } ] }
+        "profile" => profile, "conclusions" => [ { "anchor" => profile, "claim" => profile, "explanation" => "Source expression", "citations" => citations } ] }
     end
-    Ratings::RefreshExpressionProfile.call(user_id: @user.id, synthesizer:, tracer_provider: nil)
+    Ratings::RefreshTasteProfile.call(user_id: @user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
   end
 
   def jobs

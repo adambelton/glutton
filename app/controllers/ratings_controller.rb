@@ -12,7 +12,6 @@ class RatingsController < ApplicationController
   end
 
   def new
-    @expression_texts = []
     @targeted = params.key?(:film_id)
     if @targeted
       @rating_film = Ratings::PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
@@ -24,15 +23,15 @@ class RatingsController < ApplicationController
 
   def create
     @targeted = params[:targeted] == "1"
-    return render_invalid_rating unless read_rating_input
+    read_rating_input
     rating = Ratings::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
-      value: @value, expression_texts: @expression_texts.reject(&:blank?))
+      value: @value, notes: @notes)
     flash[:edited_film] = { id: rating.rating_film.film_id, title: rating.rating_film.film.title }
     redirect_to new_rating_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_rating
-  rescue Ratings::InvalidExpressions => error
+  rescue Ratings::InvalidNotes => error
     @errors = [ error.message ]
     render_invalid_rating
   end
@@ -42,21 +41,21 @@ class RatingsController < ApplicationController
     @rating_film = rating.rating_film
     @previous_rating_id = rating.id
     @value = rating.value
-    @expression_texts = rating.rating_expressions.map(&:text)
+    @notes = rating.notes
     render_edit
   end
 
   def update
     @previous_rating_id = previous_rating_id_param
-    return render_invalid_revision unless read_rating_input
+    read_rating_input
     rating = Ratings::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
-      previous_rating_id: @previous_rating_id, value: @value, expression_texts: @expression_texts.reject(&:blank?))
+      previous_rating_id: @previous_rating_id, value: @value, notes: @notes)
     redirect_to edit_rating_path(film_id: rating.rating_film.film_id),
       notice: I18n.t("ratings.browser.updated"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_revision
-  rescue Ratings::InvalidExpressions => error
+  rescue Ratings::InvalidNotes => error
     @errors = [ error.message ]
     render_invalid_revision
   rescue Ratings::StaleRating => error
@@ -74,31 +73,20 @@ class RatingsController < ApplicationController
 
   def render_new(status: :ok)
     render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: @targeted,
-      value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors, edited_film: flash[:edited_film]), status:
+      value: @value, notes: @notes, errors: @errors, edited_film: flash[:edited_film]), status:
   end
 
   def render_edit(status: :ok)
     render ::Views::Ratings::Edit.new(rating_film: @rating_film, previous_rating_id: @previous_rating_id,
-      value: @value, expression_texts: @expression_texts, expression_draft: @expression_draft, errors: @errors), status:
+      value: @value, notes: @notes, errors: @errors), status:
   end
 
   def read_rating_input
     @value = params[:value] if params[:value].is_a?(String)
-    @expression_texts = []
-    texts = params.fetch(:expression_texts, [])
-    unless texts.is_a?(Array) && texts.size <= Ratings::Rating::MAX_EXPRESSIONS && texts.all? { |text| text.is_a?(String) }
-      raise Ratings::InvalidExpressions
-    end
-    @expression_texts = texts
-    draft = params.fetch(:expression_draft, "")
-    raise Ratings::InvalidExpressions unless draft.is_a?(String)
+    notes = params.fetch(:notes, "")
+    raise Ratings::InvalidNotes unless notes.is_a?(String)
 
-    @expression_draft = draft
-    if draft.present?
-      @errors = [ I18n.t("ratings.browser.unadded_expression") ]
-      return false
-    end
-    true
+    @notes = notes
   end
 
   def previous_rating_id_param

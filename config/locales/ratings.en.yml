@@ -3,18 +3,14 @@ en:
     browser:
       film_details: Film details
       film_year: "(%{year})"
-      unadded_expression: Add your thought to the list or clear the input before saving.
-      expression_draft: Add a thought
-      expression_placeholder: I loved how slowly the tension builds.
-      expression_remove: "Remove thought %{number}"
       title: Rate films
       edit_title: Edit your rating
       edit_saved: "Edit your rating for %{title}"
       updated: Your updated rating has been saved.
       reload: Reload current rating
       choice: What did you think?
-      expressions: What stood out to you (optional)?
-      expression: "Expression %{number}"
+      notes: Your notes (optional)
+      notes_placeholder: What stayed with you? What worked for you, or didn’t?
       save: Save rating
       dismiss: Dismiss film
       saved: Your rating has been saved.
@@ -33,7 +29,7 @@ en:
       stale_rating: This rating has changed. Reload it before submitting a replacement.
       hold_unavailable: This film is already held from rating rotation.
       hold_release_unavailable: This film is not held from rating rotation.
-      invalid_expressions: Provide no more than %{count} thoughts.
+      invalid_notes: Enter your notes as text.
       already_rated: This film has already been rated.
       identity_unavailable: An active account is required to rate films.
       film_unavailable: This rating film is unavailable.
@@ -41,24 +37,20 @@ en:
   activerecord:
     models:
       ratings/rating: Rating
-      ratings/rating_expression: Thought
       ratings/rating_film: Rating film
       ratings/rating_quality_eval: Rating quality evaluation
-      ratings/expression_profile_revision_eval: Expression profile revision evaluation
+      ratings/taste_profile_revision_eval: Taste profile revision evaluation
     attributes:
-      ratings/expression_profile_revision_eval:
+      ratings/taste_profile_revision_eval:
         user: User
         output: Evaluation output
       ratings/rating_quality_eval:
         rating: Rating
         output: Evaluation output
-      ratings/rating_expression:
-        rating: Rating
-        text: Thought
       ratings/rating:
         rating_film: Rating film
         value: Rating
-        rating_expressions: Thoughts
+        notes: Your notes
       ratings/rating_film:
         user: User
         film: Film

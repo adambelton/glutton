@@ -85,11 +85,11 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do
-        rate(token: csrf_token, expression_texts: [ "  Atmosphere!\nÉerie 👻  ", "", " \t", "The ending" ], user_id: next_candidate.user_id, held: true)
+        rate(token: csrf_token, notes: "  Atmosphere!\nÉerie 👻  \n\nThe ending", user_id: next_candidate.user_id, held: true)
       end
     end
     assert_response :see_other
-    assert_equal [ "  Atmosphere!\nÉerie 👻  ", "The ending" ], @candidate.ratings.sole.rating_expressions.pluck(:text)
+    assert_equal "  Atmosphere!\nÉerie 👻  \n\nThe ending", @candidate.ratings.sole.notes
     assert_equal Ratings::Events::RATING_SUBMITTED, DomainEvents::DomainEvent.last.name
     follow_redirect!
     assert_select "h2", "Next film (1982)"
@@ -118,7 +118,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       rate(row, token: csrf_token, value:)
       assert_response :see_other
       assert_equal value, row.ratings.sole.value
-      assert_empty row.ratings.sole.rating_expressions
+      assert_nil row.ratings.sole.notes
     end
   end
 
@@ -127,16 +127,16 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     token = csrf_token
     @candidate.film.update!(title: "<script>alert('title')</script>")
     text = "  <script>alert('expression')</script>  "
-    rate(token:, expression_texts: [ text, "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
+    rate(token:, notes: (text += "a" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)))
     assert_response :unprocessable_entity
     assert_select "script", text: /alert\(/, count: 0
     assert_select "h2", "#{@candidate.film.title} (1982)"
-    assert_select ".expression-items input[type=hidden][value=?]", text
+    assert_select "textarea#notes", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::BRILLIANT
     assert_select '#rating-errors[role="alert"]'
-    assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
-    assert_select 'label[for="expression-draft"]'
-    assert_select "textarea[maxlength=?]", Ratings::RatingExpression::MAX_TEXT_LENGTH.to_s, count: 1
+    assert_select '[aria-describedby*="rating-errors"]', count: 2
+    assert_select 'label[for="notes"]'
+    assert_select "textarea[maxlength=?]", Ratings::Rating::MAX_NOTES_LENGTH.to_s, count: 1
     assert_empty @candidate.ratings
   end
 
@@ -145,57 +145,17 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     token = csrf_token
     [ nil, "", "unknown", "x" * 10_000, [], { choice: "brilliant" } ].each do |value|
       assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        rate(token:, value:, expression_texts: [ "Keep this" ])
+        rate(token:, value:, notes: "Keep this")
         assert_response :unprocessable_entity
-        assert_select ".expression-item .expression-copy", "Keep this"
+        assert_select "textarea#notes", "Keep this"
       end
     end
-    [ nil, "text", { text: "text" }, [ { text: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
+    [ [ "text" ], { text: "text" }, [ { text: "text" } ] ].each do |notes|
       assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        rate(token:, expression_texts:)
+        rate(token:, notes:)
         assert_response :unprocessable_entity
       end
     end
-  end
-
-  test "unadded drafts block saving and stay in the input until explicitly added or cleared" do
-    get new_rating_path
-    token = csrf_token
-    draft = "  <script>draft</script>\nÉerie 👻  "
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
-      rate(token:, expression_texts: [ "First thought" ], expression_draft: draft)
-      assert_response :unprocessable_entity
-      assert_select "#rating-errors", text: /#{Regexp.escape(I18n.t("ratings.browser.unadded_expression"))}/
-      assert_select "textarea#expression-draft" do |inputs|
-        assert_equal draft, inputs.sole.text
-      end
-      assert_select '.expression-items input[value="First thought"]', count: 1
-      assert_select ".expression-items input", count: 1
-      assert_select "script", text: "draft", count: 0
-    end
-    rate(token:, expression_texts: [ "First thought", draft ], expression_draft: "")
-    assert_response :see_other
-    assert_equal [ "First thought", draft ], @candidate.reload.current_rating.rating_expressions.pluck(:text)
-  end
-
-  test "malformed drafts cannot write and pending input remains recoverable at the list limit" do
-    get new_rating_path
-    token = csrf_token
-    [ { bad: "shape" }, [ "text" ] ].each do |expression_draft|
-      assert_no_difference "Ratings::Rating.count" do
-        rate(token:, expression_draft:)
-        assert_response :unprocessable_entity
-      end
-    end
-    assert_no_difference "Ratings::Rating.count" do
-      rate(token:, expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS, "Existing"), expression_draft: "Extra")
-      assert_response :unprocessable_entity
-      assert_select "textarea#expression-draft", "Extra"
-      assert_select ".expression-items input", count: Ratings::Rating::MAX_EXPRESSIONS
-    end
-    rate(token:, expression_draft: " ")
-    assert_response :see_other
-    assert_empty @candidate.reload.current_rating.rating_expressions
   end
 
   test "foreign missing and malformed candidates have the same unavailable response" do
@@ -267,8 +227,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     assert_not @candidate.reload.dismissed?
-    filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter("expression_texts" => [ "Private expression" ], "expression_draft" => "Private draft")
-    assert_equal "[FILTERED]", filtered["expression_texts"]
-    assert_equal "[FILTERED]", filtered["expression_draft"]
+    filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter("notes" => "Private notes")
+    assert_equal "[FILTERED]", filtered["notes"]
   end
 end

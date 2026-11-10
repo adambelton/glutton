@@ -20,7 +20,7 @@ Rails.application.routes.draw do
   end
 
   resource :account, only: :show, controller: :account do
-    post :refresh_expression_profile
+    post :refresh_taste_profile
   end
 
   resource :library, only: :show, controller: :library

@@ -187,11 +187,11 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       watched = entry(title: '<script>film</script> "title"')
       unrated = entry
       candidate = Ratings::RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
-      original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Original" ])
+      original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "Original")
       current = Ratings::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
-        previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "Current" ])
+        previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Current")
       edit_link = edit_rating_path(film_id: watched.film_id)
-      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+      assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         [ library_path(view: Library::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
           get path
           assert_response :success
@@ -210,16 +210,16 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       get edit_link
       assert_response :success
       assert_select 'input[name="previous_rating_id"][value=?]', current.id.to_s
-      assert_select ".expression-items .expression-copy", text: "Current"
+      assert_select "textarea#notes", text: "Current"
       patch rating_path, params: { rating_film_id: candidate.id, previous_rating_id: current.id,
-        value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "Updated from Library" ] }
+        value: Ratings::Rating::Values::BRILLIANT, notes: "Updated from Library" }
       assert_response :see_other
       get library_film_path(watched)
       get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
       assert_response :success
-      assert_select ".expression-items .expression-copy", text: "Updated from Library"
+      assert_select "textarea#notes", text: "Updated from Library"
       assert_select 'input[name="previous_rating_id"][value=?]', candidate.ratings.order(:id).last.id.to_s
-      assert_equal [ "Original" ], original.rating_expressions.pluck(:text)
+      assert_equal "Original", original.notes
     end
   end
 

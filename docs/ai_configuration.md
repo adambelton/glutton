@@ -23,7 +23,7 @@ The OpenAI client uses a 60-second timeout and zero automatic retries so a diagn
 
 Dependencies locked for this implementation: `openai` 0.113.0, `opentelemetry-sdk` 1.13.1, `opentelemetry-exporter-otlp` 0.37.0. Ruby uses native OpenTelemetry because the official Langfuse language SDKs cover Python and JS/TS.
 
-Ratings and Registry supply their assessment tags to TypeSafe generation spans. Each generation records the Rails environment, model and usage. Ratings keeps expression text and provider bodies out of trace attributes. Registry retains its existing opt-in payload capture.
+Ratings and Registry supply their assessment tags to TypeSafe generation spans. Each generation records the Rails environment, model and usage. Ratings keeps notes text and provider bodies out of trace attributes. Registry retains its existing opt-in payload capture.
 
 ## Existing legacy integration
 

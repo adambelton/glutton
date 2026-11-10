@@ -291,13 +291,6 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 }
 
 
-.expression-composer { display: grid; gap: 10px; }
-.expression-composer > label { font-size: 12px; color: var(--glutton-muted-foreground); }
-.expression-composer textarea.ui-input { height: 76px; min-height: 76px; resize: none; padding: 10px 12px; }
-.expression-items { list-style: none; padding: 4px; display: grid; align-content: start; gap: 10px; margin-top: 18px; height: 180px; overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior-y: contain; }
-.expression-item { display: flex; align-items: start; gap: 12px; border: 1px solid var(--glutton-border); border-radius: 4px; padding: 14px 16px; background: var(--glutton-inset); }
-.expression-copy { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; font-size: 14px; line-height: 1.6; margin: 0; }
-.expression-remove { min-width: 36px; min-height: 36px; margin: -6px -6px -6px 0; font-size: 22px; color: var(--glutton-muted-foreground); }
 @media (max-width: 650px) {
   .rating-interface { grid-template-columns: 1fr; gap: 22px; }
   .rating-film-artwork > .film-poster { display: block; width: 100%; margin-inline: auto; }
@@ -314,10 +307,10 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .rating-description { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 4px; }
 .rating-description .rating-synopsis { margin: 0; }
 .rating-interface .rating-choices { grid-column: 2; grid-row: 2; margin: 0; }
-.rating-interface .expression-list { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; min-height: 0; margin: 0; }
-.rating-interface:not(:has(> .rating-actions)) .expression-list { grid-row: 1 / -1; }
-.expression-list .expression-composer { flex-shrink: 0; }
-.expression-list .expression-items { flex: 1; min-height: 0; height: 0; }
+.rating-notes label { display: block; margin-bottom: 8px; }
+.rating-notes textarea.ui-input { flex: 1; width: 100%; min-height: 150px; resize: vertical; padding: 10px 12px; }
+.rating-interface .rating-notes { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; min-height: 0; margin: 0; }
+.rating-interface:not(:has(> .rating-actions)) .rating-notes { grid-row: 1 / -1; }
 .rating-actions { grid-column: 3; grid-row: 2; display: flex; justify-content: flex-end; align-items: flex-end; gap: 12px; }
 .ui-page .rating-actions .ui-submit { width: auto; margin: 0; }
 .ui-page .rating-actions .ui-submit:disabled { pointer-events: auto; cursor: not-allowed; background-color: var(--color-primary); }
@@ -326,7 +319,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .rating-interface > .ui-errors { grid-column: 1 / -1; max-height: 120px; overflow-y: auto; }
 .rating-interface:has(> .ui-errors) { aspect-ratio: auto; height: 650px; grid-template-rows: auto minmax(0, 1fr) auto; }
 .rating-interface:has(> .ui-errors) .rating-film-artwork { grid-row: 2 / -1; }
-.rating-interface:has(> .ui-errors) .rating-film-details, .rating-interface:has(> .ui-errors) .expression-list { grid-row: 2; }
+.rating-interface:has(> .ui-errors) .rating-film-details, .rating-interface:has(> .ui-errors) .rating-notes { grid-row: 2; }
 .rating-interface:has(> .ui-errors) .rating-choices, .rating-interface:has(> .ui-errors) .rating-actions { grid-row: 3; }
 @media (min-width: 651px) and (max-width: 1099px) {
   .ui-card:has(> .rating-interface), .demo-browser { container-type: inline-size; }
@@ -337,11 +330,11 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .rating-film-details { display: flex; flex: 1; }
   .rating-description { flex: none; height: 180px; }
   .rating-interface .rating-choices { grid-column: 2; grid-row: 1; align-self: start; }
-  .rating-interface .expression-list, .rating-interface:not(:has(> .rating-actions)) .expression-list { grid-column: 2; grid-row: 2; }
+  .rating-interface .rating-notes, .rating-interface:not(:has(> .rating-actions)) .rating-notes { grid-column: 2; grid-row: 2; }
   .rating-actions { grid-column: 2; grid-row: 3; }
   .rating-interface:has(> .ui-errors) .rating-film-info { grid-row: 2 / 5; }
   .rating-interface:has(> .ui-errors) .rating-choices { grid-row: 2; }
-  .rating-interface:has(> .ui-errors) .expression-list { grid-row: 3; }
+  .rating-interface:has(> .ui-errors) .rating-notes { grid-row: 3; }
   .rating-interface:has(> .ui-errors) .rating-actions { grid-row: 4; }
 }
 @media (max-width: 650px) {
@@ -350,8 +343,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .rating-film-artwork > .film-poster { display: block; height: auto; max-height: none; }
   .rating-film-details { display: flex; }
   .rating-description { flex: none; height: auto; overflow: visible; scrollbar-gutter: auto; }
-  .rating-interface .expression-list { display: block; height: auto; }
-  .expression-list .expression-items { height: auto; overflow: visible; scrollbar-gutter: auto; }
+  .rating-interface .rating-notes { display: block; height: auto; }
   .rating-interface > .ui-errors { max-height: none; overflow: visible; }
 }
 
@@ -372,7 +364,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .account-tabs { border-bottom: 1px solid var(--glutton-border); }
 .account-tabs a { display: inline-block; padding: 10px 0; border-bottom: 2px solid currentColor; }
 .account-page section > p, .profile-narrative { margin-block: 12px; }
-.profile-narrative { white-space: pre-wrap; }
+.profile-narrative, .profile-evidence-list blockquote { white-space: pre-wrap; }
 .profile-annotation { color: var(--glutton-muted-foreground); text-decoration: underline; }
 .profile-evidence-list { list-style: decimal; padding-inline-start: 24px; }
 .profile-evidence-list > li { margin-block: 12px; scroll-margin-block-start: 16px; }

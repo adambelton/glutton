@@ -8,8 +8,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     @other_quality = category.qualities.create!(name: "Isolation")
     [ @quality, @other_quality ].each { |quality| Registry::FilmQuality.create!(film:, quality:) }
     @rating_film = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film:)
-    @rating = @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "The dread builds slowly." ])
-    @expression = @rating.rating_expressions.sole
+    @rating = @rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "The dread builds slowly.")
   end
 
   test "recording preserves evidence and Rating applies a complete score set" do
@@ -22,7 +21,7 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, scores(evaluation))
     assert_equal [ [ "explicitly_expressed", 5 ], [ "unexpressed", 2 ] ],
       evaluation.rating_qualities.order(:quality_id).pluck(:classification, :score)
-    assert_equal @expression.text, @rating.rating_expressions.sole.text
+    assert_equal "The dread builds slowly.", @rating.notes
     assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
   end
 
@@ -30,9 +29,9 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     other_film = Registry::Film.create!(title: "Another film")
     other_rating_film = Ratings::RatingFilm.create!(user: @rating_film.user, film: other_film)
     other_rating = other_rating_film.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD,
-      expression_texts: [ "Different thought." ])
+      notes: "Different thought.")
     invalid_evidence = [
-      assessment_output(expression_id: other_rating.rating_expressions.sole.id),
+      assessment_output(rating_id: other_rating.id),
       assessment_output(quality_id: -1),
       assessment_output(result_id: "missing")
     ]
@@ -106,9 +105,9 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     Ratings::RatingQualityEval.record!(rating: @rating, assessment:)
   end
 
-  def assessment_output(expression_id: @expression.id, quality_id: @quality.id, result_id: "q1")
+  def assessment_output(rating_id: @rating.id, quality_id: @quality.id, result_id: "q1")
     {
-      expressions: { @expression.id.to_s => @expression.text },
+      notes: { @rating.id.to_s => @rating.notes },
       qualities: {
         @quality.id.to_s => { name: @quality.name, match_rule: @quality.match_rule, not_sufficient: @quality.not_sufficient },
         @other_quality.id.to_s => { name: @other_quality.name, match_rule: nil, not_sufficient: nil }
@@ -118,8 +117,8 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
         { id: "q2", question: "Does the expression address isolation?", result: { probability: 0.05 } }
       ] ],
       decisions: [
-        { quality_id:, applicable: true, supporting_expression_ids: [ expression_id ], result_ids: [ result_id ] },
-        { quality_id: @other_quality.id, applicable: false, supporting_expression_ids: [], result_ids: [ "q2" ] }
+        { quality_id:, applicable: true, supporting_rating_ids: [ rating_id ], result_ids: [ result_id ] },
+        { quality_id: @other_quality.id, applicable: false, supporting_rating_ids: [], result_ids: [ "q2" ] }
       ]
     }
   end

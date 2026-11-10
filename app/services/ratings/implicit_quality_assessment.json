@@ -1,7 +1,7 @@
 {
   "minimum_support": 0.60,
   "question_type": "noul",
-  "question_template": "Does the viewer's expression_profile support inferring a reaction to qualities[\"{quality_id}\"] as defined?",
+  "question_template": "Does the viewer's taste_profile support inferring a reaction to qualities[\"{quality_id}\"] as defined?",
   "criteria": {
     "true": "The profile supports a positive or negative reaction to the defined quality and any conditions stated in the profile are met by the quality definition.",
     "false": "The profile provides no clear basis for a reaction, the quality only matches an exclusion, or the quality definition does not establish a condition required by the profile."

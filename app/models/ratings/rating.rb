@@ -9,17 +9,15 @@ module Ratings
       ALL = [ BRILLIANT, PRETTY_GOOD, NOT_FOR_ME, GARBAGE ].freeze
     end
 
-    MAX_EXPRESSIONS = 20
+    MAX_NOTES_LENGTH = 8_000
 
     belongs_to :rating_film
-    has_many :rating_expressions, -> { order(:id) }
     has_many :rating_qualities
     has_many :rating_quality_evals
 
-    accepts_nested_attributes_for :rating_expressions, limit: MAX_EXPRESSIONS
-
     scope :current, -> { where(id: Rating.group(:rating_film_id).select("MAX(id)")) }
 
+    validates :notes, length: { maximum: MAX_NOTES_LENGTH }, allow_nil: true
     validate :recognized_value
 
     def can_assess_qualities_for?(profile_revision_id)
@@ -42,11 +40,10 @@ module Ratings
       current_rating_quality_eval&.explicit_evidence_for_reassessment
     end
 
-    def request_profile_refresh_if_expressions_changed!(previous_rating:)
-      previous_texts = previous_rating&.rating_expressions&.pluck(:text) || []
-      return if rating_expressions.pluck(:text) == previous_texts
+    def request_profile_refresh_if_notes_changed!(previous_rating:)
+      return if notes == previous_rating&.notes
 
-      ExpressionProfileRefreshRequest.mark_pending!(user_id: rating_film.user_id)
+      TasteProfileRefreshRequest.mark_pending!(user_id: rating_film.user_id)
     end
 
     def publish_event!

@@ -1,21 +1,24 @@
 require "test_helper"
 
-class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
-  Job = Ratings::RefreshExpressionProfilesJob
+require Rails.root.join("test/support/taste_profile_openai_stub")
+
+class Ratings::RefreshTasteProfilesJobTest < ActiveSupport::TestCase
+  include TasteProfileOpenaiStub
+  Job = Ratings::RefreshTasteProfilesJob
 
   setup do
     @adapter = Job.queue_adapter
     Job.queue_adapter = :good_job
-    @constructor = Ratings::ExpressionProfileSynthesizer.method(:new)
+    @openai_client = Rails.application.config.x.openai_client
   end
 
   teardown do
     Job.queue_adapter = @adapter
-    Ratings::ExpressionProfileSynthesizer.define_singleton_method(:new, @constructor)
+    Rails.application.config.x.openai_client = @openai_client
   end
 
   test "quarter-hour cron runs one batch at a time and the next tick recovers pending work" do
-    cron = GoodJob::CronEntry.find(:ratings_expression_profile_refresh)
+    cron = GoodJob::CronEntry.find(:ratings_taste_profile_refresh)
     tick = Time.utc(2026, 11, 9, 10)
     travel_to tick
     assert_equal [ tick + 15.minutes ], cron.within((tick + 1.second)..(tick + 15.minutes + 1.second))
@@ -24,34 +27,34 @@ class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
     user = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Quiet dread")
     rating_film = Ratings::RatingFilm.create!(user:, film:)
-    rating_film.submit_rating!(value: "brilliant", expression_texts: [ "I liked the quiet dread." ])
+    rating_film.submit_rating!(value: "brilliant", notes: "I liked the quiet dread.")
     calls = 0
     synthesizer = lambda do |input:, **|
-      expressions = input.is_a?(Hash) ? input.fetch("added") : input
+      notes = input.fetch("note_changes").select { |change| change.fetch("after_rating_id") }
       calls += 1
-      raise Ratings::ExpressionProfileRefreshFailed.new(reason: :provider_failure) if calls == 1
+      raise Ratings::TasteProfileRefreshFailed.new(reason: :provider_failure) if calls == 1
 
-      ids = expressions.sole.fetch("expressions").pluck("expression_id")
+      note = notes.sole
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
-        "profile" => "Enjoys quiet dread.", "conclusions" => [ { "anchor" => "Enjoys quiet dread.", "claim" => "Enjoys quiet dread.", "explanation" => "The viewer praised quiet dread.", "expression_ids" => ids } ] }
+        "profile" => "Enjoys quiet dread.", "conclusions" => [ { "anchor" => "Enjoys quiet dread.", "claim" => "Enjoys quiet dread.", "explanation" => "The viewer praised quiet dread.", "citations" => [ { "rating_id" => note.fetch("after_rating_id"), "quote" => note.fetch("after") } ] } ] }
     end
-    Ratings::ExpressionProfileSynthesizer.define_singleton_method(:new) { synthesizer }
+    Rails.application.config.x.openai_client = taste_profile_openai_stub(synthesizer)
 
     cron.enqueue(tick)
     travel 15.minutes
     cron.enqueue(tick + 15.minutes)
     assert_equal "ratings_assessment", cron.jobs.sole.queue_name
     assert_nil perform_next(cron).unhandled_error
-    assert Ratings::ExpressionProfileRefreshRequest.exists?(user:)
+    assert Ratings::TasteProfileRefreshRequest.exists?(user:)
 
     travel 15.minutes
     cron.enqueue(tick + 30.minutes)
     assert_nil perform_next(cron).unhandled_error
     assert_equal 2, calls
-    refute Ratings::ExpressionProfileRefreshRequest.exists?(user:)
-    revision = Ratings::ExpressionProfile.find_by!(user:).current_revision
+    refute Ratings::TasteProfileRefreshRequest.exists?(user:)
+    revision = Ratings::TasteProfile.find_by!(user:).current_revision
     assert_equal "Enjoys quiet dread.", revision.profile
-    assert_equal revision.id, Ratings::RatingQualityReassessmentRequest.find_by!(user:).expression_profile_revision_id
+    assert_equal revision.id, Ratings::RatingQualityReassessmentRequest.find_by!(user:).taste_profile_revision_id
   end
 
   test "manual refresh is scoped to one superuser and coalesces duplicate requests" do
@@ -60,22 +63,22 @@ class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
     other = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Quiet dread")
     [ user, other ].each do |viewer|
-      Ratings::RatingFilm.create!(user: viewer, film:).submit_rating!(value: "brilliant", expression_texts: [ "Expression #{viewer.id}" ])
+      Ratings::RatingFilm.create!(user: viewer, film:).submit_rating!(value: "brilliant", notes: "Reflection #{viewer.id}")
     end
-    cron = GoodJob::CronEntry.find(:ratings_expression_profile_refresh)
+    cron = GoodJob::CronEntry.find(:ratings_taste_profile_refresh)
     requests = []
     synthesizer = lambda do |input:, **|
-      expressions = input.is_a?(Hash) ? input.fetch("added") : input
-      expression = expressions.sole.fetch("expressions").sole
-      requests << expression.fetch("text")
+      notes = input.fetch("note_changes").select { |change| change.fetch("after_rating_id") }
+      notes = notes.sole
+      requests << notes.fetch("after")
       cron.enqueue(Time.current)
       assert perform_next(cron).retried?
 
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
-        "profile" => "Enjoys dread.", "conclusions" => [ { "anchor" => "Enjoys dread.", "claim" => "Enjoys dread.", "explanation" => "Source expression.",
-          "expression_ids" => [ expression.fetch("expression_id") ] } ] }
+        "profile" => "Enjoys dread.", "conclusions" => [ { "anchor" => "Enjoys dread.", "claim" => "Enjoys dread.", "explanation" => "Source notes.",
+          "citations" => [ { "rating_id" => notes.fetch("after_rating_id"), "quote" => notes.fetch("after") } ] } ] }
     end
-    Ratings::ExpressionProfileSynthesizer.define_singleton_method(:new) { synthesizer }
+    Rails.application.config.x.openai_client = taste_profile_openai_stub(synthesizer)
 
     assert Job.perform_later(user.id)
     assert_equal false, Job.perform_later(user.id)
@@ -85,10 +88,10 @@ class Ratings::RefreshExpressionProfilesJobTest < ActiveSupport::TestCase
       assert_nil jobs.perform_with_lock(lock_id: SecureRandom.uuid, lock_strategy: :skiplocked).unhandled_error
     end
 
-    assert_equal [ "Expression #{user.id}" ], requests
-    assert Ratings::ExpressionProfile.exists?(user:)
-    refute Ratings::ExpressionProfile.exists?(user: other)
-    assert Ratings::ExpressionProfileRefreshRequest.exists?(user: other)
+    assert_equal [ "Reflection #{user.id}" ], requests
+    assert Ratings::TasteProfile.exists?(user:)
+    refute Ratings::TasteProfile.exists?(user: other)
+    assert Ratings::TasteProfileRefreshRequest.exists?(user: other)
   end
 
   private

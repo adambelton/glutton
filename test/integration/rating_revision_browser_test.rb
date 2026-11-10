@@ -8,7 +8,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     bind_user(@user)
     @film = Registry::Film.create!(title: "Revision film")
     @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
-    @original = @candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, expression_texts: [ "  <script>original</script>\nÉerie 👻  " ])
+    @original = @candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "  <script>original</script>\nÉerie 👻  ")
   end
 
   teardown do
@@ -28,20 +28,20 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
 
   def revise(token:, **attributes)
     patch rating_path, params: { rating_film_id: @candidate.id, previous_rating_id: @original.id,
-      value: Ratings::Rating::Values::PRETTY_GOOD, expression_texts: [ "New thought" ], authenticity_token: token }.merge(attributes)
+      value: Ratings::Rating::Values::PRETTY_GOOD, notes: "New thought", authenticity_token: token }.merge(attributes)
   end
 
   test "edit reads latest rating and exact escaped expressions without any writes" do
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
-      previous_rating_id: @original.id, value: Ratings::Rating::Values::NOT_FOR_ME, expression_texts: [ "  <script>new</script>\n  " ])
-    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+      previous_rating_id: @original.id, value: Ratings::Rating::Values::NOT_FOR_ME, notes: "  <script>new</script>\n  ")
+    assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       get edit_rating_path(film_id: @film.id)
       assert_response :success
       assert_select 'input[name="_method"][value="patch"]'
       assert_select 'input[name="previous_rating_id"][value=?]', latest.id.to_s
       assert_select "input[checked][value=?]", latest.value
-      assert_select ".expression-items input[type=hidden]", count: 1 do |inputs|
-        assert_equal latest.rating_expressions.sole.text, inputs.sole["value"]
+      assert_select "textarea#notes", count: 1 do |inputs|
+        assert_equal latest.notes, inputs.sole.text
       end
       assert_select "script", text: /new/, count: 0
       assert_select "a[href=?]", new_rating_path
@@ -49,26 +49,12 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "pending expression input blocks a revision without replacing the saved rating" do
-    get edit_rating_path(film_id: @film.id)
-    token = csrf_token
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
-      revise(token:, expression_draft: "Still composing")
-      assert_response :unprocessable_entity
-      assert_select "textarea#expression-draft", "Still composing"
-      assert_equal @original.id, @candidate.reload.current_rating.id
-    end
-    revise(token:, expression_draft: "", expression_texts: [ "Ready" ])
-    assert_response :see_other
-    assert_equal [ "Ready" ], @candidate.reload.current_rating.rating_expressions.pluck(:text)
-  end
-
   test "replacement preserves original and candidate state without publishing and allows clearing expressions" do
     get edit_rating_path(film_id: @film.id)
     token = csrf_token
     assert_no_difference [ "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count", "Ratings::RatingFilm.count" ] do
       assert_difference "Ratings::Rating.count", 1 do
-        revise(token:, expression_texts: [ "  Updated\n👻 ", "", "  " ], user_id: Identity::UserGuest.create!.id, held: false)
+        revise(token:, notes: "  Updated\n👻 ", user_id: Identity::UserGuest.create!.id, held: false)
       end
     end
     assert_redirected_to edit_rating_path(film_id: @film.id)
@@ -76,14 +62,14 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select '[role="status"]', I18n.t("ratings.browser.updated")
     latest = @candidate.reload.current_rating
-    assert_equal [ "  Updated\n👻 " ], latest.rating_expressions.pluck(:text)
+    assert_equal "  Updated\n👻 ", latest.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value
-    assert_equal [ "  <script>original</script>\nÉerie 👻  " ], @original.rating_expressions.pluck(:text)
+    assert_equal "  <script>original</script>\nÉerie 👻  ", @original.notes
     assert @candidate.held?
     assert @candidate.dismissed?
-    revise(token:, previous_rating_id: latest.id, value: latest.value, expression_texts: [ "", " " ])
+    revise(token:, previous_rating_id: latest.id, value: latest.value, notes: " ")
     assert_response :see_other
-    assert_empty @candidate.reload.current_rating.rating_expressions
+    assert_nil @candidate.reload.current_rating.notes
     assert_equal 3, @candidate.ratings.count
   end
 
@@ -92,8 +78,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     token = csrf_token
     latest = Ratings::ReviseRating.call(user_id: @user.id, rating_film_id: @candidate.id,
       previous_rating_id: @original.id, value: Ratings::Rating::Values::GARBAGE)
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
-      revise(token:, expression_texts: { bad: "shape" })
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
+      revise(token:, notes: { bad: "shape" })
       assert_response :unprocessable_entity
       assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
       revise(token:)
@@ -108,19 +94,19 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
   test "invalid values and expressions preserve safe input without writing" do
     get edit_rating_path(film_id: @film.id)
     token = csrf_token
-    assert_no_difference [ "Ratings::Rating.count", "Ratings::RatingExpression.count", "DomainEvents::DomainEvent.count" ] do
+    assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       [ nil, "unknown", [], { bad: "value" } ].each do |value|
-        revise(token:, value:, expression_texts: [ "  Keep <script>this</script>  " ])
+        revise(token:, value:, notes: "  Keep <script>this</script>  ")
         assert_response :unprocessable_entity
-        assert_select ".expression-items input[type=hidden][value=?]", "  Keep <script>this</script>  "
+        assert_select "textarea#notes", "  Keep <script>this</script>  "
         assert_select "script", text: /this/, count: 0
         assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
       end
-      revise(token:, expression_texts: [ "a" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
+      revise(token:, notes: "a" * (Ratings::Rating::MAX_NOTES_LENGTH + 1))
       assert_response :unprocessable_entity
       assert_select "input[checked][value=?]", Ratings::Rating::Values::PRETTY_GOOD
-      [ nil, "text", [ { bad: "text" } ], Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") ].each do |expression_texts|
-        revise(token:, expression_texts:)
+      [ [ "text" ], { bad: "text" }, [ { bad: "text" } ] ].each do |notes|
+        revise(token:, notes:)
         assert_response :unprocessable_entity
       end
     end

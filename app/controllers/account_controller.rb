@@ -2,11 +2,11 @@ class AccountController < ApplicationController
   before_action :require_superuser
 
   def show
-    render Views::Account::Show.new(profile: Ratings::ViewExpressionProfile.call(user_id: current_user.id))
+    render Views::Account::Show.new(profile: Ratings::ViewTasteProfile.call(user_id: current_user.id))
   end
 
-  def refresh_expression_profile
-    job = Ratings::RefreshExpressionProfilesJob.new(current_user.id)
+  def refresh_taste_profile
+    job = Ratings::RefreshTasteProfilesJob.new(current_user.id)
     if job.enqueue
       redirect_to account_path, status: :see_other, notice: t("account.refresh_queued")
     elsif job.enqueue_error.present?

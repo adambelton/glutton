@@ -73,14 +73,14 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     get new_rating_path(film_id: @film.id)
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
-      rate(token: csrf_token, expression_texts: [ "  <script>Private</script>  ", "", "Ending" ], user_id: foreign.user_id,
+      rate(token: csrf_token, notes: "  <script>Private</script>  \n\nEnding", user_id: foreign.user_id,
         film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
     end
     assert_response :see_other
     assert_redirected_to new_rating_path
     rating = Ratings::Rating.last
     assert_equal @user.id, rating.rating_film.user_id
-    assert_equal [ "  <script>Private</script>  ", "Ending" ], rating.rating_expressions.pluck(:text)
+    assert_equal "  <script>Private</script>  \n\nEnding", rating.notes
     assert_not rating.rating_film.held?
     assert_not rating.rating_film.dismissed?
     assert_empty foreign.ratings
@@ -92,16 +92,16 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: @film.id)
     text = "  <script>alert('expression')</script>  "
     assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-      rate(token: csrf_token, expression_texts: [ text, "x" * (Ratings::RatingExpression::MAX_TEXT_LENGTH + 1) ])
+      rate(token: csrf_token, notes: (text += "x" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)))
       assert_response :unprocessable_entity
     end
     assert_select "h2", "#{@film.title} (1982)"
     assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
-    assert_select ".expression-items input[type=hidden][value=?]", text
+    assert_select "textarea#notes", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::PRETTY_GOOD
-    assert_select 'fieldset[aria-describedby*="rating-errors"]', count: 2
+    assert_select '[aria-describedby*="rating-errors"]', count: 2
     assert_select "script", text: /alert\(/, count: 0
-    assert_select 'label[for="expression-draft"]'
+    assert_select 'label[for="notes"]'
     assert_select "form[action=?]", rating_path
     assert_targeted_controls
   end
@@ -109,25 +109,14 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   test "malformed choice and expression structures preserve the existing candidate" do
     get new_rating_path(film_id: @film.id)
     token = csrf_token
-    [ { value: nil }, { value: [ "brilliant" ] }, { expression_texts: "text" }, { expression_texts: { text: "text" } },
-      { expression_texts: [ { text: "text" } ] }, { expression_texts: Array.new(Ratings::Rating::MAX_EXPRESSIONS + 1, "text") } ].each do |attributes|
+    [ { value: nil }, { value: [ "brilliant" ] }, { notes: { text: "text" } },
+      { notes: [ { text: "text" } ] } ].each do |attributes|
       assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         rate(token:, **attributes)
         assert_response :unprocessable_entity
         assert_targeted_controls
       end
     end
-  end
-
-  test "an unadded draft preserves targeted controls and entered text" do
-    get new_rating_path(film_id: @film.id)
-    rate(token: csrf_token, expression_texts: [ "The ending" ], expression_draft: "Unadded thought")
-
-    assert_response :unprocessable_entity
-    assert_targeted_controls
-    assert_select "#expression-draft", text: "Unadded thought"
-    assert_select '.expression-items input[value="The ending"]'
-    assert_empty candidate.ratings
   end
 
   test "an invalid automatic submission retains dismiss controls" do

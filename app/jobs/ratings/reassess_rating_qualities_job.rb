@@ -14,7 +14,7 @@ module Ratings
     end
 
     def perform(user_id, profile_revision_id)
-      request = RatingQualityReassessmentRequest.find_by(user_id:, expression_profile_revision_id: profile_revision_id)
+      request = RatingQualityReassessmentRequest.find_by(user_id:, taste_profile_revision_id: profile_revision_id)
       return unless request.present?
 
       if request.user.active?

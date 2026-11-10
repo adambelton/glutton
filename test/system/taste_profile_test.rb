@@ -1,6 +1,9 @@
 require "application_system_test_case"
 
-class ExpressionProfileTest < ApplicationSystemTestCase
+require Rails.root.join("test/support/taste_profile_openai_stub")
+
+class TasteProfileTest < ApplicationSystemTestCase
+  include TasteProfileOpenaiStub
   test "a superuser follows an inline annotation to its claim and source evidence" do
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "profile-browser@example.test", password:,
@@ -8,21 +11,22 @@ class ExpressionProfileTest < ApplicationSystemTestCase
     film = Registry::Film.create!(title: "Quiet Dread")
     rating_film = Ratings::RatingFilm.create!(user:, film:)
     rating = rating_film.submit_rating!(value: "brilliant",
-      expression_texts: [ "The quiet made it unsettling.", "The transformation felt like a loss of control.", "The extra gore distracted me." ])
+      notes: "The quiet made it unsettling.\n\nThe transformation felt like a loss of control.\n\nThe extra gore distracted me.")
     profile = "They enjoy slowly building dread, prefer body horror that feels personal, and dislike gore without a purpose."
     anchors = [ "slowly building dread,", "body horror that feels personal,", "gore without a purpose." ]
     claims = [ "Enjoys quiet dread.", "Prefers personal body horror.", "Dislikes gratuitous gore." ]
-    explanations = [ "The expression connects quiet to dread.", "The loss of control ties the transformation to the character.",
+    explanations = [ "The notes connects quiet to dread.", "The loss of control ties the transformation to the character.",
       "The viewer described the extra gore as a distraction." ]
+    excerpts = [ "The quiet made it unsettling.", "like a loss of control.", "The extra gore distracted me." ]
     synthesizer = lambda do |**|
-      conclusions = rating.rating_expressions.ids.each_with_index.map do |id, index|
+      conclusions = anchors.each_index.map do |index|
         { "anchor" => anchors.fetch(index), "claim" => claims.fetch(index), "explanation" => explanations.fetch(index),
-          "expression_ids" => [ id ] }
+          "citations" => [ { "rating_id" => rating.id, "quote" => excerpts.fetch(index) } ] }
       end
       { "provider" => "stub", "model" => "stub", "usage" => { "input" => 0, "output" => 0 },
         "profile" => profile, "conclusions" => conclusions }
     end
-    Ratings::RefreshExpressionProfile.call(user_id: user.id, synthesizer:, tracer_provider: nil)
+    Ratings::RefreshTasteProfile.call(user_id: user.id, client: taste_profile_openai_stub(synthesizer), tracer_provider: nil)
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
@@ -36,8 +40,12 @@ class ExpressionProfileTest < ApplicationSystemTestCase
     within("#profile-evidence-2:target") do
       assert_text "Prefers personal body horror."
       assert_text "The loss of control ties the transformation to the character."
-      assert_text "The transformation felt like a loss of control."
+      assert_text "like a loss of control."
       assert_no_text "The extra gore distracted me."
+      find("summary", text: I18n.t("account.view_full_notes")).click
+      assert_selector "mark", exact_text: "like a loss of control."
+      assert_text "The transformation felt like a loss of control."
+      assert_text "The extra gore distracted me."
       click_link I18n.t("account.edit_rating", film: film.title)
     end
     assert_current_path edit_rating_path(film_id: film.id)
