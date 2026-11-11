@@ -44,20 +44,9 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
   end
 
   [
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::AddToWatchlist, Library::CollectionManagement::AddToWatchlist, Library::Errors::WatchlistUnavailable ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::FilmUnavailable ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::RecordWatched, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::NotOnWatchlist ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RecordWatched, Library::Errors::FilmUnavailable ],
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::AddToWatchlist, Library::CollectionManagement::RecordWatched, nil ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::RecordWatched, Library::CollectionManagement::AddToWatchlist, Library::Errors::WatchlistUnavailable ],
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::RemoveNotInterested, Library::CollectionManagement::AddToWatchlist, Library::Errors::FilmUnavailable ],
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::AddToWatchlist, Library::CollectionManagement::RemoveNotInterested, Library::Errors::NotMarkedNotInterested ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::MarkNotInterested, Library::CollectionManagement::MarkNotInterested, Library::Errors::DismissalUnavailable ],
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::RemoveNotInterested, Library::CollectionManagement::RemoveNotInterested, Library::Errors::FilmUnavailable ],
-    [ Library::LibraryFilmNotInterested, Library::CollectionManagement::AddToWatchlist, Library::CollectionManagement::MarkNotInterested, nil ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::MarkNotInterested, Library::CollectionManagement::AddToWatchlist, nil ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::RecordWatched, Library::CollectionManagement::MarkNotInterested, Library::Errors::DismissalUnavailable ],
-    [ Library::LibraryFilmToWatch, Library::CollectionManagement::MarkNotInterested, Library::CollectionManagement::RecordWatched, Library::Errors::AlreadyWatched ]
+    [ Library::LibraryFilm, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::FilmUnavailable ],
+    [ Library::LibraryFilm, Library::CollectionManagement::RecordWatched, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::NotOnWatchlist ],
+    [ Library::LibraryFilm, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RecordWatched, Library::Errors::FilmUnavailable ]
   ].each do |source, first, second, failure|
     test "#{first} before #{second} serializes on the existing relationship" do
       @entry = source.create!(user: @guest, film: @film)
@@ -89,7 +78,7 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
   end
 
   test "removal cannot enter between existing-entry lookup and watched transition" do
-    @entry = Library::LibraryFilmToWatch.create!(user: @guest, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @guest, film: @film)
     entry_id = @entry.id
     contender = nil
     observed = false

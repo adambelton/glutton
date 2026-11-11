@@ -14,6 +14,7 @@ module Shared
             if user.present?
               nav(aria: { label: t("ui.navigation") }, class: "ui-nav") do
                 a(href: new_rating_path) { t("ratings.browser.title") }
+                a(href: recommendation_path) { t("recommendations.title") }
                 a(href: library_path) { t("library.browser.title") }
                 if user&.superuser?
                   a(href: registry_root_path) { t("registry.title") }

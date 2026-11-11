@@ -2,17 +2,12 @@ require "test_helper"
 
 class Library::EntryOperationsTest < ActiveSupport::TestCase
   OPERATIONS = [
-    [ Library::CollectionManagement::RecordWatched, Library::LibraryFilmToWatch, :can_watch?, Library::Errors::AlreadyWatched ],
-    [ Library::CollectionManagement::AddToWatchlist, Library::LibraryFilmNotInterested, :can_add_to_watchlist?, Library::Errors::WatchlistUnavailable ],
-    [ Library::CollectionManagement::MarkNotInterested, Library::LibraryFilmToWatch, :can_mark_not_interested?, Library::Errors::DismissalUnavailable ],
-    [ Library::CollectionManagement::RemoveFromWatchlist, Library::LibraryFilmToWatch, :can_remove_from_watchlist?, Library::Errors::NotOnWatchlist ],
-    [ Library::CollectionManagement::RemoveNotInterested, Library::LibraryFilmNotInterested, :can_remove_from_not_interested?, Library::Errors::NotMarkedNotInterested ]
+    [ Library::CollectionManagement::RecordWatched, Library::LibraryFilm, :can_watch?, Library::Errors::AlreadyWatched ],
+    [ Library::CollectionManagement::RemoveFromWatchlist, Library::LibraryFilm, :can_remove_from_watchlist?, Library::Errors::NotOnWatchlist ]
   ].freeze
 
   DESTINATION_PERMISSIONS = {
-    Library::CollectionManagement::RecordWatched => :can_rate?,
-    Library::CollectionManagement::AddToWatchlist => :can_remove_from_watchlist?,
-    Library::CollectionManagement::MarkNotInterested => :can_remove_from_not_interested?
+    Library::CollectionManagement::RecordWatched => :can_rate?
   }.freeze
 
   setup do
@@ -54,7 +49,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       end
       assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(error) { operation.call(user_id: @user.id, library_film_id: entry.id) }
-        watched = Library::LibraryFilmWatched.create!(user: @user, film: Registry::Film.create!(title: "Watched"))
+        watched = Library::LibraryFilm.create!(watched: true, user: @user, film: Registry::Film.create!(title: "Watched"))
         assert_raises(rejection) { operation.call(user_id: @user.id, library_film_id: watched.id) }
         watched.destroy!
       end
@@ -97,31 +92,20 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
     end
   end
 
-  test "guest can act just before expiry and NotInterested cannot be marked watched by a user" do
-    entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
-    travel_to @user.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
-      assert_equal entry.id, Library::CollectionManagement::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id).id
-      assert_raises(Library::Errors::AlreadyWatched) { Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
-    end
-  end
-
-  [ [ Library::CollectionManagement::RecordWatched, Library::LibraryFilmToWatch, Library::LibraryFilmWatched, :update, :can_watch? ],
-    [ Library::CollectionManagement::AddToWatchlist, Library::LibraryFilmNotInterested, Library::LibraryFilmToWatch, :update, :can_add_to_watchlist? ],
-    [ Library::CollectionManagement::MarkNotInterested, Library::LibraryFilmToWatch, Library::LibraryFilmNotInterested, :update, :can_mark_not_interested? ],
-    [ Library::CollectionManagement::RemoveFromWatchlist, Library::LibraryFilmToWatch, Library::LibraryFilmToWatch, :destroy, :can_remove_from_watchlist? ],
-    [ Library::CollectionManagement::RemoveNotInterested, Library::LibraryFilmNotInterested, Library::LibraryFilmNotInterested, :destroy, :can_remove_from_not_interested? ] ].each do |operation, source, destination, action, permission|
+  [ [ Library::CollectionManagement::RecordWatched, :update, :can_watch? ],
+    [ Library::CollectionManagement::RemoveFromWatchlist, :destroy, :can_remove_from_watchlist? ] ].each do |operation, action, permission|
     test "#{operation} restores its source on persistence failure" do
-      entry = source.create!(user: @user, film: @film)
+      entry = Library::LibraryFilm.create!(user: @user, film: @film)
       callback = -> { raise ActiveRecord::StatementInvalid, "injected persistence failure" }
-      destination.set_callback(action, :after, callback)
+      Library::LibraryFilm.set_callback(action, :after, callback)
       assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(ActiveRecord::StatementInvalid) { operation.call(user_id: @user.id, library_film_id: entry.id) }
       end
       assert Library::LibraryFilm.find(entry.id).public_send(permission)
-      destination.skip_callback(action, :after, callback)
+      Library::LibraryFilm.skip_callback(action, :after, callback)
       assert_equal entry.id, operation.call(user_id: @user.id, library_film_id: entry.id).id
     ensure
-      destination.skip_callback(action, :after, callback, raise: false) if callback
+      Library::LibraryFilm.skip_callback(action, :after, callback, raise: false) if callback
     end
   end
 end

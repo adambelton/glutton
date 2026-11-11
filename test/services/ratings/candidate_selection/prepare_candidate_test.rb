@@ -26,15 +26,15 @@ class Ratings::PrepareCandidateTest < ActiveSupport::TestCase
     row = Ratings::RatingFilm.create!(user: @user, film: @film, created_at: 2.days.ago)
     [
       [ -> { }, false, false ],
-      [ -> { row.hold! }, true, false ],
+      [ -> { row.suppress! }, true, false ],
       [ -> { row.dismiss! }, true, true ],
-      [ -> { row.release_hold! }, false, true ]
-    ].each do |arrange, held, dismissed|
+      [ -> { row.release_suppression! }, false, true ]
+    ].each do |arrange, suppressed, dismissed|
       arrange.call
       assert_no_changes -> { row.reload.updated_at } do
         assert_equal row.id, prepare.id
       end
-      assert_equal [ held, dismissed ], [ row.reload.held, row.dismissed ]
+      assert_equal [ suppressed, dismissed ], [ row.reload.suppressed, row.dismissed? ]
       assert_in_delta 2.days.ago, row.created_at, 1.second
     end
   end

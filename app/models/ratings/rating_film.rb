@@ -6,12 +6,12 @@ module Ratings
     has_one :current_rating, -> { order(id: :desc) }, class_name: "Rating"
 
     validates :film_id, uniqueness: { scope: :user_id }
-    validates :dismissed, :held, inclusion: { in: [ true, false ] }
+    validates :dismissed, :suppressed, inclusion: { in: [ true, false ] }
 
     scope :dismissed, -> { where(dismissed: true) }
     scope :rated, -> { where(id: Rating.select(:rating_film_id)) }
     scope :unrated, -> { where.not(id: Rating.select(:rating_film_id)) }
-    scope :pending, -> { unrated.where(dismissed: false, held: false) }
+    scope :pending, -> { unrated.where(dismissed: false, suppressed: false) }
 
     def can_submit_rating?
       !ratings.exists?
@@ -35,25 +35,25 @@ module Ratings
       end
     end
 
-    def can_hold?
-      !held?
+    def can_suppress?
+      !suppressed?
     end
 
-    def hold!
-      raise Ratings::Errors::HoldUnavailable unless can_hold?
+    def suppress!
+      raise Ratings::Errors::SuppressionUnavailable unless can_suppress?
 
-      update!(held: true)
+      update!(suppressed: true)
       self
     end
 
-    def can_release_hold?
-      held?
+    def can_release_suppression?
+      suppressed?
     end
 
-    def release_hold!
-      raise Ratings::Errors::HoldReleaseUnavailable unless can_release_hold?
+    def release_suppression!
+      raise Ratings::Errors::SuppressionReleaseUnavailable unless can_release_suppression?
 
-      update!(held: false)
+      update!(suppressed: false)
       self
     end
 

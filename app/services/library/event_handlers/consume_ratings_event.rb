@@ -2,32 +2,25 @@ module Library
   module EventHandlers
     class ConsumeRatingsEvent
       SUBSCRIBER = "library.completed_ratings".freeze
+
       HANDLERS = {
         ::Ratings::Events::RATING_SUBMITTED => Ratings::RatingSubmitted
       }.freeze
       EVENT_NAMES = HANDLERS.keys.freeze
 
       def self.call(event:, user:)
-        validate_event!(event:, user:)
-        film = Registry::Film.find_by(id: event.payload.fetch("film_id"))
-        raise Errors::FilmUnavailable, "Rated film is unavailable" unless film
-
-        library_film = LibraryFilm.lock.find_by(user_id: user.id, film_id: film.id)
-        HANDLERS.fetch(event.name).call(event:, user:, film:, library_film:)
-      end
-
-      def self.validate_event!(event:, user:)
         stream = event.domain_event_stream
         payload = event.payload
-        # Validate only the external event fields Library needs, not rating values.
-        valid = event.schema_version == 1 && EVENT_NAMES.include?(event.name) &&
+        handler = HANDLERS[event.name]
+        valid = event.schema_version == 1 && handler.present? &&
           stream.publisher == ::Ratings::Events::PUBLISHING_DOMAIN && payload.is_a?(Hash) &&
           %w[user_id film_id].all? { |key| payload[key].is_a?(Integer) && payload[key].positive? } &&
           payload["user_id"] == user.id && stream.user_id == user.id &&
           stream.stream_key == "film:#{payload['film_id']}"
-        raise ArgumentError, "Invalid or unsupported Ratings event contract" unless valid
+        raise ArgumentError, "Invalid or unsupported event for Library" unless valid
+
+        handler.call(event:, user:)
       end
-      private_class_method :validate_event!
     end
   end
 end

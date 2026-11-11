@@ -25,7 +25,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   test "empty queue admits catalogue and watched films without touching shared or personal evidence" do
     film = catalogue_film("CatalogueQueries", votes: 100)
     watched = catalogue_film("Watched", votes: 50)
-    Library::LibraryFilmWatched.create!(user: @user, film: watched)
+    Library::LibraryFilm.create!(watched: true, user: @user, film: watched)
     assert_no_difference [ "Registry::Film.count", "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_difference "Ratings::RatingFilm.count", 2 do
         assert_equal [ film.id, watched.id ], candidates(limit: 2).map(&:film_id)
@@ -72,35 +72,32 @@ class Ratings::QueueTest < ActiveSupport::TestCase
 
   test "Library classifications affect eligibility only after Ratings consumes their events" do
     watchlisted = catalogue_film("Watchlisted", votes: 1000)
-    rejected = catalogue_film("Not interested", votes: 900)
-    Library::LibraryFilmToWatch.create!(user: @user, film: watchlisted)
-    Library::LibraryFilmNotInterested.create!(user: @user, film: rejected)
+    unclassified = catalogue_film("Unclassified", votes: 900)
+    Library::LibraryFilm.create!(user: @user, film: watchlisted)
     existing = Ratings::RatingFilm.create!(user: @user, film: watchlisted)
 
     assert_equal existing.id, candidates(limit: 1).sole.id
     assert_difference "Ratings::RatingFilm.count", 1 do
-      assert_equal [ watchlisted.id, rejected.id ], candidates(limit: 2).map(&:film_id)
+      assert_equal [ watchlisted.id, unclassified.id ], candidates(limit: 2).map(&:film_id)
     end
   end
 
   test "removing Library exclusions does not silently release holds or restore dismissals" do
-    held_film = catalogue_film("Held", votes: 100)
+    held_film = catalogue_film("Suppressed", votes: 100)
     dismissed_film = catalogue_film("Dismissed", votes: 90)
-    held = Ratings::RatingFilm.create!(user: @user, film: held_film, held: true)
+    suppressed = Ratings::RatingFilm.create!(user: @user, film: held_film, suppressed: true)
     dismissed = Ratings::RatingFilm.create!(user: @user, film: dismissed_film, dismissed: true)
-    watchlist = Library::LibraryFilmToWatch.create!(user: @user, film: held_film)
-    rejected = Library::LibraryFilmNotInterested.create!(user: @user, film: dismissed_film)
+    watchlist = Library::LibraryFilm.create!(user: @user, film: held_film)
     Library::CollectionManagement::RemoveFromWatchlist.call(user_id: @user.id, library_film_id: watchlist.id)
-    Library::CollectionManagement::RemoveNotInterested.call(user_id: @user.id, library_film_id: rejected.id)
     assert_no_difference "Ratings::RatingFilm.count" do
       assert_empty candidates
     end
-    assert held.reload.held?
+    assert suppressed.reload.suppressed?
     assert dismissed.reload.dismissed?
   end
 
-  test "exhaustion preserves rated dismissed held rows and later catalogue films become available" do
-    rows = [ candidate(dismissed: true), candidate(held: true), candidate ]
+  test "exhaustion preserves rated dismissed suppressed rows and later catalogue films become available" do
+    rows = [ candidate(dismissed: true), candidate(suppressed: true), candidate ]
     rows.last.submit_rating!(value: Ratings::Rating::Values::PRETTY_GOOD)
     assert_no_difference "Ratings::RatingFilm.count" do
       assert_empty candidates
@@ -109,7 +106,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     film = catalogue_film("Newly available", votes: 100)
     assert_equal [ film.id ], candidates.map(&:film_id)
     assert rows.first.reload.dismissed?
-    assert rows.second.reload.held?
+    assert rows.second.reload.suppressed?
     assert_equal Ratings::Rating::Values::PRETTY_GOOD, rows.last.reload.current_rating.value
   end
 

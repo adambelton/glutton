@@ -4,9 +4,9 @@ module Ratings
       class FilmAddedToWatchlist
         def self.call(rating_film:, user:, film:)
           rating_film ||= RatingFilm.create!(user:, film:)
-          return :ignored unless rating_film.can_hold?
+          return :ignored unless rating_film.can_suppress?
 
-          rating_film.hold!
+          rating_film.suppress!
           :processed
         end
       end

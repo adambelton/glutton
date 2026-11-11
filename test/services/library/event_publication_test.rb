@@ -5,7 +5,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     freeze_time
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Published film")
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @user, film: @film)
   end
 
   def act(operation)
@@ -20,18 +20,11 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
 
   test "transition and removal facts retain minimal v1 payload and continuous stream sequence" do
     original = @entry
-    act(Library::CollectionManagement::MarkNotInterested)
-    act(Library::CollectionManagement::AddToWatchlist)
-    act(Library::CollectionManagement::MarkNotInterested)
-    assert act(Library::CollectionManagement::RemoveNotInterested).destroyed?
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
-    assert_not_equal original.id, @entry.id
     assert act(Library::CollectionManagement::RemoveFromWatchlist).destroyed?
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @user, film: @film)
     act(Library::CollectionManagement::RecordWatched)
-    assert_equal [ Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_ADDED_TO_WATCHLIST,
-      Library::Events::FILM_MARKED_NOT_INTERESTED, Library::Events::FILM_DISMISSAL_REMOVED,
-      Library::Events::FILM_REMOVED_FROM_WATCHLIST, Library::Events::FILM_MARKED_WATCHED ], events.pluck(:name)
+    assert_not_equal original.id, @entry.id
+    assert_equal [ Library::Events::FILM_REMOVED_FROM_WATCHLIST, Library::Events::FILM_MARKED_WATCHED ], events.pluck(:name)
     events.each_with_index do |event, index|
       assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
       assert_equal index + 1, event.sequence
@@ -43,23 +36,10 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     assert_equal 1, events.pluck(:domain_event_stream_id).uniq.size
   end
 
-  test "outer rollback restores the entry and existing stream sequence" do
-    act(Library::CollectionManagement::MarkNotInterested)
-    Library::LibraryFilm.transaction(requires_new: true) do
-      act(Library::CollectionManagement::AddToWatchlist)
-      raise ActiveRecord::Rollback
-    end
-    assert Library::LibraryFilm.find(@entry.id).can_add_to_watchlist?
-    assert_equal [ 1 ], events.pluck(:sequence)
-    assert_equal 1, events.first.domain_event_stream.sequence
-    act(Library::CollectionManagement::AddToWatchlist)
-    assert_equal [ 1, 2 ], events.pluck(:sequence)
-  end
-
   test "independent owners and films keep independent event streams" do
     entries = [ @entry,
-      Library::LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film),
-      Library::LibraryFilmToWatch.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
+      Library::LibraryFilm.create!(user: Identity::UserGuest.create!, film: @film),
+      Library::LibraryFilm.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
     entries.each { |entry| Library::CollectionManagement::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
     assert_equal [ 1, 1, 1 ], DomainEvents::DomainEvent.pluck(:sequence)
     assert_equal 3, DomainEvents::DomainEvent.distinct.count(:domain_event_stream_id)

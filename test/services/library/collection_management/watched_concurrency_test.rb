@@ -9,7 +9,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
     @threads, @user_ids, @film_ids = [], [], []
     @guest = Identity::UserGuest.create!.tap { |user| @user_ids << user.id }
     @film = Registry::Film.create!(title: "Concurrent Library film").tap { |film| @film_ids << film.id }
-    @entry = Library::LibraryFilmToWatch.create!(user: @guest, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @guest, film: @film)
   end
 
   teardown do

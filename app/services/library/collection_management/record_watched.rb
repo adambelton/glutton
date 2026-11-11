@@ -8,12 +8,7 @@ module Library
 
           library_film = LibraryFilm.lock.find_by(user_id: user.id, id: library_film_id)
           raise Library::Errors::FilmUnavailable unless library_film.present?
-          raise Errors::AlreadyWatched unless library_film.can_watch?
-
-          library_film = library_film.becomes!(LibraryFilmWatched)
-          library_film.save!
-          library_film.publish_event!(name: Events::FILM_MARKED_WATCHED)
-          library_film
+          library_film.mark_watched!
         end
       end
     end

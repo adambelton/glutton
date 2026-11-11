@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_11_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -222,7 +222,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
   end
 
   create_table "library_films", force: :cascade do |t|
-    t.string "type", null: false
+    t.boolean "watched", default: false, null: false
     t.bigint "user_id", null: false
     t.bigint "film_id", null: false
     t.datetime "created_at", null: false
@@ -276,7 +276,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
     t.bigint "user_id", null: false
     t.bigint "film_id", null: false
     t.boolean "dismissed", default: false, null: false
-    t.boolean "held", default: false, null: false
+    t.boolean "suppressed", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["film_id"], name: "index_rating_films_on_film_id"
@@ -326,6 +326,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
     t.index ["rating_film_id", "id"], name: "index_ratings_on_rating_film_id_and_id"
     t.check_constraint "char_length(notes) >= 1 AND char_length(notes) <= 8000", name: "ratings_notes_length"
     t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'pretty_good'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"
+  end
+
+  create_table "recommendation_films", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "film_id", null: false
+    t.boolean "suppressed", default: false, null: false
+    t.string "response"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_recommendation_films_on_film_id"
+    t.index ["user_id", "film_id"], name: "index_recommendation_films_on_user_id_and_film_id", unique: true
+    t.check_constraint "response::text = ANY (ARRAY['accepted'::character varying, 'rejected'::character varying]::text[])", name: "recommendation_films_response"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -408,6 +420,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_120000) do
   add_foreign_key "rating_quality_reassessment_requests", "taste_profile_revisions", on_delete: :cascade
   add_foreign_key "rating_quality_reassessment_requests", "users", on_delete: :cascade
   add_foreign_key "ratings", "rating_films", on_delete: :cascade
+  add_foreign_key "recommendation_films", "films"
+  add_foreign_key "recommendation_films", "users", on_delete: :cascade
   add_foreign_key "sessions", "users"
   add_foreign_key "taste_profile_refresh_requests", "users", on_delete: :cascade
   add_foreign_key "taste_profile_revision_evals", "taste_profiles", on_delete: :cascade
