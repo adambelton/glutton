@@ -24,9 +24,8 @@ class RatingsController < ApplicationController
   def create
     @targeted = params[:targeted] == "1"
     read_rating_input
-    rating = Ratings::RatingRecording::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
+    Ratings::RatingRecording::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       value: @value, notes: @notes)
-    flash[:edited_film] = { id: rating.rating_film.film_id, title: rating.rating_film.film.title }
     redirect_to new_rating_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
@@ -73,7 +72,7 @@ class RatingsController < ApplicationController
 
   def render_new(status: :ok)
     render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: @targeted,
-      value: @value, notes: @notes, errors: @errors, edited_film: flash[:edited_film]), status:
+      value: @value, notes: @notes, errors: @errors), status:
   end
 
   def render_edit(status: :ok)

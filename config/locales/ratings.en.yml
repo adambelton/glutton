@@ -5,7 +5,6 @@ en:
       film_year: "(%{year})"
       title: Rate films
       edit_title: Edit your rating
-      edit_saved: "Edit your rating for %{title}"
       updated: Your updated rating has been saved.
       reload: Reload current rating
       choice: What did you think?

@@ -152,7 +152,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "registered owners can edit and first submission offers a film specific edit link" do
+  test "registered owners can edit without a post-submission edit link" do
     user = Identity::UserRegistered.create!(email_address: "revision@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     @candidate = Ratings::RatingFilm.create!(user:, film: @film)
@@ -167,7 +167,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     post rating_path, params: { rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
     assert_redirected_to new_rating_path
     follow_redirect!
-    assert_select "a[href=?]", edit_rating_path(film_id: film.id), text: I18n.t("ratings.browser.edit_saved", title: film.title)
+    assert_select "a[href=?]", edit_rating_path(film_id: film.id), count: 0
     assert_select "b", count: 0
   end
 

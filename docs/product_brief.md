@@ -215,6 +215,8 @@ Refresh must replace or supersede previous interpretations rather than count the
 
 ### 6.4 Matching baseline
 
+Personalized recommendations unlock after five distinct films have current ratings with applied quality scores. Ratings without notes count. Before that threshold, explain the requirement and link to Ratings; do not show a popularity fallback. A proposed later onboarding flow asks viewers to choose five loved films and helps them write informative notes; mandatory notes and treatment of existing ratings in that flow remain undecided.
+
 Using the current inferred preference profile and the film–quality associations, begin with a straightforward recommender that:
 
 - Handles positive **and** negative preference evidence, including repeated quality patterns and direct expressions.
@@ -224,6 +226,10 @@ Using the current inferred preference profile and the film–quality association
 - Excludes every film classified as To watch, Watched or Not interested; confirmed-unseen status alone does not exclude it from recommendations, although it does exclude it from rating prompts.
 - Produces traceable, spoiler-safe reasons for recommending a film.
 - Captures watchlist, watched and not-interested decisions without treating intent or dismissal as enjoyment evidence.
+
+A viewer may enjoy different films for different experiences. Do not assume that lower-ranked matching qualities matter less merely because stronger matches coexist. Investigate whether relevant films with fewer assigned qualities are actually overlooked before imposing a fixed count or a correction for quality count.
+
+Quality management should monitor, from launch, how widely each quality is assigned and whether it usefully distinguishes films for viewers. High prevalence is a review signal, not proof of a vague definition: the catalogue's composition matters. A distinctiveness threshold is deferred while the catalogue is limited. Track context sufficiency alongside assignment coverage; sparse quality assignments may reflect thin source context rather than the film itself. Community maintenance of sufficient film context is a longer-term direction, not an initial community-editing requirement.
 
 Do not prescribe weights, thresholds, refresh schedules or scoring mathematics in this brief. Film-level similarity is a useful baseline, not synonymous with predicted enjoyment. More specialised conditional-quality matching remains a testable later refinement, not an MVP prerequisite.
 
