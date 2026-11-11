@@ -32,6 +32,6 @@ Unsupported versions, malformed contract data and missing Film records fail deli
 
 ## Ratings Library-event consumer
 
-The Ratings consumer registers `ratings.library_events` for FilmMarkedWatched, FilmMarkedNotInterested, FilmAddedToWatchlist and FilmRemovedFromWatchlist v1. Watchlist addition holds a RatingFilm; watchlist removal releases an existing hold without creating a missing row. Watched admits a missing row or releases its hold. Not-interested dismisses and releases any hold. Dismissal is never cleared; FilmDismissalRemoved is not subscribed to. All changes and the delivery receipt share one transaction; the handler emits no events.
+The Ratings consumer registers `ratings.library_events` for FilmMarkedWatched, FilmAddedToWatchlist and FilmRemovedFromWatchlist v1. Watchlist addition suppresses a RatingFilm. Watchlist removal releases suppression without creating a missing row. Watched admits a missing row or releases suppression. All changes and the delivery receipt share one transaction. The handler emits no events.
 
 The same status/dispatch/retry commands above catch up retained matching events. Hold/release order matters: a failing predecessor blocks subsequent matching events in its stream. Replaying a completed receipt does not reapply an older hold. Do not bypass Deliver to replay handlers. Invalid consumed identifiers/versions and missing Film records retry/fail explicitly. Existing cleanup cascades candidates and receipts; claim preserves identities. These consumers use the existing worker configuration.

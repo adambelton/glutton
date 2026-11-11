@@ -13,14 +13,13 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     cookies[:session_id] = jar[:session_id]
   end
 
-  def entry(model = Library::LibraryFilmWatched, user: @user, title: "A film", **attributes)
-    model.create!(user:, film: Registry::Film.create!(title:, **attributes))
+  def entry(watched: true, user: @user, title: "A film", **attributes)
+    Library::LibraryFilm.create!(watched:, user:, film: Registry::Film.create!(title:, **attributes))
   end
 
-  test "three views isolate membership and owner and default to watchlist without writes" do
-    watchlist = entry(Library::LibraryFilmToWatch, title: "Watchlist film")
+  test "two views isolate membership and owner and default to watchlist without writes" do
+    watchlist = entry(watched: false, title: "Watchlist film")
     watched = entry(title: "Watched film")
-    uninterested = entry(Library::LibraryFilmNotInterested, title: "Not interested film")
     entry(user: Identity::UserGuest.create!, title: "Private film")
     assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
       get library_path(user_id: Identity::UserGuest.last.id)
@@ -28,20 +27,20 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "h3", text: watchlist.film.title, count: 1
       assert_select "h3", count: 1
       assert_select 'option[selected][value="watchlist"]'
-      { Library::CollectionManagement::Browse::Views::WATCHED => watched, Library::CollectionManagement::Browse::Views::NOT_INTERESTED => uninterested }.each do |view, row|
+      { Library::CollectionManagement::Browse::Views::WATCHED => watched }.each do |view, row|
         get library_path(view:)
         assert_select "h3", text: row.film.title, count: 1
         assert_select "h3", count: 1
         assert_select "option[selected][value=?]", view
       end
-      assert_select 'main a[href*="rating/new"]', count: 0
+      assert_select 'main a[href*="rating/new"]', count: 1
     end
   end
 
   test "only same-owner actual ratings count and committed ratings are visible without delivery" do
     rows = 5.times.map { |i| entry(title: "Film #{i}") }
-    rows.drop(1).zip([ [ false, false ], [ true, false ], [ false, true ], [ true, true ] ]).each do |row, (held, dismissed)|
-      Ratings::RatingFilm.create!(user: @user, film: row.film, held:, dismissed:)
+    rows.drop(1).zip([ [ false, false ], [ true, false ], [ false, true ], [ true, true ] ]).each do |row, (suppressed, dismissed)|
+      Ratings::RatingFilm.create!(user: @user, film: row.film, suppressed:, dismissed:)
     end
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
@@ -84,10 +83,10 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select ".library-rating", count: 11
   end
 
-  test "links admit missing candidates reuse held dismissed candidates and reject stale rated links" do
+  test "links admit missing candidates reuse suppressed dismissed candidates and reject stale rated links" do
     [ nil, [ true, false ], [ false, true ], [ true, true ] ].each do |flags|
       row = entry
-      candidate = Ratings::RatingFilm.create!(user: @user, film: row.film, held: flags.first, dismissed: flags.last) if flags
+      candidate = Ratings::RatingFilm.create!(user: @user, film: row.film, suppressed: flags.first, dismissed: flags.last) if flags
       get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
       link = Nokogiri::HTML(response.body).at_css("a[href='#{new_rating_path(film_id: row.film_id)}']")["href"]
       assert_difference "Ratings::RatingFilm.count", flags ? 0 : 1 do
@@ -186,7 +185,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       bind_user
       watched = entry(title: '<script>film</script> "title"')
       unrated = entry
-      candidate = Ratings::RatingFilm.create!(user:, film: watched.film, held: true, dismissed: true)
+      candidate = Ratings::RatingFilm.create!(user:, film: watched.film, suppressed: true, dismissed: true)
       original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "Original")
       current = Ratings::RatingRecording::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
         previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Current")
@@ -224,15 +223,12 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "unwatched library pages do not offer editing even when ratings exist" do
-    { Library::CollectionManagement::Browse::Views::WATCHLIST => Library::LibraryFilmToWatch,
-      Library::CollectionManagement::Browse::Views::NOT_INTERESTED => Library::LibraryFilmNotInterested }.each do |view, model|
-      row = entry(model)
-      Ratings::RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-      [ library_path(view:), library_film_path(row) ].each do |path|
-        get path
-        assert_response :success
-        assert_select 'a[href*="rating/edit"]', count: 0
-      end
+    row = entry(watched: false)
+    Ratings::RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+    [ library_path, library_film_path(row) ].each do |path|
+      get path
+      assert_response :success
+      assert_select 'a[href*="rating/edit"]', count: 0
     end
   end
 end

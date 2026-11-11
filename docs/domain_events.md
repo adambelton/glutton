@@ -1,6 +1,6 @@
 # Asynchronous domain communication
 
-Library and Ratings publish/consume the contracts below through durable Foundation delivery. Recommendations activity, preference events and accepted-quality reassessment remain future work, requiring concrete contracts before implementation.
+Library, Ratings and Recommendations use durable Foundation delivery for the contracts below. Preference events and accepted-quality reassessment remain future work.
 
 ## Decision and boundaries
 
@@ -10,7 +10,7 @@ Library, Ratings and Recommendations own their data and publish domain facts thr
 
 Publish the source change and its outbox event in one database transaction. Each consumer later commits only its own domain updates and delivery receipt. The outbox is delivery infrastructure, not the authoritative domain history or an event-sourced replacement for models. Domain rules belong in their existing models/operations. Internal calls within a domain remain ordinary synchronous Ruby calls. This decision concerns asynchronous state-changing reactions, not a ban on synchronous shared-data reads, Identity resolution or external request/response APIs.
 
-NotInterested means the person has not seen the film and does not want to watch it. Ratings excludes it from rating prompts; Recommendations excludes it from discovery. It is not a refusal to rate a watched film. Watched entries cannot become ToWatch or NotInterested. Completed ratings are evidence of viewing; a seen answer alone does not create Library state.
+Library entries represent Watchlist or Watched. A Watched entry cannot move back to Watchlist. Completed ratings supply viewing evidence. Add to Watchlist and Mark Watched are direct Library actions.
 
 ## Implemented publication and reactions
 
@@ -18,32 +18,33 @@ Events name domain facts, with minimum internal user/film identity in the payloa
 
 | Publisher / fact | Current reaction |
 | --- | --- |
-| Library: FilmMarkedWatched | Ratings admits a missing candidate or releases its hold, preserving current ratings and explicit dismissal. |
-| Library: FilmAddedToWatchlist | Ratings admits/holds its candidate; watchlist intent does not establish a rating or enjoyment. |
-| Library: FilmRemovedFromWatchlist | Ratings releases an existing hold without creating a missing candidate or clearing dismissal. |
-| Library: FilmMarkedNotInterested | Ratings admits/dismisses its candidate and releases any hold, preserving ratings and expressions. |
-| Library: FilmDismissalRemoved | Published for the Library action; Ratings has no subscription and does not automatically restore rotation. |
-| Ratings: RatingSubmitted | Library creates/reconciles watched state, including NotInterested. Already watched is ignored; an actual transition publishes a causal FilmMarkedWatched in the same receipt transaction. |
+| Library: FilmMarkedWatched | Ratings admits a missing candidate or releases its suppression, preserving current ratings and explicit dismissal. |
+| Library: FilmAddedToWatchlist | Ratings admits or suppresses its candidate. |
+| Library: FilmRemovedFromWatchlist | Ratings releases existing suppression without creating a missing candidate or clearing dismissal. |
+| Ratings: RatingSubmitted | Library creates/reconciles watched state, from a missing or Watchlist entry. Already watched is ignored. An actual transition publishes a causal FilmMarkedWatched in the same receipt transaction. |
 
-Rating replacement preserves history and emits no revision event. A later consumer need must establish its actual meaning/payload before adding one. Recommendations consumers and cross-domain action requests are not implemented by these subscriptions.
+Rating replacement preserves history and emits no revision event. A later consumer need must establish its actual meaning/payload before adding one. The Library subscriptions also handle the viewer action facts described below.
 
-The Ratings queue is oldest-first by created_at/ID, unrated, not dismissed and not held. Library watched facts do not jump the queue or clear dismissal. Explicit rating entry may bypass a hold/dismissal. There is no separate presentation/current-selection or seen/unseen-answer history.
+The Ratings queue is oldest-first by created_at/ID, unrated, not dismissed and not suppressed. Library watched facts do not jump the queue or clear dismissal. Explicit rating entry may bypass suppression or dismissal. There is no separate presentation/current-selection or seen/unseen-answer history.
 
-A Library transition publishes its resulting action once. ToWatch-to-NotInterested publishes FilmMarkedNotInterested, not a fabricated removal plus addition. Stream identity is per user/film and survives Library row removal/recreation. See the [Library publication contract](library_event_publication.md), [Ratings publication contract](ratings_event_publication.md) and [operations](domain_event_operations.md) for exact payloads, stream identity and recovery.
+A Library transition publishes its resulting action once. Stream identity is per user/film and survives Library row removal/recreation. See the [Library publication contract](library_event_publication.md), [Ratings publication contract](ratings_event_publication.md) and [operations](domain_event_operations.md) for exact payloads, stream identity and recovery.
 
-## Future action requests and conflict rules
+## Rating and recommendation events
 
-The following rules constrain future explicit recommendation/rating-flow Library choices; they are not an implemented request workflow or a requirement to add unused event plumbing.
+Each publisher records a fact about its own domain. Its state and UI are independent of any subscriber. The receiving domain treats each event as a possible transition from its current state. It applies the transition only from an allowed starting state. A valid event with no applicable transition is ignored, including when the film is unavailable. It cannot raise a domain error for a state mismatch. Investigate inconsistent data separately. Unsupported schemas and technical processing failures follow Foundation delivery handling.
 
-A recorded recommendation choice is a fact about that interaction and carries a request for Library to act. It cannot truthfully claim that the requested Library action succeeded. The UI may acknowledge the recorded choice immediately; pending/applied/rejected status remains available without blocking for a subscriber.
+| Publisher | Event | Fact | Library reaction |
+| --- | --- | --- | --- |
+| `ratings` | `RatingSubmitted` | The viewer submitted a rating. | Create a Watched entry or mark an existing Watchlist entry Watched. |
+| `recommendations` | `RecommendationAccepted` | The viewer accepted the recommendation. | Add a Watchlist entry if there is no Library entry. |
 
-Library revalidates the request against fresh state and reports the outcome. Include the observed Library version when the originating screen has one; reject a known stale version. A missing observed version does not prove freshness: evaluate the fresh permitted action, reject conflicting watched-state changes, and define deterministic processing order for multiple pending requests. Do not use wall-clock timestamps as a global ordering guarantee. Concurrent independent source requests have no inherent total order; Library is the authority that serializes accepted classification changes.
+The `RecommendationAccepted` v1 payload contains exactly the positive internal integers `user_id`, `film_id`, and `recommendation_film_id`. `RatingSubmitted` retains its existing contract. The response or rating and its event commit together. Each publisher's per-viewer, per-film stream uses `film:<internal film ID>`. The envelope supplies the event ID, source sequence, version, correlation and causation. Dismissal and rejection stay local. Add to Watchlist and Mark Watched call Library directly and do not record a rating dismissal or recommendation response.
 
-Duplicates of the same delivery return the recorded outcome. A different user request for a transition that did not occur remains an explicit rejection, including an already-satisfied user action. A completed-rating subscriber is a system workflow: it may explicitly accept existing watched state without generating another watched event. The public RecordWatched duplicate failure remains unchanged.
+Library reads its current state under the existing user lock. An acceptance delivered after a separate Watchlist addition and removal adds the film again if there is no entry. The owner confirmed this behavior for the initial release. It ignores duplicate or inapplicable facts, including a Watchlist addition for a Watched film. It publishes `FilmAddedToWatchlist` or `FilmMarkedWatched` only when a change occurs and propagates the source correlation and causation. Foundation records delivery receipts, retries technical failures and skips inactive owners. A receipt describes delivery of an event to a subscriber.
 
-Rating completion establishes viewing even if Library currently says NotInterested. The Library completed-rating handler owns this system reconciliation; it does not reuse the public duplicate-action contract. A stale dismissal event must not erase a newer rating/seen fact. Ratings retains provenance/version of independent evidence and never retracts a saved rating from a Library projection update. Library's later watched event converges the classification. Resolve genuine contradictions explicitly rather than destroying history.
+Recommendations sets `suppressed` on `RatingSubmitted`, `FilmMarkedWatched`, and `FilmAddedToWatchlist`. `FilmRemovedFromWatchlist` clears suppression. Either publisher can establish the record. Suppression never records or erases a recommendation response. Repeated facts without an applicable change are ignored, including removal with no suppression to release.
 
-Library watched events update Ratings eligibility, not rating submissions. Ratings emits RatingSubmitted only for an actual committed submission; receiving a Library event cannot synthesize one. Preference-refresh events do not create Library actions. Outcome acknowledgements do not generate fresh requests. Propagate correlation and causation IDs through real derived changes so these paths can be inspected without endless republishing.
+Use one ordered subscription per publisher and receiving domain. Ratings and Library streams have no guaranteed relative delivery order. Watchlist events are ordered within the Library stream. Cross-publisher ordering is deferred. A removal delivered after a rating can clear suppression until the derived Watched event arrives. The coordinated development rebuild starts with empty activity, streams and receipts. The subscriptions catch up from retained supported events using Foundation delivery. Unsupported versions fail explicitly.
 
 ## Delivery contract and failure handling
 
@@ -58,12 +59,12 @@ Library watched events update Ratings eligibility, not rating submissions. Ratin
 - Persist events even when a planned subscriber does not yet exist. Each new subscriber needs a defined bootstrap: retained events from a recorded cursor, or an owner-provided snapshot plus subsequent versions with no gap. Future subscribers must define how they consume retained events.
 - Event retention/compaction must account for registered and future consumers, replay needs and privacy. Do not purge unacknowledged events simply because the initial subscriber finished. Avoid promising indefinite history retention; agree concrete policy before runtime implementation.
 - Handlers lock/recheck the user before activity writes. Expired/deleted/missing owners must not be recreated by delayed events. Record a terminal skipped outcome where safe, and clean up user-owned payloads/receipts under the approved retention policy. Guest claim preserves the user ID. Infrastructure retention ownership must be decided without introducing Identity callbacks mechanically.
-- No direct publisher-to-consumer synchronous fallback during outages. Show locally committed results and allow other views to converge. Failed asynchronous requests expose a rejected outcome rather than falsely reporting a completed Library action.
+- No direct publisher-to-consumer synchronous fallback during outages. Show locally committed results and allow other views to converge. Receiving domains own their delivery handling.
 
 ## Handler organisation
 
-Production reactions use `ReceivingDomain::EventHandlers::PublishingDomain::EventName`. Keep a single ordered subscription for related reactions whose order matters. Library uses `Library::EventHandlers::ConsumeRatingsEvent` and Ratings uses `Ratings::EventHandlers::ConsumeLibraryEvent` for shared validation/loading and explicit dispatch. Handlers mutate only the receiving domain through its model actions/permissions. Use explicit top-level publisher constants where nested namespaces would shadow them.
+Production reactions use `ReceivingDomain::EventHandlers::PublishingDomain::EventName`. Keep a single ordered subscription for related reactions whose order matters. Each receiving domain uses a consumer per publishing domain, such as `Library::EventHandlers::ConsumeRatingsEvent`, for validation and dispatch. Collection lookups live with Library collection management. Handlers mutate only the receiving domain through its model actions/permissions. Use explicit top-level publisher constants where nested namespaces would shadow them.
 
 ## Future contracts
 
-Define event meaning/payload, ordering, bootstrap/delivery, duplicate/failure handling and retention before adding preference updates, recommendation responses, action outcomes or accepted film-quality reassessment. Source refresh alone changes no accepted associations or user scores. Publish only when a concrete receiving-domain reaction exists; no generic workflow engine or synchronous fallback is implied.
+Define event meaning/payload, ordering, bootstrap/delivery, duplicate/failure handling and retention before adding preference updates, accepted film-quality reassessment. Source refresh alone changes no accepted associations or user scores. Publish only when a concrete receiving-domain reaction exists; no generic workflow engine or synchronous fallback is implied.

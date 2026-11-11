@@ -61,7 +61,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "queue excludes ineligible and foreign rows and advances through save dismiss and empty" do
-    candidate("Held", held: true, created_at: 4.days.ago)
+    candidate("Suppressed", suppressed: true, created_at: 4.days.ago)
     candidate("Dismissed", dismissed: true, created_at: 4.days.ago)
     rated = candidate("Rated", created_at: 4.days.ago)
     rated.submit_rating!(value: Ratings::Rating::Values::GARBAGE)
@@ -85,7 +85,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do
-        rate(token: csrf_token, notes: "  Atmosphere!\nÉerie 👻  \n\nThe ending", user_id: next_candidate.user_id, held: true)
+        rate(token: csrf_token, notes: "  Atmosphere!\nÉerie 👻  \n\nThe ending", user_id: next_candidate.user_id, suppressed: true)
       end
     end
     assert_response :see_other
@@ -175,11 +175,11 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   test "duplicates report failure and stale forms may still explicitly rate" do
     get new_rating_path
     token = csrf_token
-    @candidate.hold!
+    @candidate.suppress!
     @candidate.dismiss!
     post rating_path, params: { rating_film_id: @candidate.id, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
     assert_response :see_other
-    assert @candidate.reload.held?
+    assert @candidate.reload.suppressed?
     assert @candidate.dismissed?
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       rate(token:)

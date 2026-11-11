@@ -5,8 +5,8 @@ module Ratings
         def self.call(rating_film:, user:, film:)
           if rating_film.nil?
             RatingFilm.create!(user:, film:)
-          elsif rating_film.can_release_hold?
-            rating_film.release_hold!
+          elsif rating_film.can_release_suppression?
+            rating_film.release_suppression!
           else
             return :ignored
           end

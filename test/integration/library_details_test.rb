@@ -6,7 +6,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     LibraryController.allow_forgery_protection = true
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "A <script>film</script>", release_date: Date.new(2001, 1, 1))
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @user, film: @film)
     bind_user
   end
 
@@ -44,12 +44,6 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
       assert_equal "no-store", response.headers["Cache-Control"]
       assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
       assert_no_match(/translation missing/i, response.body)
-      row = Library::LibraryFilmNotInterested.create!(user: @user, film: Registry::Film.create!(title: "Other film"))
-      get library_film_path(row)
-      assert_select "form[action=?]", add_to_watchlist_library_film_path(row)
-      assert_select "form[action=?]", remove_from_not_interested_library_film_path(row)
-      assert_select "p", text: /Released/, count: 0
-      row.destroy!
     end
   end
 
@@ -58,7 +52,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     other = Identity::UserGuest.create!
     assert_difference "DomainEvents::DomainEvent.count", 1 do
       assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count" ] do
-        watch(user_id: other.id, film_id: Registry::Film.create!(title: "Ignore").id, type: "LibraryFilmNotInterested")
+        watch(user_id: other.id, film_id: Registry::Film.create!(title: "Ignore").id, watched: false)
       end
     end
     assert_redirected_to library_film_path(@entry)
@@ -85,7 +79,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-    row = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    row = Ratings::RatingFilm.create!(user: @user, film: @film, suppressed: true, dismissed: true)
     get library_film_path(@entry)
     assert_select "p", "Awaiting rating"
     assert_select "a[href=?]", new_rating_path(film_id: @film.id)
@@ -97,7 +91,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "registered owner removes entry and stale actions cannot recreate or target its replacement" do
     @user = Identity::UserRegistered.create!(email_address: "details@example.test", password: "long test password", password_confirmation: "long test password", email_confirmed_at: Time.current)
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @user, film: @film)
     bind_user
     csrf = token
     assert_difference "Library::LibraryFilm.count", -1 do
@@ -109,7 +103,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     assert_redirected_to library_path
     follow_redirect!
     assert_select '[role="status"]', I18n.t("library.detail.removed")
-    replacement = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    replacement = Library::LibraryFilm.create!(user: @user, film: @film)
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       get library_film_path(@entry)
       assert_response :not_found
@@ -123,7 +117,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "invalid foreign and removed IDs are unavailable and unsupported actions conflict" do
     csrf = token
-    foreign = Library::LibraryFilmToWatch.create!(user: Identity::UserGuest.create!, film: @film)
+    foreign = Library::LibraryFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ "0", "-1", "invalid", "999999999", foreign.id ].each do |id|
       get library_film_path(id)
       assert_response :not_found

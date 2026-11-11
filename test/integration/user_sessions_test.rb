@@ -22,6 +22,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     Rails.application.routes.draw do
       root "landing#show"
       resource :library, only: :show, controller: :library
+      resource :recommendation, only: :show, controller: :recommendations
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :registration, only: [ :new, :create, :show ]
       resource :registration_email, only: :create

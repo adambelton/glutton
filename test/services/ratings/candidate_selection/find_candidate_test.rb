@@ -4,7 +4,7 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
   setup do
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Candidate lookup")
-    @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, suppressed: true, dismissed: true)
   end
 
   def find(**attributes)
@@ -16,7 +16,7 @@ class Ratings::FindCandidateTest < ActiveSupport::TestCase
       assert_no_changes -> { @candidate.reload.updated_at } do
         row = find
         assert_equal @candidate.id, row.id
-        assert row.held?
+        assert row.suppressed?
         assert row.dismissed?
       end
     end

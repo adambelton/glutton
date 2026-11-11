@@ -23,6 +23,7 @@ module Ratings
             render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit",
               disabled: !Ratings::Rating::Values::ALL.include?(@value), data: { rating_selection_target: "save" }) { t("ratings.browser.save") }
             if @dismissible
+              render Shared::ActionButton.new(text: t("library.detail.add_to_watchlist"), url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id })
               render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
             end
           end

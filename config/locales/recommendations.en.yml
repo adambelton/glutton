@@ -1,0 +1,6 @@
+en:
+  recommendations:
+    title: Recommendations
+    rate_watched: Rate the film you just marked watched
+    progress: "Recommendations unlock after %{required} films are assessed. %{assessed} assessed so far."
+    empty: No recommendations are available right now.

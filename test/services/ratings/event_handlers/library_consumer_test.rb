@@ -29,18 +29,18 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
   end
 
   test "each admitted state preserves dismissal and original evidence across all combinations" do
-    [ false, true ].product([ false, true ]).each do |held, dismissed|
-      Ratings::EventHandlers::ConsumeLibraryEvent::EVENT_NAMES.each do |name|
+    [ false, true ].product([ false, true ]).each do |suppressed, dismissed|
+      @subscription.event_names.each do |name|
         @film = Registry::Film.create!(title: "State combination")
-        row = Ratings::RatingFilm.create!(user: @user, film: @film, held:, dismissed:)
+        row = Ratings::RatingFilm.create!(user: @user, film: @film, suppressed:, dismissed:)
         rating = Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
           value: Ratings::Rating::Values::BRILLIANT, notes: "Original")
         created_at = row.created_at
         event = publish(name)
         assert_no_difference([ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ]) { deliver(event) }
         row.reload
-        assert_equal name == Library::Events::FILM_ADDED_TO_WATCHLIST, row.held?
-        assert_equal dismissed || name == Library::Events::FILM_MARKED_NOT_INTERESTED, row.dismissed?
+        assert_equal name == Library::Events::FILM_ADDED_TO_WATCHLIST, row.suppressed?
+        assert_equal dismissed, row.dismissed?
         assert_equal created_at, row.created_at
         assert_equal [ rating.id ], row.ratings.pluck(:id)
         assert_equal "Original", rating.notes
@@ -48,23 +48,19 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     end
   end
 
-  test "absent rows are admitted held or dismissed and removal does not admit" do
+  test "watchlist and watched events admit candidates and removal does not" do
     assert_equal :ignored, deliver(publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)).first
     assert_nil candidate
-    publish(Library::Events::FILM_DISMISSAL_REMOVED)
-    assert_empty dispatch
-    assert_nil candidate
     [ [ Library::Events::FILM_MARKED_WATCHED, false, false ],
-      [ Library::Events::FILM_ADDED_TO_WATCHLIST, true, false ],
-      [ Library::Events::FILM_MARKED_NOT_INTERESTED, false, true ] ].each do |name, held, dismissed|
+      [ Library::Events::FILM_ADDED_TO_WATCHLIST, true, false ] ].each do |name, suppressed, dismissed|
       @film = Registry::Film.create!(title: "Admission")
       assert_equal :processed, deliver(publish(name)).first
-      assert_equal held, candidate.held?
+      assert_equal suppressed, candidate.suppressed?
       assert_equal dismissed, candidate.dismissed?
     end
   end
 
-  test "held films stay outside bounded queue and return at original position" do
+  test "suppressed films stay outside bounded queue and return at original position" do
     publish(Library::Events::FILM_ADDED_TO_WATCHLIST)
     dispatch
     first = candidate
@@ -82,7 +78,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     dispatch
     assert first.reload.dismissed?
     assert_equal [ later.id ], Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id).map(&:id)
-    assert_not foreign.reload.held?
+    assert_not foreign.reload.suppressed?
   end
 
   test "retained hold release hold history and replay respect stream order" do
@@ -92,9 +88,9 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       travel 1.second
       event
     end
-    [ true, false, true, false ].each do |held|
+    [ true, false, true, false ].each do |suppressed|
       assert_equal({ processed: 1 }, DomainEvents::Delivery::Dispatch.call(limit: 1, subscriptions: [ @subscription ]))
-      assert_equal held, candidate.held?
+      assert_equal suppressed, candidate.suppressed?
     end
     updated_at = candidate.updated_at
     receipt = DomainEvents::EventDelivery.find_by!(domain_event: events.first, subscriber: @subscription.name)
@@ -111,35 +107,18 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     travel 1.second
     publish(Library::Events::FILM_REMOVED_FROM_WATCHLIST)
     connection = Ratings::RatingFilm.connection
-    connection.execute("ALTER TABLE rating_films ADD CONSTRAINT consumer_test_no_hold CHECK (NOT held)")
+    connection.execute("ALTER TABLE rating_films ADD CONSTRAINT consumer_test_no_hold CHECK (NOT suppressed)")
     assert_equal({ retrying: 1 }, dispatch)
     assert_nil candidate
     connection.execute("ALTER TABLE rating_films DROP CONSTRAINT consumer_test_no_hold")
     travel 5.seconds
     assert_equal({ processed: 1 }, dispatch)
-    assert candidate.held?
+    assert candidate.suppressed?
     assert_equal({ processed: 1 }, dispatch)
-    assert_not candidate.held?
+    assert_not candidate.suppressed?
     assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, DomainEvents::EventDelivery.find_by!(domain_event: first).status
   ensure
     connection&.execute("ALTER TABLE rating_films DROP CONSTRAINT IF EXISTS consumer_test_no_hold")
-  end
-
-  test "failed combined dismissal and release rolls both back" do
-    row = Ratings::RatingFilm.create!(user: @user, film: @film, held: true)
-    connection = Ratings::RatingFilm.connection
-    connection.execute("ALTER TABLE rating_films ADD CONSTRAINT consumer_test_keep_hold CHECK (held)")
-    event = publish(Library::Events::FILM_MARKED_NOT_INTERESTED)
-    assert_equal :retrying, deliver(event).first
-    assert row.reload.held?
-    assert_not row.dismissed?
-    connection.execute("ALTER TABLE rating_films DROP CONSTRAINT consumer_test_keep_hold")
-    travel 5.seconds
-    assert_equal({ processed: 1 }, dispatch)
-    assert row.reload.dismissed?
-    assert_not row.held?
-  ensure
-    connection&.execute("ALTER TABLE rating_films DROP CONSTRAINT IF EXISTS consumer_test_keep_hold")
   end
 
   test "bad versions and identifiers retry without writes" do
@@ -161,24 +140,23 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
     event = publish(Library::Events::FILM_MARKED_WATCHED)
     @film.delete
     outcome, receipt = deliver(event)
-    assert_equal :retrying, outcome
-    assert_equal "Ratings::Errors::FilmUnavailable", receipt.last_error_class
+    assert_equal :ignored, outcome
+    assert_equal DomainEvents::EventDelivery::Statuses::IGNORED, receipt.status
   end
 
   test "real cross domain delivery in either order preserves rating and dismissal without loops" do
     [ true, false ].each do |library_first|
       @film = Registry::Film.create!(title: "Both domains")
-      entry = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
-      Library::CollectionManagement::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id)
-      Library::CollectionManagement::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id)
-      2.times { dispatch } if library_first
+      publish(Library::Events::FILM_ADDED_TO_WATCHLIST)
+      dispatch if library_first
       row = candidate || Ratings::RatingFilm.create!(user: @user, film: @film)
+      row.dismiss!
       rating = Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
         value: Ratings::Rating::Values::BRILLIANT, notes: "Still original")
       5.times { DomainEvents::Delivery::Dispatch.call }
-      assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
+      assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
       assert row.reload.dismissed?
-      assert_not row.held?
+      assert_not row.suppressed?
       assert_equal "Still original", rating.notes
       assert_not_includes Ratings::CandidateSelection::NextCandidates.call(user_id: @user.id, limit: 100).map(&:id), row.id
       assert_no_difference "DomainEvents::DomainEvent.count" do

@@ -73,39 +73,16 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
     assert_equal DomainEvents::EventDelivery::Statuses::PROCESSED, @delivery.reload.status
   end
 
-  { "watchlist" => Library::CollectionManagement::AddToWatchlist, "not interested" => Library::CollectionManagement::MarkNotInterested }.each do |intent, operation|
-    test "#{intent} committed first is reconciled by waiting delivery" do
-      contender = nil
-      source = intent == "watchlist" ? Library::LibraryFilmNotInterested : Library::LibraryFilmToWatch
-      entry = source.create!(user: @guest, film: @film)
-      Identity::User.transaction do
-        entry = operation.call(user_id: @guest.id, library_film_id: entry.id)
-        contender = blocked { deliver }
-      end
-      assert_equal :processed, Timeout.timeout(5) { contender.value }
-      assert Library::LibraryFilmWatched.exists?(entry.id)
-      assert_equal 1, watched_events.count
+  test "a watchlist entry committed first is reconciled by waiting delivery" do
+    contender = entry = nil
+    Identity::User.transaction do
+      @guest.lock!
+      entry = Library::LibraryFilm.create!(user: @guest, film: @film)
+      contender = blocked { deliver }
     end
-  end
-
-  test "delivery committed first prevents waiting unwatched intent actions" do
-    [ [ Library::CollectionManagement::AddToWatchlist, Library::Errors::WatchlistUnavailable ],
-      [ Library::CollectionManagement::MarkNotInterested, Library::Errors::DismissalUnavailable ] ].each do |operation, failure|
-      contender = nil
-      Identity::User.transaction do
-        @guest.lock!
-        deliver
-        entry = Library::LibraryFilm.find_by!(user: @guest, film: @film)
-        contender = blocked do
-          operation.call(user_id: @guest.id, library_film_id: entry.id)
-        rescue failure
-          :rejected
-        end
-      end
-      assert_equal :rejected, Timeout.timeout(5) { contender.value }
-      assert Library::LibraryFilmWatched.exists?(user: @guest, film: @film)
-      assert_equal 1, watched_events.count
-    end
+    assert_equal :processed, Timeout.timeout(5) { contender.value }
+    assert entry.reload.watched?
+    assert_equal 1, watched_events.count
   end
 
   test "expiry while delivery waits skips activity" do
@@ -143,7 +120,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
-    assert Library::LibraryFilmWatched.exists?(user_id: @guest.id, film: @film)
+    assert Library::LibraryFilm.exists?(watched: true, user_id: @guest.id, film: @film)
     assert_equal 0, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     assert_equal 1, watched_events.count
   end

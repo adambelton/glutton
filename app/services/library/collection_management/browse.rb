@@ -6,8 +6,7 @@ module Library
       module Views
         WATCHLIST = "watchlist".freeze
         WATCHED = "watched".freeze
-        NOT_INTERESTED = "not_interested".freeze
-        ALL = [ WATCHLIST, WATCHED, NOT_INTERESTED ].freeze
+        ALL = [ WATCHLIST, WATCHED ].freeze
       end
 
       Page = Data.define(:entries, :next_page)
@@ -17,9 +16,8 @@ module Library
         raise Identity::Errors::Unavailable unless user&.active?
 
         entries = case view
-        when Views::WATCHLIST then LibraryFilmToWatch
-        when Views::WATCHED then LibraryFilmWatched.preload(:rated_rating_film)
-        when Views::NOT_INTERESTED then LibraryFilmNotInterested
+        when Views::WATCHLIST then LibraryFilm.where(watched: false)
+        when Views::WATCHED then LibraryFilm.where(watched: true).preload(:rated_rating_film)
         else raise ArgumentError, "Unknown Library view"
         end
         entries = entries.where(user_id: user.id).includes(:film)

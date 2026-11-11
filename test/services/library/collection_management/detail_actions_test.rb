@@ -4,7 +4,7 @@ class Library::DetailActionsTest < ActiveSupport::TestCase
   setup do
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Detail film")
-    @entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    @entry = Library::LibraryFilm.create!(user: @user, film: @film)
   end
 
   test "detail lookup rejects missing and inactive owners and foreign entries" do

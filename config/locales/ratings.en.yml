@@ -26,8 +26,8 @@ en:
     errors:
       revision_unavailable: This film has no current rating to replace.
       stale_rating: This rating has changed. Reload it before submitting a replacement.
-      hold_unavailable: This film is already held from rating rotation.
-      hold_release_unavailable: This film is not held from rating rotation.
+      suppression_unavailable: This film is already suppressed from rating rotation.
+      suppression_release_unavailable: This film is not suppressed from rating rotation.
       invalid_notes: Enter your notes as text.
       already_rated: This film has already been rated.
       film_unavailable: This rating film is unavailable.
@@ -54,4 +54,4 @@ en:
         film: Film
         film_id: Film
         dismissed: Dismissed
-        held: Held
+        suppressed: Suppressed

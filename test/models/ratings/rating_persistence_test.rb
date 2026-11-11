@@ -29,15 +29,11 @@ class Ratings::RatingPersistenceTest < ActiveSupport::TestCase
     assert duplicate.errors.of_kind?(:film_id, :taken)
   end
 
-  test "dismissal defaults false and cannot be null in model or database" do
+  test "dismissal defaults to false and is required in storage" do
     assert_not @rating_film.dismissed?
     other = Registry::Film.create!(title: "Other candidate")
-    insert(film_attributes.merge(film_id: other.id))
-    assert_not Ratings::RatingFilm.find_by!(film: other).dismissed?
-    @rating_film.dismissed = nil
-    assert_not @rating_film.valid?
-    assert_raises(ActiveRecord::NotNullViolation) do
-      Ratings::RatingFilm.transaction(requires_new: true) { @rating_film.save!(validate: false) }
+    assert_raises(ActiveRecord::StatementInvalid) do
+      insert(film_attributes.merge(film_id: other.id, dismissed: nil))
     end
   end
 

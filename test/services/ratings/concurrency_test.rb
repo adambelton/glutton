@@ -89,7 +89,7 @@ class Ratings::ConcurrencyTest < ActiveSupport::TestCase
     end
     assert_equal batch.last.id, Timeout.timeout(5) { contender.value }.id
     assert_equal 1, Ratings::RatingFilm.where(user: @user, film:).count
-    assert_not batch.last.reload.held?
+    assert_not batch.last.reload.suppressed?
     assert_not batch.last.dismissed?
   end
 

@@ -51,7 +51,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     row = candidate
     get new_rating_path
     assert_select "h2", "#{@film.title} (1982)"
-    [ -> { }, -> { row.hold! }, -> { row.dismiss! }, -> { row.release_hold! } ].each do |arrange|
+    [ -> { }, -> { row.suppress! }, -> { row.dismiss! }, -> { row.release_suppression! } ].each do |arrange|
       arrange.call
       assert_no_changes -> { row.reload.updated_at } do
         get new_rating_path(film_id: @film.id)
@@ -74,14 +74,14 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: @film.id)
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       rate(token: csrf_token, notes: "  <script>Private</script>  \n\nEnding", user_id: foreign.user_id,
-        film_id: Registry::Film.create!(title: "Ignored film").id, held: true, dismissed: true)
+        film_id: Registry::Film.create!(title: "Ignored film").id, suppressed: true, dismissed: true)
     end
     assert_response :see_other
     assert_redirected_to new_rating_path
     rating = Ratings::Rating.last
     assert_equal @user.id, rating.rating_film.user_id
     assert_equal "  <script>Private</script>  \n\nEnding", rating.notes
-    assert_not rating.rating_film.held?
+    assert_not rating.rating_film.suppressed?
     assert_not rating.rating_film.dismissed?
     assert_empty foreign.ratings
     follow_redirect!
@@ -148,17 +148,17 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: @film.id)
     token = csrf_token
     row = candidate
-    row.hold!
+    row.suppress!
     row.dismiss!
     post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::GARBAGE, authenticity_token: token }
     assert_response :see_other
-    assert row.reload.held?
+    assert row.reload.suppressed?
     assert row.dismissed?
     assert_equal Ratings::Rating::Values::GARBAGE, row.ratings.sole.value
   end
 
   test "invalid film identity and foreign candidate state do not disclose other users" do
-    row = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film, held: true, dismissed: true)
+    row = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film, suppressed: true, dismissed: true)
     row.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get new_rating_path(film_id: @film.id)
     token = csrf_token

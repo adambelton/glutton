@@ -7,7 +7,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     @user = Identity::UserGuest.create!
     bind_user(@user)
     @film = Registry::Film.create!(title: "Revision film")
-    @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, held: true, dismissed: true)
+    @candidate = Ratings::RatingFilm.create!(user: @user, film: @film, suppressed: true, dismissed: true)
     @original = @candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "  <script>original</script>\nÉerie 👻  ")
   end
 
@@ -54,7 +54,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     token = csrf_token
     assert_no_difference [ "DomainEvents::DomainEvent.count", "DomainEvents::DomainEventStream.count", "Ratings::RatingFilm.count" ] do
       assert_difference "Ratings::Rating.count", 1 do
-        revise(token:, notes: "  Updated\n👻 ", user_id: Identity::UserGuest.create!.id, held: false)
+        revise(token:, notes: "  Updated\n👻 ", user_id: Identity::UserGuest.create!.id, suppressed: false)
       end
     end
     assert_redirected_to edit_rating_path(film_id: @film.id)
@@ -65,7 +65,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_equal "  Updated\n👻 ", latest.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value
     assert_equal "  <script>original</script>\nÉerie 👻  ", @original.notes
-    assert @candidate.held?
+    assert @candidate.suppressed?
     assert @candidate.dismissed?
     revise(token:, previous_rating_id: latest.id, value: latest.value, notes: " ")
     assert_response :see_other

@@ -5,7 +5,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     freeze_time
     @user = Identity::UserGuest.create!
     @film = Registry::Film.create!(title: "Revised rating")
-    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, dismissed: true, held: true)
+    @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film, dismissed: true, suppressed: true)
     @original = Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: @rating_film.id,
       value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Original evidence")
   end
@@ -17,7 +17,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "successive replacements retain evidence without publishing events" do
-    library_film = Library::LibraryFilmWatched.create!(user: @user, film: @film)
+    library_film = Library::LibraryFilm.create!(watched: true, user: @user, film: @film)
     previous = @original
     original_expression_id = @original.id
     created_at = @rating_film.created_at
@@ -42,7 +42,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     assert_not library_film.can_rate?
     assert_equal 5, @rating_film.ratings.count
     assert @rating_film.reload.dismissed?
-    assert @rating_film.held?
+    assert @rating_film.suppressed?
     assert_equal created_at, @rating_film.created_at
     assert_equal [ @rating_film.id ], Ratings::RatingFilm.where(user: @user).rated.pluck(:id)
     assert_empty Ratings::RatingFilm.where(user: @user).unrated

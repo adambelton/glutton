@@ -16,7 +16,9 @@ class RatingsController < ApplicationController
     if @targeted
       @rating_film = Ratings::CandidateSelection::PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
     else
-      @rating_film = Ratings::CandidateSelection::NextCandidates.call(user_id: current_user.id).first
+      excluding_film_id = flash[:ratings_excluded_film_id]
+      flash.delete(:ratings_excluded_film_id)
+      @rating_film = Ratings::CandidateSelection::NextCandidates.call(user_id: current_user.id, excluding_film_id:).first
     end
     render_new
   end

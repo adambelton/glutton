@@ -38,7 +38,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     end
     assert_equal "Atmosphere", rating.reload.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, rating.value
-    assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
+    assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
     event = derived.sole
     assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
     assert_equal 1, event.schema_version
@@ -49,23 +49,17 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal 1, derived.count
   end
 
-  test "watchlist and not interested are reconciled preserving identity and public failures" do
-    [ Library::LibraryFilmToWatch, Library::LibraryFilmNotInterested ].each do |model|
-      @film = Registry::Film.create!(title: "Intent")
-      entry = model.create!(user: @user, film: @film)
-      publish
-      assert_equal({ processed: 1 }, dispatch)
-      watched = Library::LibraryFilmWatched.find_by!(user: @user, film: @film)
-      assert_equal entry.id, watched.id
-      assert_equal entry.created_at, watched.created_at
-      assert_raises(Library::Errors::AlreadyWatched) { Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
-      assert_raises(Library::Errors::WatchlistUnavailable) { Library::CollectionManagement::AddToWatchlist.call(user_id: @user.id, library_film_id: entry.id) }
-      assert_raises(Library::Errors::DismissalUnavailable) { Library::CollectionManagement::MarkNotInterested.call(user_id: @user.id, library_film_id: entry.id) }
-    end
+  test "watchlist reconciliation preserves entry identity and public failure semantics" do
+    entry = Library::LibraryFilm.create!(user: @user, film: @film)
+    publish
+    assert_equal({ processed: 1 }, dispatch)
+    watched = entry.reload
+    assert watched.watched?
+    assert_raises(Library::Errors::AlreadyWatched) { Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
   end
 
   test "already watched and repeated viewing evidence are ignored without timestamp or event changes" do
-    entry = Library::LibraryFilmToWatch.create!(user: @user, film: @film)
+    entry = Library::LibraryFilm.create!(user: @user, film: @film)
     entry = Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id)
     updated_at = entry.updated_at
     travel 1.hour
@@ -81,19 +75,19 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
   end
 
   test "publication failure rolls back transition and receipt then retry commits once" do
-    entry = Library::LibraryFilmNotInterested.create!(user: @user, film: @film)
+    entry = Library::LibraryFilm.create!(user: @user, film: @film)
     event = publish
     connection = DomainEvents::DomainEvent.connection
     connection.execute("ALTER TABLE domain_events ADD CONSTRAINT consumer_test_block_watched CHECK (name <> 'FilmMarkedWatched')")
     assert_equal({ retrying: 1 }, dispatch)
-    assert Library::LibraryFilmNotInterested.exists?(entry.id)
+    assert_not entry.reload.watched?
     assert_empty derived
     assert_equal DomainEvents::EventDelivery::Statuses::PENDING, receipt(event).status
     assert_nil receipt(event).completed_at
     connection.execute("ALTER TABLE domain_events DROP CONSTRAINT consumer_test_block_watched")
     travel 5.seconds
     assert_equal({ processed: 1 }, dispatch)
-    assert Library::LibraryFilmWatched.exists?(entry.id)
+    assert Library::LibraryFilm.where(watched: true).exists?(entry.id)
     assert_equal 1, derived.count
   ensure
     connection&.execute("ALTER TABLE domain_events DROP CONSTRAINT IF EXISTS consumer_test_block_watched")
@@ -137,15 +131,15 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
       @film = Registry::Film.create!(title: "Viewing evidence")
       publish(payload: { user_id: @user.id, film_id: @film.id }.merge(fields))
       assert_equal({ processed: 1 }, dispatch)
-      assert Library::LibraryFilmWatched.exists?(user: @user, film: @film)
+      assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
     end
   end
 
-  test "missing film fails without recreating catalogue data" do
+  test "missing film is ignored without recreating catalogue data" do
     event = publish
     @film.delete
-    assert_equal({ retrying: 1 }, dispatch)
-    assert_equal "Library::Errors::FilmUnavailable", receipt(event).last_error_class
+    assert_equal({ ignored: 1 }, dispatch)
+    assert_equal DomainEvents::EventDelivery::Statuses::IGNORED, receipt(event).status
     assert_empty Library::LibraryFilm.where(user: @user)
   end
 
