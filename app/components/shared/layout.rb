@@ -31,9 +31,14 @@ module Shared
             end
           end
         end
-        if user&.can_register?
-          aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
-            div(class: "ui-width") do
+        div(class: "ui-notifications") do
+          render Toast.new(message: flash[:notice]) if flash[:notice].present?
+          if @pending_reminder
+            render Identity::RegistrationReminder.new(registration: current_pending_registration)
+          end
+          p(role: "alert", class: "ui-alert") { flash[:alert] } if flash[:alert].present?
+          if user&.can_register?
+            aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
               span { t("identity.entry.guest_banner") }
               plain " "
               text_link(t("identity.entry.save_progress"), new_registration_path)
@@ -41,11 +46,6 @@ module Shared
           end
         end
         div(class: "ui-width ui-content") do
-          render Toast.new(message: flash[:notice]) if flash[:notice].present?
-          if @pending_reminder
-            render Identity::RegistrationReminder.new(registration: current_pending_registration)
-          end
-          p(role: "alert", class: "ui-alert") { flash[:alert] } if flash[:alert].present?
           yield
         end
       end
