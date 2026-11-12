@@ -17,8 +17,12 @@ module Views
               render ::Registry::FilmLinks.new(film: @film)
               overview = @film.tmdb_details.overview
               p { overview } if overview.present?
-              render Shared::ActionButton.new(text: t("library.detail.mark_watched"),
-                url: mark_watched_from_recommendations_path, params: { film_id: @film.id })
+              div(class: "ui-actions") do
+                params = { film_id: @film.id }
+                render Shared::ActionButton.new(text: t("recommendations.accept"), url: accept_recommendation_path, params:)
+                render Shared::ActionButton.new(text: t("recommendations.reject"), url: reject_recommendation_path, params:)
+                render Shared::ActionButton.new(text: t("library.detail.mark_watched"), url: mark_watched_from_recommendations_path, params:)
+              end
             end
           elsif @result.unlocked?
             p(class: "ui-empty") { t("recommendations.empty") }
