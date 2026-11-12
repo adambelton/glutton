@@ -53,43 +53,19 @@
   body { margin: 0; }
 }
 
-.registry-page {
-  background: var(--glutton-background);
-  color: var(--glutton-foreground);
-  font: 400 15px/1.6 ui-sans-serif, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  overflow-wrap: anywhere;
-}
-.registry-page :focus-visible { outline: 2px solid var(--glutton-foreground); outline-offset: 5px; }
-.registry-page a { text-underline-offset: .25em; }
-.registry-page a:hover { text-decoration: underline; }
-.registry-width, .registry-header-inner { width: min(1320px, calc(100% - 96px)); margin-inline: auto; }
-.registry-header { border-bottom: 1px solid var(--glutton-subtle-border); background: var(--glutton-background); }
-.registry-header-inner { display: flex; align-items: center; gap: 24px; min-height: 94px; }
 .wordmark { font: 400 62px/1 Tangerine, cursive; color: var(--glutton-foreground); letter-spacing: -.02em; padding: 8px 0 12px; }
-.registry-page .wordmark:hover { text-decoration: none; }
-.registry-divider { height: 26px; width: 1px; background: var(--glutton-border); }
-.registry-label { font-size: 14px; letter-spacing: .04em; }
-.registry-access { font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--glutton-muted-foreground); border: 1px solid var(--glutton-border); padding: 4px 8px; border-radius: 3px; }
-.registry-header-actions { margin-left: auto; display: flex; align-items: center; gap: 20px; }
 .theme-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; box-shadow: none; font-size: 12px; }
 .theme-toggle::before { content: ""; width: 10px; height: 10px; border: 1px solid currentColor; border-radius: 50%; }
 .theme-toggle[aria-pressed="true"]::before { background: currentColor; }
 .theme-toggle[hidden] { display: none; }
-.return-link { color: var(--glutton-muted-foreground); font-size: 13px; min-height: 44px; display: flex; align-items: center; }
-.registry-masthead { position: relative; isolation: isolate; padding: 46px 0 42px; background: var(--glutton-surface); }
 
-.eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--glutton-muted-foreground); margin-bottom: 8px; }
-.registry-page h1 { font-size: clamp(30px, 3vw, 42px); font-weight: 500; line-height: 1.2; letter-spacing: -.035em; max-width: 24em; }
-.masthead-description { color: var(--glutton-muted-foreground); margin-top: 12px; max-width: 45em; font-size: 14px; }
-.registry-tabs { border-bottom: 1px solid var(--glutton-border); background: var(--glutton-surface); }
-.registry-tabs .registry-width { display: flex; gap: 34px; }
-.registry-tabs a { display: flex; align-items: center; min-height: 58px; color: var(--glutton-muted-foreground); border-bottom: 2px solid transparent; font-size: 13px; }
+.registry-description { max-width: 45em; }
+.registry-tabs { display: flex; flex-wrap: wrap; gap: 0 24px; margin-block-end: 24px; border-bottom: 1px solid var(--glutton-border); }
+.registry-tabs a { display: flex; align-items: center; min-height: 44px; color: var(--glutton-muted-foreground); border-bottom: 2px solid transparent; font-size: 13px; }
 .registry-tabs a[aria-current="page"] { color: var(--glutton-foreground); border-color: var(--glutton-foreground); }
-.registry-content { padding-block: 34px 48px; min-height: 45vh; }
 .registry-panel { background: var(--glutton-surface); border: 1px solid var(--glutton-subtle-border); border-radius: 5px; overflow: hidden; }
 .section-heading { display: flex; align-items: center; gap: 14px; padding: 24px 26px; }
-.registry-page h2 { font-size: 17px; line-height: 1.4; font-weight: 500; letter-spacing: -.015em; }
+.ui-page .registry-page h2 { font-size: 17px; line-height: 1.4; margin-block: 0; }
 .registry-badge { color: var(--glutton-muted-foreground); background: var(--glutton-inset); font-size: 10px; letter-spacing: .02em; }
 .registry-table th { color: var(--glutton-muted-foreground); text-transform: uppercase; letter-spacing: .09em; font-size: 10px; background: var(--glutton-inset); padding: 12px 26px; }
 .registry-table td { padding: 19px 26px; color: var(--glutton-muted-foreground); }
@@ -102,7 +78,7 @@
 .registry-pagination { border-top: 1px solid var(--glutton-subtle-border); display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 26px; font-size: 12px; color: var(--glutton-muted-foreground); }
 .registry-pagination > div { display: flex; gap: 10px; }
 .registry-pagination a { border-color: var(--glutton-border); font-size: 12px; }
-.registry-footer { padding-block: 24px 36px; border-top: 1px solid var(--glutton-subtle-border); font-size: 11px; color: var(--glutton-muted-foreground); }
+.registry-footer { padding-top: 16px; font-size: 12px; }
 .empty-state { padding: 26px; color: var(--glutton-muted-foreground); }
 .back-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--glutton-muted-foreground); font-size: 12px; margin-bottom: 16px; }
 .registry-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 28px; padding: 20px 0 26px; border-bottom: 1px solid var(--glutton-subtle-border); }
@@ -138,15 +114,8 @@
 .skip-link:focus { top: 12px; }
 
 @media (max-width: 800px) {
-  .registry-width, .registry-header-inner { width: calc(100% - 40px); }
-  .registry-header-inner { min-height: 80px; gap: 16px; flex-wrap: wrap; }
   .wordmark { font-size: 54px; }
-  .registry-access { display: none; }
-  .registry-header-actions { gap: 12px; }
-  .registry-masthead { padding-block: 32px; }
-  .registry-tabs .registry-width { gap: 24px; }
   .registry-tabs a { font-size: 12px; }
-  .registry-content { padding-top: 24px; }
   .film-detail-grid, .definition-grid { grid-template-columns: 1fr; }
   .registry-facts { grid-template-columns: 1fr 1fr; }
   .section-heading, .registry-table td { padding: 16px 18px; }
@@ -156,10 +125,6 @@
   .registry-pagination { padding: 16px 18px; flex-wrap: wrap; }
   .prose-panel, .association-group { padding: 20px 18px; }
   .section-note { padding-inline: 18px; }
-}
-@media (max-width: 500px) {
-  .registry-header-inner { padding-block: 10px; gap: 8px 16px; }
-  .registry-header-actions { width: 100%; margin-left: 0; justify-content: space-between; }
 }
 @media (prefers-reduced-motion: reduce) {
   .registry-page * { transition: none !important; scroll-behavior: auto !important; }

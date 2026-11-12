@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t("library.browser.title"), class: "library-page") do
+        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true) do
           form_with(url: library_path, method: :get, class: "library-filter", data: { controller: "library-view" }) do
             label(for: "view") { t("library.browser.view") }
             render RubyUI::NativeSelect.new(name: "view", id: "view", class: "ui-select", data: { action: "change->library-view#change" }) do

@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        shell(title: t(:films), active: :films, description: t(:films_description)) do
+        shell(active: :films, description: t(:films_description)) do
           section(class: "registry-panel") do
             section_heading(:canonical_films, count: @page.total)
             film_table(@page)

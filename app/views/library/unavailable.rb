@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t("library.browser.title"), class: "library-page") do
+        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true) do
           p(role: "alert") { @error }
           text_link(t("library.browser.return"), library_path)
         end

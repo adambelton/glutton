@@ -1,45 +1,24 @@
 module Views
   module Registry
-    class Base < Phlex::HTML
-      include Rails.application.routes.url_helpers
-
+    class Base < ::Views::Base
       private
 
       def t(key, **options)
         I18n.t("registry.#{key}", **options, raise: true)
       end
 
-      def shell(title:, active: nil, description: nil, &block)
-        render Shared::Document.new(title:, body_class: "registry-page") do
-          a(href: "#registry-content", class: "skip-link") { t(:skip) }
-          header(class: "registry-header") do
-            div(class: "registry-header-inner") do
-              a(href: root_path, class: "wordmark", aria: { label: t(:wordmark) }) { t(:wordmark) }
-              span(class: "registry-divider", aria: { hidden: true })
-              a(href: registry_root_path, class: "registry-label") { t(:title) }
-              span(class: "registry-access") { t(:internal) }
-              div(class: "registry-header-actions") do
-                render Shared::ThemeToggle.new
-                a(href: root_path, class: "return-link") { t(:back_to_app) }
-              end
-            end
-          end
-          div(class: "registry-masthead") do
-            div(class: "registry-width") do
-              p(class: "eyebrow") { t(:eyebrow) }
-              h1 { title }
-              p(class: "masthead-description") { description } if description
-            end
-          end
-          nav(class: "registry-tabs", aria: { label: t(:navigation) }) do
-            div(class: "registry-width") do
+      def shell(title: t(:title), active: nil, description: nil)
+        page(title:, class: "registry-page", heading_outside_card: true) do
+          p(class: "registry-description") { description } if description.present?
+          if active.present?
+            nav(class: "registry-tabs", aria: { label: t(:navigation) }) do
               { films: registry_films_path, categories: registry_quality_categories_path, qualities: registry_qualities_path }.each do |key, path|
                 a(href: path, aria: { current: active == key ? "page" : nil }) { t(key) }
               end
             end
           end
-          main(id: "registry-content", class: "registry-width registry-content", tabindex: "-1", &block)
-          footer(class: "registry-width registry-footer") { t(:read_only) }
+          yield
+          p(class: "registry-footer") { t(:read_only) } if active.present?
         end
       end
 

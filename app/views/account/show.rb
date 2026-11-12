@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t("account.title"), class: "account-page") do
+        page(title: t("account.title"), class: "account-page", heading_outside_card: true) do
           nav(class: "account-tabs", aria: { label: t("account.sections") }) do
             a(href: account_path, aria: { current: "page" }) { t("account.profile") }
           end
