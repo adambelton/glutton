@@ -29,6 +29,30 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
+  test "shows stored film facts and a trailer when available" do
+    film = Registry::Film.create!(title: "Film with a trailer", release_date: Date.new(2025, 1, 1),
+      tmdb_metadata: { details: {
+        runtime: 97, genres: [ { name: "Horror" } ], overview: "A film synopsis.",
+        videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
+      } })
+    unlock_recommendations_for(user: @user)
+    get recommendation_path
+    assert_response :success
+    assert_select "h2", @film.title
+    assert_select "iframe", count: 0
+
+    Recommendations::RecordFilmResponse.call(user_id: @user.id, film_id: @film.id, response: "rejected")
+    get recommendation_path
+    assert_response :success
+    assert_select "h2", "#{film.title} (2025)"
+    assert_select ".recommendation-details h2 .film-year", "(2025)"
+    assert_select ".recommendation-facts", count: 0
+    assert_select ".recommendation-trailer h2", count: 0
+    assert_select "iframe[src=?][title=?]", "https://www.youtube.com/embed/M7lc1UVf-VE",
+      I18n.t("recommendations.trailer_for", title: film.title)
+    assert_select "a[href=?]", "https://www.youtube.com/watch?v=M7lc1UVf-VE", count: 0
+  end
+
   test "a stale or repeated submission fails without changing the recorded choice" do
     unlock_recommendations_for(user: @user)
     get recommendation_path
@@ -68,7 +92,7 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
       post accept_recommendation_path, params: submitted.merge(film_id: Registry::Film.maximum(:id) + 1)
       assert_response :conflict
     end
-    assert_not Recommendations::RecommendationFilm.exists?(user: @user, film: @film)
+    assert_nil Recommendations::RecommendationFilm.find_by!(user: @user, film: @film).response
   end
 
   test "responses require CSRF and an identified viewer" do
@@ -85,6 +109,6 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
       post reject_recommendation_path, params: submitted.merge(authenticity_token: csrf_from_open_page)
       assert_response :unauthorized
     end
-    assert_not Recommendations::RecommendationFilm.exists?(user: @user, film: @film)
+    assert_nil Recommendations::RecommendationFilm.find_by!(user: @user, film: @film).response
   end
 end

@@ -38,7 +38,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
     assert_equal Ratings::Rating::Values::PRETTY_GOOD, @original.reload.value
     assert_equal original_expression_id, @original.id
     assert_equal "Original evidence", @original.notes
-    assert_equal Library::LibraryFilm::RatingStatuses::RATED, library_film.rating_status
+    assert library_film.can_edit_rating?
     assert_not library_film.can_rate?
     assert_equal 5, @rating_film.ratings.count
     assert @rating_film.reload.dismissed?

@@ -22,10 +22,10 @@ module Recommendations
       :processed
     end
 
-    def release_suppression!
-      return :ignored unless suppressed?
+    def discard_suppression_only_record!
+      return :ignored unless suppressed? && recommended_at.nil? && response.nil?
 
-      update!(suppressed: false)
+      destroy!
       :processed
     end
 

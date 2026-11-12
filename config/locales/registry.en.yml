@@ -1,6 +1,7 @@
 en:
   registry:
     film_presentation:
+      year: "(%{year})"
       tmdb: TMDB
       wikipedia: Wikipedia
       poster: "Poster for %{title}"

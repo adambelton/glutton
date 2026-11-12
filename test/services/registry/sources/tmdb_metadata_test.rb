@@ -29,6 +29,19 @@ class Registry::TmdbMetadataTest < ActiveSupport::TestCase
     assert_nil Registry::Sources::TmdbMetadata.new("details" => { "runtime" => -1 }).runtime
     assert_equal "Source title", Registry::Sources::TmdbMetadata.new("original_title" => "Legacy", "details" => { "original_title" => "Source title" }).original_title
   end
+  test "selects a valid official YouTube trailer and prefers English" do
+    other_language = { "site" => "YouTube", "type" => "Trailer", "official" => true, "key" => "nonEnglish1", "iso_639_1" => "fr" }
+    english = other_language.merge("key" => "M7lc1UVf-VE", "iso_639_1" => "en")
+    invalid = [ nil, english.merge("site" => "Other"), english.merge("type" => "Teaser"),
+      english.merge("official" => false), english.merge("key" => "../external") ]
+
+    assert_equal "M7lc1UVf-VE", metadata_with_videos([ *invalid, other_language, english ]).youtube_trailer_id
+    assert_equal "nonEnglish1", metadata_with_videos([ other_language ]).youtube_trailer_id
+    assert_nil metadata_with_videos(invalid).youtube_trailer_id
+    assert_nil metadata_with_videos("unexpected").youtube_trailer_id
+    assert_nil Registry::Sources::TmdbMetadata.new({}).youtube_trailer_id
+  end
+
   test "ranking readers preserve usable zero and positive values without coercing invalid input" do
     reader = Registry::Sources::TmdbMetadata.new("details" => { "vote_count" => 0, "popularity" => 0.0 })
     assert_equal 0, reader.vote_count
@@ -43,5 +56,11 @@ class Registry::TmdbMetadataTest < ActiveSupport::TestCase
     end
     assert_nil Registry::Sources::TmdbMetadata.new("details" => { "vote_count" => 1.5 }).vote_count
     assert_nil Registry::Sources::TmdbMetadata.new("details" => { "popularity" => Float::INFINITY }).popularity
+  end
+
+  private
+
+  def metadata_with_videos(results)
+    Registry::Sources::TmdbMetadata.new("details" => { "videos" => { "results" => results } })
   end
 end

@@ -5,9 +5,11 @@ class CreateRecommendationFilms < ActiveRecord::Migration[8.1]
       t.references :film, null: false, foreign_key: true
       t.boolean :suppressed, null: false, default: false
       t.string :response
+      t.datetime :recommended_at
       t.timestamps
       t.index [ :user_id, :film_id ], unique: true
       t.check_constraint "response IN ('accepted', 'rejected')", name: "recommendation_films_response"
+      t.check_constraint "suppressed OR response IS NOT NULL OR recommended_at IS NOT NULL", name: "recommendation_films_selection"
     end
   end
 end

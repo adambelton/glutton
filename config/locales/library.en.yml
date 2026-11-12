@@ -11,6 +11,10 @@ en:
     browser:
       title: Library
       view: Library view
+      rating_filters: Filter by rating
+      clear_rating_filters: Clear selection
+      unrated: Not Rated
+      selected_rating: "%{rating} (selected)"
       views:
         watchlist: Watchlist
         watched: Watched
@@ -18,8 +22,6 @@ en:
         watchlist: No films on this watchlist page.
         watched: No watched films on this page.
       released: Released in %{year}
-      rated: Rated
-      awaiting_rating: Awaiting rating
       rate: Rate this film
       rate_film: Rate %{title}
       edit_rating: Edit rating

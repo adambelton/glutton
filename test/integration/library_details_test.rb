@@ -32,7 +32,7 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
 
   test "collections link to existing entries and present supported actions and information" do
     get library_path
-    assert_select "h3 a[href=?]", library_film_path(@entry), text: @film.title
+    assert_select ".library-films a[href=?] h3", library_film_path(@entry), text: "#{@film.title} (2001)"
     assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       get library_film_path(@entry)
       assert_response :success
@@ -81,11 +81,11 @@ class LibraryDetailsTest < ActionDispatch::IntegrationTest
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     row = Ratings::RatingFilm.create!(user: @user, film: @film, suppressed: true, dismissed: true)
     get library_film_path(@entry)
-    assert_select "p", "Awaiting rating"
+    assert_select "p", text: "Awaiting rating", count: 0
     assert_select "a[href=?]", new_rating_path(film_id: @film.id)
     row.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_film_path(@entry)
-    assert_select "p", "Rated"
+    assert_select "p", text: "Rated", count: 0
     assert_select 'main a[href*="rating/new"]', count: 0
   end
 

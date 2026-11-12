@@ -19,7 +19,7 @@ module Recommendations
         assessed_film_count = scores.map(&:first).uniq.size
 
         candidate = if assessed_film_count >= MINIMUM_ASSESSED_FILMS
-          films = Registry::Film.where.not(id: RecommendationFilm.where(user:).where.not(id: RecommendationFilm.eligible.select(:id)).select(:film_id))
+          films = Registry::Film.where.not(id: RecommendationFilm.where(user:).select(:film_id))
           films = films.where.not(id: excluding_film_id) if excluding_film_id.present?
           film_ids = films.pluck(:id)
           quality_ids_by_film = Registry::FilmQuality.where(film_id: film_ids).pluck(:film_id, :quality_id)

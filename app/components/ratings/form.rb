@@ -19,14 +19,10 @@ module Ratings
             input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
             workspace
           end
-          div(class: "rating-actions") do
-            render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit",
-              disabled: !Ratings::Rating::Values::ALL.include?(@value), data: { rating_selection_target: "save" }) { t("ratings.browser.save") }
-            if @dismissible
-              render Shared::ActionButton.new(text: t("library.detail.add_to_watchlist"), url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id })
-              render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
-            end
-          end
+        end
+        div(class: "rating-response") do
+          notes_field
+          actions unless @readonly
         end
       end
     end
@@ -37,13 +33,7 @@ module Ratings
       div(class: "rating-film-info") do
         div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
         div(class: "rating-film-details") do
-          h2 do
-            plain @film.title
-            if @film.release_date.present?
-              plain " "
-              span(class: "rating-film-year") { t("ratings.browser.film_year", year: @film.release_date.year) }
-            end
-          end
+          h2 { render Registry::FilmTitle.new(film: @film) }
           render Registry::FilmLinks.new(film: @film)
           div(class: "rating-description", tabindex: "0", role: "region", aria: { label: t("ratings.browser.film_details") }) do
             overview = @film.tmdb_details.overview
@@ -52,7 +42,6 @@ module Ratings
         end
       end
       rating_fields
-      notes_field
     end
 
     def errors_section
@@ -79,11 +68,25 @@ module Ratings
       end
     end
 
+    def actions
+      div(class: "rating-actions film-actions") do
+        render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit",
+          disabled: !Ratings::Rating::Values::ALL.include?(@value),
+          data: { rating_selection_target: "save", tooltip: t("ratings.browser.save_disabled") }) { t("ratings.browser.save") }
+        if @dismissible
+          render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), variant: :ghost,
+            url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
+          render Shared::ActionButton.new(text: t("library.detail.add_to_watchlist"), variant: :secondary, icon: ::Library::BookmarkPlus.new,
+            url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id })
+        end
+      end
+    end
+
     def notes_field
       id = "#{@prefix}notes"
       div(class: "rating-notes") do
         label(for: id) { t("ratings.browser.notes") }
-        textarea(id:, name: "notes", rows: 8, maxlength: Rating::MAX_NOTES_LENGTH, class: "ui-input",
+        textarea(id:, name: "notes", form: ("rating-form" unless @readonly), rows: 8, maxlength: Rating::MAX_NOTES_LENGTH, class: "ui-input",
           readonly: @readonly, placeholder: t("ratings.browser.notes_placeholder"),
           aria: { describedby: ("rating-errors" if @errors.present?) }) { plain "\n#{@notes}" }
       end

@@ -18,7 +18,6 @@ module Shared
                 a(href: library_path) { t("library.browser.title") }
                 if user&.superuser?
                   a(href: registry_root_path) { t("registry.title") }
-                  a(href: account_path) { t("account.title") }
                 end
               end
             end
@@ -27,6 +26,7 @@ module Shared
               if user.nil? || user.can_register?
                 render Identity::EntryActions.new(guest_entry: @account_controls && user.nil?)
               else
+                a(href: account_path, class: "ui-account-link") { t("account.title") } if user.superuser?
                 render Shared::ActionButton.new(text: t("ui.log_out"), url: session_path, method: :delete)
               end
             end

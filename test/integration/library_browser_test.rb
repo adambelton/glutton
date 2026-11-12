@@ -18,7 +18,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "two views isolate membership and owner and default to watchlist without writes" do
-    watchlist = entry(watched: false, title: "Watchlist film")
+    watchlist = entry(watched: false, title: "Watchlist film", tmdb_metadata: { details: { poster_path: "/watchlist.jpg" } })
     watched = entry(title: "Watched film")
     entry(user: Identity::UserGuest.create!, title: "Private film")
     assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
@@ -26,12 +26,14 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "h3", text: watchlist.film.title, count: 1
       assert_select "h3", count: 1
-      assert_select 'option[selected][value="watchlist"]'
+      assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view: "watchlist"), text: "Watchlist"
+      assert_select ".library-films a[href=?] img[src=?]", library_film_path(watchlist), "https://image.tmdb.org/t/p/w500/watchlist.jpg"
       { Library::CollectionManagement::Browse::Views::WATCHED => watched }.each do |view, row|
         get library_path(view:)
         assert_select "h3", text: row.film.title, count: 1
         assert_select "h3", count: 1
-        assert_select "option[selected][value=?]", view
+        assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view:), text: "Watched"
+        assert_select ".library-films a[href=?] .poster-placeholder", library_film_path(row)
       end
       assert_select 'main a[href*="rating/new"]', count: 1
     end
@@ -45,10 +47,10 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
-    assert_select "p", text: "Awaiting rating", count: 5
+    assert_select ".library-film p", text: "Awaiting rating", count: 0
     assert_select 'main a[href*="rating/new"]', count: 5
     get library_film_path(rows.first)
-    assert_select "p", text: "Awaiting rating"
+    assert_select "p", text: "Awaiting rating", count: 0
     assert_select "a[href=?]", new_rating_path(film_id: rows.first.film_id)
 
     row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
@@ -56,8 +58,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     absent = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
     absent.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
-    assert_select "p", text: "Rated", count: 1
-    assert_select "p", text: "Awaiting rating", count: 4
+    assert_select ".library-film p", text: "Rated", count: 0
+    assert_select 'main a[href*="rating/new"]', count: 4
     assert_select "h3", count: 5
     assert_select "a[href=?]", new_rating_path(film_id: rows.last.film_id), count: 0
   end
@@ -104,7 +106,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "pagination is bounded stable and preserves view while dropdown resets page" do
+  test "pagination is bounded stable and preserves view while tabs reset page" do
     freeze_time do
       rows = 27.times.map { |i| entry(title: "Film #{i}") }
       get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
@@ -115,11 +117,10 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "h3", count: 2
       assert_select "a[href=?]", library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 1)
       assert_select "a", text: "Next", count: 0
-      assert_select "form[action=?][method=get]", library_path do
-        assert_select '[name="page"]', count: 0
-        assert_select 'label[for="view"]'
-        assert_select 'select[data-action="change->library-view#change"]'
-        assert_select 'input[type="submit"], button', count: 0
+      assert_select "nav.library-tabs" do
+        assert_select "a", count: 2
+        assert_select "a[href=?]", library_path(view: "watchlist")
+        assert_select 'a[aria-current="page"][href=?]', library_path(view: "watched")
       end
       get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 3)
       assert_select "h3", count: 0
@@ -138,13 +139,45 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rating tags combine using current ratings and include unrated films" do
+    revised = entry(title: "Revised film")
+    unrated = entry(title: "Unrated film")
+    candidate = Ratings::RatingFilm.create!(user: @user, film: revised.film)
+    original = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+    Ratings::RatingRecording::ReviseRating.call(user_id: @user.id, rating_film_id: candidate.id,
+      previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD)
+    foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: unrated.film)
+    foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+
+    get library_path(view: "watched")
+    assert_select ".library-film", count: 2
+    assert_select ".library-rating-filters a[href]", count: 5
+    assert_select ".library-rating-filters a:nth-last-child(2)", text: "Not Rated"
+    assert_select '.library-clear-filters[aria-disabled="true"]:not([href]):not([data-tooltip])'
+    assert_select ".library-rating-filters [data-selected]", count: 0
+    get library_path(view: "watched", ratings: %w[brilliant pretty_good not_for_me garbage unrated])
+    assert_select ".library-film", count: 2
+    assert_select ".library-rating-filters [data-selected]", count: 5
+
+    get library_path(view: "watched", ratings: [ "brilliant" ])
+    assert_select ".library-film", count: 0
+    get library_path(view: "watched", ratings: [ "brilliant", "unrated" ])
+    assert_select ".library-film h3", text: unrated.film.title
+    assert_select ".library-film", count: 1
+    get library_path(view: "watched", ratings: [ "pretty_good", "unrated" ])
+    assert_select ".library-film", count: 2
+    assert_select ".library-film h3", text: revised.film.title
+    assert_select '.library-rating-filters a[data-selected="true"]', count: 2
+    assert_select '.library-clear-filters:last-child[aria-label="Clear selection"][data-tooltip="Clear selection"][href=?]', library_path(view: "watched")
+  end
+
   test "titles are escaped dates optional and page is private" do
     entry(title: "<script>alert('film')</script>", release_date: Date.new(2001, 1, 1))
     entry(title: "No release date")
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
-    assert_select "h3", text: "<script>alert('film')</script>"
+    assert_select "h3", text: "<script>alert('film')</script> (2001)"
     assert_select "script", text: /alert\('film'\)/, count: 0
-    assert_select "p", text: "Released in 2001", count: 1
+    assert_select "h3 .film-year", text: "(2001)", count: 1
     assert_select 'nav[aria-label="Library pages"]'
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'

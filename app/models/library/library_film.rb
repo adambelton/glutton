@@ -9,17 +9,6 @@ module Library
     validates :watched, inclusion: { in: [ true, false ] }
     validates :film_id, uniqueness: { scope: :user_id }
 
-    module RatingStatuses
-      RATED = "rated".freeze
-      AWAITING_RATING = "awaiting_rating".freeze
-    end
-
-    def rating_status
-      return unless watched?
-
-      rated? ? RatingStatuses::RATED : RatingStatuses::AWAITING_RATING
-    end
-
     def can_rate?
       watched? && !rated?
     end

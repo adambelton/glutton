@@ -50,16 +50,24 @@ class LibraryController < ApplicationController
   def show
     @view = params.fetch(:view, Library::CollectionManagement::Browse::Views::WATCHLIST)
     page = params.fetch(:page, "1")
-    unless Library::CollectionManagement::Browse::Views::ALL.include?(@view) && page.is_a?(String) && page.match?(/\A[1-9]\d{0,8}\z/)
+    ratings = params.fetch(:ratings, [])
+    unless Library::CollectionManagement::Browse::Views::ALL.include?(@view) &&
+        page.is_a?(String) && page.match?(/\A[1-9]\d{0,8}\z/) && valid_rating_filters?(ratings)
       render ::Views::Library::Invalid.new, status: :bad_request
       return
     end
     @page_number = page.to_i
-    @page = Library::CollectionManagement::Browse.call(user_id: current_user.id, view: @view, page: @page_number)
-    render ::Views::Library::Browse.new(view: @view, page: @page, page_number: @page_number)
+    ratings = ratings.uniq
+    @page = Library::CollectionManagement::Browse.call(user_id: current_user.id, view: @view, page: @page_number, ratings:)
+    render ::Views::Library::Browse.new(view: @view, page: @page, page_number: @page_number, ratings:)
   end
 
   private
+
+  def valid_rating_filters?(ratings)
+    ratings.is_a?(Array) && (ratings.empty? || (@view == Library::CollectionManagement::Browse::Views::WATCHED &&
+      (ratings - Library::CollectionManagement::Browse::RATING_FILTERS).empty?))
+  end
 
   def shortcut_film_id
     id = params[:film_id]
