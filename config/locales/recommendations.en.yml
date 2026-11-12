@@ -4,3 +4,11 @@ en:
     rate_watched: Rate the film you just marked watched
     progress: "Recommendations unlock after %{required} films are assessed. %{assessed} assessed so far."
     empty: No recommendations are available right now.
+    accept: Accept
+    reject: Reject
+    responses:
+      accepted: Recommendation accepted.
+      rejected: Recommendation rejected.
+    response_unavailable: This recommendation is no longer available to respond to.
+    invalid_film: The film could not be identified.
+    return: Return to Recommendations

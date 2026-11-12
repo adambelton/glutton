@@ -23,7 +23,10 @@ Rails.application.routes.draw do
     post :refresh_taste_profile
   end
 
-  resource :recommendation, only: :show, controller: :recommendations
+  resource :recommendation, only: :show, controller: :recommendations do
+    post :accept
+    post :reject
+  end
 
   post "library/from_ratings/watchlist", to: "library#add_to_watchlist_from_ratings", as: :add_to_watchlist_from_ratings
   post "library/from_recommendations/watched", to: "library#mark_watched_from_recommendations", as: :mark_watched_from_recommendations

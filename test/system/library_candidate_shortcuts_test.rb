@@ -1,6 +1,9 @@
 require "application_system_test_case"
+require_relative "../support/assessed_recommendation_films"
 
 class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
+  include AssessedRecommendationFilms
+
   test "adding a rating candidate to Watchlist skips it for just the next selection" do
     first = Registry::Film.create!(title: "First rating candidate")
     second = Registry::Film.create!(title: "Second rating candidate")
@@ -33,8 +36,7 @@ class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
     assert_text "0 assessed so far"
 
     user = Identity::UserGuest.last
-    quality = quality_categories(:tone).qualities.create!(name: "Slow pace")
-    5.times { |index| assess_film(user:, quality:, index:) }
+    unlock_recommendations_for(user:)
 
     visit recommendation_path
     assert_selector "h2", text: first.title
@@ -49,20 +51,5 @@ class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
 
     visit recommendation_path
     assert_selector "h2", text: first.title
-  end
-
-  private
-
-  def assess_film(user:, quality:, index:)
-    film = Registry::Film.create!(title: "Rated film #{index}")
-    Registry::FilmQuality.create!(film:, quality:)
-    rating_film = Ratings::RatingFilm.create!(user:, film:)
-    rating = rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-    evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
-      notes: {}, qualities: { quality.id.to_s => { name: quality.name, match_rule: nil, not_sufficient: nil } },
-      calls: [], decisions: [ { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } ]
-    })
-    rating.apply_quality_evaluation!(evaluation:)
-    Recommendations::RecommendationFilm.new(user:, film:).suppress!
   end
 end
