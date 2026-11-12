@@ -333,11 +333,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_120000) do
     t.bigint "film_id", null: false
     t.boolean "suppressed", default: false, null: false
     t.string "response"
+    t.datetime "recommended_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["film_id"], name: "index_recommendation_films_on_film_id"
     t.index ["user_id", "film_id"], name: "index_recommendation_films_on_user_id_and_film_id", unique: true
     t.check_constraint "response::text = ANY (ARRAY['accepted'::character varying, 'rejected'::character varying]::text[])", name: "recommendation_films_response"
+    t.check_constraint "suppressed OR response IS NOT NULL OR recommended_at IS NOT NULL", name: "recommendation_films_selection"
   end
 
   create_table "sessions", force: :cascade do |t|

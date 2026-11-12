@@ -23,7 +23,7 @@ module Registry
 
       def movie(tmdb_id:)
         raise Registry::Errors::InvalidTmdbId, "TMDB ID must be a positive Integer" unless tmdb_id.is_a?(Integer) && tmdb_id.positive?
-        request_json(path: "/3/movie/#{tmdb_id}", parameters: { language: "en-US" }, movie_not_found: true)
+        request_json(path: "/3/movie/#{tmdb_id}", parameters: { language: "en-US", append_to_response: "videos" }, movie_not_found: true)
       end
 
       def external_ids(tmdb_id:)

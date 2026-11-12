@@ -45,11 +45,16 @@ class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
     assert_selector '[role="status"]', text: I18n.t("library.detail.watched")
     assert_selector "h2", text: second.title
     assert_no_selector "h2", text: first.title
-    assert_link I18n.t("recommendations.rate_watched"), href: new_rating_path(film_id: first.id)
+    assert_no_link href: new_rating_path(film_id: first.id)
     assert Library::LibraryFilm.find_by!(user:, film: first).watched?
-    assert_not Recommendations::RecommendationFilm.exists?(user:, film: first)
+    recommendation_film = Recommendations::RecommendationFilm.find_by!(user:, film: first)
+    assert_not recommendation_film.suppressed?
+    assert_nil recommendation_film.response
 
     visit recommendation_path
     assert_selector "h2", text: first.title
+
+    DomainEvents::Delivery::Dispatch.call
+    assert Ratings::RatingFilm.pending.exists?(user:, film: first)
   end
 end

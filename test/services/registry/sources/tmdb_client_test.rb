@@ -13,7 +13,7 @@ class Registry::TmdbClientTest < ActiveSupport::TestCase
     assert_equal [ 5, 10, 10, 0 ], [ @http.open_timeout, @http.read_timeout, @http.write_timeout, @http.max_retries ]
     assert_equal 1, @http.requests.size
     request = @http.requests.first
-    assert_equal "/3/movie/348?language=en-US", request.path
+    assert_equal "/3/movie/348?language=en-US&append_to_response=videos", request.path
     assert_equal "Bearer fake-test-token", request["Authorization"]
     assert_equal "application/json", request["Accept"]
     assert_equal "GET", request.method

@@ -12,7 +12,7 @@ class Recommendations::RecordFilmResponseTest < ActiveSupport::TestCase
   test "acceptance publishes the viewer’s acceptance with the recommendation film ID" do
     response = "accepted"
     film = Registry::Film.create!(title: "Accepted recommendation")
-    other = Recommendations::RecommendationFilm.create!(user: Identity::UserGuest.create!, film:)
+    other = Recommendations::RecommendationFilm.create!(user: Identity::UserGuest.create!, film:, recommended_at: Time.current)
     recommendation_film = record(film:, response:)
     assert_equal response, recommendation_film.reload.response
     assert_nil other.reload.response
@@ -33,7 +33,7 @@ class Recommendations::RecordFilmResponseTest < ActiveSupport::TestCase
     end
 
     other = Registry::Film.create!(title: "Publication failure")
-    recommendation_film = Recommendations::RecommendationFilm.create!(user: @user, film: other)
+    recommendation_film = Recommendations::RecommendationFilm.create!(user: @user, film: other, recommended_at: Time.current)
     callback = -> { raise ActiveRecord::StatementInvalid, "injected publication failure" }
     DomainEvents::DomainEvent.set_callback(:create, :before, callback)
     assert_no_difference "DomainEvents::DomainEvent.count" do

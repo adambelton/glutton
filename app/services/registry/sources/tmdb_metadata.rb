@@ -37,6 +37,18 @@ module Registry
         text(@details["poster_path"])
       end
 
+      def youtube_trailer_id
+        videos = @details["videos"]
+        return unless videos.is_a?(Hash) && videos["results"].is_a?(Array)
+
+        trailers = videos["results"].select do |video|
+          video.is_a?(Hash) && video["site"] == "YouTube" && video["type"] == "Trailer" &&
+            video["official"] == true && video["key"].is_a?(String) && video["key"].match?(/\A[A-Za-z0-9_-]{11}\z/)
+        end
+        trailer = trailers.find { |video| video["iso_639_1"] == "en" } || trailers.first
+        trailer&.fetch("key")
+      end
+
       def runtime
         value = @details["runtime"]
         value if value.is_a?(Integer) && value >= 0

@@ -34,7 +34,10 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     get account_path, params: { user_id: other.id }
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
-    assert_select "header a[href=?]", account_path, text: I18n.t("account.title")
+    assert_select "header .theme-toggle + .ui-auth-links" do
+      assert_select "a[href=?]:first-child", account_path, text: I18n.t("account.title")
+      assert_select "a + form button", text: I18n.t("ui.log_out")
+    end
     assert_select ".account-tabs a[aria-current=page]", I18n.t("account.profile")
     assert_select ".profile-narrative a[href='#profile-evidence-1']", text: "[1]"
     assert_select "#profile-evidence-1 strong", "Enjoys quiet dread."

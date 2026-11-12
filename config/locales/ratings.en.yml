@@ -2,7 +2,6 @@ en:
   ratings:
     browser:
       film_details: Film details
-      film_year: "(%{year})"
       title: Rate films
       edit_title: Edit your rating
       updated: Your updated rating has been saved.
@@ -10,8 +9,9 @@ en:
       choice: What did you think?
       notes: Your notes (optional)
       notes_placeholder: What stayed with you? What worked for you, or didn’t?
-      save: Save rating
-      dismiss: Dismiss film
+      save: Save
+      save_disabled: Select a rating to save.
+      dismiss: Dismiss
       saved: Your rating has been saved.
       dismissed: This film has been dismissed from rating rotation.
       empty: You have no films waiting to be rated.

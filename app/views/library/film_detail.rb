@@ -8,7 +8,7 @@ module Views
       def view_template
         page(title: @library_film.film.title, class: "library-page", heading_outside_card: true) do
           p { t("library.browser.released", year: @library_film.film.release_date.year) } if @library_film.film.release_date
-          render ::Library::RatingStatus.new(library_film: @library_film)
+          render ::Library::RatingPrompt.new(library_film: @library_film)
           div(class: "library-actions") do
             action(:mark_watched, :mark_film_watched, mark_watched_library_film_path(@library_film)) if @library_film.can_watch?
             action(:remove, :remove_film, remove_from_watchlist_library_film_path(@library_film), method: :delete) if @library_film.can_remove_from_watchlist?
