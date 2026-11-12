@@ -19,7 +19,7 @@ module Library
 
         entries = case view
         when Views::WATCHLIST then LibraryFilm.where(watched: false)
-        when Views::WATCHED then LibraryFilm.where(watched: true).preload(:rated_rating_film)
+        when Views::WATCHED then LibraryFilm.where(watched: true)
         else raise ArgumentError, "Unknown Library view"
         end
         entries = entries.where(user_id: user.id)
@@ -32,7 +32,7 @@ module Library
           end
           entries = filtered
         end
-        entries = entries.includes(:film)
+        entries = entries.includes(:film).preload(rated_rating_film: :current_rating)
           .order(created_at: :desc, id: :desc).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE + 1).to_a
         next_page = entries.size > PAGE_SIZE
         Page.new(entries: entries.first(PAGE_SIZE), next_page:)

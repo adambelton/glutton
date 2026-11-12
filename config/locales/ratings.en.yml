@@ -2,7 +2,7 @@ en:
   ratings:
     browser:
       film_details: Film details
-      title: Rate films
+      title: Ratings
       edit_title: Edit your rating
       updated: Your updated rating has been saved.
       reload: Reload current rating

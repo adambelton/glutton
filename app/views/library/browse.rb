@@ -16,15 +16,9 @@ module Views
               @page.entries.each do |library_film|
                 li(class: "library-film") do
                   film = library_film.film
-                  a(href: library_film_path(library_film), class: "library-poster-link", aria: { labelledby: "library-film-title-#{library_film.id}" }) do
-                    render ::Registry::FilmPoster.new(film:)
-                    h3(id: "library-film-title-#{library_film.id}") { render ::Registry::FilmTitle.new(film:) }
-                  end
-                  if watched_view?
-                    div(class: "library-rating") do
-                      render ::Library::RatingPrompt.new(library_film:)
-                    end
-                  end
+                  render ::Registry::FilmPoster.new(film:)
+                  render ::Library::FilmActions.new(library_film:)
+                  h3 { render ::Registry::FilmTitle.new(film:) }
                 end
               end
             end

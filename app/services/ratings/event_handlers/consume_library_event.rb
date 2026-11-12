@@ -6,7 +6,8 @@ module Ratings
       HANDLERS = {
         ::Library::Events::FILM_MARKED_WATCHED => Library::FilmMarkedWatched,
         ::Library::Events::FILM_ADDED_TO_WATCHLIST => Library::FilmAddedToWatchlist,
-        ::Library::Events::FILM_REMOVED_FROM_WATCHLIST => Library::FilmRemovedFromWatchlist
+        ::Library::Events::FILM_REMOVED_FROM_WATCHLIST => Library::FilmRemovedFromLibrary,
+        ::Library::Events::FILM_REMOVED_FROM_WATCHED => Library::FilmRemovedFromLibrary
       }.freeze
       EVENT_NAMES = HANDLERS.keys.freeze
 

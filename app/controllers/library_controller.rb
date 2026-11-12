@@ -16,14 +16,25 @@ class LibraryController < ApplicationController
     render ::Views::Library::Unavailable.new(error: @error), status: :conflict
   end
 
-  def film
-    @library_film = Library::CollectionManagement::FindFilm.call(user_id: current_user.id, library_film_id: library_film_id_param)
-    render ::Views::Library::FilmDetail.new(library_film: @library_film)
+  rescue_from Library::Errors::NotWatched do
+    @error = I18n.t("library.detail.not_watched")
+    render ::Views::Library::Unavailable.new(error: @error), status: :conflict
+  end
+
+  def move_to_watchlist
+    Library::CollectionManagement::ChangeWatchedEntry.move_to_watchlist(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_path, notice: I18n.t("library.detail.watchlisted"), status: :see_other
+  end
+
+  def remove_from_watched
+    Library::CollectionManagement::ChangeWatchedEntry.remove(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_path(view: Library::CollectionManagement::Browse::Views::WATCHED),
+      notice: I18n.t("library.detail.removed_from_library"), status: :see_other
   end
 
   def mark_watched
-    library_film = Library::CollectionManagement::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
-    redirect_to library_film_path(library_film), notice: I18n.t("library.detail.watched"), status: :see_other
+    Library::CollectionManagement::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to library_path(view: Library::CollectionManagement::Browse::Views::WATCHED), notice: I18n.t("library.detail.watched"), status: :see_other
   end
 
   def add_to_watchlist_from_ratings

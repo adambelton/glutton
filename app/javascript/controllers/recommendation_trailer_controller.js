@@ -25,11 +25,6 @@ export default class extends Controller {
   }
 
   setExpanded(expanded) {
-    if (expanded) {
-      this.element.style.setProperty("--recommendation-card-height", `${this.element.getBoundingClientRect().height}px`)
-    } else {
-      this.element.style.removeProperty("--recommendation-card-height")
-    }
     this.element.classList.toggle("recommendation-film-expanded", expanded)
     this.toggleTarget.setAttribute("aria-expanded", String(expanded))
     const { expandLabel, collapseLabel } = this.toggleTarget.dataset

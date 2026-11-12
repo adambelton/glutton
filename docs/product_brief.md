@@ -41,7 +41,7 @@ Principles:
 
 Start visitors in the ratings experience and let them use ratings, recommendations and their library as email-free guests before registering. Create the temporary identity when personal activity needs saving. Guests and registered users share a revocable server-side session model. Guest sessions are issued without credentials; registered sessions follow successful password authentication. A normal browser-session cookie identifies the guest session across tabs; closing a tab does not end it, and browser restoration may preserve it. Enforce a fixed expiry 24 hours after guest creation, without extending it on activity. Explain that guest progress is temporary and registration keeps it. Expired guests lose access and cannot register to recover their old activity; the retention policy deletes abandoned guest identities and their associated activity. Deletion is eventual, not triggered by browser closure.
 
-Registered accounts use email and password. For an existing guest, registration upgrades their internal user ID so activity is retained. Direct signup requires no guest or user record before confirmation. Store unverified email and password information in a separate pending registration, optionally linked to the existing guest; only verified registration stores an email on a user. Confirmation creates a registered account for direct signup or upgrades its linked active guest. Email confirmation is required to complete registration, rather than an optional step after registration. If someone starts signup and then uses the app as a guest in the same browser, preserve that continuity so confirmation retains their activity. Keep a verification reminder, the registration deadline and the temporary nature of guest activity visible until completion; unconfirmed signup does not make progress permanent. New registrations for an already registered email are rejected with sign-in guidance, without sending another confirmation. Entering an address alone never grants access to existing data. Signing into an existing account requires authentication and does not automatically merge guest activity. Collect no names, demographic details or public profiles. Registered sessions follow Rails authentication conventions without an application-imposed TTL; sign-out, revocation and account deletion end access. Verification uses an explicit confirmation action; merely viewing an email link does not complete registration. Identity cleanup is available as a bounded command for expired guests, sessions and pending registrations. The proposed cadence is every 15 minutes, but no scheduler is installed; Library watched activity uses an agreed scoped user foreign-key cascade so eventual expired-guest deletion removes its Library relationships and preserves shared films. Other product-activity deletion policies must be agreed before those domains persist guest activity.
+Registered accounts use email and password. For an existing guest, registration upgrades their internal user ID so activity is retained. Direct signup requires no guest or user record before confirmation. Store unverified email and password information in a separate pending registration, optionally linked to the existing guest; only verified registration stores an email on a user. Confirmation creates a registered account for direct signup or upgrades its linked active guest. Email confirmation is required to complete registration, rather than an optional step after registration. If someone starts signup and then uses the app as a guest in the same browser, preserve that continuity so confirmation retains their activity. Keep a verification reminder, the registration deadline and the temporary nature of guest activity visible until completion; unconfirmed signup does not make progress permanent. New registrations for an already registered email are rejected with sign-in guidance, without sending another confirmation. Entering an address alone never grants access to existing data. Signing into an existing account requires authentication and does not automatically merge guest activity. Collect no names, demographic details or public profiles. Registered sessions follow Rails authentication conventions without an application-imposed TTL; sign-out, revocation and account deletion end access. Verification uses an explicit confirmation action; merely viewing an email link does not complete registration. Identity provides a bounded cleanup command for expired guests and pending registrations. Deleting an expired guest also removes their sessions and viewer-owned activity while preserving shared films. The proposed 15-minute cleanup schedule remains open.
 
 Use one users table with stable internal IDs for guests and registered accounts; film and preference records reference only those IDs. Guests have no fabricated email or password. Use Rails authentication primitives as the starting point, with application-owned guest and registration behaviour. Resend is the delivery provider for verification and password-reset mail, with local previews and no real sending by default; development can explicitly use Resend for end-to-end verification, while automated tests remain local. This replaces the original magic-link decision.
 
@@ -53,9 +53,9 @@ Ratings, film notes and taste profiles are private by default. Keep email out of
 
 ### 3.1 Rate films
 
-The viewer cycles through horror films in an explicit rating interface. First they indicate whether they have seen the film. Selecting **Haven’t seen it** records the film as **confirmed unseen**, so it is not offered for rating again while that status remains. At this point, offer **Add to watchlist** or continue to the next film. Confirmed unseen alone leaves the film eligible for recommendations; adding it to the watchlist classifies it as To watch and excludes it from recommendations.
+Ratings offers a film with options to save a rating, dismiss the prompt, or add the film to the Watchlist. Dismissal removes it from automatic Ratings rotation. Watchlist activity suppresses it through Library events.
 
-If they have seen it, they are presented with four ratings and optional expression inputs:
+The viewer chooses from four ratings:
 
 1. **Brilliant** — strong positive evidence.
 2. **Pretty Good** — light positive evidence.
@@ -70,25 +70,19 @@ For initial automatic admission to the Ratings queue, use descending TMDB vote c
 
 A possible future entry point, especially for new users, is a grid for selecting films they have already seen. Each selection adds the film to their ratings queue, removes its tile and loads the next film in that position. Users could select as many films as they want before moving into the normal rating interface. Selecting is not itself a rating, and unselected films are not automatically classified as unseen. This is a deferred product idea, not part of the current implementation scope.
 
-Shared expressions may later provide inspiration in placeholders, with consent and moderation. Prefer changes on page load or manual request rather than during composition. Clearly labelled curated examples may precede real shared contributions. Seen confirmation precedes spoiler-bearing rating material. Film-information links are clearly labelled for spoilers.
+Shared expressions may later provide inspiration in placeholders, with consent and moderation. Prefer changes on page load or manual request rather than during composition. Clearly labelled curated examples may precede real shared contributions. Film-information links are clearly labelled for spoilers.
 
 ### 3.2 Process recommendations
 
 Present eligible films with an understandable, specific, spoiler-safe recommendation reason. Support useful spoiler-free film information and, where integrations permit, a trailer and external ratings. Reasons should reflect actual expressed preferences or inferred rating patterns rather than superficial similarity; ratings-only users must also receive explanations.
 
-A viewer can:
+A viewer can accept, reject or mark the film watched. Acceptance adds it to the Watchlist through Library. Rejection closes the recommendation. Mark Watched is a Library action that can make the film available for rating. These actions supply no enjoyment scores.
 
-- **Add to watchlist:** Classify the film as To watch. This is intent, not positive enjoyment evidence.
-- **Mark watched:** Classify the film as Watched and queue it for a subsequent rating session if unrated. An immediate-rating link may be useful; a limited overall-rating interface is an option to evaluate.
-- **Not interested:** Record that the viewer has not seen the film and does not want to watch it; classify it as Not interested and exclude it from future recommendation results and rating prompts. This is not negative quality evidence. Capturing a reason is deferred beyond MVP.
-
-**Recommendations only contain films that the viewer has not classified.** To watch, Watched and Not interested all exclude films from results. Removing an unwatched film's classification makes it eligible again.
+Watchlist and Watched activity suppresses a film from recommendations. Removing a Watchlist entry lets a film be ranked again if its recommendation record existed solely for suppression. Previously recommended films retain their suppression.
 
 ### 3.3 Personal library
 
-Viewing status (**unknown**, **confirmed unseen**, or **watched**) is distinct from library classification. A confirmed-unseen film need not appear in any of the three classified library views. Marking it watched through the library or recommendation interface makes it available for rating. Removing a watchlist or Not interested classification does not erase confirmed-unseen status or return the film to rating prompts.
-
-The library is the durable home for classified films, with **To watch**, **Watched**, and **Not interested** views. Watched films can be rated or awaiting a rating. Viewers can mark watchlist films watched, revisit ratings and expressions, and reconsider dismissed films. Exact transition wording and editing/history behaviour remain to be specified.
+Library shows **Watchlist** and **Watched** poster grids. Viewers can mark Watchlist films watched, combine rating filters on Watched, and add or revise ratings and notes from Library. Reviewing dismissed ratings prompts or rejected recommendations is open work in their respective domains.
 
 The library provides access to spoiler-labelled film information/qualities and inaccuracy reporting. It is also a potential future entry point for streaming/purchase options and community quality editing; those features are not MVP requirements.
 
@@ -98,7 +92,7 @@ A separate ThoughtForm-like conversation after a first watch or rewatch remains 
 
 ### Ownership of viewer activity
 
-Library owns the canonical user–film relationship. Ratings owns its presentations, responses, ratings, expressions and taste interpretation. Recommendations owns its suggestions, responses, eligibility and ranking. Their histories remain separate; product-domain coordination uses durable asynchronous domain events. A completed rating publishes viewing evidence that Library consumes to establish watched state. Library publishes classification changes that Ratings and Recommendations consume independently. Watched-but-unrated films become ready for rating without another seen question; an already-rated film is not requeued. Not interested means not seen and not wanted: exclude it from rating prompts and recommendations. Removal does not assert that the film has since been watched or erase unseen history. A Ratings unseen answer alone creates no Library classification and does not exclude discovery. Choices made in recommendation or rating screens are recorded in their owning domain and delivered to Library asynchronously; successful Library changes and rejected requests have explicit outcomes. Brief propagation delays across screens are acceptable; lost or duplicate effects are not. Each domain's own action commits independently, with durable publication in its transaction. See the architecture decision in [domain events](domain_events.md).
+Library owns the canonical viewer–film relationship. Ratings owns its prompts, ratings, notes and taste interpretation. Recommendations owns selection, eligibility and responses. A completed rating publishes viewing evidence that Library consumes to establish Watched state. Acceptance publishes the event Library uses to add a Watchlist entry. The shortcuts for adding to Watchlist and marking watched invoke Library directly. See the [domain event contracts](domain_events.md).
 
 ## 4. Domain vocabulary (product concepts, not prescribed code objects)
 
@@ -106,8 +100,8 @@ Library owns the canonical user–film relationship. Ratings owns its presentati
 - **Film source information:** Maintained narrative/context material, principally Wikipedia, with source identity and revision. Film owns current source context; no independent FilmAnalysis lifecycle is retained.
 - **Quality:** A reusable characteristic potentially relevant to enjoyment or dislike: e.g. slow-burn storytelling, isolated environments, practical effects, demonic possession, oppressive atmosphere, folk ritual. Qualities are grouped into broad categories for classification, but need not appear as user-facing tags.
 - **Expression:** A viewer's original natural-language account of what they appreciated or disliked. Expressions may correspond to several qualities and can carry context that those qualities do not capture.
-- **Viewing status:** Unknown, confirmed unseen, or watched. Confirmed-unseen films are excluded from rating prompts until marked watched, but remain recommendation-eligible unless classified in the library. This status supplies no enjoyment evidence.
-- **Library classification:** A viewer’s durable To watch, Watched or Not interested choice. All exclude a film from recommendations; only watched-film ratings and expressions supply enjoyment evidence.
+- **Rating eligibility:** Ratings admits or suppresses candidates using its own state and events from Library. A dismissal remains in effect after new viewing evidence.
+- **Library entry:** A viewer’s Watchlist or Watched relationship to a shared film.
 - **Rating:** The viewer's overall four-level personal reaction to a watched film, carrying directional and strength information.
 - **Film–quality association:** An accepted assessment that a film substantially exhibits a quality, grounded in source evidence; changes can make downstream scoring eligible for reassessment.
 - **Expression–quality association:** An assessment that a viewer's expression indicates appreciation or dislike of a quality; can be re-evaluated with newer models/vocabularies.
@@ -223,9 +217,9 @@ Using the current inferred preference profile and the film–quality association
 - Can rank plausible candidate films even for a viewer who supplies no expressions.
 - Lets a single explicitly expressed quality influence interpretation of older ratings where relevant, without automatically dominating every other quality.
 - Does not treat a liked vampire film as proof of a general liking for all vampire films; competing qualities and established rating patterns affect ranking.
-- Excludes every film classified as To watch, Watched or Not interested; confirmed-unseen status alone does not exclude it from recommendations, although it does exclude it from rating prompts.
+- Excludes films with applicable suppression or a recorded recommendation response.
 - Produces traceable, spoiler-safe reasons for recommending a film.
-- Captures watchlist, watched and not-interested decisions without treating intent or dismissal as enjoyment evidence.
+- Records acceptance, rejection and Library actions independently of enjoyment scores.
 
 A viewer may enjoy different films for different experiences. Do not assume that lower-ranked matching qualities matter less merely because stronger matches coexist. Investigate whether relevant films with fewer assigned qualities are actually overlooked before imposing a fixed count or a correction for quality count.
 
@@ -243,20 +237,20 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 
 - Bulk seed and user-requested TMDB missing-film imports sharing metadata import, Wikipedia context enrichment and quality assignment within category-specific ceilings.
 - Catalogue/admin delivery order: load the seed; view canonical films/categories/qualities; add manual editing; add manual TMDB/Wikipedia refresh; then wire JEV change checking with explicit application. No persistent suggestion queue is required initially.
-- A cycling rating interface with persistent confirmed-unseen status, exclusion of confirmed-unseen films from rating prompts, direct watchlist addition for unseen films, four-level personal ratings and **one optional field for film notes**, saved together.
-- A library with To watch, Watched and Not interested views, pending-rating access and the ability to revisit ratings and expressions.
+- A cycling rating interface with dismissal, direct Watchlist addition, four levels of personal enjoyment and one optional field for film notes.
+- A Library with Watchlist and Watched, pending-rating access and the ability to revisit ratings and notes.
 - Source-backed film information and qualities accessible with spoiler-labelled navigation and manual inaccuracy reporting; direct film qualities replace the independent analysis lifecycle.
 - JEV implicit and explicit quality scoring using the pre-submission taste profile, plus separate taste-profile assessment/building based **only on explicitly submitted expressions**; retain original text.
 - Positive and negative preference inference from recurring qualities across rated films, including for users who never submit expressions.
 - **Contextual reinterpretation of existing ratings** when the taste profile changes meaningfully, through periodic reassessment rather than compulsory recalculation after each expression; exact cadence and optional manual refresh remain open.
-- Baseline recommendations using the current inferred profile, spoiler-safe explanations, and watchlist/watched/not-interested actions. All three library classifications exclude films from recommendations.
+- Baseline recommendations using current applied scores, spoiler-safe explanations, Accept and Reject, and a Mark Watched shortcut.
 - A usable bulk-rating flow that does not require selecting tags.
 
 **Subsequent milestones**
 
 - Post-release admin expression investigation/testing for missing qualities or category-preference coverage, after the seed/view/edit/refresh/check path.
 - A separate conversational reflection or rewatch experience is an optional future experiment, not a committed milestone.
-- More expressive recommendations and richer feedback, including reasons for Not interested, where evidence justifies it.
+- More expressive recommendations and richer feedback, including optional rejection reasons, where evidence justifies it.
 - Shared viewer expressions as rotating inspiration on watched-film pages, once consent/moderation mechanisms are adequate. A prototype may use clearly labelled curated examples before real shared contributions exist.
 
 **Explicitly out of scope initially**
@@ -302,40 +296,38 @@ Avoid choosing framework patterns or building abstractions solely for potential 
 
 ## 11. Open product questions / acceptance tests
 
-**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; consent/review for shared expression prompts; whether the first recommendation version needs any minimum taste profile; source coverage sufficient for useful initial qualities; JEV request packing; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful taste-profile changes; periodic reassessment cadence and optional manual refresh; taste-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
+**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; consent/review for shared expression prompts; source coverage sufficient for useful initial qualities; JEV request packing; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful taste-profile changes; taste-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
 
 **First-success tests:**
 
 1. Can someone rate a dozen familiar films quickly, **without writing any expressions**, and still receive plausible recommendations?
 2. Can it accumulate distinct positive and negative evidence from qualities repeatedly appearing in films the viewer rates? Can it identify meaningful shared qualities from the expressions users do choose to write?
-3. Can it suggest an unclassified film with a believable, spoiler-safe explanation, and exclude it after a To watch, Watched or Not interested decision without adding false enjoyment evidence?
+3. Can it suggest an unclassified film with a believable, spoiler-safe explanation, and exclude it after acceptance, rejection or marking it watched without adding false enjoyment evidence?
 4. Can users inspect sourced film information and quality context, and report an inaccurate association?
 5. Can classifications be regenerated after a quality change without losing the viewer's original expressions?
 6. After a viewer supplies an informative expression, can Glutton **reinterpret older ratings** and produce sensibly changed recommendations at a periodic refresh (or optional on-demand refresh), without manufacturing new explicit expressions or self-reinforcing scores?
 7. Can deferred JEV scoring preserve direct expression evidence separately from profile-informed interpretation, with new explicit evidence taking effect after processing and historical interpretations improving after refresh?
-8. Can viewers manage their three library views, find watched films awaiting ratings, revise ratings/expressions, and reconsider dismissals?
-9. Does Haven’t seen it prevent repeated rating prompts while preserving recommendation eligibility, and can the viewer add it directly to To watch? Does marking it watched subsequently make it available to rate?
+8. Can viewers manage Watchlist and Watched, find watched films awaiting ratings, revise ratings/expressions, and reconsider dismissals?
+9. Can viewers dismiss a Ratings prompt or add the film to their Watchlist? Does marking it watched make an unrated film available to rate while preserving any explicit dismissal?
 10. Can source information be refreshed independently of accepted quality changes, with scoring updated only for relevant accepted changes?
 
 **Product hypothesis:** Ratings identify recurring patterns in what horror enthusiasts like and dislike. Optional expressions provide the context to reinterpret those ratings more intelligently, yielding increasingly relevant and understandable recommendations as users engage—while making reflection on films rewarding in its own right. **Rate films to narrow; express yourself to supercharge discovery.**
 
 ## Ratings workflow clarification — 21 October 2026
 
-Owner-approved simplification supersedes the earlier Ratings seen/unseen question and presentation-history proposals: present a film for rating or dismissal. A dismissal only removes it from automatic Ratings rotation; it does not assert that the user has not seen it or change recommendation eligibility or Library classification. Store current queue/selection/dismissal on one RatingFilm per user/film, without presentation history or dismissal reasons. Later Library viewing evidence preserves explicit rating dismissal. The user can explicitly initiate rating from Library through the later targeted-entry task. Watchlist and not-interested-in-watching choices remain in Library and Recommendations; Ratings-flow action requests are deferred. 
-
-Ratings candidate ordering clarification: the owner subsequently approved oldest-first batches from a single persistent RatingFilm queue. Candidate selection defaults to one film and supports explicitly requested batches. Candidates admitted by Library watched events and unfinished catalogue candidates use the same created_at/ID order; newly watched entries do not jump the queue. The row stores user, film, boolean dismissal and standard timestamps only. Selection records no presentation/current state. The ratings relationship supplies rated/unrated scopes; selection excludes rated rows. Catalogue replenishment fills only requested batch shortfalls using the agreed vote-count order, preserving all existing user/film records, ratings, dismissal and holds. Library watchlist and Not interested changes affect eligibility when Ratings consumes their events. Watched films do not jump existing pending entries. This supersedes earlier watched-first priority descriptions.
+Ratings serves eligible candidates oldest first by creation time and ID. Catalogue replenishment fills only the requested shortfall. Watched events can admit unrated films into the same queue. Each RatingFilm records dismissal and suppression independently.
 
 ## Mobile-first navigation — 26 October 2026
 
 Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. Anonymous visitors see a curated, read-only Ratings demonstration using real horror-film posters/synopses, fictional sample ratings and accompanying film notes; no identity or personal queue entry exists until meaningful explicit interaction. Product pages require login, completed registration or Continue as guest. A requested resource takes priority after entry; without one, guests go to Ratings and registered users to Library. Login/registration use dedicated pages, and login also offers guest continuation. This supersedes the earlier universal Ratings-root/no-homepage proposal.
 
 - On mobile, use persistent bottom navigation with an icon and visible text label for each destination and a clear active state. Keep account/sign-in controls in the page header. Reserve content space for the navigation and device safe area so it never obscures forms, actions or the final list item. Use comfortable touch targets and verify keyboard/focus behaviour, zoom and narrow screens.
-- Library has one collection page. A labelled dropdown at the top selects Watchlist (the default), Watched or Not interested. Use the platform-native select on mobile; preserve the same control on desktop. Selection is reflected in the URL, so refresh, sharing and back/forward restore the selected view. A bare Library URL opens Watchlist; changing the view resets pagination.
-- On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with roomier film rows; keep the Library dropdown above the list. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
+- Library has Watchlist and Watched tabs above a poster grid. The URL preserves the active tab and Watched rating filters.
+- On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with collection tabs above the poster grid. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-This is the agreed navigation design, not a claim that every destination is implemented. Shared navigation/default-route wiring belongs to a narrowly scoped supporting UI task; Recommendations content and first-visit Ratings discovery still need their own implementations. Do not add dead links or invent placeholder product flows merely to complete the navigation. Library browsing and its management actions are implemented; Recommendations and shared primary navigation remain separately scoped work.
 
-Library film details: selecting a film in a Library collection opens its existing Library relationship detail page. Information and available actions are defined by model behaviour. Detail access, watchlist removal/mark-watched and dismissal-management actions use a shared composition of content-named partials guarded by model permissions. Existing watched rating entry remains. A removed relationship is unavailable rather than recreated by visiting its old URL.
 
-Library entry creation is distinct from actions on an existing entry. Ratings activity currently establishes watched entries through asynchronous Library event handling; recommendations acceptance is a future creation source. A future TMDB search may offer rating or explicit Add to watchlist, with watchlist creation followed by a redirect to that Library film detail page. Browsing details never creates entries and requires the LibraryFilm ID, not a shared Film ID.
+Watchlist cards expose Mark Watched and Remove from Watchlist. Watched cards offer Add Rating or Edit Rating, Move to Watchlist and Remove from Library. The rating icon changes when the current rating has notes.
+
+Rating submission and recommendation acceptance can create Library entries through events. The direct Library shortcuts also create entries.
