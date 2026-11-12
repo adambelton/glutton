@@ -95,8 +95,10 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
           assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
           assert_select "a.wordmark", "glutton."
           assert_select 'button[data-controller="theme"][aria-pressed="false"][aria-label=?]', I18n.t("ui.dark_mode")
-          assert_select "main#registry-content"
-          assert_select "form", count: 0
+          assert_select "header.ui-header a[href=?]", library_path
+          assert_select "main#main-content.registry-page .ui-card"
+          assert_select "main nav.registry-tabs a[aria-current=page]", count: 1
+          assert_select "main form", count: 0
           assert_select "script", text: /overview|quality|Current source/, count: 0
           assert_no_match(/translation missing/i, response.body)
           assert_equal "no-store", response.headers["Cache-Control"]

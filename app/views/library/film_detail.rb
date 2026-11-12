@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: @library_film.film.title, class: "library-page") do
+        page(title: @library_film.film.title, class: "library-page", heading_outside_card: true) do
           p { t("library.browser.released", year: @library_film.film.release_date.year) } if @library_film.film.release_date
           render ::Library::RatingStatus.new(library_film: @library_film)
           div(class: "library-actions") do

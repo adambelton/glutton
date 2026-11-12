@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        shell(title: t(:categories), active: :categories, description: t(:categories_description)) do
+        shell(active: :categories, description: t(:categories_description)) do
           section(class: "registry-panel") do
             section_heading(:categories, count: @page.total)
             if @page.entries.empty?
