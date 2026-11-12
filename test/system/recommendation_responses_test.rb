@@ -55,6 +55,29 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
+  test "rating and recommendation cards and posters use matching dimensions" do
+    film = Registry::Film.create!(title: "Card sizing film")
+    visit recommendation_path
+    click_button I18n.t("identity.entry.try_it_out")
+    assert_current_path recommendation_path
+    unlock_recommendations_for(user: Identity::Session.last.user)
+
+    [ 1400, 900, 390 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
+      visit recommendation_path
+      recommendation = find(".ui-card", text: film.title).rect
+      recommendation_poster = find(".recommendation-artwork .film-poster").rect
+      visit new_rating_path
+      rating = find(".ui-card", text: film.title).rect
+      rating_poster = find(".rating-film-artwork .film-poster").rect
+      assert_in_delta rating.height, recommendation.height, 1
+      assert_in_delta rating_poster.width, recommendation_poster.width, 1
+      assert_in_delta rating_poster.height, recommendation_poster.height, 1
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   test "new ratings leave a queued recommendation in place until a response" do
     first = Registry::Film.create!(title: "A recommendation to accept")
     second = Registry::Film.create!(title: "A recommendation to reject")

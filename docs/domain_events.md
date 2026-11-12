@@ -10,7 +10,7 @@ Library, Ratings and Recommendations own their data and publish domain facts thr
 
 Publish the source change and its outbox event in one database transaction. Each consumer later commits only its own domain updates and delivery receipt. The outbox is delivery infrastructure, not the authoritative domain history or an event-sourced replacement for models. Domain rules belong in their existing models/operations. Internal calls within a domain remain ordinary synchronous Ruby calls. This decision concerns asynchronous state-changing reactions, not a ban on synchronous shared-data reads, Identity resolution or external request/response APIs.
 
-Library entries represent Watchlist or Watched. A Watched entry cannot move back to Watchlist. Completed ratings supply viewing evidence. Add to Watchlist and Mark Watched are direct Library actions.
+Library entries represent Watchlist or Watched. Viewers can move Watched entries back to Watchlist or remove them from Library while preserving Ratings history. Completed ratings supply viewing evidence. Add to Watchlist and Mark Watched are direct Library actions.
 
 ## Implemented publication and reactions
 
@@ -20,7 +20,8 @@ Events name domain facts, with minimum internal user/film identity in the payloa
 | --- | --- |
 | Library: FilmMarkedWatched | Ratings admits a missing candidate or releases its suppression, preserving current ratings and explicit dismissal. |
 | Library: FilmAddedToWatchlist | Ratings admits or suppresses its candidate. |
-| Library: FilmRemovedFromWatchlist | Ratings releases existing suppression without creating a missing candidate or clearing dismissal. |
+| Library: FilmRemovedFromWatchlist | Ratings ensures its candidate is suppressed, preserving ratings and dismissal. |
+| Library: FilmRemovedFromWatched | Ratings ensures its candidate is suppressed, preserving ratings and dismissal. |
 | Ratings: RatingSubmitted | Library creates/reconciles watched state, from a missing or Watchlist entry. Already watched is ignored. An actual transition publishes a causal FilmMarkedWatched in the same receipt transaction. |
 
 Rating replacement preserves history and emits no revision event. A later consumer need must establish its actual meaning/payload before adding one. The Library subscriptions also handle the viewer action facts described below.
@@ -42,9 +43,51 @@ The `RecommendationAccepted` v1 payload contains exactly the positive internal i
 
 Library reads its current state under the existing user lock. An acceptance delivered after a separate Watchlist addition and removal adds the film again if there is no entry. The owner confirmed this behavior for the initial release. It ignores duplicate or inapplicable facts, including a Watchlist addition for a Watched film. It publishes `FilmAddedToWatchlist` or `FilmMarkedWatched` only when a change occurs and propagates the source correlation and causation. Foundation records delivery receipts, retries technical failures and skips inactive owners. A receipt describes delivery of an event to a subscriber.
 
-Recommendations sets `suppressed` on `RatingSubmitted`, `FilmMarkedWatched`, and `FilmAddedToWatchlist`. `FilmRemovedFromWatchlist` discards a suppression-only record if the film has never been recommended and has no response. Previously recommended or answered records stay suppressed. Either publisher can establish the record. Suppression never records or erases a recommendation response. Repeated facts without an applicable change are ignored, including removal with no suppression-only record to discard.
+Recommendations sets `suppressed` on `RatingSubmitted`, `FilmMarkedWatched`, and `FilmAddedToWatchlist`. `FilmRemovedFromWatchlist` discards a suppression-only record if the film has never been recommended and has no response. Previously recommended or answered records stay suppressed. Recommendations retains existing suppression after Watched removal. Either publisher can establish the record. Suppression never records or erases a recommendation response. Repeated facts without an applicable change are ignored, including removal with no suppression-only record to discard.
 
 Use one ordered subscription per publisher and receiving domain. Ratings and Library streams have no guaranteed relative delivery order. Watchlist events are ordered within the Library stream. Cross-publisher ordering is deferred. A removal delivered after a rating can discard a suppression-only record until the derived Watched event arrives. The coordinated development rebuild starts with empty activity, streams and receipts. The subscriptions catch up from retained supported events using Foundation delivery. Unsupported versions fail explicitly.
+
+## Domain event flows
+
+### Entering Watchlist or Watched
+
+```mermaid
+flowchart LR
+    Accept["Recommendations: accept"] --> Accepted["RecommendationAccepted"]
+    Accepted --> Add["Library: add to Watchlist if absent"]
+    Shortcut["Ratings screen: Add to Watchlist"] --> Add
+    Add --> Added["FilmAddedToWatchlist"]
+    Added --> SuppressRating["Ratings: create or suppress RatingFilm"]
+    Added --> SuppressRec["Recommendations: create or suppress RecommendationFilm"]
+
+    Submit["Ratings: submit rating"] --> Submitted["RatingSubmitted"]
+    Submitted --> Watch["Library: mark Watched if needed"]
+    Submitted --> SuppressRec
+    Mark["Recommendations screen or Watchlist: Mark Watched"] --> Watch
+    Watch --> Watched["FilmMarkedWatched"]
+    Watched --> Queue["Ratings: create or unsuppress RatingFilm"]
+    Watched --> SuppressRec
+```
+
+Ratings offers the oldest eligible candidate after delivery. Eligibility requires an unrated, unsuppressed and undismissed candidate. Dismiss and Reject are local actions.
+
+### Leaving Watchlist or Watched
+
+```mermaid
+flowchart LR
+    RemoveWatchlist["Library: remove Watchlist entry"] --> WatchlistRemoved["FilmRemovedFromWatchlist"]
+    WatchlistRemoved --> Ratings["Ratings: ensure RatingFilm is suppressed"]
+    WatchlistRemoved --> Reconsider["Recommendations: discard suppression-only record"]
+    WatchlistRemoved --> Retain["Recommendations: retain suppression for previously recommended or answered films"]
+
+    RemoveWatched["Library: remove Watched entry"] --> WatchedRemoved["FilmRemovedFromWatched"]
+    WatchedRemoved --> Ratings
+
+    Move["Library: move Watched entry to Watchlist"] --> Added["FilmAddedToWatchlist"]
+    Added --> Suppression["Ratings and Recommendations: suppress"]
+```
+
+Ratings preserves ratings and explicit dismissal. A Library action publishes its event only when it changes the entry. Each subscriber writes only its own state.
 
 ## Delivery contract and failure handling
 

@@ -11,7 +11,7 @@ module Views
           if @film.present?
             details = @film.tmdb_details
             video_id = details.youtube_trailer_id
-            article(class: "recommendation-film", data: ({ controller: "recommendation-trailer",
+            render Shared::FilmCard.new(layout: "recommendation-film", data: ({ controller: "recommendation-trailer",
               action: "keydown.esc->recommendation-trailer#collapse resize@window->recommendation-trailer#fitViewport" } if video_id.present?)) do
               div(class: "recommendation-artwork") { render ::Registry::FilmPoster.new(film: @film) }
               div(class: "recommendation-details") do

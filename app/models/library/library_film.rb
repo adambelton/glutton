@@ -17,12 +17,36 @@ module Library
       watched? && rated?
     end
 
+    def current_rating
+      rated_rating_film&.current_rating
+    end
+
     def remove_from_watchlist!
       raise Errors::NotOnWatchlist unless can_remove_from_watchlist?
 
       transaction do
         destroy!
         publish_event!(name: Events::FILM_REMOVED_FROM_WATCHLIST)
+      end
+      self
+    end
+
+    def move_to_watchlist!
+      raise Errors::NotWatched unless watched?
+
+      transaction do
+        update!(watched: false)
+        publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST)
+      end
+      self
+    end
+
+    def remove_from_watched!
+      raise Errors::NotWatched unless watched?
+
+      transaction do
+        destroy!
+        publish_event!(name: Events::FILM_REMOVED_FROM_WATCHED)
       end
       self
     end

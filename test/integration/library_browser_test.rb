@@ -27,13 +27,13 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "h3", text: watchlist.film.title, count: 1
       assert_select "h3", count: 1
       assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view: "watchlist"), text: "Watchlist"
-      assert_select ".library-films a[href=?] img[src=?]", library_film_path(watchlist), "https://image.tmdb.org/t/p/w500/watchlist.jpg"
+      assert_select ".library-films img[src=?]", "https://image.tmdb.org/t/p/w500/watchlist.jpg"
       { Library::CollectionManagement::Browse::Views::WATCHED => watched }.each do |view, row|
         get library_path(view:)
         assert_select "h3", text: row.film.title, count: 1
         assert_select "h3", count: 1
         assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view:), text: "Watched"
-        assert_select ".library-films a[href=?] .poster-placeholder", library_film_path(row)
+        assert_select ".library-films .poster-placeholder"
       end
       assert_select 'main a[href*="rating/new"]', count: 1
     end
@@ -49,8 +49,6 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
     assert_select ".library-film p", text: "Awaiting rating", count: 0
     assert_select 'main a[href*="rating/new"]', count: 5
-    get library_film_path(rows.first)
-    assert_select "p", text: "Awaiting rating", count: 0
     assert_select "a[href=?]", new_rating_path(film_id: rows.first.film_id)
 
     row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
@@ -82,7 +80,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_operator single_entry_queries, :>, 0
     10.times { entry }
     assert_equal single_entry_queries, count_queries.call
-    assert_select ".library-rating", count: 11
+    assert_select ".library-rating-icon", count: 11
   end
 
   test "links admit missing candidates reuse suppressed dismissed candidates and reject stale rated links" do
@@ -210,7 +208,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     get library_path
     assert_response :gone
   end
-  test "edit links expose latest owner evidence on both surfaces without writes" do
+  test "edit links expose latest owner evidence on poster cards without writes" do
     [ @user, Identity::UserRegistered.create!(email_address: "edit-library@example.test",
       password: "long test password", password_confirmation: "long test password",
       email_confirmed_at: Time.current) ].each do |user|
@@ -224,20 +222,16 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
         previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Current")
       edit_link = edit_rating_path(film_id: watched.film_id)
       assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        [ library_path(view: Library::CollectionManagement::Browse::Views::WATCHED), library_film_path(watched) ].each do |path|
-          get path
-          assert_response :success
-          assert_select "a[href=?]", edit_link, text: "Edit rating", count: 1 do
-            assert_select "[aria-label=?]", "Edit your rating for #{watched.film.title}"
-          end
-          assert_select "script", text: "film", count: 0
-          assert_equal "no-store", response.headers["Cache-Control"]
-          assert_no_match(/translation missing/i, response.body)
-          assert_select "a[href=?]", new_rating_path(film_id: watched.film_id), count: 0
-        end
-        get library_film_path(unrated)
+        get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+        assert_response :success
+        assert_select "a[href=?][aria-label=?]", edit_link, "Edit your rating for #{watched.film.title}", count: 1
+        assert_select 'a[href=?][data-tooltip="Edit rating · Pretty Good"][aria-description="Has rating notes"]', edit_link
+        assert_select 'a[href=?][data-tooltip="Add rating"][aria-description="No rating notes"]', new_rating_path(film_id: unrated.film_id)
+        assert_select "script", text: "film", count: 0
+        assert_equal "no-store", response.headers["Cache-Control"]
+        assert_no_match(/translation missing/i, response.body)
+        assert_select "a[href=?]", new_rating_path(film_id: watched.film_id), count: 0
         assert_select "a[href=?]", new_rating_path(film_id: unrated.film_id)
-        assert_select 'a[href*="rating/edit"]', count: 0
       end
       get edit_link
       assert_response :success
@@ -246,22 +240,25 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       patch rating_path, params: { rating_film_id: candidate.id, previous_rating_id: current.id,
         value: Ratings::Rating::Values::BRILLIANT, notes: "Updated from Library" }
       assert_response :see_other
-      get library_film_path(watched)
+      get library_path(view: "watched")
       get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
       assert_response :success
       assert_select "textarea#notes", text: "Updated from Library"
       assert_select 'input[name="previous_rating_id"][value=?]', candidate.ratings.order(:id).last.id.to_s
       assert_equal "Original", original.notes
+
+      Ratings::RatingRecording::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
+        previous_rating_id: candidate.ratings.order(:id).last.id, value: Ratings::Rating::Values::BRILLIANT, notes: nil)
+      get library_path(view: "watched")
+      assert_select 'a[href=?][data-tooltip="Edit rating · Brilliant"][aria-description="No rating notes"]', edit_link
     end
   end
 
   test "unwatched library pages do not offer editing even when ratings exist" do
     row = entry(watched: false)
     Ratings::RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-    [ library_path, library_film_path(row) ].each do |path|
-      get path
-      assert_response :success
-      assert_select 'a[href*="rating/edit"]', count: 0
-    end
+    get library_path
+    assert_response :success
+    assert_select 'a[href*="rating/edit"]', count: 0
   end
 end

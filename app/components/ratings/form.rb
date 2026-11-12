@@ -8,7 +8,7 @@ module Ratings
     end
 
     def view_template
-      div(class: "rating-interface", data: ({ controller: "rating-selection" } unless @readonly)) do
+      render Shared::FilmCard.new(layout: "rating-interface", data: ({ controller: "rating-selection" } unless @readonly)) do
         errors_section
         if @readonly
           div(class: "rating-workspace") { workspace }
@@ -62,7 +62,10 @@ module Ratings
             id = "#{@prefix}rating-#{value}"
             input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly,
               data: ({ rating_selection_target: "choice" } unless @readonly))
-            label(for: id) { t("ratings.values.#{value}") }
+            label(for: id) do
+              render ValueIcon.new(value:)
+              plain t("ratings.values.#{value}")
+            end
           end
         end
       end

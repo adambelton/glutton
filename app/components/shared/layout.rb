@@ -6,11 +6,12 @@ module Shared
 
     def view_template
       user = current_user if @account_controls
+      wordmark_path = user.present? ? new_rating_path : root_path
       render Document.new(title: @title) do
         a(href: "#main-content", class: "skip-link") { t("ui.skip") }
         header(class: "ui-header") do
           div(class: "ui-width ui-header-inner") do
-            a(href: root_path, class: "wordmark", aria: { label: t("ui.wordmark") }) { t("ui.wordmark") }
+            a(href: wordmark_path, class: "wordmark", aria: { label: t("ui.wordmark") }) { t("ui.wordmark") }
             if user.present?
               nav(aria: { label: t("ui.navigation") }, class: "ui-nav") do
                 a(href: new_rating_path) { t("ratings.browser.title") }

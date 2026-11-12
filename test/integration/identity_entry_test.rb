@@ -58,6 +58,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       get root_path
       assert_response :success
     end
+    assert_select "header a.wordmark[href=?]", root_path
     assert_select "header .ui-account-menu", count: 0
     assert_select "header a[href=?]", new_session_path
     assert_select "header a[href=?]", new_registration_path
@@ -119,6 +120,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     get root_path
     assert_redirected_to new_rating_path
     follow_redirect!
+    assert_select "header a.wordmark[href=?]", new_rating_path
     assert_select ".guest-banner a[href=?]", new_registration_path
     assert_select "header details", count: 0
     assert_select "header a[href=?]", new_session_path
@@ -140,6 +142,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     get root_path
     assert_redirected_to library_path
     follow_redirect!
+    assert_select "header a.wordmark[href=?]", new_rating_path
     assert_select ".guest-banner", count: 0
     assert_select "header details", count: 0
     assert_select "header a[href=?]", new_session_path, count: 0
@@ -200,9 +203,9 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "returned resources retain their owning domain missing and forbidden outcomes" do
-    get library_film_path(999999999)
+    get edit_rating_path(film_id: 999999999)
     enter_guest
-    assert_redirected_to library_film_path(999999999)
+    assert_redirected_to edit_rating_path(film_id: 999999999)
     follow_redirect!
     assert_response :not_found
     delete session_path, params: { authenticity_token: csrf }
