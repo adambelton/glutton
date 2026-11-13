@@ -1,14 +1,14 @@
 module Registry
   class FilmTitle < Shared::Base
-    def initialize(film:)
-      @film = film
+    def initialize(film: nil, title: film.title, release_date: film.release_date)
+      @title, @release_date = title, release_date
     end
 
     def view_template
-      plain @film.title
-      if @film.release_date.present?
+      plain @title
+      if @release_date.present?
         plain " "
-        span(class: "film-year") { t("registry.film_presentation.year", year: @film.release_date.year) }
+        span(class: "film-year") { t("registry.film_presentation.year", year: @release_date.year) }
       end
     end
   end

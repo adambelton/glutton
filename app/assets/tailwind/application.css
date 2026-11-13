@@ -153,6 +153,30 @@
 .ui-page h2 { font-size: 20px; font-weight: 500; letter-spacing: -.015em; margin-block: 22px 12px; }
 .ui-page h3 { font-size: 16px; font-weight: 500; }
 .ui-page-body { margin-top: 22px; }
+.ui-page-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.ui-page .library-film-search-form, .library-film-search-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ui-page .library-film-search-form, .ui-page .library-film-search-actions form { margin-block: 0; }
+.library-film-search-field { position: relative; width: min(calc(100% - 24px), 480px); margin-inline-start: 24px; }
+.library-film-search-spinner { position: absolute; inset-inline-start: -24px; top: 15px; width: 16px; height: 16px; border: 2px solid var(--glutton-border); border-top-color: var(--glutton-foreground); border-radius: 50%; }
+@media (prefers-reduced-motion: no-preference) {
+  .library-film-search-spinner { animation: library-film-search-spin .7s linear infinite; }
+}
+@keyframes library-film-search-spin { to { transform: rotate(1turn); } }
+.library-film-search-form input { min-width: 0; width: 100%; padding-inline: 12px; border-radius: 4px; }
+.library-film-search-dropdown { position: absolute; inset-inline: 0; top: calc(100% + 4px); z-index: 10; max-height: min(580px, var(--library-search-available-height, 65dvh)); padding: 12px; background: var(--glutton-surface); border: 1px solid var(--glutton-border); border-radius: 6px; }
+.library-film-search-dropdown:not([hidden]) { display: flex; flex-direction: column; }
+.ui-page .library-film-search-dropdown h2 { margin: 0 0 4px; font-size: 16px; }
+.library-film-search-dropdown .library-film-search-content { min-height: 0; overflow-y: auto; }
+.library-film-search-dropdown .library-pagination { flex-shrink: 0; margin-top: 8px; padding-top: 8px; }
+.library-film-search-results > li { display: flex; gap: 12px; padding-block: 6px; }
+.library-film-search-results > li + li { border-top: 1px solid var(--glutton-border); }
+.library-film-search-results .film-poster { align-self: start; box-sizing: border-box; flex: 0 0 48px; width: 48px; height: 72px; }
+.library-film-search-results .poster-wordmark { padding: 0; background: var(--glutton-inset); font: 400 34px/1 Tangerine, cursive; }
+.library-film-search-results h3 { overflow-wrap: anywhere; }
+.library-film-search-result-body { display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; gap: 8px; }
+.library-film-search-result-details { min-width: 0; }
+.library-film-search-overview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--glutton-muted-foreground); font-size: 12px; line-height: 1.35; }
+.library-film-search-actions { flex-shrink: 0; justify-content: flex-end; margin-inline-start: auto; }
 .ui-page-body > p { margin-block: 14px; color: var(--glutton-muted-foreground); }
 .ui-page form { margin-block: 22px; }
 .ui-field { display: grid; gap: 8px; margin-block: 18px; }

@@ -6,12 +6,17 @@ module Library
 
     def view_template
       div(class: "library-card-actions") do
-        if @library_film.watched?
-          render RatingPrompt.new(library_film: @library_film)
+        render RatingPrompt.new(library_film: @library_film) if @library_film.watched?
+        if @library_film.can_move_to_watchlist?
           action(:move_to_watchlist, :move_film_to_watchlist, BookmarkPlus.new, move_to_watchlist_library_film_path(@library_film))
+        end
+        if @library_film.can_remove_from_watched?
           action(:remove_from_library, :remove_film_from_library, BookmarkMinus.new, remove_from_watched_library_film_path(@library_film), method: :delete)
-        else
-          action(:mark_watched, :mark_film_watched, EyeCheck.new, mark_watched_library_film_path(@library_film))
+        end
+        if @library_film.can_move_to_watched?
+          action(:move_to_watched, :move_film_to_watched, EyeCheck.new, move_to_watched_library_film_path(@library_film))
+        end
+        if @library_film.can_remove_from_watchlist?
           action(:remove_from_watchlist, :remove_film, BookmarkMinus.new, remove_from_watchlist_library_film_path(@library_film), method: :delete)
         end
       end

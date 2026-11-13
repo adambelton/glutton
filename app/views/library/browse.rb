@@ -6,7 +6,8 @@ module Views
       end
 
       def view_template
-        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true) do
+        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true,
+          heading_action: ::Library::FilmSearchForm.new(dropdown: true)) do
           collection_navigation
           h2(class: "sr-only") { t("library.browser.views.#{@view}") }
           if @page.entries.empty?

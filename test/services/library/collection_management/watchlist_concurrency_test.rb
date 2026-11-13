@@ -45,8 +45,8 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
 
   [
     [ Library::LibraryFilm, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::FilmUnavailable ],
-    [ Library::LibraryFilm, Library::CollectionManagement::RecordWatched, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::NotOnWatchlist ],
-    [ Library::LibraryFilm, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::RecordWatched, Library::Errors::FilmUnavailable ]
+    [ Library::LibraryFilm, Library::CollectionManagement::MoveWatchlistToWatched, Library::CollectionManagement::RemoveFromWatchlist, Library::Errors::NotOnWatchlist ],
+    [ Library::LibraryFilm, Library::CollectionManagement::RemoveFromWatchlist, Library::CollectionManagement::MoveWatchlistToWatched, Library::Errors::FilmUnavailable ]
   ].each do |source, first, second, failure|
     test "#{first} before #{second} serializes on the existing relationship" do
       @entry = source.create!(user: @guest, film: @film)
@@ -96,10 +96,10 @@ class Library::WatchlistConcurrencyTest < ActiveSupport::TestCase
       end
     end
     Library::LibraryFilm.set_callback(:find, :after, callback)
-    result = call(Library::CollectionManagement::RecordWatched)
+    result = call(Library::CollectionManagement::MoveWatchlistToWatched)
     assert_equal :rejected, Timeout.timeout(5) { contender.value }
     assert_equal @entry.id, result.id
-    assert_not Library::LibraryFilm.find(@entry.id).can_watch?
+    assert_not Library::LibraryFilm.find(@entry.id).can_move_to_watched?
   ensure
     Library::LibraryFilm.skip_callback(:find, :after, callback, raise: false) if callback
   end

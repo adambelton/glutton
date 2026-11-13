@@ -1,6 +1,7 @@
 en:
   ui:
     wordmark: glutton.
+    short_wordmark: g.
     page_title: "%{title} · %{brand}"
     dismiss_notification: Dismiss notification
     log_out: Log out

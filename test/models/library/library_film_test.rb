@@ -21,9 +21,32 @@ class Library::LibraryFilmTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { insert(attributes.merge(watched: true)) }
   end
 
-  test "only watchlist entries permit marking watched" do
-    assert_not Library::LibraryFilm.new(watched: true).can_watch?
-    assert Library::LibraryFilm.new.can_watch?
+  test "collection action guards reflect the entry's lifecycle" do
+    entry = Library::LibraryFilm.new(attributes)
+    assert entry.can_add_to_watchlist?
+    assert entry.can_add_to_watched?
+    assert_not entry.can_move_to_watched?
+    assert_not entry.can_move_to_watchlist?
+    assert_not entry.can_remove_from_watchlist?
+    assert_not entry.can_remove_from_watched?
+
+    entry.add_to_watchlist!
+    assert_not entry.can_add_to_watchlist?
+    assert_not entry.can_add_to_watched?
+    assert entry.can_move_to_watched?
+    assert entry.can_remove_from_watchlist?
+    assert_not entry.can_move_to_watchlist?
+    assert_not entry.can_remove_from_watched?
+
+    entry.move_to_watched!
+    assert_not entry.can_move_to_watched?
+    assert_not entry.can_remove_from_watchlist?
+    assert entry.can_move_to_watchlist?
+    assert entry.can_remove_from_watched?
+
+    entry.remove_from_watched!
+    assert_not entry.can_add_to_watchlist?
+    assert_not entry.can_add_to_watched?
   end
 
   test "watchlist is the default and watched cannot be null" do

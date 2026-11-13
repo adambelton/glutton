@@ -2,12 +2,12 @@ require "test_helper"
 
 class Library::EntryOperationsTest < ActiveSupport::TestCase
   OPERATIONS = [
-    [ Library::CollectionManagement::RecordWatched, Library::LibraryFilm, :can_watch?, Library::Errors::AlreadyWatched ],
+    [ Library::CollectionManagement::MoveWatchlistToWatched, Library::LibraryFilm, :can_move_to_watched?, Library::Errors::AlreadyWatched ],
     [ Library::CollectionManagement::RemoveFromWatchlist, Library::LibraryFilm, :can_remove_from_watchlist?, Library::Errors::NotOnWatchlist ]
   ].freeze
 
   DESTINATION_PERMISSIONS = {
-    Library::CollectionManagement::RecordWatched => :can_rate?
+    Library::CollectionManagement::MoveWatchlistToWatched => :can_rate?
   }.freeze
 
   setup do
@@ -92,7 +92,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
     end
   end
 
-  [ [ Library::CollectionManagement::RecordWatched, :update, :can_watch? ],
+  [ [ Library::CollectionManagement::MoveWatchlistToWatched, :update, :can_move_to_watched? ],
     [ Library::CollectionManagement::RemoveFromWatchlist, :destroy, :can_remove_from_watchlist? ] ].each do |operation, action, permission|
     test "#{operation} restores its source on persistence failure" do
       entry = Library::LibraryFilm.create!(user: @user, film: @film)

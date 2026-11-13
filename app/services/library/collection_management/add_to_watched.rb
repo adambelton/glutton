@@ -1,15 +1,16 @@
 module Library
   module CollectionManagement
-    class MarkFilmWatched
+    class AddToWatched
       def self.call(user_id:, film_id:)
         LibraryFilm.transaction(requires_new: true) do
           user = Identity::User.lock.find_by(id: user_id)
           raise Identity::Errors::Unavailable unless user&.active?
 
-          library_film = FindOrBuildLibraryFilm.call(user:, film_id:)
-          raise Errors::FilmUnavailable unless library_film.present?
+          film = Registry::Film.find_by(id: film_id)
+          raise Library::Errors::FilmUnavailable unless film.present?
+          raise Library::Errors::AddToWatchedUnavailable if LibraryFilm.exists?(user:, film:)
 
-          library_film.mark_watched!
+          LibraryFilm.new(user:, film:).add_to_watched!
         end
       end
     end

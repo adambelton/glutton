@@ -40,7 +40,7 @@ class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
 
     visit recommendation_path
     assert_selector "h2", text: first.title
-    click_button I18n.t("library.detail.mark_watched")
+    click_button I18n.t("library.detail.add_to_watched")
     assert_current_path recommendation_path
     assert_selector '[role="status"]', text: I18n.t("library.detail.watched")
     assert_selector "h2", text: second.title

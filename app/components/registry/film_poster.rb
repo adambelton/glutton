@@ -1,17 +1,19 @@
 module Registry
   class FilmPoster < Shared::Base
-    def initialize(film:)
-      @film = film
+    def initialize(film: nil, title: film.title, path: film.tmdb_details.poster_path, placeholder: :title)
+      @title, @path = title, path
+      @placeholder = placeholder
     end
 
     def view_template
-      path = @film.tmdb_details.poster_path
-      if path.present? && path.match?(/\A\/[a-zA-Z0-9_-]+\.(?:jpg|png|webp)\z/)
-        img(src: "https://image.tmdb.org/t/p/w500#{path}", alt: t("registry.film_presentation.poster", title: @film.title),
+      if @path.present? && @path.match?(/\A\/[a-zA-Z0-9_-]+\.(?:jpg|png|webp)\z/)
+        img(src: "https://image.tmdb.org/t/p/w500#{@path}", alt: t("registry.film_presentation.poster", title: @title),
           width: "500", height: "750", class: "film-poster", referrerpolicy: "no-referrer")
       else
-        div(class: "film-poster poster-placeholder", role: "img", aria: { label: t("registry.film_presentation.no_poster", title: @film.title) }) do
-          span { @film.title }
+        branded = @placeholder == :wordmark
+        div(class: [ "film-poster", "poster-placeholder", ("poster-wordmark" if branded) ],
+          role: "img", aria: { label: t("registry.film_presentation.no_poster", title: @title) }) do
+          span { branded ? t("ui.short_wordmark") : @title }
         end
       end
     end

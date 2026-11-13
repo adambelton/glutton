@@ -28,6 +28,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       end
       resource :account, only: :show, controller: :account
       resource :library, only: :show, controller: :library
+      get "library/search", to: "library/film_search#index", as: :library_film_search
       resource :recommendation, only: :show, controller: :recommendations
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
       resource :password_reset, only: [ :new, :create, :edit, :update ]

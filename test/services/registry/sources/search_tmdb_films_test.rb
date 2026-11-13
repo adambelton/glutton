@@ -16,15 +16,15 @@ class Registry::SearchTmdbFilmsTest < ActiveSupport::TestCase
 
   test "one page preserves provider order and distinct translated or same-title identities without writes" do
     payload = response(page: 2, total_pages: 3, total_results: 42, results: [
-      { id: 20, title: "The Thing", original_title: "The Thing", original_language: "en", release_date: "1982-06-25", overview: "Unused" },
-      { id: 10, title: "The Thing", original_title: "The Thing", release_date: "1982-06-25", poster_path: "Unused" },
+      { id: 20, title: "The Thing", original_title: "The Thing", original_language: "en", release_date: "1982-06-25", poster_path: "/thing.jpg", overview: " A research team faces a threat. " },
+      { id: 10, title: "The Thing", original_title: "The Thing", release_date: "1982-06-25", poster_path: [] },
       { id: 30, title: "Translated", original_title: "日本語", original_language: "ja", release_date: "" }
     ])
     result = assert_no_difference("Registry::Film.count") { search(payload, page: 2) }
     assert_equal({ page: 2, total_pages: 3, total_results: 42, candidates: [
-      { tmdb_id: 20, title: "The Thing", original_title: "The Thing", release_date: Date.new(1982, 6, 25), original_language: "en" },
-      { tmdb_id: 10, title: "The Thing", original_title: "The Thing", release_date: Date.new(1982, 6, 25), original_language: nil },
-      { tmdb_id: 30, title: "Translated", original_title: "日本語", release_date: nil, original_language: "ja" }
+      { tmdb_id: 20, title: "The Thing", original_title: "The Thing", release_date: Date.new(1982, 6, 25), original_language: "en", poster_path: "/thing.jpg", overview: "A research team faces a threat." },
+      { tmdb_id: 10, title: "The Thing", original_title: "The Thing", release_date: Date.new(1982, 6, 25), original_language: nil, poster_path: nil, overview: nil },
+      { tmdb_id: 30, title: "Translated", original_title: "日本語", release_date: nil, original_language: "ja", poster_path: nil, overview: nil }
     ] }, result)
     assert_equal 1, @http.requests.size
     assert_equal "/3/search/movie", URI(@http.requests.first.path).path

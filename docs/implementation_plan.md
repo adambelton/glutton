@@ -16,7 +16,7 @@ Updated: 12 November 2026. This document describes current progress, agreed orde
 
 ## Current work
 
-Recommendation explanations and optional rejection reasons are open. The product brief calls for spoiler-safe explanations in the initial experience. Optional rejection reasons are a feedback proposal.
+Registered viewers and active guests can search for horror films from Library and choose a Library action that imports a missing film before applying the action. New imports queue initial quality assignment. Recommendation explanations and optional rejection reasons remain open. The product brief calls for spoiler-safe explanations in the initial experience. Optional rejection reasons are a feedback proposal.
 
 - Ratings owns dismissal and suppression. Recommendations owns responses and suppression. Library owns Add to Watchlist and Mark Watched, including the shortcuts on Ratings and Recommendations. The shortcuts skip the affected film on the immediate next selection while durable events update eligibility. Review and restoration of dismissed or rejected films remain open. See the [event contracts](domain_events.md#rating-and-recommendation-events).
 
@@ -142,4 +142,4 @@ The weekly podcast is a natural place to try this. Discuss the film, use follow-
 
 Complete the seed-first sequence above before later admin improvements. Admin viewing requires authorisation before exposure; manual source refresh changes no accepted qualities. Source/association changes do not themselves authorise downstream score mutations. Community editing, scheduled syncing, streaming integrations and speculative extra event consumers are not prerequisites.
 
-Production hosting, worker deployment, scheduling Identity cleanup and registered-account activity retention remain open. The product brief calls for viewer-facing missing-film requests, while the current Registry browser is read-only. Confirm whether the curated launch catalogue is sufficient before scoping that flow. Shared reads of authoritative records are allowed; cross-domain writes require the owning workflow and agreed durable events. Product/architecture briefs and domain contracts retain the detailed requirements.
+Production hosting, worker deployment, scheduling Identity cleanup and registered-account activity retention remain open. Library search provides viewer-facing missing-film imports. The Registry administration browser provides read-only catalogue inspection. Shared reads of authoritative records are allowed. Cross-domain writes require the owning workflow and agreed durable events. Product and architecture briefs and domain contracts retain the detailed requirements.
