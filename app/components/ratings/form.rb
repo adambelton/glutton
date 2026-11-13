@@ -63,7 +63,7 @@ module Ratings
             input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly,
               data: ({ rating_selection_target: "choice" } unless @readonly))
             label(for: id) do
-              render ValueIcon.new(value:)
+              render RatingValueIcon.new(value:)
               plain t("ratings.values.#{value}")
             end
           end
@@ -73,14 +73,18 @@ module Ratings
 
     def actions
       div(class: "rating-actions film-actions") do
-        render RubyUI::Button.new(type: :submit, form: "rating-form", class: "ui-submit",
+        render Shared::PrimaryButton.new(type: :submit, form: "rating-form", class: "ui-submit",
           disabled: !Ratings::Rating::Values::ALL.include?(@value),
           data: { rating_selection_target: "save", tooltip: t("ratings.browser.save_disabled") }) { t("ratings.browser.save") }
         if @dismissible
-          render Shared::ActionButton.new(text: t("ratings.browser.dismiss"), variant: :ghost,
-            url: dismiss_rating_path, params: { rating_film_id: @rating_film_id })
-          render Shared::ActionButton.new(text: t("library.detail.add_to_watchlist"), variant: :secondary, icon: ::Library::BookmarkPlus.new,
-            url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id })
+          render Shared::ActionForm.new(url: dismiss_rating_path, params: { rating_film_id: @rating_film_id }) do
+            render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.browser.dismiss") }
+          end
+          tooltip_text = t("library.detail.add_to_watchlist")
+          render Shared::ActionForm.new(url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id }) do
+            render Shared::IconButton.new(type: :submit, variant: :secondary, size: :xl, class: "ui-action-button",
+              aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
+          end
         end
       end
     end

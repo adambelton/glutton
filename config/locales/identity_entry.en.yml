@@ -15,6 +15,11 @@ en:
       guest_banner_label: Guest account reminder
       guest_banner: You are browsing as a guest.
       save_progress: Register to save your progress.
+      guest_discarded: Guest account and activity deleted.
+      discard_guest: Discard
+      discard_guest_title: Discard guest activity?
+      confirm_discard_guest: All your guest activity will be permanently lost, and your guest account will be destroyed.
+      cancel_discard_guest: Cancel
       demo:
         description: Your rating is only the beginning. Tell us what stayed with you.
         label: Example ratings

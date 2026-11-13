@@ -47,15 +47,24 @@ module Views
             end
             div(class: "library-film-search-actions") do
               unless entry.present?
-                render Shared::ActionButton.new(text: t("library.detail.add_to_watchlist"), icon: ::Library::BookmarkPlus.new,
-                  url: library_search_watchlist_path, params: selection)
+                tooltip_text = t("library.detail.add_to_watchlist")
+                render Shared::ActionForm.new(url: library_search_watchlist_path, params: selection) do
+                  render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
+                    aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
+                end
               end
               if entry.nil?
-                render Shared::ActionButton.new(text: t("library.detail.add_to_watched"), icon: ::Library::EyeCheck.new,
-                  url: library_search_watched_path, params: selection)
+                tooltip_text = t("library.detail.add_to_watched")
+                render Shared::ActionForm.new(url: library_search_watched_path, params: selection) do
+                  render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
+                    aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::EyeCheckIcon.new }
+                end
               elsif entry.can_move_to_watched?
-                render Shared::ActionButton.new(text: t("library.detail.move_to_watched"), icon: ::Library::EyeCheck.new,
-                  url: library_search_move_to_watched_path, params: selection.except(:tmdb_id).merge(library_film_id: entry.id))
+                tooltip_text = t("library.detail.move_to_watched")
+                render Shared::ActionForm.new(url: library_search_move_to_watched_path, params: selection.except(:tmdb_id).merge(library_film_id: entry.id)) do
+                  render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
+                    aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::EyeCheckIcon.new }
+                end
               end
             end
           end

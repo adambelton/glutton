@@ -82,6 +82,27 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_selector ".library-rating-filters"
 
     assert_equal watchlist_divider, divider_position
+    clear_icon = find(".library-clear-filters[disabled] svg")
+    clear_icon.hover
+    assert_equal "not-allowed", clear_icon.style("cursor").fetch("cursor")
+
+    label = I18n.t("ratings.values.brilliant")
+    find_button(I18n.t("ui.dark_mode")).send_keys(:enter)
+    assert_selector 'html[data-theme="dark"]'
+    within ".library-rating-filters" do
+      pill = find_link(label)
+      pill.hover
+      hover_background = pill.style("background-color")
+      pill.click
+      selected = find('a[data-selected="true"]', text: label)
+      selected.hover
+      assert_not_equal hover_background, selected.style("background-color")
+      colors = selected.style("color", "background-color")
+      assert_not_equal colors.fetch("background-color"), colors.fetch("color")
+      click_button I18n.t("library.browser.clear_rating_filters")
+      assert_no_selector "[data-selected]"
+      assert_button I18n.t("library.browser.clear_rating_filters"), disabled: true
+    end
   end
 
   test "Watchlist card controls mark a film watched and open its rating form" do
@@ -94,15 +115,24 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
 
     visit library_path
     within ".library-film" do
-      assert_no_link "Rate #{film.title}"
+      assert_no_button "Rate #{film.title}"
       assert_button "Remove #{film.title} from watchlist"
       click_button "Mark #{film.title} watched"
     end
 
     assert_current_path library_path(view: "watched")
     within ".library-film" do
-      assert_selector 'a[data-tooltip="Add rating"]'
-      click_link "Rate #{film.title}"
+      rating = find_button("Rate #{film.title}")
+      move = find_button(I18n.t("library.detail.move_film_to_watchlist", title: film.title))
+      assert_equal move.style("background-color"), rating.style("background-color")
+      idle_background = move.style("background-color").fetch("background-color")
+      move.hover
+      page.evaluate_async_script("const [button, done] = arguments; Promise.allSettled(button.getAnimations().map(animation => animation.finished)).then(() => done())", move)
+      hover_background = move.style("background-color")
+      assert_not_equal idle_background, hover_background.fetch("background-color")
+      rating.hover
+      rating.assert_matches_style(hover_background)
+      click_button "Rate #{film.title}"
     end
     assert_current_path new_rating_path(film_id: film.id)
     assert_selector "h2", text: film.title

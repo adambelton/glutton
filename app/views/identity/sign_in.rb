@@ -7,6 +7,7 @@ module Views
 
       def view_template
         page(title: t("identity.sessions.sign_in"), narrow: true, pending_reminder: false, account_controls: @account_controls) do
+          p(role: "status", class: "ui-reminder") { flash[:page_notice] } if flash[:page_notice].present?
           p(role: "alert", class: "ui-errors") { @error } if @error
           form_with(url: session_path) do
             field(name: "email_address", id: "email_address", label: t("identity.sessions.email"), type: :email, required: true, autocomplete: "email", autofocus: true)
@@ -14,7 +15,9 @@ module Views
             submit(t("identity.sessions.sign_in"))
           end
           div(class: "ui-guest-entry") do
-            render Shared::ActionButton.new(text: t("identity.entry.continue_guest"), url: guest_session_path)
+            render Shared::ActionForm.new(url: guest_session_path) do
+              render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("identity.entry.continue_guest") }
+            end
           end
           div(class: "ui-secondary-links") do
             text_link(t("identity.entry.back"), browsing_path)

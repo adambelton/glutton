@@ -29,6 +29,20 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
+  test "navigation renders the lock without admitting a recommendation" do
+    assert_no_difference "Recommendations::RecommendationFilm.count" do
+      get library_path
+      assert_select '.ui-nav [role="link"][aria-disabled="true"]'
+      assert_select ".ui-nav a[href=?]", recommendation_path, count: 0
+    end
+
+    unlock_recommendations_for(user: @user)
+    assert_no_difference "Recommendations::RecommendationFilm.count" do
+      get library_path
+      assert_select ".ui-nav a[href=?]", recommendation_path
+    end
+  end
+
   test "shows stored film facts and a trailer when available" do
     film = Registry::Film.create!(title: "Film with a trailer", release_date: Date.new(2025, 1, 1),
       tmdb_metadata: { details: {

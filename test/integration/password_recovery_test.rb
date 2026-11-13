@@ -59,7 +59,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       post password_reset_path, params: { email_address: email, authenticity_token: csrf, return_to: "https://evil.test" }
       assert_redirected_to new_session_path
       follow_redirect!
-      assert_select '[role="status"]', text: I18n.t("identity.recovery.requested"), count: 1
+      assert_select 'main .ui-reminder[role="status"]', text: I18n.t("identity.recovery.requested"), count: 1
     end
     assert_equal 1, ActionMailer::Base.deliveries.count
     assert_equal 0, Identity::Session.count
@@ -94,7 +94,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_equal 0, Identity::Session.count
     follow_redirect!
-    assert_select '[role="status"]', text: I18n.t("identity.recovery.completed"), count: 1
+    assert_select 'main .ui-reminder[role="status"]', text: I18n.t("identity.recovery.completed"), count: 1
     update_password
     assert_response :unprocessable_entity
     post session_path, params: { email_address: @user.email_address, password: "original password phrase", authenticity_token: csrf }

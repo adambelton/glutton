@@ -12,8 +12,7 @@ module Recommendations
         user = Identity::User.find_by(id: user_id)
         raise Identity::Errors::Unavailable unless user&.active?
 
-        ratings = ::Ratings::Rating.current.joins(:rating_film).where(rating_films: { user_id: user.id })
-        quality_scores = ::Ratings::RatingQuality.where(rating_id: ratings.select(:id))
+        quality_scores = current_quality_scores(user:)
         applied = quality_scores.where(rating_quality_eval_id: quality_scores.group(:rating_id).select("MAX(rating_quality_eval_id)"))
         scores = applied.pluck(:rating_id, :quality_id, :score)
         assessed_film_count = scores.map(&:first).uniq.size
@@ -33,6 +32,11 @@ module Recommendations
         film = Registry::Film.find_by(id: candidate.film_id) if candidate.present?
         candidate = nil unless film.present?
         Result.new(assessed_film_count:, minimum_assessed_films: MINIMUM_ASSESSED_FILMS, candidate:, film:)
+      end
+
+      def self.current_quality_scores(user:)
+        ratings = ::Ratings::Rating.current.joins(:rating_film).where(rating_films: { user_id: user.id })
+        ::Ratings::RatingQuality.where(rating_id: ratings.select(:id))
       end
     end
   end

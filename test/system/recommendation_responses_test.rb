@@ -4,6 +4,42 @@ require_relative "../support/assessed_recommendation_films"
 class RecommendationResponsesTest < ApplicationSystemTestCase
   include AssessedRecommendationFilms
 
+  test "navigation explains the lock on keyboard focus and unlocks after assessment" do
+    visit recommendation_path
+    click_button I18n.t("identity.entry.try_it_out")
+    locked_link = find('.ui-nav [role="link"][aria-disabled="true"]')
+    assert_no_link I18n.t("recommendations.title")
+    locked_link.send_keys(:shift)
+    tooltip = find('[role="tooltip"]', text: I18n.t("recommendations.navigation_locked", required: 5))
+    assert page.evaluate_script(<<~JS, tooltip, locked_link)
+      ((tooltip, link) => {
+        const label = document.createRange()
+        label.selectNode(link.firstChild)
+        const bounds = tooltip.getBoundingClientRect()
+        return bounds.top >= 0 && bounds.bottom < label.getBoundingClientRect().top
+      })(arguments[0], arguments[1])
+    JS
+
+    assert page.evaluate_script(<<~JS, tooltip)
+      ((tooltip) => {
+        for (let element = tooltip; element; element = element.parentElement) {
+          if (getComputedStyle(element).opacity !== "1") return false
+        }
+        return getComputedStyle(tooltip).backgroundColor === getComputedStyle(document.body).color
+      })(arguments[0])
+    JS
+
+    user = Identity::Session.last.user
+    pending_film = Registry::Film.create!(title: "Pending assessment")
+    Ratings::RatingFilm.create!(user:, film: pending_film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+    visit library_path
+    assert_selector '.ui-nav [role="link"][aria-disabled="true"]'
+
+    unlock_recommendations_for(user:)
+    visit library_path
+    assert_link I18n.t("recommendations.title"), href: recommendation_path
+  end
+
   test "expanding a trailer fills the card and keeps the same player" do
     film = Registry::Film.create!(title: "A recommendation with a trailer", tmdb_metadata: { details: {
       videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
@@ -112,7 +148,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
 
     click_button I18n.t("recommendations.reject")
     assert_current_path recommendation_path
-    assert_selector '[role="status"]', text: I18n.t("recommendations.responses.rejected")
+    assert_no_selector '[role="status"]'
     assert_selector "h2", text: third.title
     assert_equal "rejected", Recommendations::RecommendationFilm.find_by!(user:, film: second).response
 

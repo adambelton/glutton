@@ -30,7 +30,10 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       resource :library, only: :show, controller: :library
       get "library/search", to: "library/film_search#index", as: :library_film_search
       resource :recommendation, only: :show, controller: :recommendations
-      resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings
+      resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings do
+        get :choose_films
+        post :surprise
+      end
       resource :password_reset, only: [ :new, :create, :edit, :update ]
       resource :guest_session, only: :create
       resource :session, only: [ :new, :create, :destroy ]
@@ -74,7 +77,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_includes message.text_part.body.decoded, "http://glutton.local:3847/registration_confirmation?token="
     follow_redirect!
     assert_response :success
-    assert_select '[role="status"]', I18n.t("identity.registration.accepted")
+    assert_select 'main .ui-reminder[role="status"]', I18n.t("identity.registration.accepted")
   ensure
     Rails.env = original_environment
   end

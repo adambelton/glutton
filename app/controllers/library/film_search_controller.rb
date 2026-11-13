@@ -18,7 +18,7 @@ module Library
     def index
       raise Registry::Errors::InvalidTmdbSearch unless valid_search?
 
-      result = FilmSearch::Results.call(user_id: current_user.id, query: params[:query], page: page_number, batch:)
+      result = FilmSearch::SearchFilmsForLibrary.call(user_id: current_user.id, query: params[:query], page: page_number, batch:)
       render ::Views::Library::FilmSearch.new(query: params[:query], page_number:, result:)
     end
 

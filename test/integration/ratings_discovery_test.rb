@@ -26,7 +26,13 @@ class RatingsDiscoveryTest < ActionDispatch::IntegrationTest
     get new_session_path
     post guest_session_path, params: { authenticity_token: token }
     assert_redirected_to new_rating_path
+    assert_no_difference "Ratings::RatingFilm.count" do
+      follow_redirect!
+      assert_select "form[method=get][action=?] button", choose_films_rating_path, text: I18n.t("ratings.onboarding.choose")
+    end
     assert_difference "Ratings::RatingFilm.count", 1 do
+      post surprise_rating_path, params: { authenticity_token: token }
+      assert_response :see_other
       follow_redirect!
       assert_select "h2", @film.title
     end
@@ -56,10 +62,78 @@ class RatingsDiscoveryTest < ActionDispatch::IntegrationTest
     get new_session_path
     post session_path, params: { email_address: user.email_address, password: "long test password", authenticity_token: token }
     assert_redirected_to library_path
-    assert_difference "Ratings::RatingFilm.count", 1 do
+    assert_no_difference "Ratings::RatingFilm.count" do
       get new_rating_path
-      assert_select "h2", @film.title
+      assert_select "form[method=get][action=?] button", choose_films_rating_path, text: I18n.t("ratings.onboarding.choose")
     end
-    assert_equal user.id, Ratings::RatingFilm.sole.user_id
+  end
+
+  test "confirming a selection queues only the chosen films and a stale form cannot add more" do
+    selected = [ @next_film ] + Array.new(4) { |index| Registry::Film.create!(title: "Selected #{index}") }
+    open_picker
+    page = Nokogiri::HTML(response.body)
+    selected_ids = selected.map do |film|
+      page.at_css("input[type=checkbox][value='#{film.id}']")["value"]
+    end
+    authenticity_token = token
+    assert_difference "Ratings::RatingFilm.count", 5 do
+      post queue_films_rating_path, params: { film_ids: selected_ids + [ selected_ids.first ], authenticity_token: }
+      assert_response :see_other
+    end
+    follow_redirect!
+    assert_select "h2", @next_film.title
+    assert_equal selected.map(&:id), Ratings::RatingFilm.order(:id).pluck(:film_id)
+    assert_no_difference "Ratings::RatingFilm.count" do
+      post queue_films_rating_path, params: { film_ids: selected_ids, authenticity_token: }
+      assert_response :conflict
+      get choose_films_rating_path
+      assert_redirected_to new_rating_path
+      get new_rating_path
+      assert_select "h2", @next_film.title
+    end
+    row = Ratings::RatingFilm.find_by!(film: @next_film)
+    post dismiss_rating_path, params: { rating_film_id: row.id, authenticity_token: token }
+    follow_redirect!
+    assert_select "h2", selected.second.title
+  end
+
+  test "empty malformed and unavailable selections write nothing" do
+    valid_ids = [ @film.id, @next_film.id ] + Array.new(2) { |index| Registry::Film.create!(title: "Additional #{index}").id }
+    open_picker
+    authenticity_token = token
+    assert_no_difference "Ratings::RatingFilm.count" do
+      [ nil, { film: @film.id }, [ "invalid" ], valid_ids + [ valid_ids.first ] ].each do |film_ids|
+        post queue_films_rating_path, params: { film_ids:, authenticity_token: }
+        assert_response :unprocessable_entity
+      end
+      post queue_films_rating_path, params: { film_ids: valid_ids + [ valid_ids.last + 1 ], authenticity_token: }
+      assert_response :not_found
+      post queue_films_rating_path, params: { film_ids: [ @film.id ] }
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "an empty catalogue leaves the viewer eligible after Surprise me" do
+    @film.destroy!
+    @next_film.destroy!
+    open_picker
+    assert_no_difference "Ratings::RatingFilm.count" do
+      post surprise_rating_path, params: { authenticity_token: token }
+      assert_response :success
+      assert_select ".ui-empty", I18n.t("ratings.browser.empty")
+      get new_rating_path
+      assert_select "form[method=get][action=?] button", choose_films_rating_path, text: I18n.t("ratings.onboarding.choose")
+    end
+  end
+
+  private
+
+  def open_picker
+    get new_session_path
+    post guest_session_path, params: { authenticity_token: token }
+    assert_no_difference "Ratings::RatingFilm.count" do
+      get choose_films_rating_path
+      assert_response :success
+    end
   end
 end

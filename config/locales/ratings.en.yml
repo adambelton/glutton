@@ -1,10 +1,21 @@
 en:
   ratings:
+    onboarding:
+      heading: How would you like to start?
+      intro: Choose films you’ve seen, or let Glutton pick a film for you to rate.
+      choose: Choose films
+      surprise: Surprise me
+      cancel: Surprise me instead
+      instructions: "Select at least %{count} films to rate."
+      loading: Loading more films
+      start: Start rating
+      empty: There are no films in the catalogue yet.
+      selection_required: "Select at least %{count} different films to continue."
+      unavailable: Your rating queue has already started.
     browser:
       film_details: Film details
       title: Ratings
       edit_title: Edit your rating
-      updated: Your updated rating has been saved.
       reload: Reload current rating
       choice: What did you think?
       notes: Your notes (optional)
@@ -13,7 +24,6 @@ en:
       save_disabled: Select a rating to save.
       dismiss: Dismiss
       saved: Your rating has been saved.
-      dismissed: This film has been dismissed from rating rotation.
       empty: You have no films waiting to be rated.
       sign_in_required: Your session is no longer available. Return to Ratings to start a new guest session, or sign in to your account.
       correct_errors: Please correct the following errors.

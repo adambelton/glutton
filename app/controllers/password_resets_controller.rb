@@ -31,7 +31,8 @@ class PasswordResetsController < ApplicationController
 
   def create
     Identity::PasswordRecovery::RequestPasswordReset.call(email_address: params.permit(:email_address)[:email_address])
-    redirect_to new_session_path, notice: I18n.t("identity.recovery.requested"), status: :see_other
+    flash[:page_notice] = I18n.t("identity.recovery.requested")
+    redirect_to new_session_path, status: :see_other
   end
 
   def edit
@@ -45,7 +46,8 @@ class PasswordResetsController < ApplicationController
       clear_identity_cookie
       reset_session
     end
-    redirect_to new_session_path, notice: I18n.t("identity.recovery.completed"), status: :see_other
+    flash[:page_notice] = I18n.t("identity.recovery.completed")
+    redirect_to new_session_path, status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @reset_user = error.record
     render ::Views::Identity::RecoveryEdit.new(reset_user: @reset_user, token: @token), status: :unprocessable_entity

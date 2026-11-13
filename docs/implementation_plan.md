@@ -14,6 +14,8 @@ Updated: 12 November 2026. This document describes current progress, agreed orde
 - Library browsing uses Watchlist and Watched poster grids. Watched supports combined rating filters retained in the URL.
 - Ratings and Recommendations use the same responsive film card, with Library shortcuts in their action rows. Recommendations shows the Registry trailer in the card when available and offers in-card expansion. Ratings notes extend to the action row. The header wordmark takes signed-in viewers and active guests to Ratings. The superuser Account link appears next to the theme controls.
 
+Guests can discard their activity and sign out from the header. Identity uses the same deletion rules as guest expiry.
+
 ## Current work
 
 Registered viewers and active guests can search for horror films from Library and choose a Library action that imports a missing film before applying the action. New imports queue initial quality assignment. Recommendation explanations and optional rejection reasons remain open. The product brief calls for spoiler-safe explanations in the initial experience. Optional rejection reasons are a feedback proposal.
@@ -28,7 +30,7 @@ Registered viewers and active guests can search for horror films from Library an
 
 - **Development job worker.** bin/dev runs the domain event and Ratings queues alongside Rails and manages shared shutdown. Existing 12 queued rating submissions have converged to Library watched entries through normal delivery.
 
-- **Transient success notifications.** success toasts, error alerts and registration banners share a viewport-right overlay without shifting page content. Success toasts dismiss after five seconds, pause during hover/focus and support manual dismissal; errors and reminders remain persistent. The post-save Ratings edit link is removed; existing ratings remain editable through Library.
+- **Transient success notifications.** Success toasts, error alerts and registration reminders share a viewport-right overlay. The guest toolbar sits directly below the header. Success toasts dismiss after five seconds, pause during hover/focus and support manual dismissal; errors and reminders remain persistent. The post-save Ratings edit link is removed; existing ratings remain editable through Library.
 
 - **Ratings film source links.** shared TMDB/Wikipedia links between title and synopsis replace the separate release-year line; the year now follows the title in parentheses. Both open new tabs, including in the landing preview; rating controls remain read-only.
 
@@ -58,7 +60,7 @@ Development now contains 500 source-backed TMDB horror films, all with posters a
 
 - [Deterministic quality-change suggestions](tasks/deterministic_quality_suggestions.md): deferred draft for the later refresh/evaluation stage. Initial assignment may use the agreed selection arithmetic without implementing this suggestion product first.
 
-A deferred alternative Ratings entry point is a seen-film selection grid for new users: selecting a film queues it for rating and replaces that tile with the next film, with no fixed number of selections required. This is documented in the product brief; it is excluded from current implementation.
+Viewers with no RatingFilm records can select films from a catalogue grid or start the normal queue with **Surprise me**. Recommendations navigation shows a lock until five films have current assessed ratings or a queued recommendation is available. Selected Watched filters use a solid fill.
 
 ## Delivery order
 

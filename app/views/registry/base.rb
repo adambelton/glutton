@@ -57,10 +57,10 @@ module Views
           p { t(:page, number: page.number, total: [ (page.total.to_f / ::Registry::CatalogueQueries::InspectCatalogue::PAGE_SIZE).ceil, 1 ].max) }
           div do
             if page.number > 1
-              render RubyUI::Link.new(href: "#{path}?page=#{page.number - 1}", variant: :outline, class: "min-h-11") { t(:previous) }
+              render RubyUI::Link.new(href: "#{path}?page=#{page.number - 1}", variant: :ghost, class: "min-h-11") { t(:previous) }
             end
             if page.next_page
-              render RubyUI::Link.new(href: "#{path}?page=#{page.number + 1}", variant: :outline, class: "min-h-11") { t(:next) }
+              render RubyUI::Link.new(href: "#{path}?page=#{page.number + 1}", variant: :ghost, class: "min-h-11") { t(:next) }
             end
           end
         end

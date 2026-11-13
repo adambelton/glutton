@@ -26,9 +26,8 @@ module Identity
           guest = UserGuest.lock.find_by(id:)
           next if guest.nil? || guest.active?
 
-          Session.where(user_id: id).delete_all
-          pending_count = PendingRegistration.where(guest_user_id: id).delete_all
-          guest.destroy!
+          pending_count = PendingRegistration.where(guest_user_id: guest.id).count
+          guest.destroy_with_activity!
           pending_count
         end
       end

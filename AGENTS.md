@@ -48,6 +48,8 @@ Read `docs/implementation_plan.md`, the current working task record and relevant
 
 ## Service organization
 
+- Use an orchestration service whenever a workflow composes data from multiple services, within one domain or across domains. Place it in the domain that owns the outcome and name it for that outcome. Controllers and components call the orchestrator. Each collaborating service owns its queries, rules and transactions. When a service needs data from another domain during its operation, have it yield the required inputs and let the orchestrator supply the result in a block.
+
 - Organise services by owning domain, then by stable business capability where meaningful. Keep conventional Rails layers and shallow capability directories; technical groupings such as Sources, Publication and Delivery express infrastructure responsibilities. See [organisation and naming](docs/architecture_brief.md#service-organisation-and-naming).
 - Keep collaborating commands, queries, calculations, AI operations, validators, value objects and assets together. Do not create global technical buckets or one folder per operation. Add a capability only for a distinct responsibility, not file count or hypothetical growth.
 - Name classes from their actual responsibility, interface, return value and lifecycle, not `.call` alone. Commands and executable AI operations ordinarily name actions; information objects name concepts. For example, ScoreRatingQualities applies scores, GenerateTasteProfile produces validated proposed text, and NoteComparison represents a constructor-computed comparison. Persisted evaluation models retain their domain identities.

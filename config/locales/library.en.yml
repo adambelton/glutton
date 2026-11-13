@@ -22,9 +22,9 @@ en:
         watchlist: No films on this watchlist page.
         watched: No watched films on this page.
       rate_film: Rate %{title}
-      rate: Add rating
+      rate: "%{value} · Add rating"
       edit_film_rating: Edit your rating for %{title}
-      edit_rating: "Edit rating · %{value}"
+      edit_rating: "%{value} · Edit rating"
       notes_present: Has rating notes
       notes_absent: No rating notes
       pagination: Library pages

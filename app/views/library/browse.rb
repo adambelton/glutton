@@ -18,7 +18,7 @@ module Views
                 li(class: "library-film") do
                   film = library_film.film
                   render ::Registry::FilmPoster.new(film:)
-                  render ::Library::FilmActions.new(library_film:)
+                  render ::Library::LibraryFilmCardControls.new(library_film:)
                   h3 { render ::Registry::FilmTitle.new(film:) }
                 end
               end
@@ -54,9 +54,13 @@ module Views
           ::Library::CollectionManagement::Browse::RATING_FILTERS.each do |rating|
             selected = @ratings.include?(rating)
             next_ratings = selected ? @ratings - [ rating ] : @ratings + [ rating ]
-            label = rating == ::Library::CollectionManagement::Browse::UNRATED ? t("library.browser.unrated") : t("ratings.values.#{rating}")
+            unrated = rating == ::Library::CollectionManagement::Browse::UNRATED
+            label = unrated ? t("library.browser.unrated") : t("ratings.values.#{rating}")
             a(href: library_path(view: @view, ratings: next_ratings.presence),
-              data: { selected: ("true" if selected) }, aria: { label: (t("library.browser.selected_rating", rating: label) if selected) }) { label }
+              data: { selected: ("true" if selected) }, aria: { label: (t("library.browser.selected_rating", rating: label) if selected) }) do
+              render ::Ratings::RatingValueIcon.new(value: (rating unless unrated), size: 14)
+              plain label
+            end
           end
           clear_rating_filters
         end
@@ -65,13 +69,10 @@ module Views
       def clear_rating_filters
         label = t("library.browser.clear_rating_filters")
         enabled = @ratings.present?
-        a(href: (library_path(view: @view) if enabled), class: "library-clear-filters",
-          role: ("link" unless enabled), aria: { label:, disabled: ("true" unless enabled) },
-          data: { tooltip: (label if enabled) }) do
-          svg(viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", stroke: "currentColor",
-            stroke_width: "1.5", stroke_linecap: "round", aria: { hidden: true }) do |icon|
-            icon.path(d: "M4 4l8 8m0-8-8 8")
-          end
+        form_with(url: library_path, method: :get, class: "library-clear-filters-form") do
+          input(type: "hidden", name: "view", value: @view)
+          render Shared::IconButton.new(type: :submit, variant: :plain, class: "library-clear-filters",
+            disabled: !enabled, aria: { label: }, data: { tooltip: (label if enabled) }) { render Shared::CloseIcon.new }
         end
       end
     end

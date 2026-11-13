@@ -25,10 +25,10 @@ module Views
                 nav(class: "demo-controls", hidden: true, aria: { label: t("identity.entry.demo.browse") }, data: { "landing-examples-target": "controls" }) do
                   p(class: "sr-only", aria: { live: "polite", atomic: "true" }, data: { "landing-examples-target": "position" }) { t("identity.entry.demo.position", position: 1, count: @examples.size) }
                   @examples.each_index do |index|
-                    button(type: "button", class: "demo-dot", aria: { label: t("identity.entry.demo.select", position: index + 1, count: @examples.size), current: ("true" if index.zero?) },
+                    render Shared::IconButton.new(variant: :plain, class: "demo-dot", aria: { label: t("identity.entry.demo.select", position: index + 1, count: @examples.size), current: ("true" if index.zero?) },
                       data: { "landing-examples-target": "dot", action: "landing-examples#select", index: })
                   end
-                  button(type: "button", class: "demo-rotation", aria: { label: t("identity.entry.demo.pause") },
+                  render Shared::IconButton.new(variant: :plain, class: "demo-rotation", aria: { label: t("identity.entry.demo.pause") },
                     data: { "landing-examples-target": "rotation", action: "landing-examples#toggle",
                       "pause-label": t("identity.entry.demo.pause"), "resume-label": t("identity.entry.demo.resume") }) do
                     span(aria: { hidden: "true" }, data: { "landing-examples-target": "rotationIcon" }) { "Ⅱ" }
@@ -41,7 +41,7 @@ module Views
             section(class: "demo-entry", aria: { label: t("identity.entry.demo.get_started") }) do
               h2 { t("identity.entry.demo.get_started") }
               div(class: "preview-actions") do
-                render ::Identity::EntryActions.new
+                render ::Identity::AccountEntryControls.new
               end
               p(class: "muted") { t("identity.entry.guest_explanation") }
               p(class: "preview-attribution") do

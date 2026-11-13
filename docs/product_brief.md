@@ -209,7 +209,9 @@ Refresh must replace or supersede previous interpretations rather than count the
 
 ### 6.4 Matching baseline
 
-Personalized recommendations unlock after five distinct films have current ratings with applied quality scores. Ratings without notes count. Before that threshold, explain the requirement and link to Ratings; do not show a popularity fallback. A proposed later onboarding flow asks viewers to choose five loved films and helps them write informative notes; mandatory notes and treatment of existing ratings in that flow remain undecided.
+Personalized recommendations unlock after five distinct films have current ratings with applied quality scores. Ratings without notes count. Before that threshold, the navigation shows a lock and explains the requirement. Direct visits show assessment progress. There is no popularity fallback.
+
+Viewers with no RatingFilm records can choose at least five films they have seen from the catalogue or let Glutton pick one with **Surprise me**. Confirmed selections enter the regular Ratings queue. Cancelling the picker starts the regular queue and discards the selection.
 
 Using the current inferred preference profile and the film–quality associations, begin with a straightforward recommender that:
 
