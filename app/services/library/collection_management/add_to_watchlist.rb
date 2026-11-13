@@ -6,10 +6,11 @@ module Library
           user = Identity::User.lock.find_by(id: user_id)
           raise Identity::Errors::Unavailable unless user&.active?
 
-          library_film = FindOrBuildLibraryFilm.call(user:, film_id:)
-          raise Errors::FilmUnavailable unless library_film.present?
+          film = Registry::Film.find_by(id: film_id)
+          raise Library::Errors::FilmUnavailable unless film.present?
+          raise Library::Errors::AddToWatchlistUnavailable if LibraryFilm.exists?(user:, film:)
 
-          library_film.add_to_watchlist!
+          LibraryFilm.new(user:, film:).add_to_watchlist!
         end
       end
     end

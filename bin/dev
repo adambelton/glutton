@@ -15,7 +15,7 @@ abort "bin/dev only supports the development environment" if ENV.fetch("RAILS_EN
 system("./bin/rails", "tailwindcss:build", exception: true)
 
 # Use the web database for development background jobs.
-job_worker = [ { "JOB_DATABASE_URL" => nil }, "./bin/jobs", "--queues=domain_events,ratings_assessment" ]
+job_worker = [ { "JOB_DATABASE_URL" => nil }, "./bin/jobs", "--queues=domain_events,ratings_assessment,registry_assignment" ]
 web_server = [ "./bin/rails", "server", *ARGV ]
 
 pids = []

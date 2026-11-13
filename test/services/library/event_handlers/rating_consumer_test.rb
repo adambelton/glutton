@@ -55,12 +55,12 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal({ processed: 1 }, dispatch)
     watched = entry.reload
     assert watched.watched?
-    assert_raises(Library::Errors::AlreadyWatched) { Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id) }
+    assert_raises(Library::Errors::AlreadyWatched) { Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: @user.id, library_film_id: entry.id) }
   end
 
   test "already watched and repeated viewing evidence are ignored without timestamp or event changes" do
     entry = Library::LibraryFilm.create!(user: @user, film: @film)
-    entry = Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: entry.id)
+    entry = Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: @user.id, library_film_id: entry.id)
     updated_at = entry.updated_at
     travel 1.hour
     event = publish

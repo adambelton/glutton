@@ -41,7 +41,7 @@ class Library::WatchedConcurrencyTest < ActiveSupport::TestCase
   end
 
   def record
-    Library::CollectionManagement::RecordWatched.call(user_id: @guest.id, library_film_id: @entry.id)
+    Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: @guest.id, library_film_id: @entry.id)
   end
 
   def claim

@@ -22,7 +22,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     original = @entry
     assert act(Library::CollectionManagement::RemoveFromWatchlist).destroyed?
     @entry = Library::LibraryFilm.create!(user: @user, film: @film)
-    act(Library::CollectionManagement::RecordWatched)
+    act(Library::CollectionManagement::MoveWatchlistToWatched)
     assert_not_equal original.id, @entry.id
     assert_equal [ Library::Events::FILM_REMOVED_FROM_WATCHLIST, Library::Events::FILM_MARKED_WATCHED ], events.pluck(:name)
     events.each_with_index do |event, index|
@@ -40,7 +40,7 @@ class Library::EventPublicationTest < ActiveSupport::TestCase
     entries = [ @entry,
       Library::LibraryFilm.create!(user: Identity::UserGuest.create!, film: @film),
       Library::LibraryFilm.create!(user: @user, film: Registry::Film.create!(title: "Other")) ]
-    entries.each { |entry| Library::CollectionManagement::RecordWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
+    entries.each { |entry| Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: entry.user_id, library_film_id: entry.id) }
     assert_equal [ 1, 1, 1 ], DomainEvents::DomainEvent.pluck(:sequence)
     assert_equal 3, DomainEvents::DomainEvent.distinct.count(:domain_event_stream_id)
   end

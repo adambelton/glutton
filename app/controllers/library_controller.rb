@@ -22,18 +22,18 @@ class LibraryController < ApplicationController
   end
 
   def move_to_watchlist
-    Library::CollectionManagement::ChangeWatchedEntry.move_to_watchlist(user_id: current_user.id, library_film_id: library_film_id_param)
+    Library::CollectionManagement::MoveWatchedToWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path, notice: I18n.t("library.detail.watchlisted"), status: :see_other
   end
 
   def remove_from_watched
-    Library::CollectionManagement::ChangeWatchedEntry.remove(user_id: current_user.id, library_film_id: library_film_id_param)
+    Library::CollectionManagement::RemoveFromWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path(view: Library::CollectionManagement::Browse::Views::WATCHED),
       notice: I18n.t("library.detail.removed_from_library"), status: :see_other
   end
 
-  def mark_watched
-    Library::CollectionManagement::RecordWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
+  def move_to_watched
+    Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path(view: Library::CollectionManagement::Browse::Views::WATCHED), notice: I18n.t("library.detail.watched"), status: :see_other
   end
 
@@ -45,11 +45,11 @@ class LibraryController < ApplicationController
     redirect_to new_rating_path, alert: I18n.t("library.detail.watchlist_unavailable"), status: :see_other
   end
 
-  def mark_watched_from_recommendations
-    library_film = Library::CollectionManagement::MarkFilmWatched.call(user_id: current_user.id, film_id: shortcut_film_id)
+  def add_to_watched_from_recommendations
+    library_film = Library::CollectionManagement::AddToWatched.call(user_id: current_user.id, film_id: shortcut_film_id)
     flash[:recommendations_excluded_film_id] = library_film.film_id
     redirect_to recommendation_path, notice: I18n.t("library.detail.watched"), status: :see_other
-  rescue Library::Errors::AlreadyWatched, Library::Errors::FilmUnavailable
+  rescue Library::Errors::AddToWatchedUnavailable, Library::Errors::FilmUnavailable
     redirect_to recommendation_path, alert: I18n.t("library.detail.watch_unavailable"), status: :see_other
   end
 

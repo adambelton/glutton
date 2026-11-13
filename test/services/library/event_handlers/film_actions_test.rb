@@ -57,15 +57,26 @@ class Library::FilmActionsTest < ActiveSupport::TestCase
   end
 
   test "direct Watched action creates an entry without a recommendation response" do
-    entry = Library::CollectionManagement::MarkFilmWatched.call(user_id: @user.id, film_id: @film.id)
+    entry = Library::CollectionManagement::AddToWatched.call(user_id: @user.id, film_id: @film.id)
     assert entry.watched?
     dispatch
     recommendation_film = Recommendations::RecommendationFilm.find_by!(user: @user, film: @film)
     assert recommendation_film.suppressed?
     assert_nil recommendation_film.response
-    assert_raises(Library::Errors::AlreadyWatched) do
-      Library::CollectionManagement::MarkFilmWatched.call(user_id: @user.id, film_id: @film.id)
+    assert_raises(Library::Errors::AddToWatchedUnavailable) do
+      Library::CollectionManagement::AddToWatched.call(user_id: @user.id, film_id: @film.id)
     end
+  end
+
+  test "direct Watched admission rejects an existing Watchlist entry" do
+    entry = Library::CollectionManagement::AddToWatchlist.call(user_id: @user.id, film_id: @film.id)
+
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
+      assert_raises(Library::Errors::AddToWatchedUnavailable) do
+        Library::CollectionManagement::AddToWatched.call(user_id: @user.id, film_id: @film.id)
+      end
+    end
+    assert_not entry.reload.watched?
   end
 
   test "a failure applying an acceptance rolls back Library and retries independently" do

@@ -34,6 +34,19 @@ en:
       sign_in_required: Sign in or register to browse your library.
       invalid: This library view or page is not available.
       return: Return to Library
+    search:
+      label: Search films
+      loading: Fetching film results
+      results: Search results
+      empty: No matching horror films on this page.
+      page: "Page %{number} of %{total}"
+      in_watchlist: On your Watchlist
+      in_watched: In Watched
+      invalid: Enter a valid film title and try again.
+      unavailable: Film search is temporarily unavailable. Try again later.
+      limited: Too many film search or Library requests. Try again later.
+      import_failed: "The film could not be imported. %{reason}"
+      action_unavailable: This action is no longer available for the film.
     detail:
       add_to_watchlist: Add to Watchlist
       watchlisted: Added to your Watchlist.
@@ -44,8 +57,9 @@ en:
       remove_film_from_library: Remove %{title} from Library
       removed_from_library: Film removed from your Library.
       not_watched: This film is no longer in Watched.
-      mark_watched: Mark watched
-      mark_film_watched: Mark %{title} watched
+      add_to_watched: Mark watched
+      move_to_watched: Mark watched
+      move_film_to_watched: Mark %{title} watched
       remove_film: Remove %{title} from watchlist
       remove_from_watchlist: Remove from Watchlist
       watched: Film marked watched.

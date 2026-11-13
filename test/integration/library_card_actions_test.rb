@@ -26,7 +26,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
   end
 
   def watch(**params)
-    post mark_watched_library_film_path(@entry), params: { authenticity_token: token }.merge(params)
+    post move_to_watched_library_film_path(@entry), params: { authenticity_token: token }.merge(params)
   end
 
   test "Watchlist cards expose actions directly and escape film information" do
@@ -34,7 +34,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".library-films h3", text: "#{@film.title} (2001)"
     assert_select ".library-films a h3", count: 0
-    assert_select "form[action=?] button[aria-label=?]", mark_watched_library_film_path(@entry), "Mark #{@film.title} watched"
+    assert_select "form[action=?] button[aria-label=?]", move_to_watched_library_film_path(@entry), "Mark #{@film.title} watched"
     assert_select "form[action=?] button[aria-label=?]", remove_from_watchlist_library_film_path(@entry), "Remove #{@film.title} from watchlist"
     assert_select "a[href=?][aria-label=?]", new_rating_path(film_id: @film.id), "Rate #{@film.title}", count: 0
     assert_select "script", text: "film", count: 0
@@ -74,7 +74,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
   end
 
   test "rated films can move and leave Library with their ratings intact" do
-    Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
+    Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: @user.id, library_film_id: @entry.id)
     candidate = Ratings::RatingFilm.create!(user: @user, film: @film)
     rating = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "Keep these notes")
     DomainEvents::Delivery::Dispatch.call
@@ -90,7 +90,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     delete remove_from_watched_library_film_path(@entry), params: { authenticity_token: csrf }
     assert_response :conflict
 
-    post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
+    post move_to_watched_library_film_path(@entry), params: { authenticity_token: csrf }
     DomainEvents::Delivery::Dispatch.call
     assert_not candidate.reload.suppressed?
     delete remove_from_watched_library_film_path(@entry), params: { authenticity_token: csrf }
@@ -118,12 +118,12 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     assert_select '[role="status"]', I18n.t("library.detail.removed")
     replacement = Library::LibraryFilm.create!(user: @user, film: @film)
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
-      post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
+      post move_to_watched_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :not_found
       delete remove_from_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :not_found
     end
-    assert replacement.reload.can_watch?
+    assert replacement.reload.can_move_to_watched?
   end
 
   test "invalid foreign and removed IDs are unavailable and unsupported actions conflict" do
@@ -131,10 +131,10 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     csrf = token
     foreign = Library::LibraryFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ "0", "-1", "invalid", "999999999", foreign.id ].each do |id|
-      post mark_watched_library_film_path(id), params: { authenticity_token: csrf }
+      post move_to_watched_library_film_path(id), params: { authenticity_token: csrf }
       assert_response :not_found
     end
-    Library::CollectionManagement::RecordWatched.call(user_id: @user.id, library_film_id: @entry.id)
+    Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: @user.id, library_film_id: @entry.id)
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       delete remove_from_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }
       assert_response :conflict
@@ -145,12 +145,12 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     get library_path
     csrf = token
     assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "DomainEvents::DomainEvent.count", "Identity::User.count" ] do
-      post mark_watched_library_film_path(@entry)
+      post move_to_watched_library_film_path(@entry)
       assert_response :unprocessable_entity
       delete remove_from_watchlist_library_film_path(@entry)
       assert_response :unprocessable_entity
       travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
-        post mark_watched_library_film_path(@entry), params: { authenticity_token: csrf }
+        post move_to_watched_library_film_path(@entry), params: { authenticity_token: csrf }
         assert_response :unauthorized
         get library_path
         assert_redirected_to new_session_path

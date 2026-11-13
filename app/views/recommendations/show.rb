@@ -26,7 +26,7 @@ module Views
                   params = { film_id: @film.id }
                   render Shared::ActionButton.new(text: t("recommendations.accept"), variant: :primary, url: accept_recommendation_path, params:)
                   render Shared::ActionButton.new(text: t("recommendations.reject"), variant: :ghost, url: reject_recommendation_path, params:)
-                  render Shared::ActionButton.new(text: t("library.detail.mark_watched"), variant: :secondary, icon: ::Library::EyeCheck.new, url: mark_watched_from_recommendations_path, params:)
+                  render Shared::ActionButton.new(text: t("library.detail.add_to_watched"), variant: :secondary, icon: ::Library::EyeCheck.new, url: add_to_watched_from_recommendations_path, params:)
                 end
               end
             end

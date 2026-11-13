@@ -21,6 +21,59 @@ module Library
       rated_rating_film&.current_rating
     end
 
+    def can_add_to_watchlist?
+      new_record?
+    end
+
+    def add_to_watchlist!(correlation_id: nil, causation_id: nil)
+      raise Errors::AddToWatchlistUnavailable unless can_add_to_watchlist?
+
+      transaction do
+        update!(watched: false)
+        publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST, correlation_id:, causation_id:)
+      end
+      self
+    end
+
+    def can_add_to_watched?
+      new_record?
+    end
+
+    def add_to_watched!(correlation_id: nil, causation_id: nil)
+      raise Errors::AddToWatchedUnavailable unless can_add_to_watched?
+
+      save_as_watched!(correlation_id:, causation_id:)
+    end
+
+    def can_move_to_watchlist?
+      persisted? && watched?
+    end
+
+    def move_to_watchlist!
+      raise Errors::NotWatched unless can_move_to_watchlist?
+
+      transaction do
+        update!(watched: false)
+        publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST)
+      end
+      self
+    end
+
+    def can_move_to_watched?
+      persisted? && !watched?
+    end
+
+    def move_to_watched!(correlation_id: nil, causation_id: nil)
+      raise Errors::NotOnWatchlist unless persisted?
+      raise Errors::AlreadyWatched unless can_move_to_watched?
+
+      save_as_watched!(correlation_id:, causation_id:)
+    end
+
+    def can_remove_from_watchlist?
+      persisted? && !watched?
+    end
+
     def remove_from_watchlist!
       raise Errors::NotOnWatchlist unless can_remove_from_watchlist?
 
@@ -31,18 +84,12 @@ module Library
       self
     end
 
-    def move_to_watchlist!
-      raise Errors::NotWatched unless watched?
-
-      transaction do
-        update!(watched: false)
-        publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST)
-      end
-      self
+    def can_remove_from_watched?
+      persisted? && watched?
     end
 
     def remove_from_watched!
-      raise Errors::NotWatched unless watched?
+      raise Errors::NotWatched unless can_remove_from_watched?
 
       transaction do
         destroy!
@@ -51,49 +98,15 @@ module Library
       self
     end
 
-    def can_remove_from_watchlist?
-      !watched?
-    end
+    private
 
-    def can_watch?
-      !watched?
-    end
-
-    def mark_watched!(correlation_id: nil, causation_id: nil)
-      raise Errors::AlreadyWatched unless can_watch?
-
+    def save_as_watched!(correlation_id:, causation_id:)
       transaction do
         update!(watched: true)
         publish_event!(name: Events::FILM_MARKED_WATCHED, correlation_id:, causation_id:)
       end
       self
     end
-
-    def add_to_watchlist!(correlation_id: nil, causation_id: nil)
-      raise Errors::AddToWatchlistUnavailable if persisted?
-
-      transaction do
-        save!
-        publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST, correlation_id:, causation_id:)
-      end
-      self
-    end
-
-    def add_to_watchlist_from_event!(correlation_id:, causation_id:)
-      return :ignored if persisted?
-
-      add_to_watchlist!(correlation_id:, causation_id:)
-      :processed
-    end
-
-    def mark_watched_from_event!(correlation_id:, causation_id:)
-      return :ignored unless can_watch?
-
-      mark_watched!(correlation_id:, causation_id:)
-      :processed
-    end
-
-    private
 
     def publish_event!(name:, correlation_id: nil, causation_id: nil)
       DomainEvents::Publication::Publish.call(user_id:, publisher: Library::Events::PUBLISHING_DOMAIN,

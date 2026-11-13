@@ -1,6 +1,74 @@
 require "application_system_test_case"
 
 class LibraryCollectionNavigationTest < ApplicationSystemTestCase
+  test "film search from the Library heading adds a result to Watchlist" do
+    client = Registry::Sources::TmdbClient
+    original_search = client.method(:search)
+    client.define_singleton_method(:search) do |query:, page:, **|
+      sleep 0.4
+      results = (page == 1 ? 7 : 5).times.map do |index|
+        { "id" => 348 + index, "title" => (page == 1 && index.zero? ? query : "#{query} #{page}-#{index + 1}"),
+          "release_date" => "1979-05-25", "poster_path" => ("/alien.jpg" unless index == 6), "genre_ids" => [ 27 ],
+          "overview" => "A crew answers a distress signal on a distant moon." }
+      end
+      { "page" => page, "total_pages" => 2, "total_results" => 12, "results" => results }
+    end
+    Registry::Film.create!(title: "Alien", tmdb_id: 348)
+
+    visit library_path
+    click_button I18n.t("identity.entry.try_it_out")
+    within ".ui-page-heading" do
+      fill_in I18n.t("library.search.label"), with: "Alien"
+      assert_no_selector "form[role=search] button"
+    end
+
+    assert_selector ".library-film-search-spinner"
+    spinner = find(".library-film-search-spinner").rect
+    field = find("#library-film-query").rect
+    assert_operator spinner.x + spinner.width, :<=, field.x
+    assert_selector ".library-film-search-dropdown h3", text: "Alien (1979)"
+    assert_no_selector ".library-film-search-spinner"
+    assert_selector ".library-film-search-dropdown img[src$='/alien.jpg']"
+    assert_selector ".library-film-search-dropdown .library-film-search-overview", count: 5,
+      text: "A crew answers a distress signal"
+    assert_selector ".library-film-search-dropdown button[aria-label='Mark watched'] svg"
+    actions = first(".library-film-search-actions").rect
+    details = first(".library-film-search-result-details").rect
+    assert_operator actions.x, :>=, details.x + details.width
+    assert_selector "#library-film-query:focus"
+    assert_current_path library_path
+    within ".library-film-search-dropdown" do
+      assert_selector "li", count: 5
+      assert_text "Page 1 of 2"
+      assert_selector "h3 .film-year", text: "(1979)", count: 5
+      last_result = all("li", count: 5).last.rect
+      pagination = find(".library-pagination").rect
+      assert_operator last_result.y + last_result.height, :<=, pagination.y
+      click_link I18n.t("library.browser.next")
+      assert_selector "li", count: 2
+      assert_text "Alien 1-7"
+      poster = find("img.film-poster").rect
+      within all("li", count: 2).last do
+        placeholder = find(".film-poster.poster-wordmark", text: I18n.t("ui.short_wordmark")).rect
+        assert_equal [ poster.width, poster.height ], [ placeholder.width, placeholder.height ]
+        assert_selector ".library-film-search-overview", text: "A crew answers a distress signal"
+      end
+      click_link I18n.t("library.browser.next")
+      assert_text "Alien 2-5"
+      assert_current_path library_path
+      click_link I18n.t("library.browser.previous")
+      assert_text "Alien 1-7"
+      click_link I18n.t("library.browser.previous")
+      assert_selector "h3", text: "Alien (1979)", exact_text: true
+      first("li").click_button I18n.t("library.detail.add_to_watchlist")
+    end
+    assert_text I18n.t("library.search.in_watchlist")
+    click_link I18n.t("library.browser.return")
+    assert_selector ".library-film h3", text: "Alien"
+  ensure
+    client.define_singleton_method(:search, original_search)
+  end
+
   test "Watched filters share the Watchlist divider position when they fit beside the tabs" do
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")

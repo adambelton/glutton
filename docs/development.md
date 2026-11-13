@@ -27,6 +27,8 @@ Run `bin/rails identity:cleanup_expired` for one bounded pass over expired guest
 
 See [domain event operations](domain_event_operations.md) for worker configuration and delivery diagnostics. GoodJob schedules taste-profile refresh every 15 minutes in production. Superusers can inspect and queue a refresh of their own profile from Account. Operators can process pending requests from the console with `Ratings::TasteProfiling::ProcessProfileRefreshes.call`. See [AI configuration](ai_configuration.md) for provider setup.
 
+Public film imports enqueue initial quality assignment on `registry_assignment`. The `bin/dev` worker includes that queue. Workers configured with an explicit queue list need to include it to process public imports.
+
 ## Quality vocabulary seed
 
 After applying migrations, load the 235 provisional quality definitions and nine category defaults:

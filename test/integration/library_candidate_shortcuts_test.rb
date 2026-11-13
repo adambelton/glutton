@@ -29,7 +29,7 @@ class LibraryCandidateShortcutsRequestTest < ActionDispatch::IntegrationTest
 
   {
     add_to_watchlist_from_ratings_path: :new_rating_path,
-    mark_watched_from_recommendations_path: :recommendation_path
+    add_to_watched_from_recommendations_path: :recommendation_path
   }.each do |shortcut, destination|
     test "#{shortcut} rejects missing, malformed and unavailable film IDs" do
       get library_path
@@ -66,7 +66,7 @@ class LibraryCandidateShortcutsRequestTest < ActionDispatch::IntegrationTest
   test "a competing watched action makes a stale Watchlist submission fail without changing Library" do
     get new_rating_path
     token = csrf_from_open_page
-    Library::CollectionManagement::MarkFilmWatched.call(user_id: @user.id, film_id: @film.id)
+    Library::CollectionManagement::AddToWatched.call(user_id: @user.id, film_id: @film.id)
 
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       post add_to_watchlist_from_ratings_path, params: { film_id: @film.id, authenticity_token: token }
@@ -81,13 +81,13 @@ class LibraryCandidateShortcutsRequestTest < ActionDispatch::IntegrationTest
   test "repeated watched submission creates no second event or success flash" do
     get recommendation_path
     token = csrf_from_open_page
-    post mark_watched_from_recommendations_path, params: { film_id: @film.id, authenticity_token: token }
+    post add_to_watched_from_recommendations_path, params: { film_id: @film.id, authenticity_token: token }
     assert_redirected_to recommendation_path
     assert_equal @film.id, flash[:recommendations_excluded_film_id]
     follow_redirect!
 
     assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
-      post mark_watched_from_recommendations_path, params: { film_id: @film.id, authenticity_token: token }
+      post add_to_watched_from_recommendations_path, params: { film_id: @film.id, authenticity_token: token }
     end
     assert_response :see_other
     assert_redirected_to recommendation_path
