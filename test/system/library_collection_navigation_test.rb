@@ -126,12 +126,17 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       move = find_button(I18n.t("library.detail.move_film_to_watchlist", title: film.title))
       assert_equal move.style("background-color"), rating.style("background-color")
       idle_background = move.style("background-color").fetch("background-color")
+      page.evaluate_script("arguments[0].style.transition = arguments[1].style.transition = 'none'", move, rating)
       move.hover
-      page.evaluate_async_script("const [button, done] = arguments; Promise.allSettled(button.getAnimations().map(animation => animation.finished)).then(() => done())", move)
+      assert_selector "button:hover" do |button|
+        button.style("background-color").fetch("background-color") != idle_background
+      end
       hover_background = move.style("background-color")
-      assert_not_equal idle_background, hover_background.fetch("background-color")
       rating.hover
-      rating.assert_matches_style(hover_background)
+      assert_selector "button:hover" do |button|
+        button.style("background-color") != { "background-color" => idle_background }
+      end
+      assert_equal hover_background, rating.style("background-color")
       click_button "Rate #{film.title}"
     end
     assert_current_path new_rating_path(film_id: film.id)

@@ -17,8 +17,8 @@ class NotificationTest < ApplicationSystemTestCase
       assert_selector "header.ui-header + .guest-banner"
       assert_in_delta before, find(".rating-interface").rect.y, 1
       notification = find(".ui-toast")
-      viewport_width = page.evaluate_script("document.documentElement.clientWidth")
-      assert_in_delta 16, viewport_width - notification.rect.x - notification.rect.width, 1
+      right_gap = page.evaluate_script("window.innerWidth - arguments[0].getBoundingClientRect().right", notification)
+      assert_in_delta 16, right_gap, 1
       assert_operator notification.rect.x, :>=, 16
       click_button I18n.t("ui.dismiss_notification")
       assert_no_selector ".ui-toast"
