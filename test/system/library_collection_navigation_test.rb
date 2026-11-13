@@ -17,6 +17,10 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
 
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
+    heading = find(".ui-page-heading h1").rect
+    search_field = find("#library-film-query").rect
+    assert_in_delta heading.height, search_field.height, 1
+    assert_in_delta heading.y, search_field.y, 1
     within ".ui-page-heading" do
       fill_in I18n.t("library.search.label"), with: "Alien"
       assert_no_selector "form[role=search] button"
