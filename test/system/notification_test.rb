@@ -5,6 +5,7 @@ class NotificationTest < ApplicationSystemTestCase
     3.times { |index| Registry::Film.create!(title: "Notification film #{index}") }
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
+    click_button I18n.t("ratings.onboarding.surprise")
 
     [ [ 1400, 1000 ], [ 390, 844 ] ].each do |width, height|
       page.current_window.resize_to(width, height)
@@ -13,16 +14,17 @@ class NotificationTest < ApplicationSystemTestCase
       choose I18n.t("ratings.values.brilliant"), allow_label_click: true
       click_button I18n.t("ratings.browser.save")
       assert_selector '.ui-notifications [role="status"]', text: I18n.t("ratings.browser.saved")
-      assert_selector ".ui-notifications .guest-banner"
+      assert_selector "header.ui-header + .guest-banner"
       assert_in_delta before, find(".rating-interface").rect.y, 1
       notification = find(".ui-toast")
-      viewport_width = page.evaluate_script("document.documentElement.clientWidth")
-      assert_in_delta 16, viewport_width - notification.rect.x - notification.rect.width, 1
+      overlay = find(".ui-notifications")
+      assert_equal({ "position" => "fixed", "right" => "16px" }, overlay.style("position", "right"))
       assert_operator notification.rect.x, :>=, 16
+      assert page.evaluate_script("arguments[0].getBoundingClientRect().right <= document.documentElement.clientWidth", notification)
       click_button I18n.t("ui.dismiss_notification")
       assert_no_selector ".ui-toast"
       assert_in_delta before, find(".rating-interface").rect.y, 1
-      assert_selector ".ui-notifications .guest-banner"
+      assert_selector "header.ui-header + .guest-banner"
     end
   ensure
     page.current_window.resize_to(1400, 1000)
@@ -32,14 +34,16 @@ class NotificationTest < ApplicationSystemTestCase
     Registry::Film.create!(title: "Film with notification")
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
-    click_button I18n.t("ratings.browser.dismiss")
+    click_button I18n.t("ratings.onboarding.surprise")
+    choose I18n.t("ratings.values.brilliant"), allow_label_click: true
+    click_button I18n.t("ratings.browser.save")
 
     dismiss = find_button(I18n.t("ui.dismiss_notification"))
     dismiss.send_keys(:shift)
-    assert_selector "button:focus", text: "×"
+    assert_equal I18n.t("ui.dismiss_notification"), find("button:focus")["aria-label"]
     sleep 5.2
-    assert_selector '[role="status"]', text: I18n.t("ratings.browser.dismissed")
+    assert_selector '[role="status"]', text: I18n.t("ratings.browser.saved")
     dismiss.send_keys(:enter)
-    assert_no_selector '[role="status"]', text: I18n.t("ratings.browser.dismissed")
+    assert_no_selector '[role="status"]', text: I18n.t("ratings.browser.saved")
   end
 end

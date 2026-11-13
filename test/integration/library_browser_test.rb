@@ -35,7 +35,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
         assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view:), text: "Watched"
         assert_select ".library-films .poster-placeholder"
       end
-      assert_select 'main a[href*="rating/new"]', count: 1
+      assert_select "main form[action=?] button.library-rating-icon", new_rating_path, count: 1
     end
   end
 
@@ -48,8 +48,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
     assert_select ".library-film p", text: "Awaiting rating", count: 0
-    assert_select 'main a[href*="rating/new"]', count: 5
-    assert_select "a[href=?]", new_rating_path(film_id: rows.first.film_id)
+    assert_select "main form[action=?] button.library-rating-icon", new_rating_path, count: 5
+    assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, rows.first.film_id.to_s
 
     row = Ratings::RatingFilm.find_by!(user: @user, film: rows.last.film)
     Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
@@ -57,9 +57,9 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     absent.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
     assert_select ".library-film p", text: "Rated", count: 0
-    assert_select 'main a[href*="rating/new"]', count: 4
+    assert_select "main form[action=?] button.library-rating-icon", new_rating_path, count: 4
     assert_select "h3", count: 5
-    assert_select "a[href=?]", new_rating_path(film_id: rows.last.film_id), count: 0
+    assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, rows.last.film_id.to_s, count: 0
   end
 
   test "watched page rendering keeps database queries bounded as entries grow" do
@@ -88,7 +88,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       row = entry
       candidate = Ratings::RatingFilm.create!(user: @user, film: row.film, suppressed: flags.first, dismissed: flags.last) if flags
       get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
-      link = Nokogiri::HTML(response.body).at_css("a[href='#{new_rating_path(film_id: row.film_id)}']")["href"]
+      assert_select 'form[action=?][method="get"] input[name="film_id"][value=?]', new_rating_path, row.film_id.to_s
+      link = new_rating_path(film_id: row.film_id)
       assert_difference "Ratings::RatingFilm.count", flags ? 0 : 1 do
         get link
         assert_response :success
@@ -98,7 +99,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::PRETTY_GOOD }
       assert_response :see_other
       get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
-      assert_select "a[href=?]", link, count: 0
+      assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, row.film_id.to_s, count: 0
       get link
       assert_response :conflict
     end
@@ -151,7 +152,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select ".library-film", count: 2
     assert_select ".library-rating-filters a[href]", count: 5
     assert_select ".library-rating-filters a:nth-last-child(2)", text: "Not Rated"
-    assert_select '.library-clear-filters[aria-disabled="true"]:not([href]):not([data-tooltip])'
+    assert_select ".library-clear-filters[disabled]:not([data-tooltip])"
     assert_select ".library-rating-filters [data-selected]", count: 0
     get library_path(view: "watched", ratings: %w[brilliant pretty_good not_for_me garbage unrated])
     assert_select ".library-film", count: 2
@@ -166,7 +167,10 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select ".library-film", count: 2
     assert_select ".library-film h3", text: revised.film.title
     assert_select '.library-rating-filters a[data-selected="true"]', count: 2
-    assert_select '.library-clear-filters:last-child[aria-label="Clear selection"][data-tooltip="Clear selection"][href=?]', library_path(view: "watched")
+    assert_select 'form.library-clear-filters-form[action=?][method="get"]', library_path do
+      assert_select 'input[name="view"][value="watched"]'
+      assert_select 'button.library-clear-filters[aria-label="Clear selection"][data-tooltip="Clear selection"]:not([disabled])'
+    end
   end
 
   test "titles are escaped dates optional and page is private" do
@@ -224,14 +228,14 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
         get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
         assert_response :success
-        assert_select "a[href=?][aria-label=?]", edit_link, "Edit your rating for #{watched.film.title}", count: 1
-        assert_select 'a[href=?][data-tooltip="Edit rating · Pretty Good"][aria-description="Has rating notes"]', edit_link
-        assert_select 'a[href=?][data-tooltip="Add rating"][aria-description="No rating notes"]', new_rating_path(film_id: unrated.film_id)
+        assert_select "form[action=?] button[aria-label=?]", edit_rating_path, "Edit your rating for #{watched.film.title}", count: 1
+        assert_select 'form[action=?] button[data-tooltip="Pretty Good · Edit rating"][aria-description="Has rating notes"]', edit_rating_path
+        assert_select 'form[action=?] button[data-tooltip="Not Rated · Add rating"][aria-description="No rating notes"]', new_rating_path
         assert_select "script", text: "film", count: 0
         assert_equal "no-store", response.headers["Cache-Control"]
         assert_no_match(/translation missing/i, response.body)
-        assert_select "a[href=?]", new_rating_path(film_id: watched.film_id), count: 0
-        assert_select "a[href=?]", new_rating_path(film_id: unrated.film_id)
+        assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, watched.film_id.to_s, count: 0
+        assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, unrated.film_id.to_s
       end
       get edit_link
       assert_response :success
@@ -241,7 +245,8 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
         value: Ratings::Rating::Values::BRILLIANT, notes: "Updated from Library" }
       assert_response :see_other
       get library_path(view: "watched")
-      get Nokogiri::HTML(response.body).at_css("a[href='#{edit_link}']")["href"]
+      assert_select 'form[action=?] input[name="film_id"][value=?]', edit_rating_path, watched.film_id.to_s
+      get edit_link
       assert_response :success
       assert_select "textarea#notes", text: "Updated from Library"
       assert_select 'input[name="previous_rating_id"][value=?]', candidate.ratings.order(:id).last.id.to_s
@@ -250,7 +255,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       Ratings::RatingRecording::ReviseRating.call(user_id: user.id, rating_film_id: candidate.id,
         previous_rating_id: candidate.ratings.order(:id).last.id, value: Ratings::Rating::Values::BRILLIANT, notes: nil)
       get library_path(view: "watched")
-      assert_select 'a[href=?][data-tooltip="Edit rating · Brilliant"][aria-description="No rating notes"]', edit_link
+      assert_select 'form[action=?] button[data-tooltip="Brilliant · Edit rating"][aria-description="No rating notes"]', edit_rating_path
     end
   end
 
@@ -259,6 +264,6 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     Ratings::RatingFilm.create!(user: @user, film: row.film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     get library_path
     assert_response :success
-    assert_select 'a[href*="rating/edit"]', count: 0
+    assert_select "form[action=?] button.library-rating-icon", edit_rating_path, count: 0
   end
 end

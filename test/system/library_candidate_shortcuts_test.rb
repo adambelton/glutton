@@ -9,6 +9,7 @@ class LibraryCandidateShortcutsTest < ApplicationSystemTestCase
     second = Registry::Film.create!(title: "Second rating candidate")
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
+    click_button I18n.t("ratings.onboarding.surprise")
     assert_selector "h2", text: first.title
 
     click_button I18n.t("library.detail.add_to_watchlist")

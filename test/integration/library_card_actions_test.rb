@@ -36,7 +36,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     assert_select ".library-films a h3", count: 0
     assert_select "form[action=?] button[aria-label=?]", move_to_watched_library_film_path(@entry), "Mark #{@film.title} watched"
     assert_select "form[action=?] button[aria-label=?]", remove_from_watchlist_library_film_path(@entry), "Remove #{@film.title} from watchlist"
-    assert_select "a[href=?][aria-label=?]", new_rating_path(film_id: @film.id), "Rate #{@film.title}", count: 0
+    assert_select "form[action=?] button[aria-label=?]", new_rating_path, "Rate #{@film.title}", count: 0
     assert_select "script", text: "film", count: 0
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
@@ -60,10 +60,10 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     event = DomainEvents::DomainEvent.joins(:domain_event_stream).find_by!(domain_event_streams: { user_id: @user.id }, name: Library::Events::FILM_MARKED_WATCHED)
     assert_equal @film.id, event.payload.fetch("film_id")
     follow_redirect!
-    assert_select '[role="status"]', I18n.t("library.detail.watched")
+    assert_select ".ui-toast", count: 0
     assert_select "form[action=?]", move_to_watchlist_library_film_path(@entry)
     assert_select "form[action=?]", remove_from_watched_library_film_path(@entry)
-    assert_select "a[href=?]", new_rating_path(film_id: @film.id)
+    assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, @film.id.to_s
     assert_no_difference "DomainEvents::DomainEvent.count" do
       watch
       assert_response :conflict
@@ -79,7 +79,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     rating = candidate.submit_rating!(value: Ratings::Rating::Values::BRILLIANT, notes: "Keep these notes")
     DomainEvents::Delivery::Dispatch.call
     get library_path(view: "watched")
-    assert_select "a[href=?][data-tooltip=?]", edit_rating_path(film_id: @film.id), "Edit rating · Brilliant"
+    assert_select "form[action=?] button[data-tooltip=?]", edit_rating_path, "Brilliant · Edit rating"
     csrf = token
 
     post move_to_watchlist_library_film_path(@entry), params: { authenticity_token: csrf }

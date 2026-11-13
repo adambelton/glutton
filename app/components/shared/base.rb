@@ -20,7 +20,7 @@ module Shared
     end
 
     def submit(text)
-      render RubyUI::Button.new(type: :submit, class: "ui-submit") { text }
+      render Shared::PrimaryButton.new(type: :submit, class: "ui-submit") { text }
     end
 
     def field(name:, label:, id:, type: :text, **attrs)

@@ -24,9 +24,17 @@ module Views
                 trailer(video_id:) if video_id.present?
                 div(class: "film-actions recommendation-actions") do
                   params = { film_id: @film.id }
-                  render Shared::ActionButton.new(text: t("recommendations.accept"), variant: :primary, url: accept_recommendation_path, params:)
-                  render Shared::ActionButton.new(text: t("recommendations.reject"), variant: :ghost, url: reject_recommendation_path, params:)
-                  render Shared::ActionButton.new(text: t("library.detail.add_to_watched"), variant: :secondary, icon: ::Library::EyeCheck.new, url: add_to_watched_from_recommendations_path, params:)
+                  render Shared::ActionForm.new(url: accept_recommendation_path, params:) do
+                    render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("recommendations.accept") }
+                  end
+                  render Shared::ActionForm.new(url: reject_recommendation_path, params:) do
+                    render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("recommendations.reject") }
+                  end
+                  label = t("library.detail.add_to_watched")
+                  render Shared::ActionForm.new(url: add_to_watched_from_recommendations_path, params:) do
+                    render Shared::IconButton.new(type: :submit, variant: :secondary, size: :xl, class: "ui-action-button",
+                      aria: { label: }, data: { tooltip: label }) { render ::Library::EyeCheckIcon.new }
+                  end
                 end
               end
             end
@@ -47,7 +55,7 @@ module Views
           div(class: "recommendation-trailer-frame") do
             iframe(id: "recommendation-trailer-player", src: "https://www.youtube.com/embed/#{video_id}", title: t("recommendations.trailer_for", title: @film.title),
               loading: "lazy", allowfullscreen: true)
-            button(type: "button", class: "recommendation-trailer-toggle", hidden: true,
+            render Shared::IconButton.new(variant: :plain, class: "recommendation-trailer-toggle", hidden: true,
               aria: { controls: "recommendation-trailer-player", expanded: "false", label: t("recommendations.expand_trailer") },
               data: { recommendation_trailer_target: "toggle", action: "recommendation-trailer#toggle",
                 expand_label: t("recommendations.expand_trailer"), collapse_label: t("recommendations.collapse_trailer") }) do

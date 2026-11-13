@@ -60,7 +60,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_rating_path(film_id: @film.id)
     assert_response :see_other
     follow_redirect!
-    assert_select '[role="status"]', I18n.t("ratings.browser.updated")
+    assert_select ".ui-toast", count: 0
     latest = @candidate.reload.current_rating
     assert_equal "  Updated\n👻 ", latest.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value

@@ -11,6 +11,7 @@ class RegistrationEmailsController < ApplicationController
     raise Identity::Errors::RegistrationUnavailable if registration.nil?
 
     Identity::Registration::DeliverRegistrationConfirmation.call(pending_registration_id: registration.id)
-    redirect_to registration_path, notice: I18n.t("identity.registration.accepted"), status: :see_other
+    flash[:page_notice] = I18n.t("identity.registration.accepted")
+    redirect_to registration_path, status: :see_other
   end
 end

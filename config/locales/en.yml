@@ -52,7 +52,6 @@ en:
     sessions:
       sign_in: Sign in
       sign_out: Sign out
-      signed_out: Signed out.
       registered_status: Signed in
       guest_status: Guest session
       invalid_credentials: Email or password is incorrect.

@@ -1,7 +1,7 @@
 module Shared
   class ThemeToggle < Base
     def view_template
-      button(type: "button", class: "theme-toggle", hidden: true, aria: { pressed: "false", label: t("ui.dark_mode") },
+      render Shared::IconButton.new(variant: :plain, class: "theme-toggle", hidden: true, aria: { pressed: "false", label: t("ui.dark_mode") },
         data: { controller: "theme", action: "theme#toggle" }) do
         span(aria: { hidden: "true" }, class: "theme-icon") do
           svg(viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round", class: "theme-moon") do |icon|

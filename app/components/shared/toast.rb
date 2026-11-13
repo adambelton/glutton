@@ -8,7 +8,7 @@ module Shared
       div(class: "ui-toast", data: { controller: "toast", turbo_temporary: true,
         action: "mouseenter->toast#pause mouseleave->toast#resume focusin->toast#pause focusout->toast#resume visibilitychange@document->toast#visibilityChanged turbo:before-cache@document->toast#dismiss" }) do
         p(role: "status", aria: { atomic: "true" }) { @message }
-        button(type: "button", class: "ui-toast-dismiss", aria: { label: t("ui.dismiss_notification") }, data: { action: "toast#dismiss" }) { "×" }
+        render Shared::IconButton.new(variant: :plain, class: "ui-toast-dismiss", aria: { label: t("ui.dismiss_notification") }, data: { action: "toast#dismiss" }) { render CloseIcon.new }
       end
     end
   end

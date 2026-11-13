@@ -17,7 +17,9 @@ module Views
           section(aria: { labelledby: "pending-evidence-heading" }) do
             h2(id: "pending-evidence-heading") { t("account.pending") }
             pending_evidence
-            render Shared::ActionButton.new(text: t("account.refresh"), url: refresh_taste_profile_account_path)
+            render Shared::ActionForm.new(url: refresh_taste_profile_account_path) do
+              render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("account.refresh") }
+            end
           end
         end
       end

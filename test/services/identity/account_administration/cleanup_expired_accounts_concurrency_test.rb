@@ -145,9 +145,9 @@ module Identity
       blocked = guest
       Identity::Session.create!(user: blocked)
       travel Identity::UserGuest::EXPIRY_DURATION
-      original = Identity::UserGuest.instance_method(:destroy!)
+      original = Identity::UserGuest.instance_method(:destroy_with_activity!)
       blocked_id = blocked.id
-      Identity::UserGuest.define_method(:destroy!) do
+      Identity::UserGuest.define_method(:destroy_with_activity!) do
         raise IOError, "simulated failure" if id == blocked_id
         original.bind_call(self)
       end
@@ -159,7 +159,7 @@ module Identity
       end.value
       assert_equal [ false, true, true ], visible
     ensure
-      Identity::UserGuest.define_method(:destroy!, original) if original
+      Identity::UserGuest.define_method(:destroy_with_activity!, original) if original
     end
   end
 end

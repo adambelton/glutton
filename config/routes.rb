@@ -11,12 +11,15 @@ Rails.application.routes.draw do
 
   resource :password_reset, only: [ :new, :create, :edit, :update ]
 
-  resource :guest_session, only: :create
+  resource :guest_session, only: [ :create, :destroy ]
 
   resource :session, only: [ :new, :create, :destroy ]
 
   resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings do
     post :dismiss
+    get :choose_films
+    post :queue_films
+    post :surprise
   end
 
   resource :account, only: :show, controller: :account do

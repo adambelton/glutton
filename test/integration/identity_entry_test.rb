@@ -33,6 +33,24 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     post session_path, params: { email_address: user.email_address, password: @password, authenticity_token: csrf }
   end
 
+  test "discarding guest activity requires a guest session and CSRF token" do
+    delete guest_session_path, params: { authenticity_token: csrf }
+    assert_response :unauthorized
+
+    user = registered_user
+    login(user)
+    delete guest_session_path, params: { authenticity_token: csrf }
+    assert_response :forbidden
+    assert Identity::UserRegistered.exists?(user.id)
+
+    reset!
+    enter_guest
+    guest = Identity::UserGuest.sole
+    delete guest_session_path
+    assert_response :unprocessable_entity
+    assert Identity::UserGuest.exists?(guest.id)
+  end
+
   test "the five requested horror examples appear in order without creating personal activity" do
     [ [ 1091, "The Thing" ], [ 948, "Halloween" ], [ 9552, "The Exorcist" ], [ 814, "An American Werewolf in London" ] ].each do |tmdb_id, title|
       Registry::Film.create!(tmdb_id:, title:)
@@ -126,7 +144,11 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select "header a[href=?]", new_session_path
     assert_select "header a[href=?]", new_registration_path
     assert_select "header form[action=?]", session_path, count: 0
-    assert_select "header form[action=?]", guest_session_path, count: 0
+    assert_select 'header .ui-auth-links a[href=?] + div > button[aria-haspopup="dialog"]', new_registration_path, text: "Discard"
+    assert_select "header dialog form[action=?]", guest_session_path do
+      assert_select 'input[name="_method"][value="delete"]'
+      assert_select "button", "Discard"
+    end
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       enter_guest
       assert_redirected_to new_rating_path

@@ -36,6 +36,6 @@ class SessionsController < ApplicationController
     Identity::Session.revoke(id: bound_session.id) if bound_session.present?
     clear_identity_cookie
     reset_session
-    redirect_to root_path, notice: I18n.t("identity.sessions.signed_out"), status: :see_other
+    redirect_to root_path, status: :see_other
   end
 end

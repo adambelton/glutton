@@ -73,17 +73,7 @@ module RubyUI
         BASE_CLASSES,
         size_classes,
         "bg-destructive text-white shadow-sm",
-        "[a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20",
-        "dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
-      ]
-    end
-
-    def outline_classes
-      [
-        BASE_CLASSES,
-        size_classes,
-        "border border-input bg-background shadow-sm",
-        "hover:bg-accent hover:text-accent-foreground"
+        "hover:bg-destructive/90 focus-visible:ring-destructive"
       ]
     end
 
@@ -91,17 +81,18 @@ module RubyUI
       [
         BASE_CLASSES,
         size_classes,
+        "border border-border",
         "hover:bg-accent hover:text-accent-foreground"
       ]
     end
 
     def default_classes
       case @variant
+      when :plain then []
       when :primary then primary_classes
       when :link then link_classes
       when :secondary then secondary_classes
       when :destructive then destructive_classes
-      when :outline then outline_classes
       when :ghost then ghost_classes
       end
     end

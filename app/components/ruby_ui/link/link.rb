@@ -78,19 +78,11 @@ module RubyUI
       ]
     end
 
-    def outline_classes
-      [
-        BASE_CLASSES,
-        size_classes,
-        "border border-input bg-background shadow-sm",
-        "hover:bg-accent hover:text-accent-foreground"
-      ]
-    end
-
     def ghost_classes
       [
         BASE_CLASSES,
         size_classes,
+        "border border-border",
         "hover:bg-accent hover:text-accent-foreground"
       ]
     end
@@ -101,7 +93,6 @@ module RubyUI
       when :link then link_classes
       when :secondary then secondary_classes
       when :destructive then destructive_classes
-      when :outline then outline_classes
       when :ghost then ghost_classes
       end
     end

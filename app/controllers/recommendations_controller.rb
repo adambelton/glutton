@@ -32,6 +32,7 @@ class RecommendationsController < ApplicationController
     end
 
     Recommendations::RecordFilmResponse.call(user_id: current_user.id, film_id: film_id.to_i, response:)
-    redirect_to recommendation_path, notice: I18n.t("recommendations.responses.#{response}"), status: :see_other
+    flash[:notice] = I18n.t("recommendations.responses.accepted") if response == Recommendations::RecommendationFilm::Responses::ACCEPTED
+    redirect_to recommendation_path, status: :see_other
   end
 end

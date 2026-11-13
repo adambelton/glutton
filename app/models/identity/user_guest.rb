@@ -25,6 +25,14 @@ module Identity
       persisted? && active?
     end
 
+    def destroy_with_activity!
+      transaction do
+        Session.where(user_id: id).delete_all
+        PendingRegistration.where(guest_user_id: id).delete_all
+        destroy!
+      end
+    end
+
     def active?
       created_at + EXPIRY_DURATION > Time.current
     end

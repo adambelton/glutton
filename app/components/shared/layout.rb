@@ -15,7 +15,7 @@ module Shared
             if user.present?
               nav(aria: { label: t("ui.navigation") }, class: "ui-nav") do
                 a(href: new_rating_path) { t("ratings.browser.title") }
-                a(href: recommendation_path) { t("recommendations.title") }
+                render Recommendations::RecommendationsNavLink.new(user:)
                 a(href: library_path) { t("library.browser.title") }
                 if user&.superuser?
                   a(href: registry_root_path) { t("registry.title") }
@@ -25,11 +25,23 @@ module Shared
             render ThemeToggle.new
             div(class: "ui-auth-links") do
               if user.nil? || user.can_register?
-                render Identity::EntryActions.new(guest_entry: @account_controls && user.nil?)
+                render Identity::AccountEntryControls.new(guest_entry: @account_controls && user.nil?)
+                render Identity::DiscardGuestConfirmationDialog.new if user&.can_register?
               else
                 a(href: account_path, class: "ui-account-link") { t("account.title") } if user.superuser?
-                render Shared::ActionButton.new(text: t("ui.log_out"), url: session_path, method: :delete)
+                render Shared::ActionForm.new(url: session_path, method: :delete) do
+                  render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ui.log_out") }
+                end
               end
+            end
+          end
+        end
+        if user&.can_register?
+          aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
+            div(class: "ui-width") do
+              span { t("identity.entry.guest_banner") }
+              plain " "
+              text_link(t("identity.entry.save_progress"), new_registration_path)
             end
           end
         end
@@ -39,13 +51,6 @@ module Shared
             render Identity::RegistrationReminder.new(registration: current_pending_registration)
           end
           p(role: "alert", class: "ui-alert") { flash[:alert] } if flash[:alert].present?
-          if user&.can_register?
-            aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
-              span { t("identity.entry.guest_banner") }
-              plain " "
-              text_link(t("identity.entry.save_progress"), new_registration_path)
-            end
-          end
         end
         div(class: "ui-width ui-content") do
           yield

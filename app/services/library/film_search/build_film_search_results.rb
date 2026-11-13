@@ -1,12 +1,11 @@
 module Library
   module FilmSearch
-    class Results
+    class BuildFilmSearchResults
       PAGE_SIZE = 5
       Result = Data.define(:candidates, :total_pages, :entries, :batch, :batch_count)
 
-      def self.call(user_id:, query:, page:, batch:)
-        search = Registry::Sources::SearchTmdbFilms.call(query:, page:,
-          genre_id: Registry::Sources::SearchTmdbFilms::HORROR_GENRE_ID)
+      def self.call(user_id:, batch:)
+        search = yield
         matches = search.fetch(:candidates)
         batch_count = [ (matches.size + PAGE_SIZE - 1) / PAGE_SIZE, 1 ].max
         batch = batch == "last" ? batch_count : [ batch.to_i, batch_count ].min
