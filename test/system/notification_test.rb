@@ -17,9 +17,10 @@ class NotificationTest < ApplicationSystemTestCase
       assert_selector "header.ui-header + .guest-banner"
       assert_in_delta before, find(".rating-interface").rect.y, 1
       notification = find(".ui-toast")
-      right_gap = page.evaluate_script("window.innerWidth - arguments[0].getBoundingClientRect().right", notification)
-      assert_in_delta 16, right_gap, 1
+      overlay = find(".ui-notifications")
+      assert_equal({ "position" => "fixed", "right" => "16px" }, overlay.style("position", "right"))
       assert_operator notification.rect.x, :>=, 16
+      assert page.evaluate_script("arguments[0].getBoundingClientRect().right <= document.documentElement.clientWidth", notification)
       click_button I18n.t("ui.dismiss_notification")
       assert_no_selector ".ui-toast"
       assert_in_delta before, find(".rating-interface").rect.y, 1

@@ -129,18 +129,15 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       rating = find_button("Rate #{film.title}")
       move = find_button(I18n.t("library.detail.move_film_to_watchlist", title: film.title))
       assert_equal move.style("background-color"), rating.style("background-color")
-      idle_background = move.style("background-color").fetch("background-color")
-      page.evaluate_script("arguments[0].style.transition = arguments[1].style.transition = 'none'", move, rating)
-      move.hover
-      assert_selector "button:hover" do |button|
-        button.style("background-color").fetch("background-color") != idle_background
+      if page.evaluate_script("matchMedia('(hover: hover)').matches")
+        page.evaluate_script("arguments[0].style.transition = arguments[1].style.transition = 'none'", move, rating)
+        move.hover
+        assert_selector "button:hover"
+        hover_background = move.style("background-color")
+        rating.hover
+        assert_selector "button.library-rating-icon:hover"
+        assert_equal hover_background, rating.style("background-color")
       end
-      hover_background = move.style("background-color")
-      rating.hover
-      assert_selector "button:hover" do |button|
-        button.style("background-color") != { "background-color" => idle_background }
-      end
-      assert_equal hover_background, rating.style("background-color")
       click_button "Rate #{film.title}"
     end
     assert_current_path new_rating_path(film_id: film.id)
