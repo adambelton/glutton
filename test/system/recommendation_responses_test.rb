@@ -122,18 +122,22 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     [ 1400, 900, 390 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
       visit recommendation_path
-      recommendation = find(".ui-card", text: film.title).rect
+      recommendation = find(".recommendation-film", text: film.title).rect
       recommendation_poster = find(".recommendation-artwork .film-poster").rect
       visit new_rating_path
-      rating = find(".ui-card", text: film.title).rect
+      rating = find(".rating-interface", text: film.title).rect
       rating_poster = find(".rating-film-artwork .film-poster").rect
       if width >= 1100
         assert_in_delta rating.height, recommendation.height, 1
       elsif width <= 650
         assert_equal "visible", find(".rating-interface").style("overflow-y").fetch("overflow-y")
       end
-      assert_in_delta rating_poster.width, recommendation_poster.width, 1
-      assert_in_delta rating_poster.height, recommendation_poster.height, 1
+      # One page can have a vertical scrollbar and a narrower content area.
+      columns = width >= 1100 ? 3 : (width > 650 ? 2 : 1)
+      poster_width_difference = (rating.width - recommendation.width).to_f / columns
+      assert_in_delta rating_poster.width - poster_width_difference, recommendation_poster.width, 1
+      assert_in_delta recommendation_poster.width * 1.5, recommendation_poster.height, 1
+      assert_in_delta rating_poster.width * 1.5, rating_poster.height, 1
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
