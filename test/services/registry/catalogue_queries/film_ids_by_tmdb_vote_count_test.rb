@@ -4,13 +4,18 @@ class Registry::FilmIdsByTmdbVoteCountTest < ActiveSupport::TestCase
   test "returns a bounded ordering with exclusions, stable ties and missing counts last" do
     missing = film("Missing")
     malformed = film("Malformed", "900")
+    negative = film("Negative", -1)
+    fractional = film("Fractional", 1.5)
+    decimal = film("Decimal", 20.0)
     zero = film("Zero", 0)
     first = film("First tie", 20)
     second = film("Second tie", 20)
     excluded = film("Excluded", 100)
 
     assert_equal [ first.id, second.id, zero.id ], ordered_ids(excluded, limit: 3)
-    assert_equal [ first.id, second.id, zero.id, missing.id, malformed.id ], ordered_ids(excluded, limit: 10)
+    assert_equal [ second.id, zero.id ], Registry::CatalogueQueries::FilmIdsByTmdbVoteCount.call(
+      excluding_ids: [ excluded.id ], limit: 2, offset: 1)
+    assert_equal [ first.id, second.id, zero.id, missing.id, malformed.id, negative.id, fractional.id, decimal.id ], ordered_ids(excluded, limit: 10)
   end
 
   private
