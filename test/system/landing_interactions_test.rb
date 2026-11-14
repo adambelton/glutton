@@ -3,14 +3,19 @@ require "application_system_test_case"
 class LandingInteractionsTest < ApplicationSystemTestCase
   test "theme selection survives navigation and reload" do
     visit root_path
-    click_button I18n.t("ui.dark_mode")
-    assert_selector 'html[data-theme="dark"]'
-    visit new_session_path
-    assert_selector 'html[data-theme="dark"]'
-    refresh
+    assert_selector "html:not([data-theme])"
+    assert_equal "dark", find("html").style("color-scheme").fetch("color-scheme")
     assert_selector 'button.theme-toggle[aria-pressed="true"]'
     click_button I18n.t("ui.dark_mode")
     assert_selector 'html[data-theme="light"]'
+    assert_equal "light", find("html").style("color-scheme").fetch("color-scheme")
+    visit new_session_path
+    assert_selector 'html[data-theme="light"]'
+    refresh
+    assert_selector 'button.theme-toggle[aria-pressed="false"]'
+    click_button I18n.t("ui.dark_mode")
+    assert_selector "html:not([data-theme])"
+    assert_equal "dark", find("html").style("color-scheme").fetch("color-scheme")
   end
 
   test "a visitor can select an example and pause automatic rotation" do

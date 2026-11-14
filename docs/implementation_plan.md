@@ -18,6 +18,9 @@ Guests can discard their activity and sign out from the header. Identity uses th
 
 ## Current work
 
+- Add a feedback form under Account.
+- Add Support us information under Account covering Open Collective and the Glutton podcast. Link to a separate podcast page with the placeholder copy “Coming in 2027.”
+
 Registered viewers and active guests can search for horror films from Library and choose a Library action that imports a missing film before applying the action. New imports queue initial quality assignment. Registered viewers can manage their credentials and close their accounts in Settings. Glutton Profile shows up to ten positive and ten negative quality totals with expandable definitions. Pending evidence and manual refresh are reserved for superusers. Per-film explanations and optional rejection reasons are deferred. A feedback form is the next proposed product task; see the [catalogue coverage check](research/wikipedia_quality_coverage.md) for the evidence needed before considering a public Wikipedia contribution list.
 
 - Ratings owns dismissal and suppression. Recommendations owns responses and suppression. Library owns Add to Watchlist and Mark Watched, including the shortcuts on Ratings and Recommendations. The shortcuts skip the affected film on the immediate next selection while durable events update eligibility. Review and restoration of dismissed or rejected films remain open. See the [event contracts](domain_events.md#rating-and-recommendation-events).
@@ -64,7 +67,7 @@ Viewers with no RatingFilm records can select films from a catalogue grid or sta
 
 ## Delivery order
 
-Before public launch, complete the [registration privacy notice and terms acceptance task](tasks/registration_privacy_and_terms.md), including disclosure of what Glutton retains after account closure before viewers register.
+Registration links to the Privacy Notice and Terms of Service, discloses live account deletion and backup expiry, and records the accepted terms version and timestamp. Before public launch, review the notices against the final provider configuration and verify the backup restoration procedure below.
 
 The immediate priority is a usable development seed followed by core public Ratings, Library and Recommendations functionality. Registry editing/refresh improvements below are deferred. The canonical-content dependency order remains:
 
@@ -146,10 +149,21 @@ The weekly podcast is a natural place to try this. Discuss the film, use follow-
 
 Complete the seed-first sequence above before later admin improvements. Admin viewing requires authorisation before exposure; manual source refresh changes no accepted qualities. Source/association changes do not themselves authorise downstream score mutations. Community editing, scheduled syncing, streaming integrations and speculative extra event consumers are not prerequisites.
 
-Production PostgreSQL will use Neon Launch. Start with the smallest compute size, a modest autoscaling ceiling and scale to zero enabled. Check how Rails and GoodJob affect idle time during staging and adjust the ceiling based on observed load. Web and worker hosting and scheduling Identity cleanup remain open.
+Keep GoodJob for launch with direct PostgreSQL connections, 30-second polling and a 30-second domain event recovery sweep. Compare hosts with one Rails web service, one separate queue worker and one PostgreSQL database. Expect an always-active database with the current polling and sweep intervals. Confirm memory, connections, queue latency and compute usage in staging.
 
-Set Neon's point-in-time recovery window to seven days. Use that window for routine recovery at launch. Decide on scheduled snapshots or independent exports separately if we need a longer window or recovery from loss of the Neon project.
+Monthly USD estimates assume one continuously running web process, one continuously running worker, and 1 GB of database data. They exclude taxes, external APIs, email, and variable recovery storage and transfer. Neon Launch adds about $19.70 at 0.25 CU for 730 hours and 1 GB of data, before recovery history; higher average compute increases the bill. Configure a seven-day restore window on Neon. [Neon pricing](https://neon.com/pricing)
 
-Before launch, implement a durable record of account closures outside the primary database's restore boundary. Retain entries for as long as any recovery point could contain the old account. For a restore, create a separate Neon branch and keep it disconnected from production web and worker processes. Replay closures, then verify that closed accounts cannot sign in or resume old sessions, their retained activity is present, and an unrelated account still works. Run this drill before switching production to any restored branch.
+| App host | Same-provider Postgres | With Neon Launch | Assumptions |
+| --- | ---: | ---: | --- |
+| Render | $45 | $34 | Two 512 MB services cost $14. The $6 database needs the $25 Pro workspace for seven-day point-in-time recovery. Hobby with native Postgres is $20 for three days. The Neon estimate uses Hobby; add $25 if Pro features are needed. [Pricing](https://render.com/pricing?trk=public_profile__reactions-text) · [Recovery](https://render.com/docs/postgresql-backups) |
+| Railway | $15–32 | $28–39 | Usage estimates assume 1.25–2.5 GB average RAM and 0.10–0.35 average vCPU across all services, or 0.75–1.5 GB and 0.05–0.20 vCPU for web and worker only. The native estimate includes a 1 GB volume and assumes a single database instance. Enable WAL archiving and budget for bucket storage and archive transfer. High availability costs extra. [Pricing](https://docs.railway.com/pricing/plans) · [Recovery](https://docs.railway.com/volumes/point-in-time-recovery) |
+| Heroku | From $164 with seven-day rollback | $34 | Two 512 MB Basic dynos cost $14. Essential-0 totals $19 with scheduled dumps available and no point-in-time rollback; Standard-0 totals $64 with four days. Advanced starts at $150 without a standby, or $300 with the default standby. Classic Premium-0 totals $214 with high availability and seven-day rollback. [Pricing](https://www.heroku.com/pricing) · [Database tiers](https://devcenter.heroku.com/articles/heroku-postgres-plans) · [Advanced pricing](https://devcenter.heroku.com/articles/getting-started-postgres-advanced) |
+| Fly.io | $47–56 plus provisioned database storage | $28–37 | Two shared Machines with 512 MB to 1 GB each at the displayed reference region rates. Managed Postgres Basic adds $38, includes high availability, and charges $0.28 per provisioned GB. Verify pricing in the chosen region and the exact point-in-time restore window before selecting it. [Machine pricing](https://fly.io/pricing-update/) · [Managed Postgres](https://fly.io/docs/mpg/) · [Recovery](https://fly.io/changelog/managed-postgres-point-in-time-restore/) |
+
+The Frankfurt staging Blueprint targets `main` and waits for GitHub Actions checks before deploying the web service and GoodJob worker. GitHub Actions replays the migrations on fresh PostgreSQL. The Render web service runs `bin/rails db:prepare` against staging before starting. After switching and syncing the existing Blueprint source to `main`, verify the first deployment on both services and check `/up` and worker startup.
+
+Measure web and worker memory and queue latency before committing to the smallest sizes. For split hosting, match app and database regions as closely as possible and use direct TLS PostgreSQL connections. Shortlist Render with Neon for simple managed hosting and Railway with its own Postgres for lower estimated spend and private networking.
+
+Before launch, implement a durable record of account deletions outside the primary database's restore boundary. Retain entries for as long as any recovery point could contain the old account. Test at least seven days of point-in-time history by restoring into an isolated database (a separate branch with Neon) and keeping it disconnected from production web and worker processes. Replay deletions, then verify that deleted accounts cannot sign in or resume old sessions, their activity has been purged, and an unrelated account still works. Run this drill before switching production to the restored database. Decide separately whether to schedule independent exports to cover the loss of the database project or a longer recovery window.
 
 Library search provides viewer-facing missing-film imports. The Registry administration browser provides read-only catalogue inspection. Shared reads of authoritative records are allowed. Cross-domain writes require the owning workflow and agreed durable events. Product and architecture briefs and domain contracts retain the detailed requirements.

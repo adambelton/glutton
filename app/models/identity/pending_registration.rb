@@ -6,6 +6,8 @@ module Identity
     CONFIRMATION_DELIVERY_LIMIT = 5
     CONFIRMATION_DELIVERY_COOLDOWN = 60.seconds.freeze
 
+    attr_accessor :terms_accepted
+
     belongs_to :guest_user, class_name: "Identity::User", optional: true
 
     scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }

@@ -1,13 +1,14 @@
 require "application_system_test_case"
 
 class DeleteRegisteredAccountTest < ApplicationSystemTestCase
-  test "a registered viewer can cancel or confirm closing their account while retaining activity" do
+  test "a registered viewer can cancel or confirm closing their account and permanently delete their activity" do
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "delete@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     other_session = Identity::Session.create!(user:)
     film = Registry::Film.create!(title: "Shared film")
     rating = Ratings::RatingFilm.create!(user:, film:).submit_rating!(value: "brilliant", notes: "My notes")
+    library_film = Library::LibraryFilm.create!(user:, film:, watched: true)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
@@ -69,16 +70,12 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
     within("dialog[open]") { click_button label }
     assert_current_path root_path
     assert_selector ".ui-toast", text: I18n.t("identity.settings.deleted")
-    closed_account = Identity::UserDeleted.find(user.id)
-    assert_nil closed_account.email_address
-    assert_nil closed_account.password_digest
-    assert_nil closed_account.email_confirmed_at
-    assert_not closed_account.superuser?
+    assert_not Identity::User.exists?(user.id)
     assert_not Identity::Session.exists?(user_id: user.id)
-    assert_raises(Identity::Errors::AccountDeleted) { Identity::Session.resume(id: other_session.id, user_id: user.id) }
+    assert_nil Identity::Session.resume(id: other_session.id, user_id: user.id)
     assert_nil Identity::Authentication::Authenticate.call(email_address: user.email_address, password:)
-    assert_equal "My notes", rating.reload.notes
-    assert_equal "brilliant", rating.value
+    assert_not Ratings::Rating.exists?(rating.id)
+    assert_not Library::LibraryFilm.exists?(library_film.id)
     assert Registry::Film.exists?(film.id)
   end
 end

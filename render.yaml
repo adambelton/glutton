@@ -19,7 +19,8 @@ services:
     runtime: ruby
     region: frankfurt
     plan: 0.5c-512mb
-    autoDeployTrigger: "off"
+    branch: main
+    autoDeployTrigger: checksPass
     buildCommand: bundle install && SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile
     preDeployCommand: bin/rails db:prepare
     startCommand: bundle exec puma -C config/puma.rb
@@ -40,7 +41,8 @@ services:
     runtime: ruby
     region: frankfurt
     plan: 0.5c-512mb
-    autoDeployTrigger: "off"
+    branch: main
+    autoDeployTrigger: checksPass
     buildCommand: bundle install
     startCommand: bundle exec good_job start
     envVars:

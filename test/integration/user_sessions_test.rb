@@ -20,6 +20,8 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     SessionsController.allow_forgery_protection = true
     SessionsController::RATE_LIMIT_STORE.clear
     Rails.application.routes.draw do
+      get "privacy", to: "privacy_notices#show", as: :privacy_notice
+      get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "landing#show"
       resource :library, only: :show, controller: :library
       resource :recommendation, only: :show, controller: :recommendations

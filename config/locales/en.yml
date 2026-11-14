@@ -27,6 +27,7 @@ en:
       title: Create an account
       explanation: Verify your email to complete registration and keep your progress. Your password must be at least 15 characters.
       password_confirmation: Confirm password
+      terms_acceptance: I accept the Terms of Service
       submit: Send confirmation email
       pending_title: Verify your email
       verify_required: Registration is not complete. Verify your email to keep your progress permanently.
@@ -73,6 +74,7 @@ en:
   activerecord:
     attributes:
       identity/pending_registration:
+        terms_accepted: Terms of Service
         confirmation_delivery_attempts: Confirmation delivery attempts
         confirmation_delivery_attempted_at: Last confirmation delivery attempt
         guest_user: Guest

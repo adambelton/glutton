@@ -1,0 +1,7 @@
+class PrivacyNoticesController < ApplicationController
+  allow_unauthenticated_access only: :show
+
+  def show
+    render ::Views::Identity::PrivacyNotice.new
+  end
+end

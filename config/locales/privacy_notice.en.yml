@@ -1,0 +1,27 @@
+en:
+  identity:
+    privacy_notice:
+      title: Privacy Notice
+      operator: Adam Belton operates Glutton and is responsible for how it uses your personal data. Contact hello@adambelton.com with privacy questions or requests.
+      registration_disclosure: If you delete your account, Glutton deletes your sign-in details and activity, including your ratings and notes, from the live service. Copies in backups may remain until those backups expire.
+      data:
+        title: What Glutton uses
+        description: Glutton uses your email address and a securely hashed password to manage your account. It uses private ratings, notes, library entries and recommendation activity to provide the service and personalise recommendations. A session cookie keeps you signed in, and local browser storage remembers your theme choice.
+      lawful_bases:
+        title: Why Glutton uses this data
+        description: Glutton uses your account and viewing activity to provide the service you request under the Terms of Service. Glutton has a legitimate interest in keeping the service secure and recoverable, including using operational logs and backups for those purposes.
+      providers:
+        title: Who helps provide Glutton
+        description: Render hosts Glutton and its database in Frankfurt, Germany. Resend delivers account emails when email delivery is enabled. TypeSafe processes film and rating information, including notes when relevant, to produce film assessments and taste profiles. Your browser connects to TMDB for film images and to YouTube when a trailer is embedded. These providers may process information outside the UK. Contact Glutton for details about international transfers and the safeguards used.
+      retention:
+        title: How long Glutton keeps your data
+        description: Glutton keeps your account and saved activity while your account is open. An unfinished registration expires after one hour, and guest access expires after 24 hours. Expired records are removed during cleanup.
+      account_deletion:
+        title: Deleting your account
+        description: You can delete your account in Account Settings. This ends your sessions and deletes your sign-in details, ratings, notes, library entries, recommendation activity and taste profile from the live service. Guest activity is temporary and is deleted when expired guest accounts are cleaned up.
+      backups:
+        title: Backups
+        description: A backup taken before deletion may contain a copy of your account and activity until the backup expires. Backups are kept for recovery. Before returning a restored database to service, Glutton must reapply deletions made since the backup was taken.
+      rights:
+        title: Your privacy rights
+        description: You can contact hello@adambelton.com to request access to, correction of or deletion of your personal data, or to exercise other applicable data protection rights. You can also complain to the UK Information Commissioner's Office.

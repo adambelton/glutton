@@ -44,6 +44,7 @@ module Views
                 render ::Identity::AccountEntryControls.new
               end
               p(class: "muted") { t("identity.entry.guest_explanation") }
+              p { text_link(t("identity.privacy_notice.title"), privacy_notice_path) }
               p(class: "preview-attribution") do
                 a(href: "https://www.themoviedb.org", rel: "noreferrer") { t("identity.entry.attribution") }
                 plain " "

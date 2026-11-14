@@ -2,18 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   connect() {
-    let theme = document.documentElement.dataset.theme || "light"
-    try {
-      theme = localStorage.getItem("glutton.theme") === "dark" ? "dark" : "light"
-    } catch {
-      // Keep the document's choice when browser storage is unavailable.
-    }
-    this.apply(theme)
+    this.apply(document.documentElement.dataset.theme || "dark")
     this.element.hidden = false
   }
 
   toggle() {
-    const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark"
+    const theme = document.documentElement.dataset.theme === "light" ? "dark" : "light"
     this.apply(theme)
     try {
       localStorage.setItem("glutton.theme", theme)
@@ -23,7 +17,11 @@ export default class extends Controller {
   }
 
   apply(theme) {
-    document.documentElement.dataset.theme = theme
+    if (theme === "light") {
+      document.documentElement.dataset.theme = "light"
+    } else {
+      delete document.documentElement.dataset.theme
+    }
     this.element.setAttribute("aria-pressed", String(theme === "dark"))
   }
 }
