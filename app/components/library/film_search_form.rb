@@ -16,7 +16,7 @@ module Library
           end
           label(for: "library-film-query", class: "sr-only") { t("library.search.label") }
           input(id: "library-film-query", type: "search", name: "query", value: @query,
-            class: "ui-input", placeholder: t("library.search.label"), required: true, maxlength: 200,
+            class: "ui-input", placeholder: t("library.search.placeholder"), required: true, maxlength: 200,
             aria: { controls: "library-film-search-results" },
             data: { action: "input->library-film-search#schedule compositionend->library-film-search#schedule focus->library-film-search#reopen" })
         end

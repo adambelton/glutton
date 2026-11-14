@@ -36,6 +36,7 @@ en:
       return: Return to Library
     search:
       label: Search films
+      placeholder: Add films to library
       loading: Fetching film results
       results: Search results
       empty: No matching horror films on this page.

@@ -1,11 +1,11 @@
 module Recommendations
   class RecommendationsNavLink < Shared::Base
-    def initialize(user:)
-      @user = user
+    def initialize(unlocked:)
+      @unlocked = unlocked
     end
 
     def view_template
-      if CandidateSelection::RecommendationUnlock.unlocked?(user: @user)
+      if @unlocked
         a(href: recommendation_path) { t("recommendations.title") }
       else
         tooltip = t("recommendations.navigation_locked", required: CandidateSelection::NextCandidate::MINIMUM_ASSESSED_FILMS)

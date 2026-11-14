@@ -1,0 +1,28 @@
+en:
+  identity:
+    settings:
+      title: Settings
+      login_details: Login Details
+      change_email: Change email
+      email: Email
+      password_hidden: Password hidden
+      new_email: New email
+      current_password: Current password
+      incorrect_current_password: The current password is incorrect.
+      send_email: Send confirmation email
+      password: Password
+      change_password: Change password
+      confirm_email: Confirm email change
+      confirm_address: "Change your sign-in email to %{email}?"
+      delete_title: Delete account
+      delete_description: This permanently closes your account and removes your sign-in details. Glutton keeps your activity, including ratings and notes, privately to improve the service.
+      cancel: Cancel
+      email_sent: Check your new email address for a confirmation link. Your current email is unchanged.
+      email_changed: Your email changed. Sign in with your new address.
+      password_changed: Your password changed. Sign in with your new password.
+      email_unavailable: This email change is no longer available. Request a new confirmation link.
+      email_delivery_failed: The confirmation email could not be sent. Try again.
+      deleted: Your account was closed.
+      rate_limited: Too many attempts. Wait a few minutes and try again.
+      mail_subject: Confirm your Glutton email change
+      mail_introduction: Open this link while signed in to confirm your new email address. The link expires in 30 minutes.

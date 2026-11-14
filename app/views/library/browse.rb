@@ -57,9 +57,9 @@ module Views
             unrated = rating == ::Library::CollectionManagement::Browse::UNRATED
             label = unrated ? t("library.browser.unrated") : t("ratings.values.#{rating}")
             a(href: library_path(view: @view, ratings: next_ratings.presence),
-              data: { selected: ("true" if selected) }, aria: { label: (t("library.browser.selected_rating", rating: label) if selected) }) do
+              data: { selected: ("true" if selected) }, aria: { label: (selected ? t("library.browser.selected_rating", rating: label) : label) }) do
               render ::Ratings::RatingValueIcon.new(value: (rating unless unrated), size: 14)
-              plain label
+              span(class: "library-rating-filter-label") { label }
             end
           end
           clear_rating_filters

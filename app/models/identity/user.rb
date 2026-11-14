@@ -44,6 +44,10 @@ module Identity
       false
     end
 
+    def can_view_account?
+      false
+    end
+
     def active?
       true
     end

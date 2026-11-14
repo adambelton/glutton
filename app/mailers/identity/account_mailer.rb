@@ -10,6 +10,10 @@ module Identity
       compose(recipient, reset_url, I18n.t("identity.account_mailer.password_reset.subject"))
     end
 
+    def email_change(recipient:, confirmation_url:)
+      compose(recipient, confirmation_url, I18n.t("identity.settings.mail_subject"))
+    end
+
     private
 
     def compose(recipient, url, subject)

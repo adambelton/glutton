@@ -26,7 +26,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       namespace :registry do
         root "films#index"
       end
-      resource :account, only: :show, controller: :account
+      get "account/settings", to: "account_settings#show", as: :account_settings
       resource :library, only: :show, controller: :library
       get "library/search", to: "library/film_search#index", as: :library_film_search
       resource :recommendation, only: :show, controller: :recommendations

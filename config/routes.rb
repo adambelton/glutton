@@ -22,9 +22,15 @@ Rails.application.routes.draw do
     post :surprise
   end
 
-  resource :account, only: :show, controller: :account do
-    post :refresh_taste_profile
-  end
+  get "account", to: redirect("/account/settings", status: 302), as: :account
+  get "account/settings", to: "account_settings#show", as: :account_settings
+  get "account/taste-profile", to: "account#show", as: :account_taste_profile
+  post "account/refresh_taste_profile", to: "account#refresh_taste_profile", as: :refresh_taste_profile_account
+  post "account/email", to: "account_settings#request_email", as: :account_email
+  get "account/email/confirm", to: "account_settings#show_email_confirmation", as: :confirm_account_email
+  post "account/email/confirm", to: "account_settings#confirm_email"
+  patch "account/password", to: "account_settings#change_password", as: :account_password
+  delete "account", to: "account_settings#destroy"
 
   resource :recommendation, only: :show, controller: :recommendations do
     post :accept

@@ -77,7 +77,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
     assert_select "header a.wordmark[href=?]", root_path
-    assert_select "header .ui-account-menu", count: 0
+    assert_select "header a[href=?]", account_settings_path, count: 0
     assert_select "header a[href=?]", new_session_path
     assert_select "header a[href=?]", new_registration_path
     assert_select "header form[action=?]", guest_session_path do
@@ -140,7 +140,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "header a.wordmark[href=?]", new_rating_path
     assert_select ".guest-banner a[href=?]", new_registration_path
-    assert_select "header details", count: 0
+    assert_select "header select.ui-primary-navigation", count: 1
     assert_select "header a[href=?]", new_session_path
     assert_select "header a[href=?]", new_registration_path
     assert_select "header form[action=?]", session_path, count: 0
@@ -166,11 +166,13 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "header a.wordmark[href=?]", new_rating_path
     assert_select ".guest-banner", count: 0
-    assert_select "header details", count: 0
+    assert_select "header select.ui-primary-navigation", count: 1
     assert_select "header a[href=?]", new_session_path, count: 0
     assert_select "header a[href=?]", new_registration_path, count: 0
     assert_select "header form[action=?]", guest_session_path, count: 0
-    assert_select "header form[action=?]", session_path do
+    assert_select "header form[action=?]", session_path, count: 0
+    get account_settings_path
+    assert_select "main form[action=?]", session_path do
       assert_select 'input[name="_method"][value="delete"]'
       assert_select "button", I18n.t("ui.log_out")
     end

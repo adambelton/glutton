@@ -4,6 +4,12 @@ en:
     sections: Account sections
     profile: Glutton Profile
     empty: Your Glutton Profile will appear here once it has been built from your film notes.
+    quality_rankings:
+      definition_unavailable: No definition is available for this quality.
+      top: Top 10 qualities
+      bottom: Bottom 10 qualities
+      top_empty: No qualities have a positive score yet.
+      bottom_empty: No qualities have a negative score yet.
     supporting_evidence: "Supporting evidence %{number}"
     evidence_list: Claims and evidence
     evidence_marker: "[%{number}]"

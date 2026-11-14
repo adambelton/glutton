@@ -1,18 +1,18 @@
 module Views
   module Account
     class Show < Base
-      def initialize(profile:)
+      def initialize(profile:, can_refresh_taste_profile:)
         @profile = profile
+        @can_refresh_taste_profile = can_refresh_taste_profile
       end
 
       def view_template
         page(title: t("account.title"), class: "account-page", heading_outside_card: true) do
-          nav(class: "account-tabs", aria: { label: t("account.sections") }) do
-            a(href: account_path, aria: { current: "page" }) { t("account.profile") }
-          end
+          render ::Identity::AccountNavigation.new(section: :profile)
           section(aria: { labelledby: "taste-profile-heading" }) do
             h2(id: "taste-profile-heading") { t("account.profile") }
             profile_content
+            quality_rankings
           end
           section(aria: { labelledby: "pending-evidence-heading" }) do
             h2(id: "pending-evidence-heading") { t("account.pending") }
@@ -20,11 +20,43 @@ module Views
             render Shared::ActionForm.new(url: refresh_taste_profile_account_path) do
               render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("account.refresh") }
             end
-          end
+          end if @can_refresh_taste_profile
         end
       end
 
       private
+
+      def quality_rankings
+        rankings = @profile.fetch(:quality_rankings)
+        div(class: "profile-quality-rankings") do
+          quality_list(:top, rankings.fetch(:top))
+          quality_list(:bottom, rankings.fetch(:bottom))
+        end
+      end
+
+      def quality_list(kind, qualities)
+        section(aria: { labelledby: "#{kind}-qualities-heading" }) do
+          h3(id: "#{kind}-qualities-heading") { t("account.quality_rankings.#{kind}") }
+          if qualities.empty?
+            p { t("account.quality_rankings.#{kind}_empty") }
+          else
+            ul(class: "profile-quality-list", role: "list") do
+              qualities.each { |quality| li { quality_item(quality) } }
+            end
+          end
+        end
+      end
+
+      def quality_item(quality)
+        definition = quality.fetch(:definition)
+        details(class: "profile-quality-item") do
+          summary do
+            span(class: "profile-quality-name") { quality.fetch(:name) }
+            span(class: "profile-quality-score") { "%+d" % quality.fetch(:score) }
+          end
+          p { definition.presence || t("account.quality_rankings.definition_unavailable") }
+        end
+      end
 
       def profile_content
         if @profile[:profile].blank?

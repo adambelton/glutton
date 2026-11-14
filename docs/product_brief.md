@@ -9,7 +9,7 @@
 
 Build a personalised horror-film discovery experience that understands **what people appreciate about the films they have watched**, rather than relying chiefly on genres, popularity, ratings or conventional “similar films” metadata.
 
-A viewer rates films and may optionally describe, in their own words, why they enjoyed or disliked them. Ratings alone reveal recurring positive and negative patterns across film **qualities**; optional **film notes** supply more specific information. The system maintains an taste profile built only from what the viewer has actually expressed, and uses it to reinterpret rating history. Together these inform recommendations, explanations and an evolving understanding of personal taste.
+A viewer rates films and may optionally describe, in their own words, why they enjoyed or disliked them. Ratings alone reveal recurring positive and negative patterns across film **qualities**; optional **film notes** supply more specific information. The system maintains a taste profile built only from what the viewer has actually expressed, and uses it to reinterpret rating history. Together these inform recommendations, explanations and an evolving understanding of personal taste.
 
 The product should be enjoyable even before its recommendations become useful: reflecting on horror should be interesting in its own right. Horror means more than fear: people might enjoy performers, decade-specific aesthetics, folklore, extreme violence, imaginative effects, quiet atmosphere, narrative structure, humour, themes or any other distinctive characteristic.
 
@@ -47,7 +47,7 @@ Use one users table with stable internal IDs for guests and registered accounts;
 
 Password recovery uses an emailed link valid for 15 minutes and an explicit new-password submission. Resetting revokes every existing session and requires fresh sign-in; viewing the link alone changes nothing. Ordinary request responses do not reveal whether the email is registered. Recovery does not merge guest activity or switch another signed-in account.
 
-Ratings, film notes and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account deletion anonymises and locks the retained identity and revokes access. The exact activity anonymisation/deletion policy needs specification before launch; abandoned guests and their activity are deleted rather than retained as deleted accounts.
+Ratings, film notes and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account closure clears sign-in details and revokes access. Glutton retains grouped activity privately to improve the service. An older backup can still associate that activity with the original account. Abandoned guests and their activity are deleted.
 
 ## 3. Two engagement modes and a personal library
 
@@ -74,7 +74,7 @@ Shared expressions may later provide inspiration in placeholders, with consent a
 
 ### 3.2 Process recommendations
 
-Present eligible films with an understandable, specific, spoiler-safe recommendation reason. Support useful spoiler-free film information and, where integrations permit, a trailer and external ratings. Reasons should reflect actual expressed preferences or inferred rating patterns rather than superficial similarity; ratings-only users must also receive explanations.
+Support useful spoiler-free film information and a trailer where available. Show the strongest positive and negative quality signals on the Glutton Profile even when a viewer has rated films without adding notes. Per-film recommendation explanations are deferred.
 
 A viewer can accept, reject or mark the film watched. Acceptance adds it to the Watchlist through Library. Rejection closes the recommendation. Mark Watched is a Library action that can make the film available for rating. These actions supply no enjoyment scores.
 
@@ -245,7 +245,7 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 - JEV implicit and explicit quality scoring using the pre-submission taste profile, plus separate taste-profile assessment/building based **only on explicitly submitted expressions**; retain original text.
 - Positive and negative preference inference from recurring qualities across rated films, including for users who never submit expressions.
 - **Contextual reinterpretation of existing ratings** when the taste profile changes meaningfully, through periodic reassessment rather than compulsory recalculation after each expression; exact cadence and optional manual refresh remain open.
-- Baseline recommendations using current applied scores, spoiler-safe explanations, Accept and Reject, and a Mark Watched shortcut.
+- Baseline recommendations using current applied scores, Accept and Reject, and a Mark Watched shortcut. Show up to ten positive and ten negative quality signals on the viewer’s Glutton Profile to explain what shapes recommendations without revealing film details.
 - A usable bulk-rating flow that does not require selecting tags.
 
 **Subsequent milestones**
@@ -304,7 +304,7 @@ Avoid choosing framework patterns or building abstractions solely for potential 
 
 1. Can someone rate a dozen familiar films quickly, **without writing any expressions**, and still receive plausible recommendations?
 2. Can it accumulate distinct positive and negative evidence from qualities repeatedly appearing in films the viewer rates? Can it identify meaningful shared qualities from the expressions users do choose to write?
-3. Can it suggest an unclassified film with a believable, spoiler-safe explanation, and exclude it after acceptance, rejection or marking it watched without adding false enjoyment evidence?
+3. Can it suggest an unclassified film, surface the viewer’s strongest quality signals on their Glutton Profile, and exclude a film after acceptance, rejection or marking it watched without adding false enjoyment evidence?
 4. Can users inspect sourced film information and quality context, and report an inaccurate association?
 5. Can classifications be regenerated after a quality change without losing the viewer's original expressions?
 6. After a viewer supplies an informative expression, can Glutton **reinterpret older ratings** and produce sensibly changed recommendations at a periodic refresh (or optional on-demand refresh), without manufacturing new explicit expressions or self-reinforcing scores?

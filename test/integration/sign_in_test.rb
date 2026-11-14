@@ -35,7 +35,8 @@ class SignInTest < ActionDispatch::IntegrationTest
     assert_includes header, "samesite=lax"
     assert_equal "no-store", response.headers["Cache-Control"]
     follow_redirect!
-    assert_select "header button", text: I18n.t("ui.log_out"), count: 1
+    get account_settings_path
+    assert_select "main button", text: I18n.t("ui.log_out"), count: 1
     other = open_session
     sign_in(other)
     second = Identity::Session.last

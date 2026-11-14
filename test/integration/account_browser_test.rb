@@ -6,15 +6,26 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
   include TasteProfileOpenaiStub
   include ActiveJob::TestHelper
 
-  test "only superusers can read the account or queue a refresh" do
-    get account_path
+  test "only registered viewers can read the account and only superusers can queue a refresh" do
+    get account_taste_profile_path
     assert_redirected_to new_session_path
+
+    sign_in(Identity::UserGuest.create!)
+    get account_taste_profile_path
+    assert_response :forbidden
 
     sign_in(registered_user)
     get new_rating_path
-    assert_select "header a[href=?]", account_path, count: 0
+    assert_select "header a[href=?]", account_settings_path, count: 1
+    assert_select "header select option[value=?]", account_settings_path, text: I18n.t("account.title")
     get account_path
-    assert_response :forbidden
+    assert_redirected_to account_settings_path
+    get account_taste_profile_path
+    assert_response :success
+    assert_select "#pending-evidence-heading", count: 0
+    assert_select "form[action=?]", refresh_taste_profile_account_path, count: 0
+    assert_select "p", I18n.t("account.quality_rankings.top_empty")
+    assert_select "p", I18n.t("account.quality_rankings.bottom_empty")
     assert_no_enqueued_jobs(only: Ratings::RefreshTasteProfilesJob) do
       post refresh_taste_profile_account_path
       assert_response :forbidden
@@ -31,13 +42,11 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     publish(other)
     sign_in(user)
 
-    get account_path, params: { user_id: other.id }
+    get account_taste_profile_path, params: { user_id: other.id }
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
-    assert_select "header .theme-toggle + .ui-auth-links" do
-      assert_select "a[href=?]:first-child", account_path, text: I18n.t("account.title")
-      assert_select "a + form button", text: I18n.t("ui.log_out")
-    end
+    assert_select "header nav a[href=?] + a[href=?]", account_settings_path, registry_root_path
+    assert_select "header form[action=?]", session_path, count: 0
     assert_select ".account-tabs a[aria-current=page]", I18n.t("account.profile")
     assert_select ".profile-narrative a[href='#profile-evidence-1']", text: "[1]"
     assert_select "#profile-evidence-1 strong", "Enjoys quiet dread."
@@ -54,7 +63,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: Ratings::RefreshTasteProfilesJob, args: [ user.id ]) do
       post refresh_taste_profile_account_path, params: { authenticity_token: token, user_id: other.id }
     end
-    assert_redirected_to account_path
+    assert_redirected_to account_taste_profile_path
   end
 
   test "citations resolve to identical current notes and label earlier notes until refresh" do
@@ -65,7 +74,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     identical = candidate.revise_rating!(previous_rating_id: rating.id, value: "pretty_good", notes: rating.notes)
     sign_in(user)
 
-    get account_path
+    get account_taste_profile_path
     assert_select "#profile-evidence-1 blockquote", rating.notes
     assert_select "#profile-evidence-1 p", text: I18n.t("account.earlier_rating_evidence"), count: 0
     evidence = Ratings::TasteProfiling::ViewTasteProfile.call(user_id: user.id).fetch(:annotations).sole.fetch(:evidence).sole
@@ -74,12 +83,12 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     assert_equal [ rating.id ], assessed.taste_profile_revision_eval.output.fetch("evidence").pluck("rating_id")
 
     changed = candidate.revise_rating!(previous_rating_id: identical.id, value: "pretty_good", notes: "The quiet ending felt eerie.")
-    get account_path
+    get account_taste_profile_path
     assert_select "#profile-evidence-1 blockquote", rating.notes
     assert_select "#profile-evidence-1 p", I18n.t("account.earlier_rating_evidence")
 
     publish(user)
-    get account_path
+    get account_taste_profile_path
     assert_select "#profile-evidence-1 blockquote", changed.notes
     assert_select "#profile-evidence-1 p", text: I18n.t("account.earlier_rating_evidence"), count: 0
   end
@@ -89,13 +98,59 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     submit(user, "My first expression")
     sign_in(user)
 
-    get account_path
+    get account_taste_profile_path
     assert_response :success
     assert_select "p", I18n.t("account.empty")
     assert_select "li", "My first expression"
   end
 
+  test "quality rankings limit each list and exclude canceled and superseded scores without a written profile" do
+    user = registered_user
+    category = quality_categories(:tone)
+    positives = 11.times.map do |i|
+      category.qualities.create!(name: "Positive #{i}", match_rule: "A definition for quality #{i}.", not_sufficient: "An exclusion.")
+    end
+    negatives = 11.times.map { |i| category.qualities.create!(name: "Negative #{i}") }
+    canceled = category.qualities.create!(name: "Canceled")
+    stale = category.qualities.create!(name: "Superseded")
+    assess(user, "pretty_good", *positives, canceled)
+    assess(user, "not_for_me", *negatives, canceled)
+    assess(user, "brilliant", positives.last)
+    assess(user, "garbage", negatives.last)
+    rating = assess(user, "brilliant", stale)
+    rating.rating_film.revise_rating!(previous_rating_id: rating.id, value: "garbage")
+    assess(registered_user, "brilliant", stale)
+    sign_in(user)
+
+    get account_taste_profile_path
+    assert_response :success
+    assert_select "p", I18n.t("account.empty")
+    assert_select ".profile-quality-rankings ol", count: 0
+    assert_select 'section[aria-labelledby="top-qualities-heading"] .profile-quality-score', text: "+3", count: 1
+    assert_select 'section[aria-labelledby="bottom-qualities-heading"] .profile-quality-score', text: "-3", count: 1
+    assert_select ".profile-quality-item p", text: positives.last.match_rule, count: 1
+    assert_select 'section[aria-labelledby="top-qualities-heading"] .profile-quality-name' do |items|
+      assert_equal [ positives.last, *positives.first(9) ].map(&:name), items.map(&:text)
+    end
+    assert_select 'section[aria-labelledby="bottom-qualities-heading"] .profile-quality-name' do |items|
+      assert_equal [ negatives.last, *negatives.first(9) ].map(&:name), items.map(&:text)
+    end
+  end
+
   private
+
+  def assess(user, value, *qualities)
+    film = Registry::Film.create!(title: "Rated film")
+    qualities.each { |quality| Registry::FilmQuality.create!(film:, quality:) }
+    rating = Ratings::RatingFilm.create!(user:, film:).submit_rating!(value:)
+    evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
+      notes: {}, calls: [],
+      qualities: qualities.to_h { |quality| [ quality.id.to_s, { name: quality.name, match_rule: nil, not_sufficient: nil } ] },
+      decisions: qualities.map { |quality| { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } }
+    })
+    rating.apply_quality_evaluation!(evaluation:)
+    rating
+  end
 
   def registered_user(superuser: false)
     Identity::UserRegistered.create!(email_address: "account-#{Identity::User.count}@example.test", password: "a long test password",
