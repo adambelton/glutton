@@ -14,5 +14,12 @@ module Ratings
 
     validates :classification, inclusion: { in: Classifications::ALL }
     validates :score, numericality: { only_integer: true }
+
+    # Returns the rows from the latest applied score set for each current rating revision.
+    def self.current_rating_qualities_for_user(user_id:)
+      ratings = Rating.current.joins(:rating_film).where(rating_films: { user_id: })
+      scores = where(rating_id: ratings.select(:id))
+      scores.where(rating_quality_eval_id: scores.group(:rating_id).select("MAX(rating_quality_eval_id)"))
+    end
   end
 end

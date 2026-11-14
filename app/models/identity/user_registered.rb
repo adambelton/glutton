@@ -1,3 +1,5 @@
+require "digest"
+
 module Identity
   class UserRegistered < User
     has_secure_password reset_token: { expires_in: 15.minutes }
@@ -12,6 +14,10 @@ module Identity
 
     def default_entry_path
       "/library"
+    end
+
+    def can_view_account?
+      active?
     end
 
     def grant_superuser!(actor:)
@@ -42,6 +48,35 @@ module Identity
         save!(context: :password_reset)
         Session.where(user_id: id).delete_all
         self
+      end
+    end
+
+    def authorize_credential_change!(current_password:)
+      return if current_password.is_a?(String) && current_password.bytesize <= 72 && authenticate(current_password)
+
+      raise Errors::IncorrectCurrentPassword
+    end
+
+    def validate_new_email!(email_address:)
+      address = self.class.normalize_value_for(:email_address, email_address)
+      if !address.is_a?(String) || !URI::MailTo::EMAIL_REGEXP.match?(address)
+        errors.add(:email_address, :invalid)
+      elsif address == self.email_address || self.class.exists?(email_address: address)
+        errors.add(:email_address, :taken)
+      end
+      raise ActiveRecord::RecordInvalid, self if errors.any?
+
+      address
+    end
+
+    def email_change_version
+      Digest::SHA256.hexdigest([ email_address, email_confirmed_at.iso8601(6), password_digest ].join(":"))
+    end
+
+    def change_email!(email_address:)
+      transaction do
+        update!(email_address: validate_new_email!(email_address:), email_confirmed_at: Time.current)
+        Session.where(user_id: id).delete_all
       end
     end
 

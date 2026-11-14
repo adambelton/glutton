@@ -10,3 +10,4 @@ en:
     dark_mode: Dark mode
     skip: Skip to content
     navigation: Main navigation
+    locked_navigation_option: "%{label} (%{reason})"

@@ -12,10 +12,27 @@ module Ratings
       def call
         revision = TasteProfile.find_by(user_id: @user_id)&.current_revision
         current = current_ratings
-        { profile: revision&.profile, annotations: annotations(revision, current), changes: changes(revision, current) }
+        { profile: revision&.profile, annotations: annotations(revision, current), changes: changes(revision, current),
+          quality_rankings: quality_rankings }
       end
 
       private
+
+      def quality_rankings
+        totals = RatingQuality.current_rating_qualities_for_user(user_id: @user_id).group(:quality_id).sum(:score)
+        positive, negative = totals.reject { |_, score| score.zero? }.partition { |_, score| score.positive? }
+        top = positive.sort_by { |id, score| [ -score, id ] }.first(10).map(&:first)
+        bottom = negative.sort_by { |id, score| [ score, id ] }.first(10).map(&:first)
+        qualities = Registry::Quality.where(id: top + bottom).index_by(&:id)
+        { top: ranked_qualities(top, totals, qualities), bottom: ranked_qualities(bottom, totals, qualities) }
+      end
+
+      def ranked_qualities(ids, totals, qualities)
+        ids.map do |id|
+          quality = qualities.fetch(id)
+          { name: quality.name, definition: quality.match_rule, score: totals.fetch(id) }
+        end
+      end
 
       def current_ratings
         Rating.current.joins(:rating_film).where(rating_films: { user_id: @user_id })

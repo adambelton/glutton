@@ -42,6 +42,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
 
   test "expanding a trailer fills the card and keeps the same player" do
     film = Registry::Film.create!(title: "A recommendation with a trailer", tmdb_metadata: { details: {
+      overview: "A visitor arrives in a town where nobody goes out after dark.",
       videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
     } })
     visit recommendation_path
@@ -82,11 +83,31 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert page.evaluate_script("arguments[0] === document.querySelector('#recommendation-trailer-player')", player)
 
     click_button I18n.t("recommendations.expand_trailer")
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 900, height: 1000, deviceScaleFactor: 1, mobile: false)
+    assert_no_button I18n.t("recommendations.collapse_trailer")
+    poster = find(".recommendation-artwork .film-poster").rect
+    details = find(".recommendation-details").rect
+    synopsis = find(".recommendation-synopsis").rect
+    tablet_player = player.rect
+    actions = find(".recommendation-actions").rect
+    assert_in_delta poster.y, details.y, 1
+    assert_in_delta details.x, tablet_player.x, 1
+    assert_operator synopsis.y + synopsis.height, :<, tablet_player.y
+    assert_operator tablet_player.y, :>=, details.y + details.height
+    assert_in_delta poster.y + poster.height, tablet_player.y + tablet_player.height, 1
+    assert_operator actions.y, :>, poster.y + poster.height
+    assert_in_delta details.x, actions.x, 1
+    assert_in_delta poster.x + poster.width, actions.x + actions.width, 1
+
     page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 850, deviceScaleFactor: 1, mobile: true)
     assert_no_button I18n.t("recommendations.collapse_trailer")
     assert_no_button I18n.t("recommendations.expand_trailer")
     assert_button I18n.t("recommendations.accept")
     assert_selector "#recommendation-trailer-player[allowfullscreen]"
+    mobile_player = player.rect
+    actions = find(".recommendation-actions").rect
+    assert_in_delta 16.0 / 9, mobile_player.width.to_f / mobile_player.height, 0.02
+    assert_in_delta 16, actions.y - (mobile_player.y + mobile_player.height), 1
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
@@ -101,14 +122,22 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     [ 1400, 900, 390 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
       visit recommendation_path
-      recommendation = find(".ui-card", text: film.title).rect
+      recommendation = find(".recommendation-film", text: film.title).rect
       recommendation_poster = find(".recommendation-artwork .film-poster").rect
       visit new_rating_path
-      rating = find(".ui-card", text: film.title).rect
+      rating = find(".rating-interface", text: film.title).rect
       rating_poster = find(".rating-film-artwork .film-poster").rect
-      assert_in_delta rating.height, recommendation.height, 1
-      assert_in_delta rating_poster.width, recommendation_poster.width, 1
-      assert_in_delta rating_poster.height, recommendation_poster.height, 1
+      if width >= 1100
+        assert_in_delta rating.height, recommendation.height, 1
+      elsif width <= 650
+        assert_equal "visible", find(".rating-interface").style("overflow-y").fetch("overflow-y")
+      end
+      # One page can have a vertical scrollbar and a narrower content area.
+      columns = width >= 1100 ? 3 : (width > 650 ? 2 : 1)
+      poster_width_difference = (rating.width - recommendation.width).to_f / columns
+      assert_in_delta rating_poster.width - poster_width_difference, recommendation_poster.width, 1
+      assert_in_delta recommendation_poster.width * 1.5, recommendation_poster.height, 1
+      assert_in_delta rating_poster.width * 1.5, rating_poster.height, 1
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
