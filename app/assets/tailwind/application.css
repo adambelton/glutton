@@ -203,6 +203,10 @@
 .ui-page .ui-submit { min-height: 46px; width: 100%; margin-top: 12px; border-radius: 4px; }
 .ui-link { color: var(--glutton-foreground); min-height: 44px; padding: 8px 0; white-space: normal; text-align: left; justify-content: start; text-underline-offset: 5px; }
 .ui-secondary-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; margin-top: 16px; }
+.registration-terms { display: flex; align-items: baseline; gap: 8px; }
+.registration-terms input { flex: none; }
+.registration-policies { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 13px; }
+.registration-policies .ui-link { color: var(--glutton-muted-foreground); text-decoration: underline; }
 .ui-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
 .ui-action-form { display: inline-block; margin-block: 12px; }
 .ui-action-button { min-height: 44px; white-space: normal; }
@@ -399,6 +403,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .rating-description .rating-synopsis { margin: 0; }
 .rating-interface .rating-choices { grid-column: 2; grid-row: 2; margin: 0; }
 .rating-notes label { display: block; margin-bottom: 8px; }
+.rating-notes-guidance { color: var(--glutton-muted-foreground); font-size: 13px; margin-bottom: 8px; }
+.ui-page .rating-notes-guidance p { margin: 0; }
 .rating-notes textarea.ui-input { flex: 1; width: 100%; min-height: 150px; resize: none; padding: 10px 12px; }
 .rating-response { grid-column: 3; grid-row: 1 / -1; display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 12px; }
 .rating-notes { display: flex; flex: 1; flex-direction: column; min-height: 0; }

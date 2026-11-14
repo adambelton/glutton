@@ -67,7 +67,7 @@ Viewers with no RatingFilm records can select films from a catalogue grid or sta
 
 ## Delivery order
 
-Registration links to the Privacy Notice and Terms of Service, discloses live account deletion and backup expiry, and records the accepted terms version and timestamp. Before public launch, review the notices against the final provider configuration and verify the backup restoration procedure below.
+Registration records the accepted terms version and timestamp and links to the Terms of Service and Privacy Notice below the form. The Privacy Notice explains account deletion, backup expiry, and which AI providers receive rating notes. The editable rating form links directly to that disclosure. Before early access, review the [transfer assessment](operations/early_access_transfer_assessment.md) against the live configuration and verify the backup restoration procedure below.
 
 The immediate priority is a usable development seed followed by core public Ratings, Library and Recommendations functionality. Registry editing/refresh improvements below are deferred. The canonical-content dependency order remains:
 
