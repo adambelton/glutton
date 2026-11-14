@@ -2,7 +2,7 @@ databases:
   - name: glutton-staging-db
     databaseName: glutton_staging
     region: frankfurt
-    plan: 0.1c-256mb
+    plan: 0.5c-1g
     diskSizeGB: 5
     postgresMajorVersion: "17"
     ipAllowList: []
