@@ -151,6 +151,8 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
 
   test "unrelated guest and its pending registration survive reset without merging" do
     Rails.application.routes.draw do
+      get "privacy", to: "privacy_notices#show", as: :privacy_notice
+      get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "ratings#new"
       resource :library, only: :show, controller: :library
       resource :recommendation, only: :show, controller: :recommendations
@@ -163,7 +165,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       resource :session, only: [ :new, :create, :destroy ]
       post "/password-recovery-activity", to: "password_recovery_activity_probe#create"
     end
-    post registration_path, params: { registration: { email_address: "guest-pending@example.test", password: "original password phrase",
+    post registration_path, params: { registration: { terms_accepted: "1", email_address: "guest-pending@example.test", password: "original password phrase",
       password_confirmation: "original password phrase" }, authenticity_token: csrf }
     assert_response :see_other
     post "/password-recovery-activity", params: { authenticity_token: csrf }

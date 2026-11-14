@@ -40,10 +40,7 @@ module Identity
       end
 
       def close_account
-        with_account do |account|
-          account.becomes!(UserDeleted).close_account!
-          Session.where(user_id: account.id).delete_all
-        end
+        with_account(&:destroy_with_activity!)
       end
 
       private

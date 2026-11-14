@@ -1,0 +1,21 @@
+en:
+  identity:
+    terms_of_service:
+      title: Terms of Service
+      version: "Version %{version}"
+      operator: Glutton is operated by Adam Belton. You can contact hello@adambelton.com about these terms.
+      service:
+        title: Using Glutton
+        description: Glutton lets you keep a private film library, rate films and get recommendations for personal use. Recommendations reflect the information available to Glutton and are suggestions.
+      account:
+        title: Your account
+        description: Keep your sign-in details secure and use an email address you have access to. You can delete your account in Account Settings. The Privacy Notice explains what happens to your data.
+      acceptable_use:
+        title: Acceptable use
+        description: Respect other people's rights and keep your use lawful. Do not try to gain access to another account or disrupt the service. Glutton may suspend access when reasonably necessary to protect the service or its users.
+      changes:
+        title: Changes to Glutton
+        description: Features may change over time. This page shows the current version of the terms.
+      rights:
+        title: Your legal rights
+        description: These terms do not affect rights you have under applicable law that cannot be excluded.

@@ -10,20 +10,8 @@
   font-display: swap;
 }
 
-/* Default to light independently of the operating-system theme. */
+/* The document defaults to dark independently of the operating-system theme. */
 :root {
-  --glutton-background: #e4ebed;
-  --glutton-surface: #f8fafb;
-  --glutton-inset: #eef2f4;
-  --glutton-foreground: #090e14;
-  --glutton-muted-foreground: #425461;
-  --glutton-primary: #086b63;
-  --glutton-on-primary: #fff;
-  --glutton-border: #b6c5cc;
-  --glutton-subtle-border: #ced8dd;
-  --glutton-color-scheme: light;
-}
-:root[data-theme="dark"] {
   --glutton-background: #090e14;
   --glutton-surface: #111b26;
   --glutton-inset: #162330;
@@ -34,6 +22,18 @@
   --glutton-border: #344653;
   --glutton-subtle-border: #243441;
   --glutton-color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --glutton-background: #e4ebed;
+  --glutton-surface: #f8fafb;
+  --glutton-inset: #eef2f4;
+  --glutton-foreground: #090e14;
+  --glutton-muted-foreground: #425461;
+  --glutton-primary: #086b63;
+  --glutton-on-primary: #fff;
+  --glutton-border: #b6c5cc;
+  --glutton-subtle-border: #ced8dd;
+  --glutton-color-scheme: light;
 }
 @theme inline {
   --color-background: var(--glutton-background);
@@ -525,9 +525,9 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .ui-guest-entry .ui-action-button { width: 100%; min-height: 46px; border-radius: 4px; }
 
 .theme-icon svg { width: 22px; height: 22px; }
-.theme-sun { display: none; }
-[data-theme="dark"] .theme-sun { display: block; }
-[data-theme="dark"] .theme-moon { display: none; }
+.theme-moon { display: none; }
+[data-theme="light"] .theme-sun { display: none; }
+[data-theme="light"] .theme-moon { display: block; }
 :is(a[href], button, summary, select, [role="button"], [role="switch"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]), .rating-choice label { cursor: pointer; }
 :is(button, input, select, a, [role="button"], [role="switch"]):is(:disabled, [aria-disabled="true"]), .rating-choice:has(input:disabled) label { cursor: default; }
 

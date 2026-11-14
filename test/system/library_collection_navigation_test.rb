@@ -91,8 +91,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_equal "not-allowed", clear_icon.style("cursor").fetch("cursor")
 
     label = I18n.t("ratings.values.brilliant")
-    find_button(I18n.t("ui.dark_mode")).send_keys(:enter)
-    assert_selector 'html[data-theme="dark"]'
+    assert_equal "dark", find("html").style("color-scheme").fetch("color-scheme")
     within ".library-rating-filters" do
       pill = find_link(label)
       pill.hover

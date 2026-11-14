@@ -1,8 +1,8 @@
 module Identity
   module Registration
     class PrepareRegistration
-      def self.call(email_address:, password:, password_confirmation:, guest_user_id: nil)
-        attributes = { email_address:, password:, password_confirmation: }
+      def self.call(email_address:, password:, password_confirmation:, guest_user_id: nil, terms_version: nil, terms_accepted_at: nil)
+        attributes = { email_address:, password:, password_confirmation:, terms_version:, terms_accepted_at: }
         # Always validate fresh credentials, including on replacement. An existing
         # digest must not make a blank replacement password valid.
         registration = PendingRegistration.new(attributes)

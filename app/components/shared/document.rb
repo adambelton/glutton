@@ -25,9 +25,11 @@ module Shared
           link(rel: "apple-touch-icon", href: "/icon.png")
           javascript_tag(<<~JS, nonce: true)
             try {
-              document.documentElement.dataset.theme = localStorage.getItem("glutton.theme") === "dark" ? "dark" : "light";
+              if (localStorage.getItem("glutton.theme") === "light") {
+                document.documentElement.dataset.theme = "light";
+              }
             } catch {
-              document.documentElement.dataset.theme = "light";
+              // Keep the default when browser storage is unavailable.
             }
           JS
           stylesheet_link_tag "tailwind", "data-turbo-track": "reload"

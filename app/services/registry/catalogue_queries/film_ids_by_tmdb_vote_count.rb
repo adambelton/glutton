@@ -1,12 +1,16 @@
 module Registry
   module CatalogueQueries
     class FilmIdsByTmdbVoteCount
+      VOTE_COUNT = Arel.sql(<<~SQL.squish).freeze
+        CASE
+          WHEN jsonb_typeof(tmdb_metadata #> '{details,vote_count}') = 'number'
+            AND (tmdb_metadata #>> '{details,vote_count}') ~ '^[0-9]+$'
+          THEN (tmdb_metadata #>> '{details,vote_count}')::numeric
+        END DESC NULLS LAST
+      SQL
+
       def self.call(excluding_ids:, limit:, offset: 0)
-        Film.where.not(id: excluding_ids).pluck(:id, :tmdb_metadata)
-          .map { |film_id, metadata| [ film_id, Sources::TmdbMetadata.new(metadata).vote_count ] }
-          # Valid vote counts are nonnegative; missing values sort after zero.
-          .sort_by { |film_id, vote_count| [ -(vote_count || -1), film_id ] }
-          .slice(offset, limit).to_a.map(&:first)
+        Film.where.not(id: excluding_ids).order(VOTE_COUNT, :id).offset(offset).limit(limit).pluck(:id)
       end
     end
   end

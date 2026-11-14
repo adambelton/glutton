@@ -47,7 +47,7 @@ Use one users table with stable internal IDs for guests and registered accounts;
 
 Password recovery uses an emailed link valid for 15 minutes and an explicit new-password submission. Resetting revokes every existing session and requires fresh sign-in; viewing the link alone changes nothing. Ordinary request responses do not reveal whether the email is registered. Recovery does not merge guest activity or switch another signed-in account.
 
-Ratings, film notes and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered-account closure clears sign-in details and revokes access. Glutton retains grouped activity privately to improve the service. An older backup can still associate that activity with the original account. Abandoned guests and their activity are deleted.
+Ratings, film notes and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered account deletion purges sign-in details, sessions and viewer activity from the live database. Copies can remain in existing backups until expiry. Reapply deletions before putting a restored database back into service. Abandoned guests and their activity are deleted.
 
 ## 3. Two engagement modes and a personal library
 

@@ -22,6 +22,8 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
+      get "privacy", to: "privacy_notices#show", as: :privacy_notice
+      get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "landing#show"
       namespace :registry do
         root "films#index"
@@ -59,8 +61,36 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   def signup(client = self, **attributes)
-    credentials = { email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase" }.merge(attributes)
+    credentials = { terms_accepted: "1", email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase" }.merge(attributes)
     client.post registration_path, params: { registration: credentials, authenticity_token: csrf(client) }
+  end
+
+  test "registration requires an explicit unchecked-by-default terms acceptance" do
+    get new_registration_path
+    assert_select 'input[type="checkbox"][name="registration[terms_accepted]"][required]:not([checked])'
+    authenticity_token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+
+    assert_no_difference [ "Identity::PendingRegistration.count", "Identity::User.count", "ActionMailer::Base.deliveries.count" ] do
+      post registration_path, params: { authenticity_token:, registration: {
+        email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
+      } }
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "confirmation preserves the terms version and original acceptance time for a guest upgrade" do
+    guest_user = guest
+    freeze_time
+    signup
+    pending = Identity::PendingRegistration.last
+    assert_equal "1", pending.terms_version
+    assert_equal Time.current, pending.terms_accepted_at
+    travel 1.minute
+    confirm
+    assert_response :see_other
+    account = Identity::UserRegistered.find(guest_user.id)
+    assert_equal pending.terms_version, account.terms_version
+    assert_equal pending.terms_accepted_at, account.terms_accepted_at
   end
 
   test "registration on the local development alias uses its explicitly configured origin" do
@@ -408,7 +438,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "trusted origin ignores hostile Host and redirect parameters" do
     authenticity_token = csrf
-    post registration_path, params: { authenticity_token:, return_to: "https://evil.example", registration: {
+    post registration_path, params: { authenticity_token:, return_to: "https://evil.example", registration: { terms_accepted: "1",
       email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
     } }, headers: { "Host" => "evil.example" }
     assert_response :see_other

@@ -8,11 +8,20 @@ module Views
       def view_template
         page(title: t("identity.registration.title"), narrow: true) do
           p { t("identity.registration.explanation") }
+          p { t("identity.privacy_notice.registration_disclosure") }
+          div(class: "ui-secondary-links") do
+            text_link(t("identity.privacy_notice.title"), privacy_notice_path)
+            text_link(t("identity.terms_of_service.title"), terms_of_service_path)
+          end
           errors(@registration.errors.full_messages)
           form_with(url: registration_path, scope: :registration) do
             field(name: "registration[email_address]", id: "registration_email_address", label: t("identity.sessions.email"), type: :email, value: @registration.email_address, required: true, autocomplete: "email")
             field(name: "registration[password]", id: "registration_password", label: t("identity.sessions.password"), type: :password, required: true, autocomplete: "new-password")
             field(name: "registration[password_confirmation]", id: "registration_password_confirmation", label: t("identity.registration.password_confirmation"), type: :password, required: true, autocomplete: "new-password")
+            label(for: "registration_terms_accepted") do
+              input(type: :checkbox, id: "registration_terms_accepted", name: "registration[terms_accepted]", value: "1", required: true)
+              plain t("identity.registration.terms_acceptance")
+            end
             submit(t("identity.registration.submit"))
           end
           div(class: "ui-secondary-links") do
