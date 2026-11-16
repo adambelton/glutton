@@ -43,9 +43,11 @@ module Registry
 
         trailers = videos["results"].select do |video|
           video.is_a?(Hash) && video["site"] == "YouTube" && video["type"] == "Trailer" &&
-            video["official"] == true && video["key"].is_a?(String) && video["key"].match?(/\A[A-Za-z0-9_-]{11}\z/)
+            video["key"].is_a?(String) && video["key"].match?(/\A[A-Za-z0-9_-]{11}\z/)
         end
-        trailer = trailers.find { |video| video["iso_639_1"] == "en" } || trailers.first
+        official_trailers = trailers.select { |video| video["official"] == true }
+        candidates = official_trailers.presence || trailers
+        trailer = candidates.find { |video| video["iso_639_1"] == "en" } || candidates.first
         trailer&.fetch("key")
       end
 
