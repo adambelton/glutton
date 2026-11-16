@@ -15,10 +15,11 @@ module Registry
       def call(client:)
         available_state = {
           "film_title" => source.fetch("title"),
+          "tmdb_overview" => Sources::TmdbMetadata.new(source.fetch("tmdb_metadata")).overview.presence,
           "source_paragraphs" => source.fetch("wikipedia_context").fetch("source_paragraphs"),
           "evidence_policy" => @contract.fetch("evidence_policy")
         }
-        state = @contract.fetch("state_fields").index_with { |field| available_state.fetch(field) }
+        state = @contract.fetch("state_fields").index_with { |field| available_state.fetch(field) }.compact
         questions = definitions.to_h do |definition|
           [ question_id(definition), {
             "type" => @contract.fetch("question_type"),

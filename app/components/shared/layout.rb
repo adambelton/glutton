@@ -9,13 +9,19 @@ module Shared
     def view_template
       user = current_user if @account_controls
       wordmark_path = user.present? ? new_rating_path : root_path
+      recommendations_unlocked = Recommendations::CandidateSelection::RecommendationUnlock.unlocked?(user:) if user.present?
+      watch_unlock = user.present? && !recommendations_unlocked &&
+        Recommendations::CandidateSelection::RecommendationUnlock.enough_ratings_submitted?(user:)
+      header_data = if watch_unlock
+        { controller: "recommendations-unlock", recommendations_unlock_url_value: availability_recommendation_path }
+      end
+
       render Document.new(title: @title) do
         a(href: "#main-content", class: "skip-link") { t("ui.skip") }
-        header(class: "ui-header") do
+        header(class: "ui-header", data: header_data) do
           div(class: "ui-width ui-header-inner") do
             a(href: wordmark_path, class: "wordmark", aria: { label: t("ui.wordmark") }) { t("ui.wordmark") }
             if user.present?
-              recommendations_unlocked = Recommendations::CandidateSelection::RecommendationUnlock.unlocked?(user:)
               primary_navigation(user, recommendations_unlocked:)
               mobile_navigation(user, recommendations_unlocked:)
             end
@@ -84,15 +90,16 @@ module Shared
             reason: t("recommendations.navigation_locked", required: Recommendations::CandidateSelection::NextCandidate::MINIMUM_ASSESSED_FILMS))
         end
         navigation_option("recommendation", recommendation_path, recommendation_label,
-          current_section:, disabled: !recommendations_unlocked)
+          current_section:, disabled: !recommendations_unlocked,
+          data: { recommendations_unlock_target: "option", unlocked_label: t("recommendations.title") })
         navigation_option("library", library_path, t("library.browser.title"), current_section:)
         navigation_option("account", account_settings_path, t("account.title"), current_section:) if user.can_view_account?
         navigation_option("registry", registry_root_path, t("registry.title"), current_section:) if user.superuser?
       end
     end
 
-    def navigation_option(section, path, label, current_section:, disabled: false)
-      option(value: path, selected: section == current_section, disabled:) { label }
+    def navigation_option(section, path, label, current_section:, disabled: false, **attrs)
+      option(value: path, selected: section == current_section, disabled:, **attrs) { label }
     end
   end
 end

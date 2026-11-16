@@ -57,17 +57,18 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
         revise(token:, notes: "  Updated\n👻 ", user_id: Identity::UserGuest.create!.id, suppressed: false)
       end
     end
-    assert_redirected_to edit_rating_path(film_id: @film.id)
+    assert_redirected_to library_path(view: "watched")
     assert_response :see_other
     follow_redirect!
-    assert_select ".ui-toast", count: 0
+    assert_select ".ui-toast", text: I18n.t("ratings.browser.saved")
     latest = @candidate.reload.current_rating
     assert_equal "  Updated\n👻 ", latest.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value
     assert_equal "  <script>original</script>\nÉerie 👻  ", @original.notes
     assert @candidate.suppressed?
     assert @candidate.dismissed?
-    revise(token:, previous_rating_id: latest.id, value: latest.value, notes: " ")
+    get edit_rating_path(film_id: @film.id)
+    revise(token: csrf_token, previous_rating_id: latest.id, value: latest.value, notes: " ")
     assert_response :see_other
     assert_nil @candidate.reload.current_rating.notes
     assert_equal 3, @candidate.ratings.count

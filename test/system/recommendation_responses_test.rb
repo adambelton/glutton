@@ -30,14 +30,23 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     JS
 
     user = Identity::Session.last.user
+    quality = quality_categories(:tone).qualities.create!(name: "Slow pace")
+    4.times do |index|
+      film = Registry::Film.create!(title: "Rated film #{index}")
+      assess_recommendation_film(user:, film:, quality:)
+    end
     pending_film = Registry::Film.create!(title: "Pending assessment")
-    Ratings::RatingFilm.create!(user:, film: pending_film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+    Registry::FilmQuality.create!(film: pending_film, quality:)
+    rating = Ratings::RatingFilm.create!(user:, film: pending_film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     visit library_path
     assert_selector '.ui-nav [role="link"][aria-disabled="true"]'
+    option = ".ui-primary-navigation option[value='#{recommendation_path}']"
+    assert_selector "#{option}[disabled]", visible: :all
 
-    unlock_recommendations_for(user:)
-    visit library_path
-    assert_link I18n.t("recommendations.title"), href: recommendation_path
+    apply_recommendation_assessment(rating:, quality:)
+    assert_selector ".ui-nav a[href='#{recommendation_path}']", text: I18n.t("recommendations.title"), wait: 8
+    assert_selector "#{option}:enabled", visible: :all, text: I18n.t("recommendations.title")
+    assert_current_path library_path
   end
 
   test "expanding a trailer fills the card and keeps the same player" do

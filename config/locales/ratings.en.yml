@@ -24,6 +24,7 @@ en:
       save: Save
       save_disabled: Select a rating to save.
       dismiss: Dismiss
+      save_unchanged: Change the rating or notes to save.
       saved: Your rating has been saved.
       empty: You have no films waiting to be rated.
       sign_in_required: Your session is no longer available. Return to Ratings to start a new guest session, or sign in to your account.

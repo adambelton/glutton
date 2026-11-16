@@ -5,7 +5,8 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
   include QualityAssessmentSources
 
   test "assigns threshold matches from one support request with an inspectable result" do
-    film = imported_assignment_film
+    overview = "A house is haunted by an evil spirit."
+    film = imported_assignment_film(overview:)
     first = assessment_quality(name: "First")
     second = assessment_quality(name: "Second")
     below = assessment_quality(name: "Below")
@@ -33,8 +34,10 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal [ "selected", "selected", "below_threshold" ], evaluation.output.fetch("selection_decisions").sort_by { |decision| decision.fetch("quality_id") }.map { |decision| decision.fetch("reason") }
     assert_equal 100, assessment_result.fetch("input_tokens")
     assert_equal [ "quality-support" ], client.requests.map { |request| request.fetch(:phase) }
+    assert_equal overview, client.requests.first.dig(:state, "tmdb_overview")
+    assert_equal film.wikipedia_context.fetch("source_paragraphs"), client.requests.first.dig(:state, "source_paragraphs")
     assert_not client.requests.first.fetch(:state).key?("categories")
-    assert_equal "Do the supplied source_paragraphs support First in this film?", client.requests.first.dig(:questions, "quality_#{first.id}", "instructions")
+    assert_equal "Do the supplied film evidence support First in this film?", client.requests.first.dig(:questions, "quality_#{first.id}", "instructions")
     timestamp = film.updated_at
     error = assert_raises(Registry::Errors::AssignmentFailed) do
       Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client: Object.new)
@@ -48,6 +51,7 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assessment_quality
     client = Client.new(default_support: 0.1)
     result = Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client:)
+    assert_not client.requests.first.fetch(:state).key?("tmdb_overview")
     assert_empty film.reload.film_qualities
     assert_equal [], result.fetch(:film_quality_eval).output.fetch("selected_quality_ids")
     assert_equal 1, client.requests.size

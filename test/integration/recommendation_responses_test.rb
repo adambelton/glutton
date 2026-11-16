@@ -43,6 +43,24 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "availability returns the current viewer's lock status without caching" do
+    get availability_recommendation_path, as: :json
+    assert_response :accepted
+    assert_includes response.headers["Cache-Control"], "no-store"
+
+    unlock_recommendations_for(user: @user)
+    assert_no_difference "Recommendations::RecommendationFilm.count" do
+      get availability_recommendation_path, as: :json
+      assert_response :no_content
+      assert_includes response.headers["Cache-Control"], "no-store"
+    end
+
+    open_session do |signed_out|
+      signed_out.get availability_recommendation_path, as: :json
+      signed_out.assert_response :unauthorized
+    end
+  end
+
   test "shows stored film facts and a trailer when available" do
     film = Registry::Film.create!(title: "Film with a trailer", release_date: Date.new(2025, 1, 1),
       tmdb_metadata: { details: {

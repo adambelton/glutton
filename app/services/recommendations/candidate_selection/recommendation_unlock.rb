@@ -1,6 +1,11 @@
 module Recommendations
   module CandidateSelection
     class RecommendationUnlock
+      def self.enough_ratings_submitted?(user:)
+        minimum = NextCandidate::MINIMUM_ASSESSED_FILMS
+        ::Ratings::RatingFilm.where(user:).rated.limit(minimum).pluck(:id).size >= minimum
+      end
+
       def self.unlocked?(user:)
         return true if RecommendationFilm.where(user:).eligible.exists?
 
