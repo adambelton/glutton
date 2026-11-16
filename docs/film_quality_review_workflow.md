@@ -62,7 +62,7 @@ Reject a set exceeding any configured category ceiling explicitly and preserve t
 
 This admin gap-discovery/testing capability is not an initial-release dependency. It follows seed loading, content viewing, manual editing, manual source refresh and JEV change inspection. Core expression interpretation for viewer preferences is unchanged.
 
-Start with an admin examining an expression against its film, not an assumption that every unmatched phrase deserves a new label. Registry may read relevant Ratings-owned evidence through authorised read paths; it does not edit original expressions, infer consent for public display, or take ownership of user profiles. The implementation must define appropriate admin access and minimal context before exposing real user text. No bulk export or live expression processing is performed by this design task.
+Start with an admin examining an expression against its film, not an assumption that every unmatched phrase deserves a new label. Registry may read relevant Ratings-owned evidence through authorised private read paths. Ratings owns original expressions and user profiles. Use recurring patterns supported by distinct viewers as aggregate film evidence. Individual notes, quotations and identities remain private. The implementation must define appropriate admin access and minimal context before exposing real user text. No bulk export or live expression processing is performed by this design task.
 
 The investigation should distinguish:
 

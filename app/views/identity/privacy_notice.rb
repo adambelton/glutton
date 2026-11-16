@@ -1,19 +1,24 @@
 module Views
   module Identity
     class PrivacyNotice < ::Views::Base
+      def initialize(notice:)
+        @notice = notice
+      end
+
       def view_template
-        page(title: t("identity.privacy_notice.title"), narrow: true, pending_reminder: false, account_controls: false) do
-          p { t("identity.privacy_notice.operator") }
+        page(title: notice_text("title"), narrow: true, pending_reminder: false, account_controls: false) do
+          p { t("identity.privacy_notice.version", version: @notice.version) }
+          p { notice_text("operator") }
           %i[data lawful_bases providers international_transfers retention account_deletion backups rights].each do |topic|
             section do
-              h2 { t("identity.privacy_notice.#{topic}.title") }
+              h2 { notice_text("#{topic}.title") }
               if topic == :providers
                 ai_providers
-                t("identity.privacy_notice.providers.paragraphs").each { |paragraph| p { paragraph } }
+                notice_text("providers.paragraphs").each { |paragraph| p { paragraph } }
               elsif topic == :international_transfers
-                t("identity.privacy_notice.#{topic}.paragraphs").each { |paragraph| p { paragraph } }
+                notice_text("#{topic}.paragraphs").each { |paragraph| p { paragraph } }
               else
-                p { t("identity.privacy_notice.#{topic}.description") }
+                p { notice_text("#{topic}.description") }
               end
             end
           end
@@ -22,13 +27,17 @@ module Views
 
       private
 
+      def notice_text(key)
+        t("#{@notice.translation_scope}.#{key}")
+      end
+
       def ai_providers
-        h3(id: "ai-providers") { t("identity.privacy_notice.providers.ai_title") }
-        p { t("identity.privacy_notice.providers.ai_intro") }
+        h3(id: "ai-providers") { notice_text("providers.ai_title") }
+        p { notice_text("providers.ai_intro") }
         dl do
           %i[typesafe openai].each do |provider|
-            dt { strong { t("identity.privacy_notice.providers.#{provider}.name") } }
-            dd { p { t("identity.privacy_notice.providers.#{provider}.description") } }
+            dt { strong { notice_text("providers.#{provider}.name") } }
+            dd { p { notice_text("providers.#{provider}.description") } }
           end
         end
       end

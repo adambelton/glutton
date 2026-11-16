@@ -11,11 +11,13 @@ Build a personalised horror-film discovery experience that understands **what pe
 
 A viewer rates films and may optionally describe, in their own words, why they enjoyed or disliked them. Ratings alone reveal recurring positive and negative patterns across film **qualities**; optional **film notes** supply more specific information. The system maintains a taste profile built only from what the viewer has actually expressed, and uses it to reinterpret rating history. Together these inform recommendations, explanations and an evolving understanding of personal taste.
 
+Glutton is a private, personal film discovery experience. Viewers’ notes, ratings and Library activity are private.
+
 The product should be enjoyable even before its recommendations become useful: reflecting on horror should be interesting in its own right. Horror means more than fear: people might enjoy performers, decade-specific aesthetics, folklore, extreme violence, imaginative effects, quiet atmosphere, narrative structure, humour, themes or any other distinctive characteristic.
 
 **Core proposition:** Discover horror through the things you love about horror, not simply the films you have already watched.
 
-**Project ambition:** Build an independent enthusiast product with real users in production, a distinctive experience and a committed community. It is first a personal engineering and product-learning project, not a venture pursuing rapid scaling or commercial growth. Ideally, it becomes self-sustaining. A future acquisition by a film-discovery company (for example, JustWatch) is a possible upside, **not** a product requirement, exit plan or justification for changing priorities.
+**Project ambition:** Build an independent enthusiast product with real users in production, a distinctive experience and a committed audience. It is first a personal engineering and product-learning project, not a venture pursuing rapid scaling or commercial growth. Ideally, it becomes self-sustaining. A future acquisition by a film-discovery company (for example, JustWatch) is a possible upside, **not** a product requirement, exit plan or justification for changing priorities.
 
 **Learning goals:** Use the project to reinforce domain-driven design, PostgreSQL performance, and managing domain complexity with Ruby on Rails. These goals should inform deliberate design and measurement without requiring unnecessary infrastructure or abstractions.
 
@@ -64,13 +66,15 @@ The viewer chooses from four ratings:
 
 Offer one optional multiline field for the viewer to record what they liked or disliked and why. The viewer can save a rating immediately and return later to add or revise their notes.
 
+Early product work will identify recurring experiences reported by distinct viewers across private notes. Use aggregate patterns to enrich shared film evidence for JEV reassessment and identify potential new qualities. Individual notes, quotations and viewer identities remain private. Disclose aggregate analysis as a standard use of optional notes in the terms and Privacy Notice. Aggregation, evidence requirements, review and deletion handling are open implementation decisions. See the [draft viewer guide](research/film_notes_guide.md).
+
 Extreme reactions carry greater weight than mild reactions; numeric weights remain experimental. For MVP, prompts follow the overall rating's sentiment rather than deliberately soliciting mixed positive and negative observations. Preserve what viewers actually write.
 
 For initial automatic admission to the Ratings queue, use descending TMDB vote count as a practical proxy for films a viewer may have seen. Preserve the existing queue order; this signal does not estimate enjoyment or establish that a particular viewer has seen a film.
 
 A possible future entry point, especially for new users, is a grid for selecting films they have already seen. Each selection adds the film to their ratings queue, removes its tile and loads the next film in that position. Users could select as many films as they want before moving into the normal rating interface. Selecting is not itself a rating, and unselected films are not automatically classified as unseen. This is a deferred product idea, not part of the current implementation scope.
 
-Shared expressions may later provide inspiration in placeholders, with consent and moderation. Prefer changes on page load or manual request rather than during composition. Clearly labelled curated examples may precede real shared contributions. Film-information links are clearly labelled for spoilers.
+Writing prompts may use clearly labelled curated examples. Show a new example on page load or manual request. Film-information links are clearly labelled for spoilers.
 
 ### 3.2 Process recommendations
 
@@ -117,7 +121,7 @@ Categories and exact granularity are provisional. Capture distinctions that matt
 
 ### 5.1 Initial catalogue and expansion
 
-Target a diverse initial catalogue of 500 horror films, with useful source-backed quality associations at sustainable cost. Start from the provisional master vocabulary rather than generating qualities from a handful of film analyses. Initial coverage need not be exhaustive; the vocabulary and associations should be easy to improve.
+Target a diverse launch catalogue of about 5,000 horror films, with useful source-backed quality associations at sustainable cost. The 500-film development catalogue serves development and testing. Use TMDB’s Horror classification for the launch seed and Library discovery. Use recommendation threads and curated lists to identify films to include and check coverage across viewing experiences. See the [horror catalogue master list](research/horror_catalogue_master_list.md) and the [launch manifest and verification notes](research/horror_launch_manifest.md). Start from the provisional master vocabulary rather than generating qualities from a handful of film analyses. Initial coverage need not be exhaustive; the vocabulary and associations should be easy to improve. Include horror films with verified film-specific wins from reputable award bodies, including craft, jury and audience awards from established genre festivals. For launch, require a documented current way to watch, buy or borrow the film in at least one of the UK, Ireland, US, Canada, Australia or New Zealand, regardless of the film’s original language. Current general theatrical bookings, licensed digital access and sourceable physical editions each qualify. Record the territory and channel and verify theatrical releases separately from festival or special-event screenings. Exclude films whose only evidence is past screenings, expired offers or future release plans until a current route is documented.
 
 Initial-release users should be able to search TMDB and request import of a missing film. After TMDB search/selection, bulk seeding and on-demand import use one operation to persist canonical metadata and automatically resolved Wikipedia plot/context. A successful import is ready for quality assessment; no separately supplied Wikipedia page ID or enrichment action is required. Quality assignment then uses individually configured category ceilings. Enforce unique TMDB identity; an existing film is an explicit import conflict. Fetch and validate both sources before creating the film, leaving no partial row on acquisition failure. Subsequent on-demand source updates use a separate workflow. Import readiness does not mean qualities have already been assigned. No mandatory manual approval per imported film or generated analysis prose is required. Use the chosen 60% support/category-cap baseline for initial assignment; settle missing-source/readiness rules in the seed implementation task without another research phase.
 
@@ -175,7 +179,7 @@ Discuss logical judgments separately from request packing. One independent quest
 
 ### 6.1.1 Admin learning from expressions — post-release
 
-Deferred until after initial release: examine user expressions in their film context to identify missing vocabulary, missing film associations, weak definitions/matching and possible category-level preferences. A non-match alone does not prove a new quality is needed, and one portrayal does not establish an unrestricted category preference. Let admins formulate and test a candidate or definition adjustment against positive, negative and untouched cases; compare results before an explicit production change. Tests do not change live definitions, film associations, user profiles or historical scores. Expression investigation does not automatically generate vocabulary or change category weights. Define admin access to original Ratings-owned evidence before implementation; read access does not transfer ownership or imply public display permission.
+Deferred until after initial release: examine user expressions in their film context to identify missing vocabulary, missing film associations, weak definitions/matching and possible category-level preferences. A non-match alone does not prove a new quality is needed, and one portrayal does not establish an unrestricted category preference. Let admins formulate and test a candidate or definition adjustment against positive, negative and untouched cases; compare results before an explicit production change. Tests do not change live definitions, film associations, user profiles or historical scores. Expression investigation does not automatically generate vocabulary or change category weights. Define admin access to original Ratings-owned evidence before implementation; source access stays private and supports aggregate learning.
 
 This deferral applies to admin vocabulary-gap discovery/testing. Interpreting expressions for personal preferences and recommendations remains part of the core release.
 
@@ -253,7 +257,6 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 - Post-release admin expression investigation/testing for missing qualities or category-preference coverage, after the seed/view/edit/refresh/check path.
 - A separate conversational reflection or rewatch experience is an optional future experiment, not a committed milestone.
 - More expressive recommendations and richer feedback, including optional rejection reasons, where evidence justifies it.
-- Shared viewer expressions as rotating inspiration on watched-film pages, once consent/moderation mechanisms are adequate. A prototype may use clearly labelled curated examples before real shared contributions exist.
 
 **Explicitly out of scope initially**
 
@@ -298,7 +301,7 @@ Avoid choosing framework patterns or building abstractions solely for potential 
 
 ## 11. Open product questions / acceptance tests
 
-**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; consent/review for shared expression prompts; source coverage sufficient for useful initial qualities; JEV request packing; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful taste-profile changes; taste-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
+**Open:** Where-to-watch data availability, provider licensing and actual affiliate eligibility; when to expose a voluntary donation link; how AI usage costs change with real users; how to display rating strength without implying artistic merit; spoiler labelling and presentation details; source coverage sufficient for useful initial qualities; JEV request packing; exact Jev primitives and thresholds; the initial evidence weighting and contextual attribution strategy; criteria for meaningful taste-profile changes; taste-profile structure and validation of the JEV novelty/change gate; library transitions and re-rating/expression edit and deletion behaviour; how detailed recommendation explanations should be.
 
 **First-success tests:**
 

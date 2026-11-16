@@ -165,7 +165,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       resource :session, only: [ :new, :create, :destroy ]
       post "/password-recovery-activity", to: "password_recovery_activity_probe#create"
     end
-    post registration_path, params: { registration: { terms_accepted: "1", email_address: "guest-pending@example.test", password: "original password phrase",
+    post registration_path, params: { registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version, email_address: "guest-pending@example.test", password: "original password phrase",
       password_confirmation: "original password phrase" }, authenticity_token: csrf }
     assert_response :see_other
     post "/password-recovery-activity", params: { authenticity_token: csrf }

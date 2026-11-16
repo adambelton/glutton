@@ -22,7 +22,8 @@ module Identity
 
           user = source_user.present? ? source_user.becomes!(UserRegistered) : UserRegistered.new
           user.assign_attributes(email_address: registration.email_address, password_digest: registration.password_digest,
-            email_confirmed_at: Time.current, terms_version: registration.terms_version, terms_accepted_at: registration.terms_accepted_at)
+            email_confirmed_at: Time.current, terms_version: registration.terms_version, terms_accepted_at: registration.terms_accepted_at,
+            privacy_notice_version: registration.privacy_notice_version)
           # The confirmed pending request supplies the validated digest. Ordinary
           # creation still requires plaintext password/confirmation; all common
           # validations and database constraints run in this explicit context.

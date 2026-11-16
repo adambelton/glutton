@@ -1,0 +1,42 @@
+en:
+  identity:
+    privacy_notice_v1:
+      title: Privacy Notice
+      operator: Adam Belton operates Glutton and is responsible for how it uses your personal data. Contact hello@adambelton.com with privacy questions or requests.
+      data:
+        title: What Glutton uses
+        description: Glutton uses your email address and a securely hashed password to manage your account. It uses private ratings, notes, library entries and recommendation activity to provide the service and personalise recommendations. A session cookie keeps you signed in, and local browser storage remembers your theme choice.
+      lawful_bases:
+        title: Why Glutton uses this data
+        description: Glutton uses your account and viewing activity to provide the service you request under the Terms of Service. Glutton has a legitimate interest in keeping the service secure and recoverable, including using operational logs and backups for those purposes.
+      providers:
+        title: Who helps provide Glutton
+        ai_title: Who analyses your rating notes
+        ai_intro: Rating notes are optional. If you add one, Glutton analyses it to personalise your recommendations. Glutton leaves your account email and password out of AI requests. Any personal details you write in a note are part of the text sent. Please keep notes about the film and leave out sensitive or identifying details about yourself or others. The descriptions below reflect Glutton’s settings and the providers’ published API policies as reviewed on 16 November 2026. TypeSafe and OpenAI may update their policies at any time.
+        typesafe:
+          name: TypeSafe AI
+          description: When Glutton assesses a rating with a note, it sends the note text, an internal rating reference and film quality information to TypeSafe AI in the United States to identify the qualities you describe. TypeSafe says it does not use submitted content to train its models. It keeps submitted content as long as reasonably necessary to provide the service and publishes no fixed retention period.
+        openai:
+          name: OpenAI
+          description: Glutton sends note text and film context directly to OpenAI to build or refresh your taste profile. A refresh may also include information from your existing profile. OpenAI may process these requests outside the UK. Glutton turns off response storage for these requests and has not opted in to share API data for model training. OpenAI may retain submitted text in abuse monitoring logs for up to 30 days, with exceptions for legal or safety reasons.
+        paragraphs:
+          - Render hosts Glutton and its database in Frankfurt, Germany.
+          - When account email delivery is enabled, Resend processes recipient email addresses and account messages in the United States. Fastmail handles correspondence sent to Glutton’s contact address.
+          - Your browser connects to The Movie Database to load posters and to Google’s YouTube service when a trailer appears. These requests give the services information such as your IP address and the poster or trailer requested. The services handle those requests under their own privacy policies.
+      international_transfers:
+        title: How Glutton protects international transfers
+        paragraphs:
+          - Germany is covered by the UK’s adequacy regulations. For transfers to the United States that are covered by Render’s UK Extension to the EU–US Data Privacy Framework certification, Render’s agreement uses that framework. It provides contractual safeguards for UK transfers where the framework does not apply.
+          - The data processing agreements for TypeSafe, OpenAI and Resend include standard contractual clauses with the UK International Data Transfer Addendum for restricted transfers from the UK. You can contact hello@adambelton.com for a copy of the applicable safeguards and information about where your data is processed.
+      retention:
+        title: How long Glutton keeps your data
+        description: Glutton keeps your account and saved activity while your account is open. An unfinished registration expires after one hour, and guest access expires after 24 hours. Expired records are removed during cleanup.
+      account_deletion:
+        title: Deleting your account
+        description: You can delete your account in Account Settings. This ends your sessions and deletes your sign-in details, ratings, notes, library entries, recommendation activity and taste profile from the live service. Any copies already held by TypeSafe or OpenAI follow the provider retention described above. Guest activity is temporary and is deleted when expired guest accounts are cleaned up.
+      backups:
+        title: Backups
+        description: A backup taken before deletion may contain a copy of your account and activity until the backup expires. Backups are kept for recovery. Before returning a restored database to service, Glutton must reapply deletions made since the backup was taken.
+      rights:
+        title: Your privacy rights
+        description: You can contact hello@adambelton.com to request access to, correction of or deletion of your personal data, or to exercise other applicable data protection rights. You can also complain to the UK Information Commissioner's Office.

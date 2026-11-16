@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -241,6 +241,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_180000) do
     t.datetime "updated_at", null: false
     t.string "terms_version"
     t.datetime "terms_accepted_at"
+    t.string "privacy_notice_version"
     t.index ["guest_user_id"], name: "index_pending_registrations_on_guest_user_id", unique: true
     t.check_constraint "(terms_version IS NULL) = (terms_accepted_at IS NULL)", name: "pending_registrations_complete_terms_acceptance"
     t.check_constraint "confirmation_delivery_attempts >= 0 AND confirmation_delivery_attempts <= 5", name: "pending_registration_delivery_limit"
@@ -401,6 +402,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_180000) do
     t.datetime "updated_at", null: false
     t.string "terms_version"
     t.datetime "terms_accepted_at"
+    t.string "privacy_notice_version"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.check_constraint "(terms_version IS NULL) = (terms_accepted_at IS NULL)", name: "users_complete_terms_acceptance"
     t.check_constraint "NOT superuser OR type::text = 'UserRegistered'::text", name: "only_registered_users_can_be_superusers"
