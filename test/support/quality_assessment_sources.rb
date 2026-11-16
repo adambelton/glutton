@@ -41,8 +41,8 @@ module QualityAssessmentSources
     end
   end
 
-  def imported_assignment_film(tmdb_id: 800001, context: wikipedia_context(tmdb_id: tmdb_id))
-    Registry::Film.new(tmdb_id:).import!(tmdb_data: { title: "Assessment fixture", release_date: nil, tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
+  def imported_assignment_film(tmdb_id: 800001, context: wikipedia_context(tmdb_id: tmdb_id), overview: nil)
+    Registry::Film.new(tmdb_id:).import!(tmdb_data: { title: "Assessment fixture", release_date: nil, tmdb_metadata: { "details" => { "overview" => overview }.compact } }, wikipedia_context: context)
   end
 
   def assessment_quality(category: quality_categories(:tone), name: "Supported quality")

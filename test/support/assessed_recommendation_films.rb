@@ -11,11 +11,15 @@ module AssessedRecommendationFilms
     Registry::FilmQuality.create!(film:, quality:)
     rating_film = Ratings::RatingFilm.create!(user:, film:)
     rating = rating_film.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+    apply_recommendation_assessment(rating:, quality:)
+    Recommendations::RecommendationFilm.new(user:, film:).suppress!
+  end
+
+  def apply_recommendation_assessment(rating:, quality:)
     evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
       notes: {}, qualities: { quality.id.to_s => { name: quality.name, match_rule: nil, not_sufficient: nil } },
       calls: [], decisions: [ { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } ]
     })
     rating.apply_quality_evaluation!(evaluation:)
-    Recommendations::RecommendationFilm.new(user:, film:).suppress!
   end
 end

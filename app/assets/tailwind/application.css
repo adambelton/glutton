@@ -279,8 +279,8 @@
 .library-card-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
 .ui-page .library-card-actions .ui-action-form { margin-block: 0; }
 .library-card-actions .ui-action-button { display: flex; align-items: center; justify-content: center; width: 100%; height: auto; min-height: 0; aspect-ratio: 1; padding: 0; border-radius: 4px; }
-.library-rating-notes-badge { position: absolute; inset-block-start: 2px; inset-inline-end: 2px; }
-.library-rating-notes-badge svg { display: block; width: 12px; height: 12px; }
+.library-rating-notes-badge { position: absolute; inset-block-start: -4px; inset-inline-end: -4px; color: var(--glutton-primary); pointer-events: none; }
+.library-rating-notes-badge svg { display: block; width: 16px; height: 16px; }
 .library-pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; border-top: 1px solid var(--glutton-border); margin-top: 20px; padding-top: 18px; font-size: 13px; }
 .ui-empty { padding-block: 24px; color: var(--glutton-muted-foreground); }
 .rating-choices { margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

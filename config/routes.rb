@@ -36,6 +36,7 @@ Rails.application.routes.draw do
   delete "account", to: "account_settings#destroy"
 
   resource :recommendation, only: :show, controller: :recommendations do
+    get :availability
     post :accept
     post :reject
   end

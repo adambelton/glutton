@@ -14,6 +14,12 @@ class RecommendationsController < ApplicationController
     render ::Views::Recommendations::Show.new(result:)
   end
 
+  def availability
+    no_store
+    unlocked = Recommendations::CandidateSelection::RecommendationUnlock.unlocked?(user: current_user)
+    head(unlocked ? :no_content : :accepted)
+  end
+
   def accept
     record_response(Recommendations::RecommendationFilm::Responses::ACCEPTED)
   end

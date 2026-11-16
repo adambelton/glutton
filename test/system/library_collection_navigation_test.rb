@@ -108,7 +108,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     end
   end
 
-  test "Watchlist card controls mark a film watched and open its rating form" do
+  test "Library ratings return to Watched with save feedback" do
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
     assert_current_path library_path
@@ -141,6 +141,45 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     end
     assert_current_path new_rating_path(film_id: film.id)
     assert_selector "h2", text: film.title
+    assert_link I18n.t("library.browser.return"), href: library_path(view: "watched")
+    save = I18n.t("ratings.browser.save")
+    toast = I18n.t("ratings.browser.saved")
+    assert_button save, disabled: true
+    find('label[for="rating-brilliant"]').click
+    fill_in "notes", with: "Original notes"
+    click_button save
+    assert_current_path library_path(view: "watched")
+    assert_selector ".ui-toast", text: toast
+
+    click_button I18n.t("library.browser.edit_film_rating", title: film.title)
+    assert_current_path edit_rating_path(film_id: film.id)
+    assert_link I18n.t("library.browser.return"), href: library_path(view: "watched")
+    assert_button save, disabled: true
+
+    find('label[for="rating-pretty_good"]').click
+    assert_button save, disabled: false
+    find('label[for="rating-brilliant"]').click
+    assert_button save, disabled: true
+
+    oversized_notes = "x" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)
+    notes = find_field("notes")
+    notes.execute_script("this.removeAttribute('maxlength')")
+    notes.set(oversized_notes)
+    click_button save
+    assert_selector "#rating-errors"
+    assert_field "notes", with: oversized_notes
+    assert_button save, disabled: false
+    fill_in "notes", with: "Revised notes"
+    assert_button save, disabled: false
+    fill_in "notes", with: "Original notes"
+    assert_button save, disabled: true
+    fill_in "notes", with: "Revised notes"
+    click_button save
+    assert_current_path library_path(view: "watched")
+    assert_selector ".ui-toast", text: toast
+    click_button I18n.t("library.browser.edit_film_rating", title: film.title)
+    assert_field "notes", with: "Revised notes"
+    assert_button save, disabled: true
   end
 
   private

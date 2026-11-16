@@ -10,7 +10,8 @@ module Recommendations
       else
         tooltip = t("recommendations.navigation_locked", required: CandidateSelection::NextCandidate::MINIMUM_ASSESSED_FILMS)
         span(class: "recommendations-nav-lock", role: "link", tabindex: "0",
-          aria: { disabled: "true", describedby: "recommendations-nav-tooltip" }) do
+          aria: { disabled: "true", describedby: "recommendations-nav-tooltip" },
+          data: { recommendations_unlock_target: "lockedLink" }) do
           plain t("recommendations.title")
           svg(viewBox: "0 0 24 24", width: "14", height: "14", fill: "none", stroke: "currentColor",
             stroke_width: "2", aria: { hidden: true }) do |icon|

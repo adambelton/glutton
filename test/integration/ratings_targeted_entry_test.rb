@@ -31,15 +31,15 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   end
 
   def rate(token:, **attributes)
-    targeted = Nokogiri::HTML(response.body).at_css('input[name="targeted"]')&.[]("value")
+    film_id = Nokogiri::HTML(response.body).at_css('#rating-form input[name="film_id"]')&.[]("value")
     post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::PRETTY_GOOD,
-      authenticity_token: token, targeted: }.merge(attributes)
+      authenticity_token: token }.merge(film_id ? { film_id: } : {}).merge(attributes)
   end
 
   def assert_targeted_controls
-    assert_select 'input[name="targeted"][value="1"]'
+    assert_select '#rating-form input[name="film_id"][value=?]', @film.id.to_s
     assert_select "form[action=?]", dismiss_rating_path, count: 0
-    assert_select "a[href=?]", new_rating_path, text: I18n.t("ratings.browser.continue")
+    assert_select "a[href=?]", library_path(view: "watched"), text: I18n.t("library.browser.return")
   end
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do
@@ -77,7 +77,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
         film_id: Registry::Film.create!(title: "Ignored film").id, suppressed: true, dismissed: true)
     end
     assert_response :see_other
-    assert_redirected_to new_rating_path
+    assert_redirected_to library_path(view: "watched")
     rating = Ratings::Rating.last
     assert_equal @user.id, rating.rating_film.user_id
     assert_equal "  <script>Private</script>  \n\nEnding", rating.notes
@@ -126,7 +126,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "form[action=?]", dismiss_rating_path
-    assert_select 'input[name="targeted"]', count: 0
+    assert_select '#rating-form input[name="film_id"]', count: 0
     assert_select "a[href=?]", new_rating_path, text: I18n.t("ratings.browser.continue"), count: 0
   end
 
@@ -247,7 +247,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: @film)
     [ nil, foreign.id, foreign.id + 1, "#{foreign.id}junk" ].each do |rating_film_id|
       assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        post rating_path, params: { targeted: "1", film_id: @film.id, rating_film_id:, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
+        post rating_path, params: { film_id: @film.id, rating_film_id:, value: Ratings::Rating::Values::BRILLIANT, authenticity_token: token }
         assert_response :not_found
       end
     end

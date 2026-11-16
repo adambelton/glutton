@@ -1,21 +1,22 @@
 module Ratings
   class Form < Shared::Base
-    def initialize(film:, rating_film_id: nil, method: :post, value: nil, notes: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false, targeted: false)
+    def initialize(film:, rating_film_id: nil, method: :post, value: nil, notes: nil, previous_rating_id: nil, errors: nil, readonly: false, dismissible: false, requested_film_id: nil, saved_rating: nil)
       @film, @rating_film_id, @method, @value = film, rating_film_id, method, value
       @notes, @previous_rating_id, @errors, @readonly = notes, previous_rating_id, errors, readonly
-      @dismissible, @targeted = dismissible, targeted
+      @dismissible, @requested_film_id = dismissible, requested_film_id
+      @saved_rating = saved_rating
       @prefix = readonly ? "example-#{film.tmdb_id}-" : ""
     end
 
     def view_template
-      render Shared::FilmCard.new(layout: "rating-interface", data: ({ controller: "rating-selection" } unless @readonly)) do
+      render Shared::FilmCard.new(layout: "rating-interface", data: ({ controller: "rating-selection", rating_selection_baseline_value: saved_baseline&.to_json } unless @readonly)) do
         errors_section
         if @readonly
           div(class: "rating-workspace") { workspace }
         else
           form_with(url: rating_path, method: @method, id: "rating-form", class: "rating-workspace") do
             input(type: "hidden", name: "rating_film_id", value: @rating_film_id)
-            input(type: "hidden", name: "targeted", value: "1") if @targeted
+            input(type: "hidden", name: "film_id", value: @requested_film_id) if @requested_film_id.present?
             input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
             workspace
           end
@@ -71,11 +72,27 @@ module Ratings
       end
     end
 
+    def saved_baseline
+      return unless @saved_rating.present?
+
+      { value: @saved_rating.value, notes: browser_notes(@saved_rating.notes) }
+    end
+
+    def is_dirty?
+      return true unless @saved_rating.present?
+
+      saved_baseline != { value: @value, notes: browser_notes(@notes) }
+    end
+
+    def browser_notes(notes)
+      notes.to_s.gsub(/\r\n?/, "\n")
+    end
+
     def actions
       div(class: "rating-actions film-actions") do
         render Shared::PrimaryButton.new(type: :submit, form: "rating-form", class: "ui-submit",
-          disabled: !Ratings::Rating::Values::ALL.include?(@value),
-          data: { rating_selection_target: "save", tooltip: t("ratings.browser.save_disabled") }) { t("ratings.browser.save") }
+          disabled: !is_dirty? || !Ratings::Rating::Values::ALL.include?(@value),
+          data: { rating_selection_target: "save", tooltip: t(@saved_rating.present? && Ratings::Rating::Values::ALL.include?(@value) ? "ratings.browser.save_unchanged" : "ratings.browser.save_disabled") }) { t("ratings.browser.save") }
         if @dismissible
           render Shared::ActionForm.new(url: dismiss_rating_path, params: { rating_film_id: @rating_film_id }) do
             render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.browser.dismiss") }
@@ -102,6 +119,7 @@ module Ratings
           end
         end
         textarea(id:, name: "notes", form: ("rating-form" unless @readonly), rows: 8, maxlength: Rating::MAX_NOTES_LENGTH, class: "ui-input",
+          data: ({ rating_selection_target: "notes", action: "input->rating-selection#update" } unless @readonly),
           readonly: @readonly, placeholder: t("ratings.browser.notes_placeholder"),
           aria: { describedby: (descriptions.join(" ") if descriptions.present?) }) { plain "\n#{@notes}" }
       end

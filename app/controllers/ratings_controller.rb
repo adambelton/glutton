@@ -16,9 +16,9 @@ class RatingsController < ApplicationController
   end
 
   def new
-    @targeted = params.key?(:film_id)
-    if @targeted
-      @rating_film = Ratings::CandidateSelection::PrepareCandidate.call(user_id: current_user.id, film_id: film_id_param)
+    @requested_film_id = film_id_param if params.key?(:film_id)
+    if @requested_film_id.present?
+      @rating_film = Ratings::CandidateSelection::PrepareCandidate.call(user_id: current_user.id, film_id: @requested_film_id)
     elsif Ratings::CandidateSelection::InitialRatingFilmSelection.available?(user: current_user)
       return render ::Views::Ratings::RatingStartOptions.new
     else
@@ -63,11 +63,11 @@ class RatingsController < ApplicationController
   end
 
   def create
-    @targeted = params[:targeted] == "1"
+    @requested_film_id = film_id_param if params.key?(:film_id)
     read_rating_input
     Ratings::RatingRecording::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       value: @value, notes: @notes)
-    redirect_to new_rating_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
+    redirect_to (@requested_film_id.present? ? watched_library_path : new_rating_path), notice: I18n.t("ratings.browser.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_rating
@@ -79,6 +79,7 @@ class RatingsController < ApplicationController
   def edit
     rating = Ratings::RatingRecording::FindCurrentRating.call(user_id: current_user.id, film_id: film_id_param)
     @rating_film = rating.rating_film
+    @saved_rating = rating
     @previous_rating_id = rating.id
     @value = rating.value
     @notes = rating.notes
@@ -88,9 +89,9 @@ class RatingsController < ApplicationController
   def update
     @previous_rating_id = previous_rating_id_param
     read_rating_input
-    rating = Ratings::RatingRecording::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
+    Ratings::RatingRecording::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       previous_rating_id: @previous_rating_id, value: @value, notes: @notes)
-    redirect_to edit_rating_path(film_id: rating.rating_film.film_id), status: :see_other
+    redirect_to watched_library_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_revision
@@ -110,6 +111,10 @@ class RatingsController < ApplicationController
 
   private
 
+  def watched_library_path
+    library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+  end
+
   def render_picker(error: nil, status: :ok)
     catalogue = Ratings::CandidateSelection::ChooseInitialRatingFilms.catalogue(page: 1)
     render ::Views::Ratings::ChooseRatingFilms.new(catalogue:, error:), status:
@@ -122,13 +127,13 @@ class RatingsController < ApplicationController
   end
 
   def render_new(status: :ok)
-    render ::Views::Ratings::New.new(rating_film: @rating_film, targeted: @targeted,
+    render ::Views::Ratings::New.new(rating_film: @rating_film, requested_film_id: @requested_film_id,
       value: @value, notes: @notes, errors: @errors), status:
   end
 
   def render_edit(status: :ok)
     render ::Views::Ratings::Edit.new(rating_film: @rating_film, previous_rating_id: @previous_rating_id,
-      value: @value, notes: @notes, errors: @errors), status:
+      value: @value, notes: @notes, errors: @errors, saved_rating: @saved_rating), status:
   end
 
   def read_rating_input
@@ -147,7 +152,8 @@ class RatingsController < ApplicationController
   end
 
   def render_invalid_revision
-    @rating_film = Ratings::CandidateSelection::FindCandidate.call(user_id: current_user.id, rating_film_id: rating_film_id_param)
+    @rating_film, @saved_rating = Ratings::RatingRecording::FindRevisionBaseline.call(user_id: current_user.id,
+      rating_film_id: rating_film_id_param, previous_rating_id: @previous_rating_id)
     render_edit(status: :unprocessable_entity)
   end
 

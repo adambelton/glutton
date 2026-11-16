@@ -12,8 +12,10 @@ module Views
           render Shared::ActionForm.new(url: registration_email_path) do
             render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("identity.registration.resend") }
           end
-          text_link(t("identity.registration.restart"), new_registration_path)
-          text_link(t("identity.registration.continue"), root_path)
+          div(class: "ui-secondary-links") do
+            text_link(t("identity.registration.restart"), new_registration_path)
+            text_link(t("identity.registration.continue"), root_path)
+          end
         end
       end
     end
