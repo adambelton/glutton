@@ -14,6 +14,8 @@ gem "good_job", "~> 4.22"
 gem "opentelemetry-sdk"
 gem "opentelemetry-exporter-otlp"
 gem "openai"
+# S3-compatible access to the independent R2 account deletion log.
+gem "aws-sdk-s3", "~> 1.242"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]

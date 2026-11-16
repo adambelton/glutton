@@ -10,6 +10,10 @@ class AccountSettingsController < ApplicationController
     head :forbidden
   end
 
+  rescue_from Identity::Errors::DeletionLogUnavailable do
+    redirect_to account_settings_path, alert: t("identity.settings.deletion_log_unavailable"), status: :see_other
+  end
+
   rescue_from Identity::Errors::AccountChangeUnavailable do
     redirect_to account_settings_path, alert: t("identity.settings.email_unavailable"), status: :see_other
   end

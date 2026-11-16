@@ -37,6 +37,23 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert Identity::User.exists?(@user.id)
   end
 
+  test "account deletion reports a retry and keeps the session when the log is unavailable" do
+    previous_endpoint = ENV["ACCOUNT_DELETION_R2_ENDPOINT"]
+    ENV["ACCOUNT_DELETION_R2_ENDPOINT"] = "invalid-endpoint"
+    sign_in(@user)
+    get account_settings_path
+
+    delete account_path, params: { authenticity_token: csrf_token(account_path) }
+
+    assert_redirected_to account_settings_path
+    assert_equal I18n.t("identity.settings.deletion_log_unavailable"), flash[:alert]
+    assert Identity::UserRegistered.exists?(@user.id)
+    follow_redirect!
+    assert_response :success
+  ensure
+    ENV["ACCOUNT_DELETION_R2_ENDPOINT"] = previous_endpoint
+  end
+
   test "password change verifies the current password and revokes sessions" do
     sign_in(@user)
     other_session = Identity::Session.create!(user: @user)
