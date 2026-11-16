@@ -61,11 +61,14 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "shows stored film facts and a trailer when available" do
+  test "shows stored film facts and falls back to a trailer when no official one is listed" do
     film = Registry::Film.create!(title: "Film with a trailer", release_date: Date.new(2025, 1, 1),
       tmdb_metadata: { details: {
         runtime: 97, genres: [ { name: "Horror" } ], overview: "A film synopsis.",
-        videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
+        videos: { results: [
+          { site: "YouTube", type: "Teaser", official: false, key: "Q82CFO_OvmY", iso_639_1: "en" },
+          { site: "YouTube", type: "Trailer", official: false, key: "JarbtubycQg", iso_639_1: "en" }
+        ] }
       } })
     unlock_recommendations_for(user: @user)
     get recommendation_path
@@ -80,9 +83,9 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     assert_select ".recommendation-details h2 .film-year", "(2025)"
     assert_select ".recommendation-facts", count: 0
     assert_select ".recommendation-trailer h2", count: 0
-    assert_select "iframe[src=?][title=?]", "https://www.youtube.com/embed/M7lc1UVf-VE",
+    assert_select "iframe[src=?][title=?]", "https://www.youtube.com/embed/JarbtubycQg",
       I18n.t("recommendations.trailer_for", title: film.title)
-    assert_select "a[href=?]", "https://www.youtube.com/watch?v=M7lc1UVf-VE", count: 0
+    assert_select "a[href=?]", "https://www.youtube.com/watch?v=JarbtubycQg", count: 0
   end
 
   test "a stale or repeated submission fails without changing the recorded choice" do

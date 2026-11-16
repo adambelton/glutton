@@ -33,10 +33,13 @@ class Registry::TmdbMetadataTest < ActiveSupport::TestCase
     other_language = { "site" => "YouTube", "type" => "Trailer", "official" => true, "key" => "nonEnglish1", "iso_639_1" => "fr" }
     english = other_language.merge("key" => "M7lc1UVf-VE", "iso_639_1" => "en")
     invalid = [ nil, english.merge("site" => "Other"), english.merge("type" => "Teaser"),
-      english.merge("official" => false), english.merge("key" => "../external") ]
+      english.merge("key" => "../external") ]
+    fallback = english.merge("official" => false, "key" => "JarbtubycQg")
 
     assert_equal "M7lc1UVf-VE", metadata_with_videos([ *invalid, other_language, english ]).youtube_trailer_id
     assert_equal "nonEnglish1", metadata_with_videos([ other_language ]).youtube_trailer_id
+    assert_equal "nonEnglish1", metadata_with_videos([ fallback, other_language ]).youtube_trailer_id
+    assert_equal "JarbtubycQg", metadata_with_videos([ other_language.merge("official" => false), fallback ]).youtube_trailer_id
     assert_nil metadata_with_videos(invalid).youtube_trailer_id
     assert_nil metadata_with_videos("unexpected").youtube_trailer_id
     assert_nil Registry::Sources::TmdbMetadata.new({}).youtube_trailer_id
