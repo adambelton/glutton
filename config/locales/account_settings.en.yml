@@ -22,6 +22,7 @@ en:
       password_changed: Your password changed. Sign in with your new password.
       email_unavailable: This email change is no longer available. Request a new confirmation link.
       email_delivery_failed: The confirmation email could not be sent. Try again.
+      deletion_log_unavailable: We couldn’t complete your account deletion. Please try again.
       deleted: Your account was deleted.
       rate_limited: Too many attempts. Wait a few minutes and try again.
       mail_subject: Confirm your Glutton email change

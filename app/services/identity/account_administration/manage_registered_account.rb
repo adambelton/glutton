@@ -39,8 +39,11 @@ module Identity
         raise Errors::AccountChangeUnavailable, cause: nil
       end
 
-      def close_account
-        with_account(&:destroy_with_activity!)
+      def close_account(deletion_log: DeletionLog.writer)
+        with_account do |account|
+          deletion_log.record!(account_id: account.deletion_replay_id)
+          account.destroy_with_activity!
+        end
       end
 
       private

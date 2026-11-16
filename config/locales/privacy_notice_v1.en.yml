@@ -36,7 +36,7 @@ en:
         description: You can delete your account in Account Settings. This ends your sessions and deletes your sign-in details, ratings, notes, library entries, recommendation activity and taste profile from the live service. Any copies already held by TypeSafe or OpenAI follow the provider retention described above. Guest activity is temporary and is deleted when expired guest accounts are cleaned up.
       backups:
         title: Backups
-        description: A backup taken before deletion may contain a copy of your account and activity until the backup expires. Backups are kept for recovery. Before returning a restored database to service, Glutton must reapply deletions made since the backup was taken.
+        description: A backup taken before deletion may contain a copy of your account and activity until the backup expires. Backups are kept for recovery. Before returning a restored database to service, Glutton reapplies account deletions. Cloudflare R2 stores the deletion log separately from the backups. Each record contains an internal account reference and the time the deletion was recorded. Glutton currently keeps these records without a fixed expiry.
       rights:
         title: Your privacy rights
         description: You can contact hello@adambelton.com to request access to, correction of or deletion of your personal data, or to exercise other applicable data protection rights. You can also complain to the UK Information Commissioner's Office.
