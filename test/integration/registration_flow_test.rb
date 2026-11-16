@@ -61,8 +61,12 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   def signup(client = self, **attributes)
-    credentials = { terms_accepted: "1", email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase" }.merge(attributes)
-    client.post registration_path, params: { registration: credentials, authenticity_token: csrf(client) }
+    authenticity_token = csrf(client, path: new_registration_path)
+    form = Nokogiri::HTML(client.response.body)
+    terms_version = form.at_css('input[name="registration[terms_version]"]')["value"]
+    notice_version = form.at_css('input[name="registration[privacy_notice_version]"]')["value"]
+    credentials = { terms_accepted: "1", terms_version:, privacy_notice_version: notice_version, email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase" }.merge(attributes)
+    client.post registration_path, params: { registration: credentials, authenticity_token: }
   end
 
   test "registration requires an explicit unchecked-by-default terms acceptance" do
@@ -72,9 +76,26 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
     assert_no_difference [ "Identity::PendingRegistration.count", "Identity::User.count", "ActionMailer::Base.deliveries.count" ] do
       post registration_path, params: { authenticity_token:, registration: {
-        email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
+        terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version, email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
       } }
       assert_response :unprocessable_entity
+    end
+  end
+
+  test "registration asks visitors to review the current privacy notice when the submitted version differs" do
+    assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
+      signup(privacy_notice_version: "2")
+      assert_response :unprocessable_entity
+      assert_select "a[href=?]", privacy_notice_path(version: Identity::PrivacyNotice.current.version)
+    end
+  end
+
+  test "registration requires renewed acceptance if the submitted Terms version differs" do
+    assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
+      signup(terms_version: "2")
+      assert_response :unprocessable_entity
+      assert_select "a[href=?]", terms_of_service_path(version: "1")
+      assert_select 'input[name="registration[terms_accepted]"]:not([checked])'
     end
   end
 
@@ -84,12 +105,14 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     signup
     pending = Identity::PendingRegistration.last
     assert_equal "1", pending.terms_version
+    assert_equal Identity::PrivacyNotice.current.version, pending.privacy_notice_version
     assert_equal Time.current, pending.terms_accepted_at
     travel 1.minute
     confirm
     assert_response :see_other
     account = Identity::UserRegistered.find(guest_user.id)
     assert_equal pending.terms_version, account.terms_version
+    assert_equal pending.privacy_notice_version, account.privacy_notice_version
     assert_equal pending.terms_accepted_at, account.terms_accepted_at
   end
 
@@ -438,7 +461,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "trusted origin ignores hostile Host and redirect parameters" do
     authenticity_token = csrf
-    post registration_path, params: { authenticity_token:, return_to: "https://evil.example", registration: { terms_accepted: "1",
+    post registration_path, params: { authenticity_token:, return_to: "https://evil.example", registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version,
       email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
     } }, headers: { "Host" => "evil.example" }
     assert_response :see_other

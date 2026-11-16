@@ -213,7 +213,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example.test"
     get library_path(view: "watched")
-    post registration_path, params: { authenticity_token: csrf(new_registration_path), registration: { terms_accepted: "1",
+    post registration_path, params: { authenticity_token: csrf(new_registration_path), registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version,
       email_address: "new-entry@example.test", password: @password, password_confirmation: @password } }
     registration = Identity::PendingRegistration.order(:id).last
     post registration_confirmation_path, params: { token: registration.generate_token_for(:email_confirmation),

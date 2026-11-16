@@ -74,7 +74,15 @@ Invalid selected IDs raise `Registry::Errors::InvalidTmdbId`. Known provider/cov
 
 Each client configures its fixed HTTPS host and response-size limit on the provider-agnostic `ProviderRequest`. The transport accepts host/path/parameters/headers, parses JSON and raises sanitized transport errors; clients own response shape, API error interpretation and import-stage translation. Adding a provider requires no transport registry or provider-specific branch. Requests use a descriptive User-Agent, 5-second connect and 10-second read/write timeouts, a 30-second total request limit, streamed body caps (TMDB 2 MiB, Wikimedia 8 MiB), and no automatic retries or HTTP redirects. API-level article redirects are accepted only with matching Wikidata identity and revision/page checks. Errors omit credentials and provider bodies.
 
-This operation serves both future bulk catalogue loading and on-demand import. It is not called during boot or vocabulary seeding and creates no Library entry, rating or quality assignment. Automated tests cover fake-HTTP search/selection/import, parsing, atomic creation, failures and explicit duplicate conflicts. A live development smoke test passed for five horror films through TMDB, Wikidata and Wikipedia; wider coverage and operational throughput remain unverified.
+Use this operation for source-only catalogue loading and on-demand import. It creates no Library entry, rating or quality assignment. Automated tests cover fake-HTTP search/selection/import, parsing, atomic creation, failures and explicit duplicate conflicts.
+
+### Bulk source imports
+
+Batch provider reads wherever the API supports it. Request TMDB movie details, videos and external IDs together with `append_to_response=videos,external_ids`. Batch Wikidata sitelinks and English Wikipedia identity, rights and latest-revision queries across titles. Fetch each selected article at its exact revision and retain Registry’s per-film validation and atomic write. The single-film importer accepts source clients from the batch runner. [TMDB append to response](https://developer.themoviedb.org/docs/append-to-response) · [MediaWiki revisions API](https://www.mediawiki.org/wiki/API:Revisions)
+
+Use one shared request limit across Wikidata and Wikipedia, including retries and individual fallbacks. Recheck the provider’s current limit before each run. The staging import used up to three concurrent Wikimedia requests and spaced request starts at least 450 ms apart, about 133 per minute at most, below the published 200 per minute for clients identified by User-Agent alone. Honour `Retry-After` on throttled responses when available and back off before retrying. [Wikimedia rate limits](https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits)
+
+Resume from the manifest IDs missing in the target Registry. Verify the final IDs and source readiness, and retain unresolved provider errors by film ID. Run JEV assignment separately when its cost and scope have been agreed.
 
 ## Search TMDB for a film
 
