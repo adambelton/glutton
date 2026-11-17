@@ -39,7 +39,7 @@ en:
           detail_heading: Give Glutton more to understand.
           details:
             - A specific detail about your reaction can help Glutton make sense of more than one rating—and build a richer picture of what you enjoy over time. Your rating reflects your experience, not a verdict on whether a film is good or bad.
-            - Keep a private journal of the horror you watch. Describe what stayed with you, what drew you in or pushed you away, and why—even when your reaction is hard to put into words.
+            - Keep a journal of the horror you watch. Describe what stayed with you, what drew you in or pushed you away, and why—even when your reaction is hard to put into words.
             - You might love a film’s atmosphere, its practical effects or the way it portrays grief. The same feature can work in one film and fall flat in another. Your notes give Glutton that context; there’s no review format to follow or list of qualities you need to choose.
         recommendations:
           samples: Recommendation samples
@@ -55,7 +55,7 @@ en:
           description: Save something interesting to your Watchlist, watch it, then record your reaction in Watched. Your library keeps the next discovery and your past experiences together.
           details:
             - Revisit and edit your ratings and notes as you reflect or rewatch. You don’t have to capture everything on your first visit; your journal can develop with your thoughts.
-            - Glutton is a personal discovery app, not a social platform. Your ratings and notes stay private and aren’t published.
+            - Glutton is a personal horror discovery app and film journal. Your ratings and notes aren’t published or shared with other users.
         profile:
           eyebrow: 04 / Glutton Profile
           title: Watch your taste come into focus.
@@ -63,9 +63,9 @@ en:
           details:
             - Your notes give the profile its context. They help Glutton understand which qualities mattered to you and reconsider your wider rating history. Updates happen over time, rather than instantly.
             - Over time, we want those experiences to deepen Glutton’s understanding of the films themselves—revealing connections that plot summaries and familiar genre labels can miss. Your notes can help shape how Glutton discovers those connections.
-            - Your ratings and notes remain private and aren’t published. Learning across viewers’ experiences to enrich the catalogue is a longer-term ambition, rather than something Glutton already does automatically.
+            - Your ratings and notes aren’t published or shared with other users. Learning across viewers’ experiences to enrich the catalogue is a longer-term ambition, rather than something Glutton already does automatically.
       demo:
-        description: Glutton is a personal horror discovery app with a private film journal. Your ratings and notes help it understand the experiences you enjoy and find what to watch next.
+        description: Glutton is a personal horror discovery app and film journal. Your ratings and notes help it understand the experiences you enjoy and find what to watch next.
         browse_feature: "Browse %{feature}"
         select: "Show example %{position} of %{count}"
         position: "Example %{position} of %{count}"
