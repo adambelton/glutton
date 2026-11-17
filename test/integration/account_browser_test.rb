@@ -32,7 +32,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the account shows historical annotations and only the signed-in user's pending evidence" do
+  test "the account shows the narrative without claims and only the signed-in user's pending evidence" do
     user = registered_user(superuser: true)
     rating = submit(user, "Old <script>expression</script>")
     revision = publish(user)
@@ -48,12 +48,8 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     assert_select "header nav a[href=?] + a[href=?]", account_settings_path, registry_root_path
     assert_select "header form[action=?]", session_path, count: 0
     assert_select ".account-tabs a[aria-current=page]", I18n.t("account.profile")
-    assert_select ".profile-narrative a[href='#profile-evidence-1']", text: "[1]"
-    assert_select "#profile-evidence-1 strong", "Enjoys quiet dread."
-    assert_select "#profile-evidence-1 blockquote", "Old <script>expression</script>"
-    assert_select "#profile-evidence-1 p", I18n.t("account.earlier_rating_evidence")
-    assert_select "#profile-evidence-1 script", count: 0
-    assert_select "#profile-evidence-1 a[href=?]", edit_rating_path(film_id: rating.rating_film.film_id)
+    assert_select ".profile-narrative", revision.profile
+    assert_select ".profile-narrative a, .profile-annotation, .profile-evidence-list", count: 0
     assert_select "section[aria-labelledby=pending-evidence-heading] li", text: "New expression"
     assert_select "section[aria-labelledby=pending-evidence-heading] li", text: "Old <script>expression</script>"
     refute_includes response.body, "Private foreign expression"
@@ -66,7 +62,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_taste_profile_path
   end
 
-  test "citations resolve to identical current notes and label earlier notes until refresh" do
+  test "the narrative stays readable across rating revisions without exposing evidence" do
     user = registered_user(superuser: true)
     rating = submit(user, "The silence built dread.")
     assessed = publish(user)
@@ -75,22 +71,20 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     sign_in(user)
 
     get account_taste_profile_path
-    assert_select "#profile-evidence-1 blockquote", rating.notes
-    assert_select "#profile-evidence-1 p", text: I18n.t("account.earlier_rating_evidence"), count: 0
-    evidence = Ratings::TasteProfiling::ViewTasteProfile.call(user_id: user.id).fetch(:annotations).sole.fetch(:evidence).sole
-    assert_equal identical.id, evidence.fetch("rating_id")
+    assert_select ".profile-narrative", assessed.profile
+    assert_select ".profile-narrative a, .profile-annotation, .profile-evidence-list", count: 0
     assert_equal [ rating.id ], assessed.reload.annotations.sole.fetch("citations").pluck("rating_id")
     assert_equal [ rating.id ], assessed.taste_profile_revision_eval.output.fetch("evidence").pluck("rating_id")
 
-    changed = candidate.revise_rating!(previous_rating_id: identical.id, value: "pretty_good", notes: "The quiet ending felt eerie.")
+    candidate.revise_rating!(previous_rating_id: identical.id, value: "pretty_good", notes: "The quiet ending felt eerie.")
     get account_taste_profile_path
-    assert_select "#profile-evidence-1 blockquote", rating.notes
-    assert_select "#profile-evidence-1 p", I18n.t("account.earlier_rating_evidence")
+    assert_select ".profile-narrative", assessed.profile
+    assert_select ".profile-narrative a, .profile-annotation, .profile-evidence-list", count: 0
 
-    publish(user)
+    refreshed = publish(user)
     get account_taste_profile_path
-    assert_select "#profile-evidence-1 blockquote", changed.notes
-    assert_select "#profile-evidence-1 p", text: I18n.t("account.earlier_rating_evidence"), count: 0
+    assert_select ".profile-narrative", refreshed.profile
+    assert_select ".profile-narrative a, .profile-annotation, .profile-evidence-list", count: 0
   end
 
   test "a superuser without a profile sees the empty state and pending expressions" do

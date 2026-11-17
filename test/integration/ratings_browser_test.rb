@@ -72,9 +72,8 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     get new_rating_path
     assert_select "h2", "First film (1982)"
     assert_select "form#rating-form[action=?]", rating_path
-    assert_select "textarea#notes[aria-describedby=?]", "notes-privacy-guidance"
-    assert_select "#notes-privacy-guidance", text: I18n.t("ratings.browser.notes_privacy_guidance")
-    assert_select "a[href=?]", privacy_notice_path(anchor: "ai-providers")
+    assert_select "textarea#notes:not([aria-describedby])[placeholder=?]", I18n.t("ratings.browser.notes_placeholder")
+    assert_select ".rating-notes-guidance", count: 0
     assert_select ".rating-interface .rating-actions" do
       assert_select 'button[type="submit"][form="rating-form"].ui-submit[disabled]', I18n.t("ratings.browser.save")
       assert_select "form[action=?]", dismiss_rating_path do

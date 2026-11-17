@@ -22,13 +22,9 @@ module Library
     def rating_button(url, film_id:, label:, tooltip:, rating: nil)
       has_notes = rating&.notes.present?
       description = t(has_notes ? "library.browser.notes_present" : "library.browser.notes_absent")
-      form_with(url:, method: :get, class: "ui-action-form") do
-        input(type: "hidden", name: "film_id", value: film_id.to_s)
-        render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button library-rating-icon",
-          aria: { label:, description: }, data: { tooltip: }) do
-          render Ratings::RatingValueIcon.new(value: rating&.value)
-          span(class: "library-rating-notes-badge", aria: { hidden: true }) { render NotesIcon.new } if has_notes
-        end
+      render CardAction.new(url:, method: :get, params: { film_id: }, label:, tooltip:,
+        class: "ui-action-button library-rating-icon", aria: { label:, description: }) do
+        render RatingIndicator.new(value: rating&.value, notes: has_notes)
       end
     end
   end

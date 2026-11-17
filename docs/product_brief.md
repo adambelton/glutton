@@ -11,7 +11,7 @@ Build a personalised horror-film discovery experience that understands **what pe
 
 A viewer rates films and may optionally describe, in their own words, why they enjoyed or disliked them. Ratings alone reveal recurring positive and negative patterns across film **qualities**; optional **film notes** supply more specific information. The system maintains a taste profile built only from what the viewer has actually expressed, and uses it to reinterpret rating history. Together these inform recommendations, explanations and an evolving understanding of personal taste.
 
-Glutton is a private, personal film discovery experience. Viewers’ notes, ratings and Library activity are private.
+Glutton is a personal horror discovery app and film journal. Notes inform recommendations; notes, ratings and Library activity are not published or shared with other users.
 
 The product should be enjoyable even before its recommendations become useful: reflecting on horror should be interesting in its own right. Horror means more than fear: people might enjoy performers, decade-specific aesthetics, folklore, extreme violence, imaginative effects, quiet atmosphere, narrative structure, humour, themes or any other distinctive characteristic.
 
@@ -49,7 +49,7 @@ Use one users table with stable internal IDs for guests and registered accounts;
 
 Password recovery uses an emailed link valid for 15 minutes and an explicit new-password submission. Resetting revokes every existing session and requires fresh sign-in; viewing the link alone changes nothing. Ordinary request responses do not reveal whether the email is registered. Recovery does not merge guest activity or switch another signed-in account.
 
-Ratings, film notes and taste profiles are private by default. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered account deletion purges sign-in details, sessions and viewer activity from the live database. Copies can remain in existing backups until expiry. Reapply deletions before putting a restored database back into service. Abandoned guests and their activity are deleted.
+Ratings, film notes and taste profiles are not published or shared with other users. Keep email out of AI inputs and analytics; filter email, passwords and authentication tokens from routine logs. This setup does not anonymise registered activity after a complete database leak. Separate identity infrastructure and custom email encryption are not initial requirements. Registered account deletion purges sign-in details, sessions and viewer activity from the live database. Copies can remain in existing backups until expiry. Reapply deletions before putting a restored database back into service. Abandoned guests and their activity are deleted.
 
 ## 3. Two engagement modes and a personal library
 
@@ -66,7 +66,7 @@ The viewer chooses from four ratings:
 
 Offer one optional multiline field for the viewer to record what they liked or disliked and why. The viewer can save a rating immediately and return later to add or revise their notes.
 
-Early product work will identify recurring experiences reported by distinct viewers across private notes. Use aggregate patterns to enrich shared film evidence for JEV reassessment and identify potential new qualities. Individual notes, quotations and viewer identities remain private. Disclose aggregate analysis as a standard use of optional notes in the terms and Privacy Notice. Aggregation, evidence requirements, review and deletion handling are open implementation decisions. See the [draft viewer guide](research/film_notes_guide.md).
+Early product work will identify recurring experiences reported by distinct viewers across viewers’ notes. Use aggregate patterns to enrich shared film evidence for JEV reassessment and identify potential new qualities. Individual notes, quotations and viewer identities are not published or shared with other users. Disclose aggregate analysis as a standard use of optional notes in the terms and Privacy Notice. Aggregation, evidence requirements, review and deletion handling are open implementation decisions. See the [draft viewer guide](research/film_notes_guide.md).
 
 Extreme reactions carry greater weight than mild reactions; numeric weights remain experimental. For MVP, prompts follow the overall rating's sentiment rather than deliberately soliciting mixed positive and negative observations. Preserve what viewers actually write.
 
@@ -324,7 +324,7 @@ Ratings serves eligible candidates oldest first by creation time and ID. Catalog
 
 ## Mobile-first navigation — 26 October 2026
 
-Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. Anonymous visitors see a curated, read-only Ratings demonstration using real horror-film posters/synopses, fictional sample ratings and accompanying film notes; no identity or personal queue entry exists until meaningful explicit interaction. Product pages require login, completed registration or Continue as guest. A requested resource takes priority after entry; without one, guests go to Ratings and registered users to Library. Login/registration use dedicated pages, and login also offers guest continuation. This supersedes the earlier universal Ratings-root/no-homepage proposal.
+Agreed product structure: Ratings, Recommendations and Library are the three primary destinations, in that order. Anonymous visitors see labelled, illustrative previews of Ratings, Recommendations, Library and Glutton Profile using shared application components, real film metadata and fictional sample activity; no identity or personal queue entry exists until meaningful explicit interaction. Product pages require login, completed registration or Continue as guest. A requested resource takes priority after entry; without one, guests go to Ratings and registered users to Library. Login/registration use dedicated pages, and login also offers guest continuation. This supersedes the earlier universal Ratings-root/no-homepage proposal.
 
 - On mobile, use persistent bottom navigation with an icon and visible text label for each destination and a clear active state. Keep account/sign-in controls in the page header. Reserve content space for the navigation and device safe area so it never obscures forms, actions or the final list item. Use comfortable touch targets and verify keyboard/focus behaviour, zoom and narrow screens.
 - Library has Watchlist and Watched tabs above a poster grid. The URL preserves the active tab and Watched rating filters.

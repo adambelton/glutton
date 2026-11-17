@@ -4,7 +4,7 @@ require Rails.root.join("test/support/taste_profile_openai_stub")
 
 class TasteProfileTest < ApplicationSystemTestCase
   include TasteProfileOpenaiStub
-  test "a superuser follows an inline annotation to its claim and source evidence" do
+  test "a superuser reads the full profile without repeated claims or source notes" do
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "profile-browser@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
@@ -52,21 +52,14 @@ class TasteProfileTest < ApplicationSystemTestCase
     within(".ui-nav") { click_link I18n.t("account.title") }
     within(".account-tabs") { click_link I18n.t("account.profile") }
     within(".profile-narrative") do
-      assert_text "slowly building dread, [1] prefer body horror that feels personal, [2] and dislike gore without a purpose. [3]"
-      click_link I18n.t("account.evidence_marker", number: 2)
+      assert_text profile
+      assert_no_selector "a"
     end
-    within("#profile-evidence-2:target") do
-      assert_text "Prefers personal body horror."
-      assert_text "The loss of control ties the transformation to the character."
-      assert_text "like a loss of control."
-      assert_no_text "The extra gore distracted me."
-      find("summary", text: I18n.t("account.view_full_notes")).click
-      assert_selector "mark", exact_text: "like a loss of control."
-      assert_text "The transformation felt like a loss of control."
-      assert_text "The extra gore distracted me."
-      click_link I18n.t("account.edit_rating", film: film.title)
-    end
-    assert_current_path edit_rating_path(film_id: film.id)
+    assert_no_selector ".profile-evidence-list, .profile-annotation", visible: :all
+    assert_no_text "Enjoys quiet dread."
+    assert_no_text "The loss of control ties the transformation to the character."
+    assert_no_text "The quiet made it unsettling."
+
   ensure
     page.current_window.resize_to(*original_size) if original_size
   end
@@ -95,6 +88,9 @@ class TasteProfileTest < ApplicationSystemTestCase
     within(".account-tabs") { click_link I18n.t("account.profile") }
 
     row = find(".profile-quality-item")
+    gap = row.evaluate_script("(() => { const name = this.querySelector('.profile-quality-name'); const score = this.querySelector('.profile-quality-score'); const range = document.createRange(); range.selectNodeContents(name); return score.getBoundingClientRect().left - range.getBoundingClientRect().right; })()")
+    assert_operator gap, :>=, 0
+    assert_operator gap, :<=, 20
     within row do
       assert_no_text quality.match_rule
       find("summary").send_keys(:space)

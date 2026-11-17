@@ -1,0 +1,74 @@
+en:
+  identity:
+    entry:
+      profile_sample:
+        paragraphs:
+          - >-
+            You are drawn to horror that gives you time to settle into a place before making it unsafe. The lived-in spaceship in Alien and the ordinary streets in Halloween matter as much as the threat itself. You respond to characters with convincing working lives and relationships; tension feels stronger when there is something human to lose. Slow pacing appeals to you when each quiet scene changes what you expect, rather than simply delaying the next scare.
+          - >-
+            Paranoia and inventive practical effects are particular pleasures for you. The Thing (1982) is a favourite because the creature work and the uncertainty between the characters reinforce each other. The suspense continues even when nothing visibly monstrous is happening. You respond to effects that feel physically present and express the story's unease. The 2011 film did not work for you in the same way; the appeal is how atmosphere, character tension and craft come together, rather than the premise alone.
+          - >-
+            You are less interested in cheap jump scares that substitute an abrupt noise for anticipation. A frightening moment works better for you when the film has built a reason to care about what is about to happen. Repeated false alarms, predictable loud stings and characters who exist only to be startled tend to weaken the experience. Quiet does not have to mean uneventful: a change in trust, a sound in the next room or an unsettling detail can hold your attention.
+          - >-
+            Your taste spans decades rather than belonging to one period. The atmosphere of The Wicker Man can sit alongside the physical satire of The Substance. Modern studio remakes are less appealing when they trade a distinctive mood or approach for familiar, polished beats. These are current interpretations of what you have shared, not rules every new film must obey; your notes give the context and your ratings help the picture develop over time.
+        qualities:
+          slow_building_tension:
+            name: Slow-building tension
+            definition: "Quiet scenes steadily change expectations and build anticipation."
+          paranoia_and_distrust:
+            name: Paranoia and distrust
+            definition: "Uncertainty between characters sustains suspense even without an immediate threat."
+          practical_creature_effects:
+            name: Practical creature effects
+            definition: "Physical effects bring a convincing presence and expressive detail to the horror."
+          believable_environments:
+            name: Believable environments
+            definition: "Places feel inhabited and specific before something makes them unsafe."
+          human_vulnerability:
+            name: Human vulnerability
+            definition: "Recognisable fears and relationships give the danger emotional weight."
+          atmospheric_sound:
+            name: Atmospheric sound
+            definition: "Sound and silence build unease beyond an individual scare."
+          visual_storytelling:
+            name: Visual storytelling
+            definition: "Framing, colour and movement communicate tension without explaining it away."
+          distinctive_creature_design:
+            name: Distinctive creature design
+            definition: "A creature has an individual visual identity that supports the film's ideas."
+          isolated_settings:
+            name: Isolated settings
+            definition: "Distance from help increases pressure on the characters and their relationships."
+          ambiguous_mysteries:
+            name: Ambiguous mysteries
+            definition: "Some uncertainty remains for the viewer to think about after the film ends."
+          cheap_jump_scares:
+            name: Cheap jump scares
+            definition: "Abrupt surprises replace the anticipation that would give a frightening moment weight."
+          formulaic_modern_remakes:
+            name: Formulaic modern remakes
+            definition: "Familiar story beats replace the distinctive atmosphere or approach of an earlier film."
+          repetitive_loud_stings:
+            name: Repetitive loud stings
+            definition: "Sudden increases in volume repeatedly supply the main effect of a scare."
+          false_alarm_scares:
+            name: False-alarm scares
+            definition: "Threatening setups repeatedly resolve into harmless surprises before the real danger arrives."
+          predictable_scare_rhythms:
+            name: Predictable scare rhythms
+            definition: "Threats and reveals arrive in an easily anticipated pattern."
+          disposable_characters:
+            name: Disposable characters
+            definition: "Characters have little individuality beyond their place in the next scare."
+          spectacle_over_atmosphere:
+            name: Spectacle over atmosphere
+            definition: "Large effects sequences displace a sense of place, anticipation or character."
+          excessive_exposition:
+            name: Excessive exposition
+            definition: "Dialogue repeatedly explains the threat instead of letting uncertainty develop."
+          empty_nostalgia:
+            name: Empty nostalgia
+            definition: "References to an earlier film stand in for a new dramatic purpose."
+          overexplained_endings:
+            name: Overexplained endings
+            definition: "The finale resolves uncertainty that had made the experience unsettling."

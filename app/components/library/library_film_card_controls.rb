@@ -25,11 +25,7 @@ module Library
     private
 
     def action(tooltip, label, icon, url, method: :post)
-      tooltip_text = t("library.detail.#{tooltip}")
-      render Shared::ActionForm.new(url:, method:) do
-        render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
-          aria: { label: t("library.detail.#{label}", title: @library_film.film.title) }, data: { tooltip: tooltip_text }) { render icon }
-      end
+      render CardAction.new(url:, method:, label: t("library.detail.#{label}", title: @library_film.film.title), tooltip: t("library.detail.#{tooltip}")) { render icon }
     end
   end
 end

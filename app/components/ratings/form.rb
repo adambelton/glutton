@@ -35,7 +35,7 @@ module Ratings
         div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
         div(class: "rating-film-details") do
           h2 { render Registry::FilmTitle.new(film: @film) }
-          render Registry::FilmLinks.new(film: @film)
+          render Registry::FilmLinks.new(film: @film, readonly: @readonly)
           div(class: "rating-description", tabindex: "0", role: "region", aria: { label: t("ratings.browser.film_details") }) do
             overview = @film.tmdb_details.overview
             p(class: "rating-synopsis") { overview } if overview.present?
@@ -108,20 +108,12 @@ module Ratings
 
     def notes_field
       id = "#{@prefix}notes"
-      guidance_id = "#{id}-privacy-guidance" unless @readonly
-      descriptions = [ guidance_id, ("rating-errors" if @errors.present?) ].compact
       div(class: "rating-notes") do
         label(for: id) { t("ratings.browser.notes") }
-        if guidance_id.present?
-          div(class: "rating-notes-guidance") do
-            p(id: guidance_id) { t("ratings.browser.notes_privacy_guidance") }
-            text_link(t("identity.privacy_notice.title"), privacy_notice_path(anchor: "ai-providers"))
-          end
-        end
         textarea(id:, name: "notes", form: ("rating-form" unless @readonly), rows: 8, maxlength: Rating::MAX_NOTES_LENGTH, class: "ui-input",
           data: ({ rating_selection_target: "notes", action: "input->rating-selection#update" } unless @readonly),
           readonly: @readonly, placeholder: t("ratings.browser.notes_placeholder"),
-          aria: { describedby: (descriptions.join(" ") if descriptions.present?) }) { plain "\n#{@notes}" }
+          aria: { describedby: ("rating-errors" if @errors.present?) }) { plain "\n#{@notes}" }
       end
     end
   end

@@ -3,8 +3,11 @@ en:
     errors:
       unavailable: An active account is required.
     entry:
-      title: Find your next obsession.
-      eyebrow: Films worth an appetite.
+      title: Discover more of what you love about horror.
+      heading:
+        template: "Discover %{more} of what you love%{line_break} about %{horror}."
+        more: more
+        horror: horror
       empty: Our film collection is getting ready. You can still get started.
       continue_guest: Try it out as a guest
       try_it_out: Try it out
@@ -20,36 +23,67 @@ en:
       discard_guest_title: Discard guest activity?
       confirm_discard_guest: All your guest activity will be permanently lost, and your guest account will be destroyed.
       cancel_discard_guest: Cancel
+      preview_label: Illustrative example
+      preview_disclosure: These examples use fictional ratings and notes. Explore the samples and try the Library tabs and rating filters; film actions and trailer playback are available in the app.
+      library_empty: No example films match. Try changing the rating filters.
+      library_count:
+        one: 1 example film
+        other: "%{count} example films"
+      static_trailer: Trailer preview — playback is available in the app.
+      features:
+        ratings:
+          samples: Rating samples
+          eyebrow: 01 / Ratings
+          title: Rate it. Write what stayed with you.
+          description: Two people can love the same film for different reasons. Rate your own experience and add optional notes about what mattered to you.
+          detail_heading: Give Glutton more to understand.
+          details:
+            - A specific detail about your reaction can help Glutton make sense of more than one rating—and build a richer picture of what you enjoy over time. Your rating reflects your experience, not a verdict on whether a film is good or bad.
+            - Keep a journal of the horror you watch. Describe what stayed with you, what drew you in or pushed you away, and why—even when your reaction is hard to put into words.
+            - You might love a film’s atmosphere, its practical effects or the way it portrays grief. The same feature can work in one film and fall flat in another. Your notes give Glutton that context; there’s no review format to follow or list of qualities you need to choose.
+        recommendations:
+          samples: Recommendation samples
+          eyebrow: 02 / Recommendations
+          title: Turn your taste into your next watch.
+          description: Rate five films to get started with recommendations. Once Glutton has had time to understand those ratings, it can help you find more of the experiences you enjoy. Accept a suggestion to save it to your Watchlist, pass on it with Reject, or mark it watched if you’ve already seen it.
+          details:
+            - Those details help Glutton understand more than which films you like. They help it understand the experiences you’re looking for, so each new discovery can build on what you’ve shared.
+            - Glutton considers the qualities within films alongside your ratings and notes. That can help it find connections in what you enjoy that broad genre labels might miss.
+        library:
+          eyebrow: 03 / Library
+          title: A home for your watchlist and your journal.
+          description: Save something interesting to your Watchlist, watch it, then record your reaction in Watched. Your library keeps the next discovery and your past experiences together.
+          details:
+            - Revisit and edit your ratings and notes as you reflect or rewatch. You don’t have to capture everything on your first visit; your journal can develop with your thoughts.
+            - Glutton is a personal horror discovery app and film journal. Your ratings and notes aren’t published or shared with other users.
+        profile:
+          eyebrow: 04 / Glutton Profile
+          title: Watch your taste come into focus.
+          description: See what Glutton is learning about your taste—what draws you in, what puts you off, and where the details matter. This picture can change as you watch and write more; it isn’t a fixed label or a set of tags you need to choose.
+          details:
+            - Your notes give the profile its context. They help Glutton understand which qualities mattered to you and reconsider your wider rating history. Updates happen over time, rather than instantly.
+            - Over time, we want those experiences to deepen Glutton’s understanding of the films themselves—revealing connections that plot summaries and familiar genre labels can miss. Your notes can help shape how Glutton discovers those connections.
+            - Your ratings and notes aren’t published or shared with other users. Learning across viewers’ experiences to enrich the catalogue is a longer-term ambition, rather than something Glutton already does automatically.
       demo:
-        description: Your rating is only the beginning. Tell us what stayed with you.
-        label: Example ratings
-        browse: Browse example ratings
+        description: Glutton is a personal horror discovery app and film journal. Your ratings and notes help it understand the experiences you enjoy and find what to watch next.
+        browse_feature: "Browse %{feature}"
         select: "Show example %{position} of %{count}"
-        pause: Pause automatic cycling
-        resume: Resume automatic cycling
         position: "Example %{position} of %{count}"
         get_started: Make it yours.
         examples:
           alien:
             notes: |-
-              I loved how slowly the tension builds.
-              The industrial spaceship felt like a real, lived-in place.
-              The crew felt like people rather than action heroes.
+              I loved how slowly the tension builds. The quiet scenes had me watching the edges of the frame, waiting for something to move, instead of waiting for a loud noise to tell me to jump.
+
+              The industrial spaceship felt like a real workplace. The clutter, the machinery and the crew's little frustrations made it easy to believe that these people had lives before the film began.
+
+              I cared about who made it out because the crew felt vulnerable rather than heroic. The creature was frightening, but the isolation and the sense that nobody was coming to help stayed with me longest.
           the_thing:
+            notes: I loved the paranoia and the practical creature effects; the distrust between the crew kept me tense even when nothing was happening.
+          the_substance:
             notes: |-
-              I loved never knowing who to trust.
-              The practical creature effects were a bit much for me.
-          halloween:
-            notes: |-
-              The slow build made ordinary streets feel threatening.
-              I loved how much suspense came from the music and framing.
-              The simplicity made it more frightening.
-          the_exorcist:
-            notes: |-
-              The performances made the fear feel very real.
-              The religious horror was not for me.
-          american_werewolf:
-            notes: |-
-              The mix of comedy and horror worked for me.
-              The transformation scene was unforgettable.
-              I liked the contrast between everyday London and the nightmare.
+              I loved how the sound and colour turned ordinary routines into something uncomfortable. The close attention to bodies, surfaces and small rituals made the pressure on the central character feel physical before the horror became extreme.
+
+              The practical effects were gloriously excessive. They worked for me because the transformation was expressing the film's anger and desperation, rather than just supplying a creature to look at.
+
+              Some of the satire repeated its point longer than I needed, which kept this from being an outright favourite. But I liked that it committed to its own strange tone instead of falling back on a predictable string of jump scares.

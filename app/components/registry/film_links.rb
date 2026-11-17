@@ -1,7 +1,7 @@
 module Registry
   class FilmLinks < Shared::Base
-    def initialize(film:)
-      @film = film
+    def initialize(film:, readonly: false)
+      @film, @readonly = film, readonly
     end
 
     def view_template
@@ -19,6 +19,8 @@ module Registry
     private
 
     def source_link(label, url)
+      return span(class: "rating-film-link") { label } if @readonly
+
       a(href: url, class: "rating-film-link", target: "_blank", rel: "noopener noreferrer") { label }
     end
   end

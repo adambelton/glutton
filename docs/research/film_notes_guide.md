@@ -33,7 +33,7 @@ An opening can be playful, a middle stretch can feel oppressive, and an ending c
 - “I was calm while I watched it. Later that night every half-open door in my flat looked wrong.”
 - “The ending let me breathe again after an hour of waiting for something terrible. That release was what I loved.”
 
-If the ending matters, you can describe the effect without revealing the twist. In private notes, include whatever you want to remember.
+If the ending matters, you can describe the effect without revealing the twist. In your notes, include whatever you want to remember.
 
 ## Compare experiences and mention the occasion
 
@@ -49,15 +49,15 @@ Write down the part that’s hard to describe. “It felt like being wide awake 
 
 ## How notes help your recommendations today
 
-Glutton uses the notes you save to build your personal taste profile and interpret your ratings. A note can help Glutton understand that you liked the sense of distrust in a film, for example, and want that feeling again even in a different kind of story. Your notes are optional and private by default. You can add or revise them after rating a film. [Product brief](../product_brief.md) · [Ratings scoring design](../ratings_scoring_design.md)
+Glutton uses the notes you save to build your personal taste profile and interpret your ratings. A note can help Glutton understand that you liked the sense of distrust in a film, for example, and want that feeling again even in a different kind of story. Your notes are optional and aren’t published or shared with other users. You can add or revise them after rating a film. [Product brief](../product_brief.md) · [Ratings scoring design](../ratings_scoring_design.md)
 
 ## How your notes will help improve Glutton
 
-Once this feature is available, Glutton will look for recurring patterns across viewers’ private notes. If several viewers describe the same feeling or point to the same detail, that pattern can help us describe what it feels like to watch the film. For example, different viewers might notice that the lighting and quiet rooms make a haunted house feel inviting. If that distinction comes up across films and helps people find something they want to watch, it could become a new quality.
+Once this feature is available, Glutton will look for recurring patterns across viewers’ notes. If several viewers describe the same feeling or point to the same detail, that pattern can help us describe what it feels like to watch the film. For example, different viewers might notice that the lighting and quiet rooms make a haunted house feel inviting. If that distinction comes up across films and helps people find something they want to watch, it could become a new quality.
 
 Be specific when you can, and write what you actually felt. If everyone calls a film cozy and you found it oppressive, say what gave you that feeling. It helps us understand where reactions differ and what viewers are responding to.
 
-Your notes remain private. Glutton will use recurring patterns to improve shared film descriptions and qualities. Glutton’s standard terms and Privacy Notice will explain this use.
+Your notes aren’t published or shared with other users. Glutton will use recurring patterns to improve shared film descriptions and qualities. Glutton’s standard terms and Privacy Notice will explain this use.
 
 ### Product direction before launch
 

@@ -1,6 +1,8 @@
 require "test_helper"
+require "support/marketing_catalogue"
 
 class IdentityEntryTest < ActionDispatch::IntegrationTest
+  include MarketingCatalogue
   setup do
     @controllers = [ SessionsController, GuestSessionsController, RegistrationsController, RegistrationConfirmationsController ]
     @forgery = @controllers.to_h { |controller| [ controller, controller.allow_forgery_protection ] }
@@ -51,23 +53,29 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert Identity::UserGuest.exists?(guest.id)
   end
 
-  test "the five requested horror examples appear in order without creating personal activity" do
-    [ [ 1091, "The Thing" ], [ 948, "Halloween" ], [ 9552, "The Exorcist" ], [ 814, "An American Werewolf in London" ] ].each do |tmdb_id, title|
-      Registry::Film.create!(tmdb_id:, title:)
-    end
-    Registry::Film.create!(tmdb_id: 419430, title: "Get Out")
-    assert_no_difference [ "Identity::User.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "Library::LibraryFilm.count" ] do
+  def create_marketing_catalogue(poster_paths: {})
+    create_preview_catalogue(except: [ 348 ], poster_paths:)
+  end
+
+  test "curated samples render without creating personal activity" do
+    create_marketing_catalogue
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Ratings::RatingFilm.count", "Ratings::Rating.count",
+      "Library::LibraryFilm.count", "Recommendations::RecommendationFilm.count", "Ratings::TasteProfile.count" ] do
       get root_path
       assert_response :success
     end
-    panels = Nokogiri::HTML(response.body).css(".demo-frame")
-    assert_equal [ @film.title, "The Thing", "Halloween", "The Exorcist", "An American Werewolf in London" ], panels.map { |panel| panel.at_css("h2").text }
-    assert_select ".demo-dot", count: 5
-    panels.each do |panel|
-      assert_equal 1, panel.css("textarea[readonly]").size
-    end
-    assert_select '.demo-frame input[value="pretty_good"][checked]', count: 2
-    assert_select '.demo-frame input[value="i_enjoyed_that"]', count: 0
+    document = Nokogiri::HTML(response.body)
+    ratings = document.css('[aria-labelledby="ratings-preview-heading"] .demo-frame')
+    assert_equal [ @film.title, "The Thing (1982)", "The Substance (2024)" ], ratings.map { |panel| panel.at_css("h2").text }
+    recommendations = document.css('[aria-labelledby="recommendations-preview-heading"] .demo-frame')
+    assert_equal [ "Ring (1998)", "The Witch (2016)", "Backrooms (2026)" ], recommendations.map { |panel| panel.at_css("h2").text }
+    assert_select '[aria-labelledby="ratings-preview-heading"] .demo-dot', count: 3
+    assert_select '[aria-labelledby="recommendations-preview-heading"] .demo-dot', count: 3
+    assert_select '[aria-labelledby="library-preview-heading"] .demo-dot', count: 0
+    assert_select ".library-preview", count: 1
+    assert_select '[aria-labelledby="profile-preview-heading"] .demo-controls', count: 0
+    assert_select '.demo-frame input[value="pretty_good"][checked]', count: 1
+    assert_select '.demo-frame input[value="brilliant"][checked]', count: 2
     assert_select ".demo-frame form", count: 0
   end
 
@@ -89,40 +97,108 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "curated rating controls are readonly and have distinct field groups" do
-    Registry::Film.create!(title: "Another film", tmdb_id: 1091)
+  test "curated controls are static with distinct field groups and unique ids" do
+    create_marketing_catalogue
     get root_path
     assert_response :success
-    assert_select ".demo-frame", count: 2
-    assert_select ".demo-browser form", count: 0
-    assert_select ".demo-controls .demo-dot", count: 2
-    assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 1
-    assert_select ".demo-controls .demo-rotation", count: 1
-    assert_select ".demo-disclaimer, .expression-add", count: 0
-    assert_select ".demo-frame textarea[readonly]", count: 2
+    assert_select ".demo-frame", count: 6
+    assert_select ".marketing-preview a[href], .marketing-preview iframe", count: 0
+    assert_select ".marketing-preview form", count: 1
+    assert_select '.library-preview-search[disabled] form[method="get"][action=?]', library_film_search_path, count: 1
+    assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 2
+    assert_select ".demo-controls .demo-rotation", count: 0
+    assert_select ".demo-frame textarea[readonly]", count: 3
+    notes = Nokogiri::HTML(response.body).css(".demo-frame textarea[readonly]").map { |field| field.text.strip }
+    assert_operator notes.first.split("\n\n").size, :>=, 3
+    assert_equal I18n.t("identity.entry.demo.examples.the_thing.notes"), notes.second
+    assert_equal 1, notes.second.lines.size
     assert_select '.demo-browser input[name="rating_film_id"]', count: 0
-    assert_select ".demo-browser .rating-choices[disabled]", count: 2
-    assert_select ".demo-browser fieldset[disabled] input[checked]", count: 2
+    assert_select ".demo-browser .rating-choices[disabled]", count: 3
+    assert_select ".demo-browser fieldset[disabled] input[checked]", count: 3
     document = Nokogiri::HTML(response.body)
     groups = document.css('.demo-frame input[type="radio"]').map { |node| node["name"] }.uniq
-    assert_equal 2, groups.size
-    assert_select ".demo-browser textarea[readonly]", count: 2
+    assert_equal 3, groups.size
     ids = document.css("[id]").map { |node| node["id"] }
     assert_equal ids.uniq, ids
   end
 
-  test "preview uses safe posters and external source links without trailer actions" do
-    Registry::Film.create!(title: "Another film", tmdb_id: 1091, tmdb_metadata: { details: { poster_path: "https://evil.test/poster.jpg" } })
+  test "previews retain safe poster and source presentation with static trailer imagery" do
+    create_marketing_catalogue(poster_paths: { 1091 => "https://evil.test/poster.jpg" })
+    get root_path
+    assert_select 'img[src="https://image.tmdb.org/t/p/w500/poster.jpg"]'
+    assert_select ".poster-placeholder"
+    assert_select 'img[src^="https://evil.test"]', count: 0
+    assert_select '[aria-labelledby="ratings-preview-heading"] .rating-film-links', count: 3
+    assert_select ".rating-film-link", text: I18n.t("registry.film_presentation.wikipedia")
+    assert_select ".rating-film-link", text: I18n.t("registry.film_presentation.tmdb")
+    assert_select 'img.recommendation-trailer-still[src="https://i.ytimg.com/vi/97OQ7MQC5Ck/hqdefault.jpg"]'
+    assert_select ".recommendation-trailer-still", count: 3
+    assert_select '.recommendation-trailer-play[aria-hidden="true"] svg', count: 3
+    assert_select ".recommendation-trailer-caption", text: I18n.t("identity.entry.static_trailer"), count: 3
+    assert_select ".marketing-preview iframe, .marketing-preview a[href]", count: 0
+  end
+
+  test "marketing explains the four features in order using complete static app previews" do
+    create_marketing_catalogue
     get root_path
     assert_response :success
-    assert_select 'img[src="https://image.tmdb.org/t/p/w500/poster.jpg"]'
-    assert_select "h2", @film.title
-    assert_select ".poster-placeholder"
-    assert_select ".demo-browser .rating-film-links", count: 2
-    assert_select '.demo-browser .rating-film-links a[target="_blank"][rel="noopener noreferrer"]', count: 3
-    assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.wikipedia")
-    assert_select ".demo-browser .rating-film-links a", text: I18n.t("registry.film_presentation.tmdb")
-    assert_select '.demo-browser a[href*="trailer"]', count: 0
+    document = Nokogiri::HTML(response.body)
+    assert_equal %w[ratings-preview-heading recommendations-preview-heading library-preview-heading profile-preview-heading],
+      document.css(".marketing-feature-intro h2").map { |heading| heading["id"] }
+    %w[ratings recommendations library profile].each do |feature|
+      assert_select "##{feature}-preview-heading", I18n.t("identity.entry.features.#{feature}.title")
+      assert_select "##{feature}-preview-disclosure", I18n.t("identity.entry.preview_label")
+    end
+    assert_select ".marketing-preview .recommendation-film button[disabled]", count: 9
+    assert_select "#preview-explanation", I18n.t("identity.entry.preview_disclosure")
+    assert_select ".marketing-preview .profile-narrative", count: 1
+    assert_select ".marketing-preview .profile-quality-item", count: 20
+    profile_text = document.at_css(".profile-narrative").text
+    assert_includes profile_text, "Quiet does not have to mean uneventful: a change in trust"
+    assert_not_includes profile_text, "=>"
+    assert_select ".marketing-preview .profile-evidence-list, .marketing-preview .profile-annotation", count: 0
+    assert_select ".marketing-preview details.profile-quality-item:not([open])", count: 20
+    assert_select ".marketing-preview .profile-quality-item > summary", count: 20
+    assert_equal %w[+32 +30 +28 +25 +23 +21 +19 +17 +15 +12 -29 -26 -23 -21 -19 -16 -14 -12 -10 -8],
+      document.css(".marketing-preview .profile-quality-score").map(&:text)
+    assert_select ".marketing-preview .library-films", count: 2
+    collections = document.css('[aria-labelledby="library-preview-heading"] .library-preview-panel').map do |frame|
+      frame.css(".library-film h3").map(&:text)
+    end
+    assert_equal [ "Ring (1998)", "The Witch (2016)", "Backrooms (2026)" ], collections.first
+    assert_equal 20, collections.last.size
+    assert_includes collections.last, "The Thing (1982)"
+    assert_includes collections.last, "The Thing (2011)"
+    watched = document.at_css('.library-preview-panel[data-view="watched"]')
+    assert_equal %w[brilliant garbage not_for_me pretty_good unrated], watched.css("[data-sample-rating]").map { |node| node["data-sample-rating"] }.uniq.sort
+    assert_empty collections.first & collections.last
+    assert_select '.library-preview-search[disabled] input[type="search"][name="query"]', count: 1
+    assert_select ".marketing-preview .library-tabs button", count: 4
+    assert_select ".marketing-preview .library-rating-filters button[value]", count: 5
+    assert_select ".marketing-preview .library-pagination", count: 2
+    assert_select ".marketing-preview .library-card-actions button[disabled]"
+    assert_select ".marketing-preview .library-rating-notes-badge"
+    assert_select ".marketing-preview .library-rating-icon[aria-description=?]", I18n.t("library.browser.notes_absent")
+    assert_select ".marketing-preview .library-rating-icon[aria-label=?]", I18n.t("library.browser.edit_film_rating", title: "The Thing")
+    assert_no_match(/translation missing/i, response.body)
+    assert_no_match(/journal entr/i, response.body)
+  end
+
+  test "missing catalogue preserves the profile and entry with clear film fallbacks" do
+    @film.destroy!
+    get root_path
+    assert_response :success
+    assert_select ".marketing-feature", count: 4
+    assert_select ".preview-empty", count: 3
+    assert_select ".profile-narrative"
+    assert_select ".demo-entry form[action=?]", guest_session_path
+  end
+
+  test "recommendation preview omits films without stored usable trailers" do
+    Registry::Film.create!(tmdb_id: 310131, title: "No trailer")
+    get root_path
+    assert_select '[aria-labelledby="recommendations-preview-heading"] .preview-empty'
+    assert_select ".recommendation-trailer-still", count: 0
   end
 
   test "protected resource returns after explicit guest entry and root then uses guest default" do

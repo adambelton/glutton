@@ -11,8 +11,7 @@ module Views
           render ::Identity::AccountNavigation.new(section: :profile)
           section(aria: { labelledby: "taste-profile-heading" }) do
             h2(id: "taste-profile-heading") { t("account.profile") }
-            profile_content
-            quality_rankings
+            render ::Account::TasteProfile.new(profile: @profile)
           end
           section(aria: { labelledby: "pending-evidence-heading" }) do
             h2(id: "pending-evidence-heading") { t("account.pending") }
@@ -25,109 +24,6 @@ module Views
       end
 
       private
-
-      def quality_rankings
-        rankings = @profile.fetch(:quality_rankings)
-        div(class: "profile-quality-rankings") do
-          quality_list(:top, rankings.fetch(:top))
-          quality_list(:bottom, rankings.fetch(:bottom))
-        end
-      end
-
-      def quality_list(kind, qualities)
-        section(aria: { labelledby: "#{kind}-qualities-heading" }) do
-          h3(id: "#{kind}-qualities-heading") { t("account.quality_rankings.#{kind}") }
-          if qualities.empty?
-            p { t("account.quality_rankings.#{kind}_empty") }
-          else
-            ul(class: "profile-quality-list", role: "list") do
-              qualities.each { |quality| li { quality_item(quality) } }
-            end
-          end
-        end
-      end
-
-      def quality_item(quality)
-        definition = quality.fetch(:definition)
-        details(class: "profile-quality-item") do
-          summary do
-            span(class: "profile-quality-name") { quality.fetch(:name) }
-            span(class: "profile-quality-score") { "%+d" % quality.fetch(:score) }
-          end
-          p { definition.presence || t("account.quality_rankings.definition_unavailable") }
-        end
-      end
-
-      def profile_content
-        if @profile[:profile].blank?
-          p { t("account.empty") }
-          return
-        end
-
-        annotations = @profile.fetch(:annotations)
-        narrative = @profile.fetch(:profile)
-        div(class: "profile-narrative") do
-          offset = 0
-          annotations.each.with_index(1) do |annotation, number|
-            ending = annotation.fetch(:end_offset)
-            plain narrative[offset...ending]
-            plain " "
-            a(href: "#profile-evidence-#{number}", class: "profile-annotation", data: { turbo: "false" },
-              aria: { label: t("account.supporting_evidence", number:) }) { t("account.evidence_marker", number:) }
-            offset = ending
-          end
-          plain narrative[offset..]
-        end
-        evidence_list(annotations) if annotations.present?
-      end
-
-      def evidence_list(annotations)
-        section(aria: { labelledby: "profile-evidence-heading" }) do
-          h3(id: "profile-evidence-heading") { t("account.evidence_list") }
-          ol(class: "profile-evidence-list") do
-            annotations.each.with_index(1) do |annotation, number|
-              li(id: "profile-evidence-#{number}", tabindex: "-1") do
-                strong { annotation.fetch(:claim) }
-                p { annotation.fetch(:explanation) }
-                ul do
-                  annotation.fetch(:evidence).each do |note|
-                    li { cited_note(note) }
-                  end
-                end
-              end
-            end
-          end
-        end
-      end
-
-      def cited_note(note)
-        text = note.fetch("text")
-        citations = note.fetch("citations").sort_by { |citation| citation.fetch("start_offset") }
-        p { note.fetch("film_title") }
-        p { t("account.earlier_rating_evidence") } if note.fetch("earlier_version")
-        citations.each do |citation|
-          blockquote { text[citation.fetch("start_offset")...citation.fetch("end_offset")] }
-        end
-        details do
-          summary { t("account.view_full_notes") }
-          blockquote { highlighted_notes(text, citations) }
-        end
-        text_link(t("account.edit_rating", film: note.fetch("film_title")), edit_rating_path(film_id: note.fetch("film_id")))
-      end
-
-      def highlighted_notes(text, citations)
-        cursor = 0
-        citations.each do |citation|
-          ending = citation.fetch("end_offset")
-          next if ending <= cursor
-
-          start = [ cursor, citation.fetch("start_offset") ].max
-          plain text[cursor...start]
-          mark { text[start...ending] }
-          cursor = ending
-        end
-        plain text[cursor..]
-      end
 
       def pending_evidence
         if @profile[:changes].empty?

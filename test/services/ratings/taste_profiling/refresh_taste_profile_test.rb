@@ -515,20 +515,16 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     end
   end
 
-  test "an identical revision during synthesis preserves the assessed ID and resolves the latest ID for display" do
+  test "an identical revision during synthesis preserves the assessed ID without pending changes" do
     rating = submit([ "Quiet dread worked." ])
-    replacement = nil
-
     revision = refresh do |**|
-      replacement = revise(rating, [ rating.notes ])
+      revise(rating, [ rating.notes ])
       synthesis
     end
 
     assert_equal [ rating.id ], revision.annotations.sole.fetch("citations").pluck("rating_id")
     assert_equal [ rating.id ], revision.taste_profile_revision_eval.output.fetch("evidence").pluck("rating_id")
-    evidence = Ratings::TasteProfiling::ViewTasteProfile.call(user_id: @user.id).fetch(:annotations).sole.fetch(:evidence).sole
-    assert_equal replacement.id, evidence.fetch("rating_id")
-    assert_not evidence.fetch("earlier_version")
+    assert_empty Ratings::TasteProfiling::ViewTasteProfile.call(user_id: @user.id).fetch(:changes)
     assert_equal revision, refresh { flunk "Identical notes must not trigger another synthesis" }
   end
 
