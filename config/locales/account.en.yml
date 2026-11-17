@@ -10,12 +10,6 @@ en:
       bottom: Bottom 10 qualities
       top_empty: No qualities have a positive score yet.
       bottom_empty: No qualities have a negative score yet.
-    supporting_evidence: "Supporting evidence %{number}"
-    evidence_list: Claims and evidence
-    evidence_marker: "[%{number}]"
-    earlier_rating_evidence: From an earlier rating version.
-    view_full_notes: View full notes
-    edit_rating: "Edit rating for %{film}"
     pending: Pending evidence
     no_pending_evidence: No notes changes since the last profile update.
     unknown_film: Unknown film

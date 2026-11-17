@@ -1,42 +1,50 @@
 module Views
   module Identity
     class Landing < ::Views::Base
-      def initialize(examples:)
-        @examples = examples
+      def initialize(examples:, films:)
+        @examples, @films = examples, films
       end
 
       def view_template
         render Shared::Layout.new(title: t("identity.entry.title")) do
           main(id: "main-content", tabindex: "-1", class: "landing-demo") do
             header(class: "demo-intro") do
-              p(class: "preview-eyebrow") { t("identity.entry.eyebrow") }
-              h1 { t("identity.entry.title") }
+              h1 { hero_heading }
               p { t("identity.entry.demo.description") }
             end
-            if @examples.present?
-              section(class: "demo-browser", aria: { label: t("identity.entry.demo.label") },
-                data: { controller: "landing-examples", action: "mouseenter->landing-examples#stop mouseleave->landing-examples#start focusin->landing-examples#stop focusout->landing-examples#resume visibilitychange@document->landing-examples#start", "landing-examples-position-template-value": t("identity.entry.demo.position", position: "%{position}", count: @examples.size) }) do
-                @examples.each_with_index do |example, index|
-                  article(class: "demo-frame", hidden: index != 0, aria: { label: example.fetch(:film).title }, data: { "landing-examples-target": "panel" }) do
-                    render ::Ratings::Form.new(film: example.fetch(:film), value: example.fetch(:rating),
-                      notes: t("identity.entry.demo.examples.#{example.fetch(:key)}.notes"), readonly: true)
-                  end
+            feature_section(:ratings) do
+              if @examples.present?
+                render ::Identity::PreviewCarousel.new(feature: :ratings, labels: @examples.map { |example| example.fetch(:film).title }) do |index|
+                  example = @examples.fetch(index)
+                  render ::Ratings::Form.new(film: example.fetch(:film), value: example.fetch(:rating),
+                    notes: t("identity.entry.demo.examples.#{example.fetch(:key)}.notes"), readonly: true)
                 end
-                nav(class: "demo-controls", hidden: true, aria: { label: t("identity.entry.demo.browse") }, data: { "landing-examples-target": "controls" }) do
-                  p(class: "sr-only", aria: { live: "polite", atomic: "true" }, data: { "landing-examples-target": "position" }) { t("identity.entry.demo.position", position: 1, count: @examples.size) }
-                  @examples.each_index do |index|
-                    render Shared::IconButton.new(variant: :plain, class: "demo-dot", aria: { label: t("identity.entry.demo.select", position: index + 1, count: @examples.size), current: ("true" if index.zero?) },
-                      data: { "landing-examples-target": "dot", action: "landing-examples#select", index: })
-                  end
-                  render Shared::IconButton.new(variant: :plain, class: "demo-rotation", aria: { label: t("identity.entry.demo.pause") },
-                    data: { "landing-examples-target": "rotation", action: "landing-examples#toggle",
-                      "pause-label": t("identity.entry.demo.pause"), "resume-label": t("identity.entry.demo.resume") }) do
-                    span(aria: { hidden: "true" }, data: { "landing-examples-target": "rotationIcon" }) { "Ⅱ" }
-                  end
-                end
+              else
+                empty_preview
               end
-            else
-              p(class: "preview-empty") { t("identity.entry.empty") }
+            end
+            feature_section(:recommendations) do
+              films = ::Identity::MarketingSamples::RECOMMENDATION_FILM_IDS.filter_map { |id| @films[id] }.select { |film| film.tmdb_details.youtube_trailer_id.present? }
+              if films.present?
+                render ::Identity::PreviewCarousel.new(feature: :recommendations, labels: films.map(&:title)) do |index|
+                  render ::Recommendations::FilmCard.new(film: films.fetch(index), readonly: true)
+                end
+              else
+                empty_preview
+              end
+            end
+            feature_section(:library) do
+              if @films.present?
+                render ::Identity::LibraryPreview.new(films: @films)
+              else
+                empty_preview
+              end
+            end
+            feature_section(:profile) do
+              div(class: "demo-browser account-page") do
+                h3 { t("account.profile") }
+                render ::Account::TasteProfile.new(profile: sample_profile)
+              end
             end
             section(class: "demo-entry", aria: { label: t("identity.entry.demo.get_started") }) do
               h2 { t("identity.entry.demo.get_started") }
@@ -53,6 +61,59 @@ module Views
             end
           end
         end
+      end
+
+      private
+
+      def hero_heading
+        t("identity.entry.heading.template", more: "%{more}", horror: "%{horror}", line_break: "%{line_break}").split(/(%{more}|%{horror}|%{line_break})/).each do |part|
+          case part
+          when "%{more}"
+            span(class: "hero-more") { t("identity.entry.heading.more") }
+          when "%{line_break}"
+            br(class: "hero-line-break")
+          when "%{horror}"
+            span(class: "hero-horror") { t("identity.entry.heading.horror") }
+          else
+            plain part
+          end
+        end
+      end
+
+      def feature_section(feature)
+        section(class: "marketing-feature", aria: { labelledby: "#{feature}-preview-heading" }) do
+          header(class: "marketing-feature-intro") do
+            p(class: "preview-eyebrow") { t("identity.entry.features.#{feature}.eyebrow") }
+            h2(id: "#{feature}-preview-heading") { t("identity.entry.features.#{feature}.title") }
+            p { t("identity.entry.features.#{feature}.description") }
+          end
+          div(class: "marketing-preview", aria: { describedby: "preview-explanation" }) do
+            p(id: "#{feature}-preview-disclosure", class: "preview-disclosure") do
+              strong { t("identity.entry.preview_label") }
+            end
+            yield
+          end
+          if feature == :ratings
+            p(id: "preview-explanation", class: "preview-explanation") { t("identity.entry.preview_disclosure") }
+          end
+          div(class: "marketing-feature-context") do
+            h3 { t("identity.entry.features.#{feature}.detail_heading") } if feature == :ratings
+            t("identity.entry.features.#{feature}.details").each { |paragraph| p { paragraph } }
+          end
+        end
+      end
+
+      def empty_preview
+        p(class: "preview-empty") { t("identity.entry.empty") }
+      end
+
+      def sample_profile
+        { profile: t("identity.entry.profile_sample.paragraphs").join("\n\n"),
+          quality_rankings: ::Identity::MarketingSamples::PROFILE_QUALITY_RANKINGS.transform_values do |qualities|
+            qualities.map do |quality|
+              t("identity.entry.profile_sample.qualities.#{quality.fetch(:key)}").merge(score: quality.fetch(:score))
+            end
+          end }
       end
     end
   end

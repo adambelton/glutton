@@ -19,8 +19,7 @@ en:
       reload: Reload current rating
       choice: What did you think?
       notes: Your notes (optional)
-      notes_privacy_guidance: Glutton uses AI to analyse your notes and personalise recommendations. Keep your notes about the film and leave out personal details about yourself or others.
-      notes_placeholder: What stayed with you? What worked for you, or didn’t?
+      notes_placeholder: What did you love or hate about the film, and why? Describe the experience. Think about particular moments, characters, atmosphere, pacing, and how the film made you feel.
       save: Save
       save_disabled: Select a rating to save.
       dismiss: Dismiss

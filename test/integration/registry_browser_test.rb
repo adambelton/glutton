@@ -210,14 +210,14 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "article#source-P1"
   end
 
-  test "Registry stylesheet serves its local wordmark font without hero imagery" do
+  test "Registry stylesheet serves its local wordmark font without background imagery" do
     get registry_films_path
     stylesheet = Nokogiri::HTML(response.body).at_css('link[rel="stylesheet"]')["href"]
     get stylesheet
     assert_response :success
     assets = response.body.scan(/url\(["']?([^"')]+)["']?\)/).flatten.select { |path| path.include?("tangerine-regular") }.uniq
     assert_equal 1, assets.size
-    assert_no_match(/hero|background-image/, response.body)
+    assert_no_match(/background-image\s*:/, response.body)
     assets.each do |path|
       get path
       assert_response :success

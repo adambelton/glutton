@@ -1,0 +1,85 @@
+module Recommendations
+  class FilmCard < Shared::Base
+    def initialize(film:, readonly: false)
+      @film, @readonly = film, readonly
+    end
+
+    def view_template
+      details = @film.tmdb_details
+      video_id = details.youtube_trailer_id
+      render Shared::FilmCard.new(layout: "recommendation-film", data: ({ controller: "recommendation-trailer",
+        action: "keydown.esc->recommendation-trailer#collapse resize@window->recommendation-trailer#fitViewport" } if video_id.present? && !@readonly)) do
+        div(class: "recommendation-artwork") { render ::Registry::FilmPoster.new(film: @film) }
+        div(class: "recommendation-details") do
+          h2 { render ::Registry::FilmTitle.new(film: @film) }
+          render ::Registry::FilmLinks.new(film: @film, readonly: @readonly)
+          overview = details.overview
+          p(class: "recommendation-synopsis") { overview } if overview.present?
+        end
+        div(class: "recommendation-response") do
+          trailer(video_id:) if video_id.present?
+          div(class: "film-actions recommendation-actions") do
+            params = { film_id: @film.id }
+            response_action(url: accept_recommendation_path, params:) do
+              render Shared::PrimaryButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.accept") }
+            end
+            response_action(url: reject_recommendation_path, params:) do
+              render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.reject") }
+            end
+            label = t("library.detail.add_to_watched")
+            response_action(url: add_to_watched_from_recommendations_path, params:) do
+              render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
+                aria: { label: }, data: { tooltip: label }) { render ::Library::EyeCheckIcon.new }
+            end
+          end
+        end
+      end
+    end
+
+    private
+
+    def response_action(url:, params:, &block)
+      if @readonly
+        div(class: "ui-action-form", &block)
+      else
+        render Shared::ActionForm.new(url:, params:), &block
+      end
+    end
+
+    def trailer(video_id:)
+      div(class: "recommendation-trailer") do
+        div(class: "recommendation-trailer-frame") do
+          if @readonly
+            div(class: "recommendation-trailer-thumbnail") do
+              img(src: "https://i.ytimg.com/vi/#{video_id}/hqdefault.jpg", alt: t("recommendations.trailer_for", title: @film.title),
+                width: 480, height: 360, loading: "lazy", referrerpolicy: "no-referrer", class: "recommendation-trailer-still")
+              span(class: "recommendation-trailer-play", aria: { hidden: "true" }) do
+                svg(viewBox: "0 0 24 24", width: 28, height: 28, fill: "currentColor", aria: { hidden: true }) do |icon|
+                  icon.path(d: "M8 5v14l11-7Z")
+                end
+              end
+            end
+            p(class: "recommendation-trailer-caption") { t("identity.entry.static_trailer") }
+          else
+            trailer_player(video_id:)
+          end
+        end
+      end
+    end
+
+    def trailer_player(video_id:)
+      iframe(id: "recommendation-trailer-player", src: "https://www.youtube.com/embed/#{video_id}", title: t("recommendations.trailer_for", title: @film.title),
+        loading: "lazy", allowfullscreen: true)
+      render Shared::IconButton.new(variant: :plain, class: "recommendation-trailer-toggle", hidden: true,
+        aria: { controls: "recommendation-trailer-player", expanded: "false", label: t("recommendations.expand_trailer") },
+        data: { recommendation_trailer_target: "toggle", action: "recommendation-trailer#toggle",
+          expand_label: t("recommendations.expand_trailer"), collapse_label: t("recommendations.collapse_trailer") }) do
+        svg(viewBox: "0 0 24 24", width: "20", height: "20", fill: "none", stroke: "currentColor",
+          stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round", aria: { hidden: true }) do |icon|
+          icon.path(class: "trailer-expand-icon", d: "M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6")
+          icon.path(class: "trailer-collapse-icon", d: "M3 9h6V3m12 6h-6V3M9 21v-6H3m12 6v-6h6")
+        end
+      end
+    end
+  end
+end
