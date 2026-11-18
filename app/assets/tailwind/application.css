@@ -359,7 +359,8 @@
 .rating-film-link { display: inline-flex; align-items: center; gap: 6px; color: var(--glutton-muted-foreground); }
 a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .landing-demo { max-width: 1200px; margin-inline: auto; }
-.demo-intro { max-width: 820px; margin-block: 0 32px; }
+.ui-content:has(> .landing-demo) { padding-top: 32px; }
+.demo-intro { max-width: 820px; margin-block: 0 24px; }
 .demo-intro h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.1; margin-block: 12px 16px; letter-spacing: -.03em; }
 .demo-intro > p { color: var(--glutton-muted-foreground); line-height: 1.7; }
 .demo-browser { border: 1px solid var(--glutton-border); border-radius: 6px; padding: 28px; background: var(--glutton-surface); }
@@ -587,15 +588,13 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .marketing-feature { margin-block: 64px; }
 .marketing-feature-intro { max-width: 760px; margin-bottom: 24px; }
 .marketing-feature-intro h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.2; margin-block: 10px 14px; letter-spacing: -.025em; }
-.marketing-feature-intro > p:last-child { color: var(--glutton-muted-foreground); line-height: 1.7; }
-.preview-disclosure { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; color: var(--glutton-muted-foreground); font-size: 12px; line-height: 1.6; }
-.preview-disclosure strong { border: 1px solid var(--glutton-border); border-radius: 4px; padding: 2px 8px; color: var(--glutton-foreground); font-weight: 500; }
+.marketing-feature-intro > p:not(.preview-eyebrow) { color: var(--glutton-muted-foreground); line-height: 1.7; }
 .marketing-preview .rating-choice label, .marketing-preview textarea[readonly] { cursor: default; }
 .marketing-preview .rating-choice:has(input:disabled):hover { background: transparent; }
 .marketing-preview .rating-choice:has(input:disabled:checked):hover { background: var(--glutton-inset); }
 .marketing-preview .demo-browser > h3 { margin-bottom: 20px; font-size: 20px; }
 @media (max-width: 650px) {
-  .demo-intro { margin-block: 0 24px; }
+  .ui-content:has(> .landing-demo) { padding-top: 16px; }
   .marketing-feature { margin-block: 40px; }
 }
 
@@ -608,9 +607,9 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .recommendation-trailer-thumbnail { position: relative; }
 .recommendation-trailer-play { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); display: grid; place-items: center; width: 68px; height: 48px; border-radius: 12px; color: white; background: rgb(0 0 0 / .8); pointer-events: none; }
 
-.demo-intro + .marketing-feature { margin-top: 32px; }
-.marketing-feature-context { max-width: 760px; margin-top: 24px; line-height: 1.7; color: var(--glutton-muted-foreground); }
-.marketing-feature-context p + p { margin-top: 16px; }
+.demo-intro + .marketing-feature { margin-top: 64px; }
+.demo-intro + .marketing-feature .marketing-feature-intro { margin-bottom: 16px; }
+.demo-intro > p + p { margin-top: 12px; }
 
 .hero-more, .hero-horror { display: inline-block; font: 400 2em/.55 Tangerine, cursive; letter-spacing: 0; }
 .hero-horror { color: #c32630; }
@@ -620,8 +619,16 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 @media (min-width: 651px) {
   .hero-line-break { display: initial; }
 }
-.preview-explanation { max-width: 760px; margin-top: 20px; font-size: 12px; line-height: 1.6; color: var(--glutton-muted-foreground); }
-.marketing-feature-context h3 { margin-bottom: 12px; color: var(--glutton-foreground); font-size: 22px; line-height: 1.3; }
+
+.marketing-faq { max-width: 760px; margin-block: 64px; }
+.marketing-faq h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.2; margin-bottom: 24px; letter-spacing: -.025em; }
+.marketing-faq details { border-bottom: 1px solid var(--glutton-border); }
+.marketing-faq summary { padding-block: 20px; cursor: pointer; font-weight: 500; }
+.marketing-faq-answer { padding-bottom: 20px; color: var(--glutton-muted-foreground); line-height: 1.7; }
+.marketing-faq-answer p + p { margin-top: 16px; }
+@media (max-width: 650px) {
+  .marketing-faq { margin-block: 40px; }
+}
 .library-preview-panel[hidden], .library-preview .library-film[hidden] { display: none; }
 .library-preview-status, .library-preview-empty { margin-top: 16px; font-size: 13px; color: var(--glutton-muted-foreground); }
 

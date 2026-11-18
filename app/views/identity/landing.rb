@@ -10,7 +10,7 @@ module Views
           main(id: "main-content", tabindex: "-1", class: "landing-demo") do
             header(class: "demo-intro") do
               h1 { hero_heading }
-              p { t("identity.entry.demo.description") }
+              t("identity.entry.demo.description").each { |paragraph| p { paragraph } }
             end
             feature_section(:ratings) do
               if @examples.present?
@@ -46,11 +46,11 @@ module Views
                 render ::Account::TasteProfile.new(profile: sample_profile)
               end
             end
+            frequently_asked_questions
             section(class: "demo-entry", aria: { label: t("identity.entry.demo.get_started") }) do
               h2 { t("identity.entry.demo.get_started") }
-              div(class: "preview-actions") do
-                render ::Identity::AccountEntryControls.new
-              end
+              p { t("identity.entry.demo.invitation") }
+              entry_actions
               p(class: "muted") { t("identity.entry.guest_explanation") }
               p { text_link(t("identity.privacy_notice.title"), privacy_notice_path) }
               p(class: "preview-attribution") do
@@ -87,18 +87,31 @@ module Views
             h2(id: "#{feature}-preview-heading") { t("identity.entry.features.#{feature}.title") }
             p { t("identity.entry.features.#{feature}.description") }
           end
-          div(class: "marketing-preview", aria: { describedby: "preview-explanation" }) do
-            p(id: "#{feature}-preview-disclosure", class: "preview-disclosure") do
-              strong { t("identity.entry.preview_label") }
-            end
+          div(class: "marketing-preview") do
             yield
           end
-          if feature == :ratings
-            p(id: "preview-explanation", class: "preview-explanation") { t("identity.entry.preview_disclosure") }
+        end
+      end
+
+      def entry_actions
+        div(class: "preview-actions") do
+          render Shared::ActionForm.new(url: guest_session_path) do
+            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("identity.entry.demo.try_as_guest") }
           end
-          div(class: "marketing-feature-context") do
-            h3 { t("identity.entry.features.#{feature}.detail_heading") } if feature == :ratings
-            t("identity.entry.features.#{feature}.details").each { |paragraph| p { paragraph } }
+          text_link(t("ui.register"), new_registration_path)
+        end
+      end
+
+      def frequently_asked_questions
+        section(class: "marketing-faq", aria: { labelledby: "faq-heading" }) do
+          h2(id: "faq-heading") { t("identity.entry.faq.title") }
+          t("identity.entry.faq.questions").each do |question|
+            details do
+              summary { question.fetch(:question) }
+              div(class: "marketing-faq-answer") do
+                question.fetch(:answer).each { |paragraph| p { paragraph } }
+              end
+            end
           end
         end
       end

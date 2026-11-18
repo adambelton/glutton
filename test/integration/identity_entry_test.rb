@@ -91,6 +91,10 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select "header form[action=?]", guest_session_path do
       assert_select "button", I18n.t("identity.entry.try_it_out")
     end
+    assert_select 'head link[rel="icon"][href="/glutton-mark.png?v=2"][type="image/png"]'
+    assert_select 'head link[rel="icon"][href="/glutton-mark.svg?v=2"][type="image/svg+xml"]'
+    assert_select 'head link[rel="apple-touch-icon"][href="/glutton-mark.png?v=2"]'
+    assert_select 'head link[href="/icon.png"], head link[href="/icon.svg"]', count: 0
     assert_select ".guest-banner", count: 0
     assert_select 'button[data-controller="theme"][aria-label=?]', I18n.t("ui.dark_mode") do
       assert_select 'span[aria-hidden="true"]'
@@ -147,10 +151,11 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       document.css(".marketing-feature-intro h2").map { |heading| heading["id"] }
     %w[ratings recommendations library profile].each do |feature|
       assert_select "##{feature}-preview-heading", I18n.t("identity.entry.features.#{feature}.title")
-      assert_select "##{feature}-preview-disclosure", I18n.t("identity.entry.preview_label")
     end
     assert_select ".marketing-preview .recommendation-film button[disabled]", count: 9
-    assert_select "#preview-explanation", I18n.t("identity.entry.preview_disclosure")
+    assert_select ".preview-disclosure, #preview-explanation, .marketing-preview[aria-describedby]", count: 0
+    assert_not_includes response.body, "Illustrative example"
+    assert_not_includes response.body, "These examples use fictional ratings and notes."
     assert_select ".marketing-preview .profile-narrative", count: 1
     assert_select ".marketing-preview .profile-quality-item", count: 20
     profile_text = document.at_css(".profile-narrative").text
@@ -182,6 +187,31 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select ".marketing-preview .library-rating-icon[aria-label=?]", I18n.t("library.browser.edit_film_rating", title: "The Thing")
     assert_no_match(/translation missing/i, response.body)
     assert_no_match(/journal entr/i, response.body)
+  end
+
+  test "marketing entry actions and FAQ surround the feature demonstrations" do
+    get root_path
+    document = Nokogiri::HTML(response.body)
+    assert_equal %w[header section section section section section section], document.css("main.landing-demo > *").map(&:name)
+    assert_select ".demo-intro .preview-actions, .demo-intro form, .demo-intro button, .demo-intro a", count: 0
+    %w[ratings recommendations library profile].each do |feature|
+      assert_select "[aria-labelledby='#{feature}-preview-heading'] .marketing-feature-intro > p:not(.preview-eyebrow)",
+        count: 1, text: I18n.t("identity.entry.features.#{feature}.description")
+    end
+    assert_select ".demo-entry form[action=?]", guest_session_path
+    assert_select ".demo-entry a[href=?]", new_registration_path
+    assert_select ".demo-entry a[href=?]", new_session_path, count: 0
+    assert_equal [ "Who makes Glutton?", "Is Glutton free?", "Why should I write notes about films?",
+      "How does Glutton recommend films?", "Are my ratings and notes private?",
+      "Can I change my ratings and notes?", "How can I help make Glutton better?" ], document.css(".marketing-faq summary").map(&:text)
+    assert_select ".marketing-faq details:not([open]) > summary", count: 7
+    assert_equal "marketing-faq", document.at_css(".demo-entry").previous_element["class"]
+    document.css(".marketing-feature").each do |section|
+      assert_equal "marketing-preview", section.element_children.last["class"]
+    end
+    assert_includes document.at_css(".marketing-faq").text, "update your rating and notes in Library"
+    assert_no_match(/\bwe(?:'re|'ve|'ll)?\b|\bre-review\b|trying to|hoping to|I want to/i, document.at_css("main").text)
+    assert_no_match(/translation missing/i, response.body)
   end
 
   test "missing catalogue preserves the profile and entry with clear film fallbacks" do
