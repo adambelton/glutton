@@ -2,6 +2,7 @@
 
 **Status:** Project kickoff / product definition  
 **Date:** 18 October 2026 (updated after product and architecture discussion)  
+**Updated:** 17 November 2026 — post-film journaling engagement goal  
 **Working title:** Glutton (provisional; naming and domain purchase deferred until after MVP)  
 **Audience:** Product owner and implementation/architecture collaborators (including Codex)
 
@@ -14,6 +15,10 @@ A viewer rates films and may optionally describe, in their own words, why they e
 Glutton is a personal horror discovery app and film journal. Notes inform recommendations; notes, ratings and Library activity are not published or shared with other users.
 
 The product should be enjoyable even before its recommendations become useful: reflecting on horror should be interesting in its own right. Horror means more than fear: people might enjoy performers, decade-specific aesthetics, folklore, extreme violence, imaginative effects, quiet atmosphere, narrative structure, humour, themes or any other distinctive characteristic.
+
+**Primary engagement goal:** After watching a horror film, a viewer thinks, “I need to write my Glutton notes.” Build toward becoming part of their post-film ritual, regardless of whether Glutton recommended the film or they discovered it elsewhere. Discovery remains the core promise; journaling gives viewers an ongoing reason to return and supplies richer context for future discovery.
+
+Writing should offer immediate value: making sense of a reaction, preserving an experience, or noticing how a response changes on rewatch. That value must not depend on waiting for AI assessment, a profile update or the next recommendation. Profiles and recommendations give the reflections further value over time.
 
 **Core proposition:** Discover horror through the things you love about horror, not simply the films you have already watched.
 
@@ -31,7 +36,8 @@ Principles:
 - **Expressions are optional, and the user's words come first.** Ratings must yield useful recommendations on their own. No forced checklist of observations; film-specific prompts may inspire writing, but are not classification options the user must choose.
 - **Infer from patterns; learn from expressions.** Ratings accumulate positive and negative evidence when qualities recur across films. Expressions provide explicit context that can change how earlier ratings are interpreted. Never turn inferred patterns into supposed user expressions.
 - **Compounding understanding, cost-conscious refresh.** New understanding can improve interpretations of older ratings, but full recalculation need not follow each expression. Separate changed input, meaningful changes to the taste profile, and eventual recomputation.
-- **Reflection should feel worthwhile.** Rating is quick and lightweight, with one optional journal field. A separate conversational interface is a possible future experiment, not a core product requirement.
+- **Reflection should feel worthwhile.** Make it easy to find the film just watched, record a rating, write meaningful notes and save without unnecessary interruption. Thoughtful prompts, comfortable writing and editing, and reliable saving support the post-film ritual. Notes remain optional; encourage specific personal reactions without requiring a formal review or a minimum length. A separate conversational interface is a possible future experiment, not a core product requirement.
+- **A journal worth returning to.** Revisiting notes should help viewers remember past experiences and reflect on changed reactions after a rewatch. Judge engagement in relation to successive film watches and voluntary returns to the journal; daily activity alone does not establish that the ritual is forming.
 - **Useful before clever.** Start with a coarse, comprehensible quality vocabulary and simple matching; increase granularity only when results justify it.
 - **Interpretations are provisional.** Viewers' tastes may evolve, and film interpretations may differ. Retain original expressions and analyses so classification can be revisited.
 - **Traceability and visibility.** Sourced film information and qualities are available to users and can be reported as inaccurate. Classification can stay internal, but the product should be able to explain recommendations meaningfully.
@@ -66,6 +72,8 @@ The viewer chooses from four ratings:
 
 Offer one optional multiline field for the viewer to record what they liked or disliked and why. The viewer can save a rating immediately and return later to add or revise their notes.
 
+Support recording the film the viewer has just watched, including films found outside Glutton, alongside the queue for rating familiar films. The journal should earn the next post-film visit through the value of reflection and preserving the viewer's own words. Notes help explain which qualities mattered in a particular experience and provide context for interpreting the viewer's wider rating history.
+
 Early product work will identify recurring experiences reported by distinct viewers across viewers’ notes. Use aggregate patterns to enrich shared film evidence for JEV reassessment and identify potential new qualities. Individual notes, quotations and viewer identities are not published or shared with other users. Disclose aggregate analysis as a standard use of optional notes in the terms and Privacy Notice. Aggregation, evidence requirements, review and deletion handling are open implementation decisions. See the [draft viewer guide](research/film_notes_guide.md).
 
 Extreme reactions carry greater weight than mild reactions; numeric weights remain experimental. For MVP, prompts follow the overall rating's sentiment rather than deliberately soliciting mixed positive and negative observations. Preserve what viewers actually write.
@@ -87,6 +95,8 @@ Watchlist and Watched activity suppresses a film from recommendations. Removing 
 ### 3.3 Personal library
 
 Library shows **Watchlist** and **Watched** poster grids. Viewers can mark Watchlist films watched, combine rating filters on Watched, and add or revise ratings and notes from Library. Reviewing dismissed ratings prompts or rejected recommendations is open work in their respective domains.
+
+The Library connects choosing a film, watching it and recording a reaction, including films discovered elsewhere. Returning to earlier notes should make the journal useful as a record of experiences and give viewers room to reflect or revise their thoughts. Dedicated comparisons between watches remain a possible later refinement, not a new requirement for the initial release.
 
 The library provides access to spoiler-labelled film information/qualities and inaccuracy reporting. It is also a potential future entry point for streaming/purchase options and community quality editing; those features are not MVP requirements.
 
@@ -316,7 +326,15 @@ Avoid choosing framework patterns or building abstractions solely for potential 
 9. Can viewers dismiss a Ratings prompt or add the film to their Watchlist? Does marking it watched make an unrated film available to rate while preserving any explicit dismissal?
 10. Can source information be refreshed independently of accepted quality changes, with scoring updated only for relevant accepted changes?
 
-**Product hypothesis:** Ratings identify recurring patterns in what horror enthusiasts like and dislike. Optional expressions provide the context to reinterpret those ratings more intelligently, yielding increasingly relevant and understandable recommendations as users engage—while making reflection on films rewarding in its own right. **Rate films to narrow; express yourself to supercharge discovery.**
+**Engagement validation:** Use early-user conversations and observed return behaviour to test whether post-film journaling becomes a habit. These are learning questions, not evidence that the habit has already formed or a requirement to implement new tracking:
+
+1. After the next horror film they watched, did the viewer think of Glutton and return to write notes without a personal prompt from the owner? Include films found outside Glutton and look for repetition across successive watches.
+2. Did writing help them understand or preserve their reaction before any assessment or profile update completed? What made the visit worthwhile, or prevented them from writing?
+3. Do viewers revisit earlier notes to remember a film or reflect after a rewatch? Does the developing journal, profile or discovery experience give them a reason to keep contributing meaningful notes?
+
+Do not equate note length, daily visits or recommendation acceptance with this engagement goal. Assess meaningful notes through the personal experience they capture; assess recommendation usefulness separately through subsequent viewing and reactions.
+
+**Product hypothesis:** A rewarding film journal can become part of a horror enthusiast's post-film ritual. Ratings identify recurring patterns in what they like and dislike; optional expressions preserve the experience and provide context to reinterpret those ratings more intelligently. Reflection gives each visit immediate value, while a growing journal and increasingly relevant profiles and recommendations give it compounding value. Validate the journaling habit and discovery benefit separately. **Discover more of what you love about horror.**
 
 ## Ratings workflow clarification — 21 October 2026
 
