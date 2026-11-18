@@ -20,9 +20,9 @@ module Shared
           meta(name: "turbo-cache-control", content: "no-cache")
           csrf_meta_tags
           csp_meta_tag
-          link(rel: "icon", href: "/icon.png", type: "image/png")
-          link(rel: "icon", href: "/icon.svg", type: "image/svg+xml")
-          link(rel: "apple-touch-icon", href: "/icon.png")
+          link(rel: "icon", href: "/glutton-mark.png?v=2", type: "image/png")
+          link(rel: "icon", href: "/glutton-mark.svg?v=2", type: "image/svg+xml")
+          link(rel: "apple-touch-icon", href: "/glutton-mark.png?v=2")
           javascript_tag(<<~JS, nonce: true)
             try {
               if (localStorage.getItem("glutton.theme") === "light") {

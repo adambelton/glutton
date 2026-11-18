@@ -24,22 +24,52 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     find("section.marketing-feature[aria-labelledby='#{feature}-preview-heading']")
   end
 
-  test "ratings heading and preview appear in the initial desktop and mobile viewport" do
-    create_preview_catalogue
+  test "header entry actions remain accessible on desktop and mobile without hero duplicates" do
     [ [ 1366, 768 ], [ 390, 844 ] ].each do |width, height|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
       visit root_path
       assert_selector "h1", text: I18n.t("identity.entry.title"), normalize_ws: true
-      heading = find("#ratings-preview-heading")
-      card = preview(:ratings).find(".demo-browser")
-      bounds = page.evaluate_script("((heading, card) => ({ headingTop: heading.getBoundingClientRect().top, headingBottom: heading.getBoundingClientRect().bottom, cardTop: card.getBoundingClientRect().top, scroll: scrollY }))(arguments[0], arguments[1])", heading, card)
-      assert_equal 0, bounds.fetch("scroll")
-      assert_operator bounds.fetch("headingTop"), :>=, 0
-      assert_operator bounds.fetch("headingBottom"), :<=, height
-      assert_operator bounds.fetch("cardTop") + 40, :<=, height, "Ratings card starts below the fold at #{width}px: #{bounds}"
+      assert_no_selector ".demo-intro .preview-actions"
+      within ".ui-header" do
+        assert_link I18n.t("ui.register"), href: new_registration_path
+        assert_link I18n.t("ui.log_in"), href: new_session_path
+        button = find("button", text: I18n.t("identity.entry.try_it_out"))
+        bounds = page.evaluate_script("arguments[0].getBoundingClientRect().toJSON()", button)
+        assert_operator bounds.fetch("bottom"), :<=, height
+        assert_operator bounds.fetch("left"), :>=, 0
+        assert_operator bounds.fetch("right"), :<=, width
+      end
     end
+    within(".ui-header") { click_link I18n.t("ui.register") }
+    assert_current_path new_registration_path
+    visit root_path
+    within(".ui-header") { click_link I18n.t("ui.log_in") }
+    assert_current_path new_session_path
+    visit root_path
+    within(".ui-header") { click_button I18n.t("identity.entry.try_it_out") }
+    assert_current_path new_rating_path
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "FAQ questions disclose answers with Enter and Space using native accessible semantics" do
+    visit root_path
+    within ".marketing-faq" do
+      assert_selector "details:not([open])", count: 7
+      question = find("summary", text: "Who makes Glutton?")
+      assert_no_text "I'm Adam."
+      question.send_keys(:enter)
+      assert_selector "details[open]", count: 1
+      assert_text "I'm Adam."
+      assert_equal question, page.evaluate_script("document.activeElement")
+      question.send_keys(:space)
+      assert_no_selector "details[open]"
+      assert_no_text "I'm Adam."
+      question.send_keys(:tab)
+      assert_equal find("summary", text: "Is Glutton free?"), page.evaluate_script("document.activeElement")
+      find("summary", text: "Is Glutton free?").send_keys(:space)
+      assert_text "Glutton is completely free to use, with no ads."
+    end
   end
 
   test "sample selections stay still until the visitor chooses another" do
@@ -196,6 +226,8 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
       assert_equal width, page.evaluate_script("window.innerWidth")
       assert_selector ".marketing-feature", count: 4
+      all(".marketing-faq details:not([open]) > summary").each { |question| question.click }
+      assert_selector ".marketing-faq details[open]", count: 7
       assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth"), "Overflow at #{width}px"
       all(".marketing-preview .demo-browser", count: 4).each do |card|
         style = card.style("padding-top", "padding-right", "padding-bottom", "padding-left", "border-top-width", "background-color")
