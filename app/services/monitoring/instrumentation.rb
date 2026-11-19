@@ -17,7 +17,7 @@ module Monitoring
       methods.each do |method|
         operation = "#{owner}#{separator}#{method}".freeze
         wrapper.define_method(method) do |*args, **kwargs, &block|
-          ActiveSupport::Notifications.instrument(ActivityMonitoring::BUSINESS_OPERATION, operation:, domain:) do
+          ActiveSupport::Notifications.instrument(ActivityMonitoring::OPERATION_NOTIFICATION, operation:, domain:) do
             super(*args, **kwargs, &block)
           end
         end

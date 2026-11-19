@@ -19,9 +19,9 @@ class AiConnectionCheck
     raise ArgumentError, "Set OPENAI_MODEL explicitly for this check" if model.to_s.strip.empty?
 
     result = nil
-    ActivityMonitoring.trace_model(TRACE_NAME, scope: ActivityMonitoring::Scopes::CONNECTION_CHECK, provider: @provider, tags: TRACE_TAGS, environment: @environment, version: "1",
+    ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::CONNECTION_CHECK, provider: @provider, tags: TRACE_TAGS, environment: @environment, version: "1",
       input: { purpose: "Verify OpenAI and Langfuse connectivity", model: model }) do |root, tracer|
-      ActivityMonitoring.trace_generation("check-openai-response", tracer:, tags: TRACE_TAGS, trace_name: TRACE_NAME,
+      ActivityMonitoring.trace_ai_generation("check-openai-response", tracer:, tags: TRACE_TAGS, trace_name: TRACE_NAME,
         environment: @environment, version: "1", model:, parameters: { max_output_tokens: 32, store: false },
         input: { instructions: INSTRUCTIONS, input: INPUT }) do |generation|
         response = @client.responses.create(

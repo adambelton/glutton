@@ -14,7 +14,7 @@ Rails.application.configure do
     worker_backlog: {
       cron: "*/5 * * * * UTC",
       class: ActivityMonitoring::ScheduledJobs::WORKER_BACKLOG,
-      enabled_by_default: -> { ActivityMonitoring.tracer.present? }
+      enabled_by_default: -> { ActivityMonitoring.operation_tracer.present? }
     },
     ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",

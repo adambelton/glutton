@@ -3,7 +3,7 @@ module Ratings
     belongs_to :user, class_name: "Identity::User"
 
     def self.mark_pending!(user_id:)
-      ActivityMonitoring.current&.profile_refresh_requested
+      ActivityMonitoring.current_operation_span&.profile_refresh_requested
       upsert({ user_id:, generation: SecureRandom.uuid }, unique_by: :user_id)
     end
 

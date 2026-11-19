@@ -13,9 +13,9 @@ module Monitoring
         OpenTelemetry::SemConv::HTTP::HTTP_REQUEST_METHOD => request.request_method,
         ActivityMonitoring::Attributes::REQUEST_ID => request.request_id
       }
-      ActivityMonitoring.trace_business_operation("#{self.class.name}##{action_name}", parent: nil, kind: :server, attributes:) do
+      ActivityMonitoring.trace_operation("#{self.class.name}##{action_name}", parent: nil, kind: :server, attributes:) do
         yield
-        ActivityMonitoring.current&.set_http_response(response)
+        ActivityMonitoring.current_operation_span&.set_http_response(response)
       end
     end
   end

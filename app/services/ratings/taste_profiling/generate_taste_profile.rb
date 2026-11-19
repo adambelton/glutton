@@ -112,7 +112,7 @@ module Ratings
       end
 
       def synthesize(client)
-        ActivityMonitoring.trace_generation("synthesize-taste-profile", tracer: @tracer, tags: @trace_tags) do |span|
+        ActivityMonitoring.trace_ai_generation("synthesize-taste-profile", tracer: @tracer, tags: @trace_tags) do |span|
           profile, annotations, synthesis = validated_synthesis(request_synthesis(client))
           span.set_model(synthesis.fetch("model"))
           span.set_usage(synthesis.fetch("usage"))

@@ -5,24 +5,24 @@ require "opentelemetry/exporter/otlp"
 require "opentelemetry-instrumentation-active_job"
 
 require_relative "activity_monitoring/span_session"
-require_relative "activity_monitoring/model_span"
-require_relative "activity_monitoring/business_span"
+require_relative "activity_monitoring/ai_span"
+require_relative "activity_monitoring/operation_span"
 
 module ActivityMonitoring
-  BUSINESS_OPERATION = "business_operation.glutton".freeze
+  OPERATION_NOTIFICATION = "operation.glutton".freeze
 
-  MODEL_TAGS = OpenTelemetry::Context.create_key("glutton.model.tags")
-  BUSINESS_CONTEXT = OpenTelemetry::Context.create_key("glutton.business.context")
-  private_constant :MODEL_TAGS, :BUSINESS_CONTEXT
+  AI_WORKFLOW_TAGS = OpenTelemetry::Context.create_key("glutton.ai.workflow.tags")
+  OPERATION_CONTEXT = OpenTelemetry::Context.create_key("glutton.operation.context")
+  private_constant :AI_WORKFLOW_TAGS, :OPERATION_CONTEXT
 
   module Scopes
-    BUSINESS = "glutton.business".freeze
+    OPERATIONS = "glutton.operations".freeze
     RATINGS = "glutton.ratings".freeze
     REGISTRY = "glutton.registry".freeze
     CONNECTION_CHECK = "glutton.ai.connection-check".freeze
     ACTIVE_JOB = OpenTelemetry::Instrumentation::ActiveJob.name
 
-    ALL = [ BUSINESS, ACTIVE_JOB ].freeze
+    ALL = [ OPERATIONS, ACTIVE_JOB ].freeze
   end
 
   module Attributes
@@ -69,9 +69,9 @@ module ActivityMonitoring
 
   HONEYCOMB_HOSTS = { "eu" => "api.eu1.honeycomb.io".freeze, "us" => "api.honeycomb.io".freeze }.freeze
 
-  class BusinessOperationSubscriber
+  class OperationSubscriber
     def start(_name, _id, payload)
-      payload[:monitoring_session] = ActivityMonitoring.start_business_operation(payload.fetch(:operation), domain: payload.fetch(:domain))
+      payload[:monitoring_session] = ActivityMonitoring.start_operation(payload.fetch(:operation), domain: payload.fetch(:domain))
     end
 
     def finish(_name, _id, payload)
@@ -119,7 +119,7 @@ module ActivityMonitoring
   end
 
   class << self
-    attr_accessor :tracer
+    attr_accessor :operation_tracer
 
     def configure
       key = ENV["HONEYCOMB_API_KEY"]
@@ -141,28 +141,28 @@ module ActivityMonitoring
         config.use(Scopes::ACTIVE_JOB, span_naming: :job_class, propagation_style: :child)
       end
       provider = OpenTelemetry.tracer_provider
-      self.tracer = provider.tracer(Scopes::BUSINESS)
+      self.operation_tracer = provider.tracer(Scopes::OPERATIONS)
       at_exit { provider.shutdown(timeout: 5) }
     end
 
-    def start_business_operation(name, domain:)
-      return unless tracer
+    def start_operation(name, domain:)
+      return unless operation_tracer
 
-      SpanSession.new(tracer, name, span_class: BusinessSpan, parent: business_context, attributes: { Attributes::DOMAIN => domain })
+      SpanSession.new(operation_tracer, name, span_class: OperationSpan, parent: operation_context, attributes: { Attributes::DOMAIN => domain })
     end
 
-    def trace_business_operation(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
-      return yield unless tracer
+    def trace_operation(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
+      return yield unless operation_tracer
 
-      session = SpanSession.new(tracer, name, span_class: BusinessSpan, parent: context_for(parent), attributes:, links:, kind:)
+      session = SpanSession.new(operation_tracer, name, span_class: OperationSpan, parent: context_for(parent), attributes:, links:, kind:)
       session.record { |span| yield span }
     end
 
-    def trace_model(name, scope:, tags:, input:, provider: model_provider, environment: Rails.application.config.x.langfuse_environment, version: nil)
-      tracer = model_tracer(scope, provider:)
-      context = OpenTelemetry::Context.empty.set_value(BUSINESS_CONTEXT, business_context).set_value(MODEL_TAGS, tags)
+    def trace_ai_workflow(name, scope:, tags:, input:, provider: ai_tracer_provider, environment: Rails.application.config.x.langfuse_environment, version: nil)
+      tracer = ai_tracer(scope, provider:)
+      context = OpenTelemetry::Context.empty.set_value(OPERATION_CONTEXT, operation_context).set_value(AI_WORKFLOW_TAGS, tags)
       OpenTelemetry::Context.with_current(context) do
-        ModelSpan.record(tracer, name, type: "span", trace_name: name, tags:, input:, environment:, version:) do |span|
+        AiSpan.record(tracer, name, type: "span", trace_name: name, tags:, input:, environment:, version:) do |span|
           yield span, tracer
         end
       end
@@ -170,36 +170,36 @@ module ActivityMonitoring
       provider&.force_flush(timeout: 5)
     end
 
-    def trace_generation(name, tracer:, tags: OpenTelemetry::Context.value(MODEL_TAGS), input: nil, environment: Rails.application.config.x.langfuse_environment,
+    def trace_ai_generation(name, tracer:, tags: OpenTelemetry::Context.value(AI_WORKFLOW_TAGS), input: nil, environment: Rails.application.config.x.langfuse_environment,
       model: nil, parameters: nil, trace_name: nil, version: nil, &block)
-      ModelSpan.record(tracer, name, type: "generation", tags:, input:, environment:, model:, parameters:, trace_name:, version:, &block)
+      AiSpan.record(tracer, name, type: "generation", tags:, input:, environment:, model:, parameters:, trace_name:, version:, &block)
     end
 
-    def model_provider
+    def ai_tracer_provider
       Rails.application.config.x.langfuse_tracer_provider
     end
 
-    def model_tracer(scope, provider:)
+    def ai_tracer(scope, provider:)
       (provider || OpenTelemetry::Trace::TracerProvider.new).tracer(scope, "1")
     end
 
-    def within_business_context(&block)
-      OpenTelemetry::Context.with_current(business_context, &block)
+    def within_operation_context(&block)
+      OpenTelemetry::Context.with_current(operation_context, &block)
     end
 
-    def business_context
-      OpenTelemetry::Context.value(BUSINESS_CONTEXT) || OpenTelemetry::Context.current
+    def operation_context
+      OpenTelemetry::Context.value(OPERATION_CONTEXT) || OpenTelemetry::Context.current
     end
-    private :business_context
+    private :operation_context
 
-    def current
-      BusinessSpan.new(OpenTelemetry::Trace.current_span(business_context)) if tracer
+    def current_operation_span
+      OperationSpan.new(OpenTelemetry::Trace.current_span(operation_context)) if operation_tracer
     end
 
     def traceparent
-      return unless tracer
+      return unless operation_tracer
 
-      context = OpenTelemetry::Trace.current_span(business_context).context
+      context = OpenTelemetry::Trace.current_span(operation_context).context
       "00-#{context.hex_trace_id}-#{context.hex_span_id}-01" if context&.valid?
     end
 

@@ -4,7 +4,7 @@ class ReportWorkerHealthJob < ApplicationJob
   queue_as :domain_events
 
   def perform
-    return unless ActivityMonitoring.tracer
+    return unless ActivityMonitoring.operation_tracer
 
     now = Time.current
     cutoff = now - OVERDUE_AFTER
@@ -16,7 +16,7 @@ class ReportWorkerHealthJob < ApplicationJob
     }.compact
     return if pending.empty?
 
-    span = ActivityMonitoring.current
+    span = ActivityMonitoring.current_operation_span
     pending.each { |kind, oldest| span.set_overdue_wait(kind, (now - oldest).to_i) }
   end
 end

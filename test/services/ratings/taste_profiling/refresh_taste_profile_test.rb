@@ -13,15 +13,15 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
   end
 
   test "delayed deliveries keep each submission trace and profile synthesis links both ratings" do
-    original = ActivityMonitoring.tracer
+    original = ActivityMonitoring.operation_tracer
     exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
     provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     provider.add_span_processor(ActivityMonitoring::Processor.new(exporter))
-    ActivityMonitoring.tracer = provider.tracer(ActivityMonitoring::Scopes::BUSINESS)
+    ActivityMonitoring.operation_tracer = provider.tracer(ActivityMonitoring::Scopes::OPERATIONS)
     ratings = 2.times.map do |index|
       film = Registry::Film.create!(title: "Trace fixture #{index}")
       candidate = Ratings::RatingFilm.create!(user: @user, film:)
-      ActivityMonitoring.trace_business_operation("submit rating") do
+      ActivityMonitoring.trace_operation("submit rating") do
         Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
           value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Private note #{index}")
       end
@@ -32,15 +32,15 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
       attributes: { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => DispatchDomainEventsJob.name }) do
       DispatchDomainEventsJob.perform_now
     end
-    model_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
-    model_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
-    model_provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(model_exporter))
+    ai_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    ai_tracer_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    ai_tracer_provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(ai_exporter))
     enqueue_parent = nil
     on_enqueue = lambda do |event|
       enqueue_parent = OpenTelemetry::Trace.current_span.context.span_id if event.payload[:job].is_a?(Ratings::ReassessRatingQualitiesJob)
     end
     revision = ActiveSupport::Notifications.subscribed(on_enqueue, "enqueue.active_job") do
-      refresh(tracer_provider: model_provider) { synthesis }
+      refresh(tracer_provider: ai_tracer_provider) { synthesis }
     end
     Ratings::ReassessRatingQualitiesJob.perform_now(@user.id, revision.id)
     provider.force_flush
@@ -51,8 +51,8 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::RATING_ID) }
     refresh_span = spans.select { |span| span.name == "refresh taste profile" }.sole
     assert_equal refresh_span.span_id, enqueue_parent
-    model_root = model_exporter.finished_spans.find { |span| span.name == Ratings::TasteProfiling::RefreshTasteProfile::TRACE_NAME }
-    assert_not_equal refresh_span.trace_id, model_root.trace_id
+    ai_workflow_span = ai_exporter.finished_spans.find { |span| span.name == Ratings::TasteProfiling::RefreshTasteProfile::TRACE_NAME }
+    assert_not_equal refresh_span.trace_id, ai_workflow_span.trace_id
     links = refresh_span.links
     assert_equal submissions.map(&:span_id).sort, links.map { |link| link.span_context.span_id }.sort
     deliveries = spans.select { |span| span.name == "deliver RatingSubmitted" }
@@ -61,9 +61,9 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::RATING_ID) }.sort
     assert_not_includes spans.map(&:attributes).inspect, "Private note"
   ensure
-    ActivityMonitoring.tracer = original
+    ActivityMonitoring.operation_tracer = original
     provider&.shutdown
-    model_provider&.shutdown
+    ai_tracer_provider&.shutdown
   end
 
   test "synthesis uses current original notes with film context and persists their provenance" do

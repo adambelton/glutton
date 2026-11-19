@@ -8,11 +8,11 @@ module Monitoring
     end
 
     def self.parent_for_event(event_id)
-      where(domain_event_id: event_id).pick(:traceparent) if ActivityMonitoring.tracer
+      where(domain_event_id: event_id).pick(:traceparent) if ActivityMonitoring.operation_tracer
     end
 
     def self.links_for_ratings(rating_ids)
-      return [] unless ActivityMonitoring.tracer
+      return [] unless ActivityMonitoring.operation_tracer
 
       where(rating_id: rating_ids).distinct.pluck(:traceparent).filter_map { |parent| ActivityMonitoring.link(parent) }
     end

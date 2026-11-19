@@ -53,7 +53,7 @@ class TypeSafeClient
     @requests += 1
     allowance = input_cost(input_tokens: bytes * 2 + 4096)
     @cost += allowance
-    ActivityMonitoring.trace_generation(phase, tracer: @tracer,
+    ActivityMonitoring.trace_ai_generation(phase, tracer: @tracer,
       model:, input: (@settings.fetch("trace_payload") ? payload : { question_count: questions.size })) do |span|
       request_sent = true
       response = @request.post(path: "/v1/systemone", payload:, headers: { "Authorization" => "Bearer #{@token}" })

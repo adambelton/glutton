@@ -7,25 +7,25 @@ module Registry
       TRACE_NAME = "assign-initial-film-qualities".freeze
       TRACE_TAGS = [ "registry", "initial-assignment" ].freeze
 
-      def self.call(film_id:, client: nil, tracer_provider: ActivityMonitoring.model_provider)
+      def self.call(film_id:, client: nil, tracer_provider: ActivityMonitoring.ai_tracer_provider)
         new(film_id:, client:, tracer_provider:).call
       end
 
       def initialize(film_id:, client:, tracer_provider:)
         @film_id, @tracer_provider = film_id, tracer_provider
-        @client = client || TypeSafeClient.new(tracer: ActivityMonitoring.model_tracer(ActivityMonitoring::Scopes::REGISTRY, provider: tracer_provider), profile: :registry)
+        @client = client || TypeSafeClient.new(tracer: ActivityMonitoring.ai_tracer(ActivityMonitoring::Scopes::REGISTRY, provider: tracer_provider), profile: :registry)
       end
 
       def call
         film = Film.find(@film_id)
-        ActivityMonitoring.current&.set_film_id(film.id)
+        ActivityMonitoring.current_operation_span&.set_film_id(film.id)
         raise Errors::AssignmentFailed.new(reason: :unready_film) unless film.has_source_context?
         raise Errors::AssignmentFailed.new(reason: :already_assigned) if film.has_film_qualities?
         source = { "title" => film.title, "tmdb_id" => film.tmdb_id, "tmdb_metadata" => film.tmdb_metadata,
           "wikidata_id" => film.wikidata_id, "wikipedia_context" => film.wikipedia_context }.deep_dup
         definitions, categories = capture_vocabulary
         result = nil
-        ActivityMonitoring.trace_model(TRACE_NAME, scope: ActivityMonitoring::Scopes::REGISTRY, provider: @tracer_provider, tags: TRACE_TAGS,
+        ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::REGISTRY, provider: @tracer_provider, tags: TRACE_TAGS,
           input: { source:, definitions:, categories: }) do |root|
           assessment = EvaluateInitialFilmQualities.new(source:, definitions:, categories:,
             trace_id: root.trace_id)

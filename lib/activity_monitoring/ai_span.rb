@@ -1,5 +1,5 @@
 module ActivityMonitoring
-  class ModelSpan
+  class AiSpan
     module Fields
       TRACE_NAME = "langfuse.trace.name".freeze
       ENVIRONMENT = "langfuse.environment".freeze

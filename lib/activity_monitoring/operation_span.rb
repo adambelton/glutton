@@ -1,5 +1,5 @@
 module ActivityMonitoring
-  class BusinessSpan
+  class OperationSpan
     def initialize(span)
       @span = span
     end

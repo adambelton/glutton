@@ -4,7 +4,7 @@ module Ratings
       TRACE_NAME = "refresh-taste-profile".freeze
       TRACE_TAGS = [ "ratings", "taste-profile" ].freeze
 
-      def self.call(user_id:, client: Rails.application.config.x.openai_client, tracer_provider: ActivityMonitoring.model_provider)
+      def self.call(user_id:, client: Rails.application.config.x.openai_client, tracer_provider: ActivityMonitoring.ai_tracer_provider)
         new(user_id:, client:, tracer_provider:).call
       end
 
@@ -19,9 +19,9 @@ module Ratings
         return current if unchanged
 
         links = Monitoring::TraceContext.links_for_ratings(evidence.pluck("rating_id"))
-        ActivityMonitoring.trace_business_operation("refresh taste profile", parent: nil, links:, attributes: { ActivityMonitoring::Attributes::USER_ID => @user_id }) do
+        ActivityMonitoring.trace_operation("refresh taste profile", parent: nil, links:, attributes: { ActivityMonitoring::Attributes::USER_ID => @user_id }) do
           revision = generate_and_apply(current:, evidence:)
-          ActivityMonitoring.current&.set_profile_revision_id(revision.id)
+          ActivityMonitoring.current_operation_span&.set_profile_revision_id(revision.id)
           revision
         end
       end
@@ -29,12 +29,12 @@ module Ratings
       private
 
       def generate_and_apply(current:, evidence:)
-        ActivityMonitoring.trace_model(TRACE_NAME, scope: ActivityMonitoring::Scopes::RATINGS, provider: @tracer_provider, tags: TRACE_TAGS,
+        ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::RATINGS, provider: @tracer_provider, tags: TRACE_TAGS,
           input: { notes_count: evidence.size }) do |span, tracer|
           assessment = GenerateTasteProfile.new(evidence:, basis: current&.incremental_synthesis_basis,
             trace_id: span.trace_id, tracer:, trace_tags: TRACE_TAGS)
           assessment.call(client: @client)
-          revision = ActivityMonitoring.within_business_context { record_and_apply(current:, assessment:) }
+          revision = ActivityMonitoring.within_operation_context { record_and_apply(current:, assessment:) }
           span.set_attribute("taste_profile_id", revision.taste_profile_id)
           span.set_attribute("taste_profile_revision_id", revision.id)
           span.set_attribute("taste_profile_revision_eval_id", revision.taste_profile_revision_eval_id)
