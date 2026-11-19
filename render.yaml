@@ -12,6 +12,8 @@ envVarGroups:
     envVars:
       - key: SECRET_KEY_BASE
         generateValue: true
+      - key: APPSIGNAL_APP_ENV
+        value: staging
 
 services:
   - type: web

@@ -152,6 +152,8 @@ The weekly podcast is a natural place to try this. Discuss the film, use follow-
 
 ## Release follow-up
 
+Staging application monitoring uses AppSignal for Rails and GoodJob. Both Render services use the Glutton app in the `staging` AppSignal environment. The SDK reads `APPSIGNAL_PUSH_API_KEY` at runtime and reports `RENDER_GIT_COMMIT` as the revision. Empty event dispatches and the Rails health action are ignored by application performance monitoring. Follow `domain_event_published` and `domain_event_delivery` in Render logs using the same `correlation_id`. A terminal delivery failure reports the error class and event and delivery identifiers. GoodJob supplies per-job inspection and Langfuse supplies AI diagnostics. Verify the hosted web and worker samples, the external `/up` monitor, and the `goodjob_worker` heartbeat after deployment. The worker checks in through a job scheduled every five minutes.
+
 Complete the seed-first sequence above before later admin improvements. Admin viewing requires authorisation before exposure; manual source refresh changes no accepted qualities. Source/association changes do not themselves authorise downstream score mutations. Community editing, scheduled syncing, streaming integrations and speculative extra event consumers are not prerequisites.
 
 Keep GoodJob for launch with direct PostgreSQL connections, 30-second polling and a 30-second domain event recovery sweep. Compare hosts with one Rails web service, one separate queue worker and one PostgreSQL database. Expect an always-active database with the current polling and sweep intervals. Confirm memory, connections, queue latency and compute usage in staging.

@@ -10,6 +10,8 @@ gem "pg", "~> 1.1"
 gem "nokogiri"
 # Durable Active Job backend for domain-event polling.
 gem "good_job", "~> 4.22"
+# Rails and Active Job application monitoring for staging.
+gem "appsignal", "~> 5.0", require: false
 # Explicit AI-workflow tracing to Langfuse via OTLP (no automatic request capture).
 gem "opentelemetry-sdk"
 gem "opentelemetry-exporter-otlp"

@@ -53,6 +53,27 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, DomainEvents::DomainEventStream.where(user: @user).count
   end
 
+  test "committed publication and delivery logs share the event correlation ID without exposing its payload" do
+    output = StringIO.new
+    logger = ActiveSupport::Logger.new(output)
+    Rails.logger.broadcast_to(logger)
+
+    event = publish(payload: { value: 1, note: "private sample text" })
+    dispatch(subscription)
+
+    entries = output.string.lines.filter_map do |line|
+      JSON.parse(line) if line.start_with?('{"message":"domain_event_')
+    end
+    publication, delivery = entries
+    assert_equal "domain_event_published", publication.fetch("message")
+    assert_equal "domain_event_delivery", delivery.fetch("message")
+    assert_equal [ event.correlation_id, event.correlation_id ], entries.map { |entry| entry.fetch("correlation_id") }
+    assert_equal "processed", delivery.fetch("outcome")
+    refute_includes entries.to_json, "private sample text"
+  ensure
+    Rails.logger.stop_broadcasting_to(logger)
+  end
+
   test "two workers commit one effect and receipt" do
     event = publish
     receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
