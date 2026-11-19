@@ -30,6 +30,12 @@ module Identity
       true
     end
 
+    def revoke_by!(actor:)
+      raise Errors::SuperuserRequired unless actor.superuser?
+
+      destroy!
+    end
+
     private
 
     def user_can_hold_session

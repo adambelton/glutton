@@ -25,9 +25,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       get "privacy", to: "privacy_notices#show", as: :privacy_notice
       get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "landing#show"
-      namespace :registry do
-        root "films#index"
-      end
+      get "admin", to: "admin#show", as: :admin
       get "account/settings", to: "account_settings#show", as: :account_settings
       resource :library, only: :show, controller: :library
       get "library/search", to: "library/film_search#index", as: :library_film_search

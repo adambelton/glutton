@@ -56,9 +56,17 @@ Rails.application.routes.draw do
   delete "library/films/:id/remove_from_watchlist", to: "library#remove_from_watchlist", as: :remove_from_watchlist_library_film
 
 
-  namespace :registry do
-    root "films#index"
-    resources :films, :quality_categories, :qualities, only: [ :index, :show ]
+  get "admin", to: "admin#show", as: :admin
+
+  scope :admin, as: :admin do
+    post "users", to: "identity/users#index"
+    resources :users, only: [ :index, :show ], controller: "identity/users" do
+      delete "sessions/:session_id", action: :revoke_session, as: :session, on: :member
+      get "glutton-profile", to: "ratings/profile_inspections#show", as: :glutton_profile, on: :member
+    end
+    resources :films, only: [ :index, :show ], controller: "registry/films"
+    resources :qualities, only: [ :index, :show ], controller: "registry/qualities"
+    resources :quality_categories, path: "quality-categories", only: [ :index, :show ], controller: "registry/quality_categories"
   end
 
   # Defines the root path route ("/")

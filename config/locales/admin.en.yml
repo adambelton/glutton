@@ -1,0 +1,21 @@
+en:
+  admin:
+    title: Admin
+    navigation: Resource navigation
+    back_to_glutton: Back to Glutton
+    search:
+      users: Search by user ID or email address
+      films: Search films
+      qualities: Search qualities
+      quality_categories: Search quality categories
+      submit: Search
+      clear: Clear search
+      no_matches: No records match your search.
+    pagination:
+      label: Pagination
+      page: "Page %{number} of %{total}"
+      previous: Previous page
+      next: Next page
+      records:
+        one: "%{count} result"
+        other: "%{count} results"

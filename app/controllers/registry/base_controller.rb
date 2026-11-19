@@ -8,24 +8,30 @@ module Registry
     end
 
     rescue_from ActiveRecord::RecordNotFound do
-      render ::Views::Registry::Message.new(key: :not_found), status: :not_found
+      render ::Views::Admin::Message.new(key: :not_found), status: :not_found
     end
 
     private
 
     def require_superuser
       unless current_user.superuser?
-        render ::Views::Registry::Message.new(key: :forbidden), status: :forbidden
+        render ::Views::Admin::Message.new(key: :forbidden), status: :forbidden
       end
     end
 
     def validate_browsing_parameters
       page = params.fetch(:page, "1")
       unless page.is_a?(String) && page.match?(/\A[1-9]\d{0,5}\z/)
-        render ::Views::Registry::Message.new(key: :invalid), status: :bad_request
+        render ::Views::Admin::Message.new(key: :invalid), status: :bad_request
+        return
+      end
+      query = action_name == "index" ? params.fetch(:q, "") : ""
+      unless query.is_a?(String) && query.bytesize <= 254
+        render ::Views::Admin::Message.new(key: :invalid), status: :bad_request
         return
       end
       @page_number = page.to_i
+      @query = query.strip
       if params.key?(:id) && !(params[:id].is_a?(String) && params[:id].match?(/\A[1-9]\d{0,17}\z/))
         raise ActiveRecord::RecordNotFound
       end

@@ -1,22 +1,29 @@
 module Registry
   module CatalogueQueries
     class InspectCatalogue
-      PAGE_SIZE = 25
-      Page = Data.define(:entries, :number, :total, :next_page)
+      COLLECTION_PAGE_SIZE = 10
+      DETAIL_PAGE_SIZE = 25
+      Page = Data.define(:entries, :number, :total, :total_pages)
       FilmDetail = Data.define(:film, :associations)
       CategoryDetail = Data.define(:category, :qualities)
       QualityDetail = Data.define(:quality, :films)
 
-      def self.films(page:)
-        paginate(Film.order(:title, :id), page:)
+      def self.films(page:, query: "")
+        records = Film.order(:title, :id)
+        records = records.where("title ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(query)}%") if query.present?
+        paginate(records, page:, page_size: COLLECTION_PAGE_SIZE)
       end
 
-      def self.categories(page:)
-        paginate(QualityCategory.order(:name, :id), page:)
+      def self.categories(page:, query: "")
+        records = QualityCategory.order(:name, :id)
+        records = records.where("name ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(query)}%") if query.present?
+        paginate(records, page:, page_size: COLLECTION_PAGE_SIZE)
       end
 
-      def self.qualities(page:)
-        paginate(Quality.includes(:quality_category).order(:name, :id), page:)
+      def self.qualities(page:, query: "")
+        records = Quality.includes(:quality_category).order(:name, :id)
+        records = records.where("name ILIKE ?", "%#{ActiveRecord::Base.sanitize_sql_like(query)}%") if query.present?
+        paginate(records, page:, page_size: COLLECTION_PAGE_SIZE)
       end
 
       def self.film(id:, page:)
@@ -37,10 +44,10 @@ module Registry
         QualityDetail.new(quality:, films: paginate(quality.films.order(:title, :id), page:))
       end
 
-      def self.paginate(records, page:)
+      def self.paginate(records, page:, page_size: DETAIL_PAGE_SIZE)
         total = records.count
-        entries = records.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).to_a
-        Page.new(entries:, number: page, total:, next_page: page * PAGE_SIZE < total)
+        entries = records.offset((page - 1) * page_size).limit(page_size).to_a
+        Page.new(entries:, number: page, total:, total_pages: [ (total.to_f / page_size).ceil, 1 ].max)
       end
       private_class_method :paginate
     end

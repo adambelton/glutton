@@ -389,7 +389,7 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 - On desktop, move the same three primary destinations into the header, keeping their order, labels and active state. Use a centred, width-constrained content area with the collection tabs above the poster grid. Do not introduce a different information hierarchy or duplicate top and bottom navigation.
 - Prefer a responsive web implementation with standard links and accessible controls. These destinations can carry into a future app without introducing an app framework now.
 
-The authenticated header links to Ratings, Recommendations and Library. Superusers also have Registry and Account links. The mobile navigation design above remains planned.
+The authenticated application header links to Ratings, Recommendations and Library. Registered viewers can open Account, and superusers can enter Admin. Admin uses dedicated resource routes under `/admin`, with its own full-height sidebar and flat content layout. Operator views and presentation components are organised under Admin, and their domain controllers keep authorization and workflow ownership.
 
 ### Controller organisation
 

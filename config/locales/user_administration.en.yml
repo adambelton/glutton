@@ -1,0 +1,49 @@
+en:
+  date:
+    formats:
+      user_admin: "%d %b %Y"
+  identity:
+    user_administration:
+      title: Users
+      detail: "User %{id}"
+      back: Back to users
+      account: Account
+      record_label: "User #%{id}"
+      email: Email address
+      type: Account type
+      status: Status
+      created: Created
+      confirmed: Email confirmed
+      active: Active
+      inactive: Inactive
+      none: None
+      types:
+        identity_user_registered: Registered
+        identity_user_guest: Guest
+        identity_user_deleted: Deleted
+      lookup_label: User ID or email address
+      lookup: Find user
+      lookup_missed: No account matches that user ID or email address.
+      no_users: No users on this page.
+      pagination: User table pages
+      page: "Page %{number}"
+      previous: Previous page
+      next: Next page
+      profile: View Glutton Profile
+      account_details: Account details
+      sessions: Sessions
+      no_sessions: No stored sessions.
+      session: "Session %{id} · Created %{time}"
+      revoke: Revoke session
+      revoke_label: "Revoke session %{id}"
+      revoked: Session revoked.
+      session_unavailable: That session is no longer available for this user.
+  ratings:
+    profile_inspection:
+      title: "Glutton Profile for user %{id}"
+      back: Back to user
+      narrative: Profile narrative
+      revision: "Profile revision %{id} · Published %{time}"
+      claims: Claims and evidence
+      no_claims: No saved claims and evidence for this profile.
+      citation: "%{title} · Rating revision %{id}"

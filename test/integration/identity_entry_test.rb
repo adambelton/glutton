@@ -339,9 +339,9 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :not_found
     delete session_path, params: { authenticity_token: csrf }
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     enter_guest
-    assert_redirected_to registry_film_path(@film)
+    assert_redirected_to admin_film_path(@film)
     follow_redirect!
     assert_response :forbidden
   end
@@ -350,7 +350,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Identity::User.count", "Ratings::RatingFilm.count" ] do
       get new_rating_path, params: { identity_required: false }
       assert_redirected_to new_session_path
-      get registry_film_path(@film), params: { identity_required: false }
+      get admin_film_path(@film), params: { identity_required: false }
       assert_redirected_to new_session_path
     end
   end
@@ -358,7 +358,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
   test "latest protected tab wins and return parameters cannot override browser continuation" do
     get new_rating_path
     get library_path(view: "watched")
-    get new_session_path, params: { return_to: "https://evil.test", redirect_to: "/registry" }
+    get new_session_path, params: { return_to: "https://evil.test", redirect_to: "/admin" }
     enter_guest
     assert_redirected_to library_path(view: "watched")
   end

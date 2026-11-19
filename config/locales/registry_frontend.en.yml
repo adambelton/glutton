@@ -18,13 +18,14 @@ en:
     film_description: Canonical film record · Source material and quality evidence may contain spoilers.
     category_description: Category settings and the qualities they govern.
     quality_description: Matching criteria and films with this accepted quality.
-    canonical_films: Canonical films
     associated_films: Associated films
     accepted_qualities: Accepted qualities
     accepted_explanation: Current associations only. Stored evaluation evidence may describe an earlier source revision.
-    all_films: ← All films
-    all_categories: ← All categories
-    all_qualities: ← All qualities
+    back_to_films: Back to films
+    back_to_categories: Back to quality categories
+    back_to_qualities: Back to qualities
+    film_details: Film details
+    category_settings: Category settings
     film: Film
     quality: Quality
     category: Category

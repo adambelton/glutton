@@ -5,17 +5,50 @@ module Ratings
         new(user_id:).call
       end
 
+      def self.inspect_saved(user_id:)
+        new(user_id:).inspect_saved
+      end
+
       def initialize(user_id:)
         @user_id = user_id
       end
 
       def call
-        revision = TasteProfile.find_by(user_id: @user_id)&.current_revision
-        { profile: revision&.profile, changes: changes(revision, current_notes),
-          quality_rankings: quality_rankings }
+        revision = current_revision
+        profile_summary(revision).merge(changes: changes(revision, current_notes))
+      end
+
+      def inspect_saved
+        raise Identity::Errors::Unavailable unless Identity::User.exists?(@user_id)
+
+        revision = current_revision
+        profile_summary(revision).merge(revision:, claims: saved_claims(revision))
       end
 
       private
+
+      def current_revision
+        TasteProfile.find_by(user_id: @user_id)&.current_revision
+      end
+
+      def profile_summary(revision)
+        { profile: revision&.profile, quality_rankings: quality_rankings }
+      end
+
+      def saved_claims(revision)
+        return [] unless revision.present? && revision.annotations.present?
+
+        evidence = revision.taste_profile_revision_eval.output.fetch("evidence").index_by { |note| note.fetch("rating_id") }
+        revision.annotations.map do |annotation|
+          citations = annotation.fetch("citations").map do |citation|
+            rating_id = citation.fetch("rating_id")
+            note = evidence.fetch(rating_id)
+            first, last = citation.values_at("start_offset", "end_offset")
+            { rating_id:, title: note.fetch("film_title"), quote: note.fetch("text")[first...last] }
+          end
+          { claim: annotation.fetch("claim"), explanation: annotation.fetch("explanation"), citations: }
+        end
+      end
 
       def quality_rankings
         totals = RatingQuality.current_rating_qualities_for_user(user_id: @user_id).group(:quality_id).sum(:score)

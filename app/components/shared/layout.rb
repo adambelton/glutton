@@ -64,7 +64,7 @@ module Shared
         render Recommendations::RecommendationsNavLink.new(unlocked: recommendations_unlocked)
         a(href: library_path) { t("library.browser.title") }
         a(href: account_settings_path) { t("account.title") } if user.can_view_account?
-        a(href: registry_root_path) { t("registry.title") } if user.superuser?
+        a(href: admin_path) { t("admin.title") } if user.superuser?
       end
     end
 
@@ -74,7 +74,6 @@ module Shared
       when "recommendation" then t("recommendations.title")
       when "library" then t("library.browser.title")
       when "account" then t("account.title")
-      when "registry" then t("registry.title")
       end
     end
 
@@ -82,7 +81,7 @@ module Shared
       current_section = request.path.split("/")[1]
       select(class: "ui-primary-navigation ui-input", aria: { label: t("ui.navigation") },
         data: { controller: "mobile-navigation", action: "change->mobile-navigation#navigate" }) do
-        option(value: "", disabled: true, selected: !%w[ rating recommendation library registry account ].include?(current_section)) { t("ui.navigation") }
+        option(value: "", disabled: true, selected: !%w[ rating recommendation library account ].include?(current_section)) { t("ui.navigation") }
         navigation_option("rating", new_rating_path, t("ratings.browser.title"), current_section:)
         recommendation_label = t("recommendations.title")
         unless recommendations_unlocked
@@ -94,7 +93,7 @@ module Shared
           data: { recommendations_unlock_target: "option", unlocked_label: t("recommendations.title") })
         navigation_option("library", library_path, t("library.browser.title"), current_section:)
         navigation_option("account", account_settings_path, t("account.title"), current_section:) if user.can_view_account?
-        navigation_option("registry", registry_root_path, t("registry.title"), current_section:) if user.superuser?
+        navigation_option("admin", admin_path, t("admin.title"), current_section:) if user.superuser?
       end
     end
 
