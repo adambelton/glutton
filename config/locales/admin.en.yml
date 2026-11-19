@@ -8,9 +8,20 @@ en:
       films: Search films
       qualities: Search qualities
       quality_categories: Search quality categories
-      submit: Search
       clear: Clear search
       no_matches: No records match your search.
+    tmdb:
+      search: Search TMDB
+      clear: Clear TMDB search
+      results: TMDB results
+      empty: No films found on TMDB.
+      unavailable: TMDB search is temporarily unavailable.
+      add: Add to Registry
+      present: In Registry
+      record: "%{title} is in the Registry. View film"
+      imported: "%{title} was added to the Registry."
+      already_present: This film is already in the Registry.
+      import_failed: "The film could not be imported. %{reason}"
     pagination:
       label: Pagination
       page: "Page %{number} of %{total}"

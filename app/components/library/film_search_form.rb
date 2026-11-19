@@ -21,7 +21,7 @@ module Library
             data: { action: "input->library-film-search#schedule compositionend->library-film-search#schedule focus->library-film-search#reopen" })
         end
         if @dropdown
-          section(id: "library-film-search-results", class: "library-film-search-dropdown", aria: { live: "polite" },
+          section(id: "library-film-search-results", class: "library-film-search-dropdown film-search-dropdown", aria: { live: "polite" },
             data: { action: "click->library-film-search#paginate" }, hidden: true)
         end
       end

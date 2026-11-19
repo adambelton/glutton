@@ -74,7 +74,7 @@ class SuperuserUserAdministrationTest < ActionDispatch::IntegrationTest
 
     get admin_users_path
     assert_select "input[type=search][value='']"
-    assert_select "a[aria-label=?]", "Clear search", count: 0
+    assert_select "a[aria-label=?]:not([hidden])", "Clear search", count: 0
 
     token = form_token(admin_users_path)
     post admin_users_path, params: { authenticity_token: token, account_email_or_id: @user.id.to_s }

@@ -3,6 +3,10 @@ module Registry
     class ImportIncomplete < StandardError
       attr_reader :stage, :reason, :tmdb_id
 
+      def existing_film?
+        stage == :persistence && reason == :existing_film
+      end
+
       def initialize(stage:, reason:, tmdb_id: nil)
         @stage, @reason, @tmdb_id = stage, reason, tmdb_id
         super(I18n.t("registry.import.incomplete",

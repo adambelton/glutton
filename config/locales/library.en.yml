@@ -38,7 +38,6 @@ en:
       label: Search films
       placeholder: Add films to library
       loading: Fetching film results
-      results: Search results
       empty: No matching horror films on this page.
       page: "Page %{number} of %{total}"
       in_watchlist: On your Watchlist

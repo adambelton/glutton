@@ -30,14 +30,16 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     spinner = find(".library-film-search-spinner").rect
     field = find("#library-film-query").rect
     assert_operator spinner.x + spinner.width, :<=, field.x
-    assert_selector ".library-film-search-dropdown h3", text: "Alien (1979)"
+    assert_selector ".library-film-search-dropdown h2", text: "Search results"
+    assert_selector '.library-film-search-dropdown h3 a[href="https://www.themoviedb.org/movie/348"][target="_blank"][rel~="noopener"]',
+      text: "Alien (1979)"
     assert_no_selector ".library-film-search-spinner"
     assert_selector ".library-film-search-dropdown img[src$='/alien.jpg']"
-    assert_selector ".library-film-search-dropdown .library-film-search-overview", count: 5,
+    assert_selector ".library-film-search-dropdown .film-search-overview", count: 5,
       text: "A crew answers a distress signal"
     assert_selector ".library-film-search-dropdown button[aria-label='Mark watched'] svg"
-    actions = first(".library-film-search-actions").rect
-    details = first(".library-film-search-result-details").rect
+    actions = first(".film-search-actions").rect
+    details = first(".film-search-result-details").rect
     assert_operator actions.x, :>=, details.x + details.width
     assert_selector "#library-film-query:focus"
     assert_current_path library_path
@@ -55,7 +57,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       within all("li", count: 2).last do
         placeholder = find(".film-poster.poster-wordmark", text: I18n.t("ui.short_wordmark")).rect
         assert_equal [ poster.width, poster.height ], [ placeholder.width, placeholder.height ]
-        assert_selector ".library-film-search-overview", text: "A crew answers a distress signal"
+        assert_selector ".film-search-overview", text: "A crew answers a distress signal"
       end
       click_link I18n.t("library.browser.next")
       assert_text "Alien 2-5"

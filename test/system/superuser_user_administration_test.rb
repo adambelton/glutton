@@ -10,7 +10,9 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     long_title = "Matched film 00 #{"with an unusually long title " * 10}"
     Registry::Film.create!(title: long_title)
     1.upto(10) { |number| Registry::Film.create!(title: "Matched film %02d" % number) }
-    Registry::Quality.create!(name: "Atmospheric", quality_category: quality_categories(:tone))
+    category = Registry::QualityCategory.create!(name: "Test category", maximum_qualities: 1)
+    Registry::Quality.create!(name: "Atmospheric", quality_category: category)
+    Registry::Quality.create!(name: "Unsettling", quality_category: quality_categories(:tone))
     detail_path = admin_user_path(guest.id)
     profile_path = glutton_profile_admin_user_path(guest.id)
 
@@ -27,16 +29,16 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_selector ".admin-sidebar > a.admin-wordmark:first-child[href='#{library_path}']", text: "glutton."
     assert_collection_dimensions
     fill_in "Search by user ID or email address", with: guest.id
-    click_button "Search"
     assert_selector "tbody tr", count: 1
     assert_link "User ##{guest.id}"
+    assert_current_path admin_users_path
+    assert_selector "#admin-collection-query:focus"
     assert_collection_dimensions
     click_link "Clear search"
     assert_selector "tbody tr", count: 2
     within(".admin-navigation") { click_link "Films" }
     assert_current_path admin_films_path
     fill_in "Search films", with: "matched"
-    click_button "Search"
     assert_current_path admin_films_path(q: "matched")
     assert_selector "tbody tr", count: 10
     assert_collection_dimensions
@@ -51,9 +53,22 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     within(".admin-navigation") { click_link "Qualities" }
     assert_current_path admin_qualities_path
     assert_collection_dimensions
+    fill_in "Search qualities", with: "Atmospheric"
+    assert_selector "tbody tr", count: 1
+    assert_link "Atmospheric"
+    fill_in "Search qualities", with: ""
+    assert_current_path admin_qualities_path
+    assert_selector "tbody tr", count: 2
     within(".admin-navigation") { click_link "Quality categories" }
     assert_current_path admin_quality_categories_path
     assert_collection_dimensions
+    fill_in "Search quality categories", with: "Test category"
+    assert_selector "tbody tr", count: 1
+    assert_link "Test category"
+    find_field("Search quality categories").send_keys(:escape)
+    assert_field "Search quality categories", with: ""
+    assert_current_path admin_quality_categories_path
+    assert_selector "tbody tr", minimum: 2
     within(".admin-navigation") { click_link "Users" }
     assert_current_path admin_users_path
 
@@ -91,15 +106,14 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
 
   def assert_collection_dimensions
     assert_selector "input[type=search][placeholder][aria-label]"
+    assert_no_selector ".admin-search button"
     dimensions = page.evaluate_script(<<~JS)
       (() => {
         const input = document.querySelector(".admin-search-field input").getBoundingClientRect()
-        const button = document.querySelector(".admin-search button").getBoundingClientRect()
-        const clearLink = document.querySelector(".admin-clear-search")
+        const clearLink = document.querySelector(".admin-clear-search:not([hidden])")
         const clear = clearLink?.getBoundingClientRect()
         return {
           inputHeight: input.height,
-          buttonHeight: button.height,
           rows: [...document.querySelectorAll(".admin-table tr")].map((row) => row.getBoundingClientRect().height),
           paginationBorder: getComputedStyle(document.querySelector(".admin-pagination")).borderBlockStartWidth,
           lastRowBorder: getComputedStyle(document.querySelector(".admin-table tbody tr:last-child td")).borderBlockEndWidth,
@@ -108,7 +122,7 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
         }
       })()
     JS
-    assert_equal dimensions.fetch("inputHeight"), dimensions.fetch("buttonHeight")
+    assert_equal 46, dimensions.fetch("inputHeight")
     assert dimensions.fetch("clearInside")
     assert_equal [ 56 ], dimensions.fetch("rows").uniq
     assert_equal "0px", dimensions.fetch("paginationBorder")

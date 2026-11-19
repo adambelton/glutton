@@ -11,15 +11,16 @@ class LibraryFilmSearchTest < ActionDispatch::IntegrationTest
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: @authentication.id, user_id: @user.id } }
     cookies[:session_id] = jar[:session_id]
-    @controller_class = Library::FilmSearchController
-    @forgery = @controller_class.allow_forgery_protection
-    @controller_class.allow_forgery_protection = true
-    @controller_class::RATE_LIMIT_STORE.clear
+    @forgery = [ Library::FilmSearchController, LibraryController ].to_h do |controller|
+      [ controller, controller.allow_forgery_protection ]
+    end
+    @forgery.each_key { |controller| controller.allow_forgery_protection = true }
+    clear_rate_limits
   end
 
   teardown do
-    @controller_class.allow_forgery_protection = @forgery
-    @controller_class::RATE_LIMIT_STORE.clear
+    @forgery.each { |controller, original| controller.allow_forgery_protection = original }
+    clear_rate_limits
   end
 
   test "guest searches and adds an existing film then marks it watched" do
@@ -122,12 +123,39 @@ class LibraryFilmSearchTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "selection rate limit applies across Library actions from search" do
+    film = Registry::Film.create!(title: "Alien", tmdb_id: 348)
+    with_search { get library_film_search_path(query: "Alien") }
+    watchlist = selection_params(library_search_watchlist_path)
+    watched = selection_params(library_search_watched_path)
+
+    10.times do
+      post library_search_watchlist_path, params: watchlist
+      assert_response :see_other
+    end
+    entry = Library::LibraryFilm.find_by!(user: @user, film:)
+    assert_not entry.watched?
+
+    post library_search_watched_path, params: watched
+    assert_response :too_many_requests
+    assert_select '[role="alert"]', I18n.t("library.search.limited")
+    assert_not entry.reload.watched?
+  end
+
   private
 
+  def clear_rate_limits
+    Library::FilmSearchController::RATE_LIMIT_STORE.clear
+    LibraryController::FILM_SEARCH_SELECTION_LIMIT_STORE.clear
+  end
+
   def post_selection(path)
+    post path, params: selection_params(path)
+  end
+
+  def selection_params(path)
     form = Nokogiri::HTML(response.body).at_css("form[action='#{path}']")
-    fields = form.css("input[type=hidden]").to_h { |field| [ field["name"], field["value"] ] }
-    post path, params: fields
+    form.css("input[type=hidden]").to_h { |field| [ field["name"], field["value"] ] }
   end
 
   def with_search(&block)

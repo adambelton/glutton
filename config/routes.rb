@@ -46,9 +46,9 @@ Rails.application.routes.draw do
 
   resource :library, only: :show, controller: :library
   get "library/search", to: "library/film_search#index", as: :library_film_search
-  post "library/search/watchlist", to: "library/film_search#add_to_watchlist", as: :library_search_watchlist
-  post "library/search/watched", to: "library/film_search#add_to_watched", as: :library_search_watched
-  post "library/search/move_to_watched", to: "library/film_search#move_watchlist_to_watched", as: :library_search_move_to_watched
+  post "library/search/watchlist", to: "library#add_to_watchlist_from_search", as: :library_search_watchlist
+  post "library/search/watched", to: "library#add_to_watched_from_search", as: :library_search_watched
+  post "library/search/move_to_watched", to: "library#move_to_watched_from_search", as: :library_search_move_to_watched
 
   post "library/films/:id/move_to_watched", to: "library#move_to_watched", as: :move_to_watched_library_film
   post "library/films/:id/move_to_watchlist", to: "library#move_to_watchlist", as: :move_to_watchlist_library_film
@@ -64,7 +64,9 @@ Rails.application.routes.draw do
       delete "sessions/:session_id", action: :revoke_session, as: :session, on: :member
       get "glutton-profile", to: "ratings/profile_inspections#show", as: :glutton_profile, on: :member
     end
-    resources :films, only: [ :index, :show ], controller: "registry/films"
+    resources :films, only: [ :index, :show, :create ], controller: "registry/films" do
+      get "search", to: "registry/film_search#index", on: :collection
+    end
     resources :qualities, only: [ :index, :show ], controller: "registry/qualities"
     resources :quality_categories, path: "quality-categories", only: [ :index, :show ], controller: "registry/quality_categories"
   end

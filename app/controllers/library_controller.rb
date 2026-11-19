@@ -1,6 +1,18 @@
 class LibraryController < ApplicationController
-  rescue_from Identity::Errors::Required, Identity::Errors::Unavailable do
-    render ::Views::Library::SignedOut.new, status: :unauthorized
+  include Library::FilmSearchContext
+
+  FILM_SEARCH_SELECTION_ACTIONS = %w[add_to_watchlist_from_search add_to_watched_from_search move_to_watched_from_search].freeze
+  FILM_SEARCH_SELECTION_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
+  rate_limit to: 10, within: 1.hour, store: FILM_SEARCH_SELECTION_LIMIT_STORE, name: :selection,
+    only: FILM_SEARCH_SELECTION_ACTIONS, with: :film_search_selection_limited
+
+  rescue_from Identity::Errors::Unavailable, with: :render_signed_out
+  rescue_from Identity::Errors::Required do
+    if FILM_SEARCH_SELECTION_ACTIONS.include?(action_name)
+      head :unauthorized
+    else
+      render_signed_out
+    end
   end
 
   rescue_from Library::Errors::FilmUnavailable do
@@ -53,6 +65,27 @@ class LibraryController < ApplicationController
     redirect_to recommendation_path, alert: I18n.t("library.detail.watch_unavailable"), status: :see_other
   end
 
+  def add_to_watchlist_from_search
+    complete_film_search_selection(notice: "library.detail.watchlisted") do
+      Library::FilmSearch::AddToLibraryFromSearch.call(user_id: current_user.id, tmdb_id: film_search_selection_id(:tmdb_id),
+        library_action: Library::CollectionManagement::AddToWatchlist)
+    end
+  end
+
+  def add_to_watched_from_search
+    complete_film_search_selection(notice: "library.detail.watched") do
+      Library::FilmSearch::AddToLibraryFromSearch.call(user_id: current_user.id, tmdb_id: film_search_selection_id(:tmdb_id),
+        library_action: Library::CollectionManagement::AddToWatched)
+    end
+  end
+
+  def move_to_watched_from_search
+    complete_film_search_selection(notice: "library.detail.watched") do
+      Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: current_user.id,
+        library_film_id: film_search_selection_id(:library_film_id))
+    end
+  end
+
   def remove_from_watchlist
     Library::CollectionManagement::RemoveFromWatchlist.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to library_path, notice: I18n.t("library.detail.removed"), status: :see_other
@@ -74,6 +107,37 @@ class LibraryController < ApplicationController
   end
 
   private
+
+  def complete_film_search_selection(notice:)
+    yield
+    redirect_to film_search_results_path, notice: t(notice), status: :see_other
+  rescue Registry::Errors::InvalidTmdbSearch
+    render_film_search_error(:invalid, :bad_request)
+  rescue Registry::Errors::TmdbUnavailable, Registry::Errors::InvalidTmdbResponse, Registry::Errors::TmdbConfigurationError
+    render_film_search_error(:unavailable, :service_unavailable)
+  rescue Registry::Errors::ImportIncomplete => error
+    redirect_to film_search_results_path, alert: t("library.search.import_failed", reason: error.message), status: :see_other
+  rescue Library::Errors::AddToWatchlistUnavailable, Library::Errors::AddToWatchedUnavailable,
+    Library::Errors::AlreadyWatched, Library::Errors::FilmUnavailable
+    redirect_to film_search_results_path, alert: t("library.search.action_unavailable"), status: :see_other
+  end
+
+  def film_search_selection_id(key)
+    id = params[key]
+    unless valid_film_search? && id.is_a?(String) && id.match?(/\A[1-9]\d{0,17}\z/)
+      raise Registry::Errors::InvalidTmdbSearch
+    end
+
+    id.to_i
+  end
+
+  def film_search_selection_limited
+    render_film_search_error(:limited, :too_many_requests)
+  end
+
+  def render_signed_out
+    render ::Views::Library::SignedOut.new, status: :unauthorized
+  end
 
   def valid_rating_filters?(ratings)
     ratings.is_a?(Array) && (ratings.empty? || (@view == Library::CollectionManagement::Browse::Views::WATCHED &&

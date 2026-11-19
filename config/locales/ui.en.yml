@@ -2,6 +2,8 @@ en:
   ui:
     wordmark: glutton.
     short_wordmark: g.
+    film_search_results: Search results
+    open_film_on_tmdb: View on TMDB (opens in a new tab)
     page_title: "%{brand} %{title}"
     dismiss_notification: Dismiss notification
     log_out: Log out

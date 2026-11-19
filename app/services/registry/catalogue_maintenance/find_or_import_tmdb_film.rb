@@ -5,15 +5,11 @@ module Registry
         film = Film.find_by(tmdb_id:)
         return film if film.present?
 
-        begin
-          film = ImportFilm.call(tmdb_id:)
-        rescue Errors::ImportIncomplete => error
-          raise unless error.stage == :persistence && error.reason == :existing_film
+        ImportDiscoveredFilm.call(tmdb_id:)
+      rescue Errors::ImportIncomplete => error
+        raise unless error.existing_film?
 
-          return Film.find_by(tmdb_id:) || raise
-        end
-        AssignInitialFilmQualitiesJob.set(queue: :registry_assignment).perform_later(film_ids: [ film.id ])
-        film
+        Film.find_by(tmdb_id:) || raise
       end
     end
   end

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { fitFilmSearchDropdown } from "controllers/fit_film_search_dropdown"
 
 export default class extends Controller {
   static values = { error: String }
@@ -61,10 +62,7 @@ export default class extends Controller {
   }
 
   fitDropdown() {
-    if (!this.element.contains(this.results) || this.results.hidden) return
-
-    const available = window.innerHeight - this.results.getBoundingClientRect().top - 12
-    this.results.style.setProperty("--library-search-available-height", `${Math.max(120, available)}px`)
+    if (this.element.contains(this.results)) fitFilmSearchDropdown(this.results)
   }
 
   paginate(event) {

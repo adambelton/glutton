@@ -250,7 +250,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       assert_select ".admin-page-summary p", "11 results"
       get path
       assert_select "tbody tr", count: 10
-      assert_select "a[aria-label=?]", "Clear search", count: 0
+      assert_select "a[aria-label=?]:not([hidden])", "Clear search", count: 0
     end
 
     Registry::Film.create!(title: "Half % of a film")
