@@ -13,16 +13,25 @@ module DomainEvents
           return :not_due unless delivery.due_for_attempt?
           return :blocked if delivery.predecessor_pending?(subscription)
 
-          outcome = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
           event = delivery.domain_event
+          attributes = {
+            ActivityMonitoring::Attributes::EVENT_ID => event.id,
+            ActivityMonitoring::Attributes::CORRELATION_ID => event.correlation_id,
+            ActivityMonitoring::Attributes::SUBSCRIBER => subscription.name,
+            ActivityMonitoring::Attributes::DELIVERY_ID => delivery.id,
+            ActivityMonitoring::Attributes::USER_ID => user_id
+          }
+          outcome = ActivityMonitoring.trace_operation("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
+            links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes:) do
+            result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
+            ActivityMonitoring.current_operation_span&.set_delivery_result(outcome: result, attempt: delivery.attempts,
+              age_ms: ((Time.current - event.occurred_at) * 1000).round, error_type: delivery.last_error_class)
+            result
+          end
           ActiveRecord.after_all_transactions_commit do
             Rails.logger.info({ message: "domain_event_delivery", event_id: event.id,
               correlation_id: event.correlation_id, event_name: event.name, subscriber: subscription.name,
               delivery_id: delivery.id, outcome:, attempts: delivery.attempts, error_class: delivery.last_error_class }.compact.to_json)
-            if outcome == :failed
-              Rails.error.report(Errors::DispatchFailure.new("Domain event delivery failed (#{delivery.last_error_class})"),
-                severity: :error, context: { correlation_id: event.correlation_id, event_id: event.id, delivery_id: delivery.id })
-            end
           end
           outcome
         end

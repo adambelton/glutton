@@ -11,6 +11,11 @@ module Ratings
 
     MAX_NOTES_LENGTH = 8_000
 
+    after_create do
+      Monitoring::TraceContext.capture!(rating_id: id) if notes.present?
+      ActivityMonitoring.current_operation_span&.set_rating_id(id)
+    end
+
     belongs_to :rating_film
     has_many :rating_qualities
     has_many :rating_quality_evals

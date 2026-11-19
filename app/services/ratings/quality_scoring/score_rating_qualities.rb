@@ -4,15 +4,14 @@ module Ratings
       TRACE_NAME = "assess-rating-qualities".freeze
       TRACE_TAGS = [ "ratings", "quality-assessment" ].freeze
 
-      def self.call(rating_id:, client: nil, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
+      def self.call(rating_id:, client: nil, tracer_provider: ActivityMonitoring.ai_tracer_provider)
         new(rating_id:, client:, tracer_provider:).call
       end
 
       def initialize(rating_id:, client:, tracer_provider:)
         @rating_id = rating_id
         @tracer_provider = tracer_provider
-        @tracer = (tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.ratings", "1")
-        @client = client || TypeSafeClient.new(tracer: @tracer, profile: :ratings)
+        @client = client || TypeSafeClient.new(tracer: ActivityMonitoring.ai_tracer(ActivityMonitoring::Scopes::RATINGS, provider: tracer_provider), profile: :ratings)
       end
 
       def call
@@ -20,33 +19,28 @@ module Ratings
         rating_film = rating.rating_film
         ensure_current!(rating_film, rating)
         profile_revision = TasteProfile.find_by(user_id: rating_film.user_id)&.current_revision
-        return unless rating.can_assess_qualities_for?(profile_revision&.id)
+        unless rating.can_assess_qualities_for?(profile_revision&.id)
+          ActivityMonitoring.current_operation_span&.set_outcome(ActivityMonitoring::AssessmentOutcomes::ALREADY_ASSESSED)
+          return
+        end
 
         explicit_evidence = rating.quality_evidence_for_reassessment
         qualities = explicit_evidence&.fetch("qualities") || capture_qualities(rating_film)
-        return if qualities.empty?
+        if qualities.empty?
+          ActivityMonitoring.current_operation_span&.set_outcome(ActivityMonitoring::AssessmentOutcomes::NO_QUALITIES)
+          return
+        end
 
         notes = rating.notes.present? ? { rating.id.to_s => rating.notes } : {}
-        @tracer.in_span(TRACE_NAME, attributes: {
-          "langfuse.trace.name" => TRACE_NAME,
-          "langfuse.observation.type" => "span",
-          "langfuse.trace.tags" => TRACE_TAGS,
-          "langfuse.environment" => Rails.env.to_s,
-          "langfuse.observation.input" => { rating_id: rating.id, notes_count: notes.size, quality_count: qualities.size }.to_json
-        }, record_exception: false) do |span|
-          trace_id = span.context.hex_trace_id if span.context.valid?
-          evaluation = TypeSafeClient.with_trace_tags(TRACE_TAGS) do
-            assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
-          end
+        ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::RATINGS, provider: @tracer_provider, tags: TRACE_TAGS,
+          input: { rating_id: rating.id, notes_count: notes.size, quality_count: qualities.size }) do |span|
+          trace_id = span.trace_id
+          evaluation = assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
+          outcome = evaluation.present? ? ActivityMonitoring::AssessmentOutcomes::ASSESSED : ActivityMonitoring::AssessmentOutcomes::SUPERSEDED
+          ActivityMonitoring.current_operation_span&.set_outcome(outcome)
           span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
           evaluation
-        rescue StandardError
-          span.status = OpenTelemetry::Trace::Status.error("Rating quality assessment failed")
-          span.set_attribute("langfuse.observation.level", "ERROR")
-          raise
         end
-      ensure
-        @tracer_provider&.force_flush(timeout: 5)
       end
 
       private

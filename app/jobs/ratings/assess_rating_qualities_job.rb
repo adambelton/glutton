@@ -14,11 +14,14 @@ module Ratings
     end
 
     def perform(rating_id)
+      ActivityMonitoring.current_operation_span&.set_rating_id(rating_id)
       QualityScoring::ScoreRatingQualities.call(rating_id:)
     rescue Errors::QualityAssessmentFailed => error
       raise unless error.reason == :stale_rating
+      ActivityMonitoring.current_operation_span&.set_outcome(ActivityMonitoring::AssessmentOutcomes::SUPERSEDED)
     rescue ActiveRecord::RecordNotFound
       raise if Rating.exists?(rating_id)
+      ActivityMonitoring.current_operation_span&.set_outcome(ActivityMonitoring::AssessmentOutcomes::REMOVED)
     end
   end
 end

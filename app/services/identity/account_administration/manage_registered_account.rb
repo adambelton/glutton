@@ -3,6 +3,9 @@ require "net/smtp"
 module Identity
   module AccountAdministration
     class ManageRegisteredAccount
+      extend Monitoring::Instrumentation
+      instrument_operations :request_email_change, :change_password, :confirm_email_change, :close_account
+
       def initialize(user_id:)
         @user_id = user_id
       end

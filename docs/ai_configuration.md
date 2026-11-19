@@ -15,6 +15,7 @@ Set secrets in `.env.development` locally (already ignored by Git), or through t
 | `LANGFUSE_BASE_URL` | Langfuse origin, e.g. `https://cloud.langfuse.com`; match the project's region or deployment. |
 | `LANGFUSE_PUBLIC_KEY` | Langfuse project public key. |
 | `LANGFUSE_SECRET_KEY` | Langfuse project secret key. |
+| `LANGFUSE_TRACING_ENVIRONMENT` | Langfuse environment label. Defaults to the Rails environment. Render staging sets `staging`. |
 | `LANGFUSE_TRACING_ENABLED` | Set to `false` to disable export. Otherwise all three Langfuse settings enable it. Tests always disable live clients/export. |
 
 Dotenv loads before Rails initializers in development. The client is available at `Rails.application.config.x.openai_client`; the dedicated provider at `Rails.application.config.x.langfuse_tracer_provider`. Missing OpenAI credentials leave the client absent. Missing Langfuse settings disable export; partial or invalid settings disable it with a sanitized warning. HTTPS is required except for localhost development deployments.

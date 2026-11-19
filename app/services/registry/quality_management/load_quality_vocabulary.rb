@@ -1,6 +1,9 @@
 module Registry
   module QualityManagement
     class LoadQualityVocabulary
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call
         Quality.transaction do
           YAML.load_file(Rails.root.join("config/quality_categories.yml")).each do |attributes|

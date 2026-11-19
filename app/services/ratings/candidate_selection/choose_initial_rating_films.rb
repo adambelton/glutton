@@ -1,6 +1,9 @@
 module Ratings
   module CandidateSelection
     class ChooseInitialRatingFilms
+      extend Monitoring::Instrumentation
+      instrument_class_operations :queue!
+
       BATCH_SIZE = 24
       CataloguePage = Data.define(:films, :number, :next_number)
 

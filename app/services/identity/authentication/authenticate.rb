@@ -1,6 +1,9 @@
 module Identity
   module Authentication
     class Authenticate
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(email_address:, password:)
         UserRegistered.transaction do
           # Verify credentials under the same user lock used by password recovery.

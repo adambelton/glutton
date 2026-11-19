@@ -2,7 +2,8 @@ module DomainEvents
   module Delivery
     class Wake
       def self.call
-        job = DispatchDomainEventsJob.perform_later
+        # One dispatcher can serve unrelated publishers. Each delivery uses its own durable trace context.
+        job = OpenTelemetry::Context.with_current(OpenTelemetry::Context.empty) { DispatchDomainEventsJob.perform_later }
         Rails.logger.warn("Domain event wakeup was not enqueued; periodic polling will recover") unless job
       rescue StandardError => error
         # Publication is already committed. Neither leak payloads nor report a failed user action.

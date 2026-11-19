@@ -1,3 +1,5 @@
+require Rails.root.join("lib/activity_monitoring")
+
 Rails.application.configure do
   config.good_job.execution_mode = :external
   config.good_job.threads = 2
@@ -7,16 +9,16 @@ Rails.application.configure do
   config.good_job.cron = {
     domain_event_sweep: {
       cron: "*/30 * * * * *",
-      class: "DispatchDomainEventsJob"
+      class: ActivityMonitoring::ScheduledJobs::DOMAIN_EVENT_SWEEP
     },
-    appsignal_worker_health: {
+    worker_backlog: {
       cron: "*/5 * * * * UTC",
-      class: "ReportWorkerHealthJob",
-      enabled_by_default: -> { defined?(Appsignal) && Appsignal.active? }
+      class: ActivityMonitoring::ScheduledJobs::WORKER_BACKLOG,
+      enabled_by_default: -> { ActivityMonitoring.operation_tracer.present? }
     },
     ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",
-      class: "Ratings::RefreshTasteProfilesJob",
+      class: ActivityMonitoring::ScheduledJobs::RATINGS_TASTE_PROFILE_REFRESH,
       enabled_by_default: -> { Rails.env.production? }
     }
   }

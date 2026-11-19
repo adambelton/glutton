@@ -17,7 +17,6 @@ require "rails/test_unit/railtie"
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
-require "appsignal" if ENV["APPSIGNAL_APP_ENV"] == "staging" && ENV["APPSIGNAL_PUSH_API_KEY"].present?
 
 module Glutton
   class Application < Rails::Application

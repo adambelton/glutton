@@ -13,8 +13,10 @@ module DomainEvents
 
           stream = DomainEventStream.find_or_create_by!(user:, publisher:, stream_key:)
           id = SecureRandom.uuid
-          stream.append!(id:, name:, payload: json_payload, schema_version:,
+          published_event = stream.append!(id:, name:, payload: json_payload, schema_version:,
             correlation_id: correlation_id || id, causation_id:, occurred_at: Time.current)
+          Monitoring::TraceContext.capture!(domain_event_id: published_event.id)
+          published_event
         end
         ActiveRecord.after_all_transactions_commit do
           Delivery::Wake.call

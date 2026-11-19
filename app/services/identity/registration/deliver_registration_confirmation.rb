@@ -3,6 +3,9 @@ require "net/smtp"
 module Identity
   module Registration
     class DeliverRegistrationConfirmation
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(pending_registration_id:)
         origin = validated_origin
         recipient, token = PendingRegistration.transaction(requires_new: true) do

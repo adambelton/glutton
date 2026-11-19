@@ -4,6 +4,7 @@ module Recommendations
       Candidate = Data.define(:film_id, :score, :contributions)
 
       def self.call(film_ids:, quality_ids_by_film:, scores_by_quality:)
+        ActivityMonitoring.current_operation_span&.set_operation(ActivityMonitoring::Operations::RANK_RECOMMENDATION_FILMS)
         film_ids.map do |film_id|
           contributions = quality_ids_by_film.fetch(film_id, []).uniq.to_h do |quality_id|
             [ quality_id, scores_by_quality.fetch(quality_id, 0) ]

@@ -1,6 +1,9 @@
 module Identity
   module AccountAdministration
     class RevokeSuperuser
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(user_id:, actor_user_id:)
         User.transaction(requires_new: true) do
           users = User.where(id: [ actor_user_id, user_id ]).order(:id).lock.index_by(&:id)

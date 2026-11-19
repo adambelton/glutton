@@ -1,6 +1,9 @@
 module Ratings
   module RatingRecording
     class ReviseRating
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(user_id:, rating_film_id:, previous_rating_id:, value:, notes: nil)
         Rating.transaction(requires_new: true) do
           user = Identity::User.lock.find_by(id: user_id)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -231,6 +231,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
     t.index ["user_id", "film_id"], name: "index_library_films_on_user_id_and_film_id", unique: true
   end
 
+  create_table "monitoring_trace_contexts", force: :cascade do |t|
+    t.uuid "domain_event_id"
+    t.bigint "rating_id"
+    t.string "traceparent", null: false
+    t.index ["domain_event_id"], name: "index_monitoring_trace_contexts_on_domain_event_id", unique: true
+    t.index ["rating_id"], name: "index_monitoring_trace_contexts_on_rating_id", unique: true
+    t.check_constraint "num_nonnulls(domain_event_id, rating_id) = 1", name: "monitoring_trace_context_one_source"
+  end
+
   create_table "pending_registrations", force: :cascade do |t|
     t.bigint "guest_user_id"
     t.string "email_address", null: false
@@ -421,6 +430,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
   add_foreign_key "film_quality_evals", "films"
   add_foreign_key "library_films", "films"
   add_foreign_key "library_films", "users", on_delete: :cascade
+  add_foreign_key "monitoring_trace_contexts", "domain_events", on_delete: :cascade
+  add_foreign_key "monitoring_trace_contexts", "ratings", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
   add_foreign_key "qualities", "quality_categories"
   add_foreign_key "rating_films", "films"

@@ -1,13 +1,6 @@
 class TypeSafeClient
   CONFIGURATION = JSON.parse(Rails.root.join("config/typesafe.json").read).freeze
 
-  TRACE_TAGS_KEY = OpenTelemetry::Context.create_key("glutton.typesafe.trace_tags")
-  private_constant :TRACE_TAGS_KEY
-
-  def self.with_trace_tags(tags, &block)
-    OpenTelemetry::Context.with_value(TRACE_TAGS_KEY, tags, &block)
-  end
-
   class Error < StandardError
     attr_reader :reason, :provider_response, :request_sent
 
@@ -60,25 +53,16 @@ class TypeSafeClient
     @requests += 1
     allowance = input_cost(input_tokens: bytes * 2 + 4096)
     @cost += allowance
-    @tracer.in_span(phase, attributes: {
-      "langfuse.observation.type" => "generation",
-      "langfuse.environment" => Rails.env.to_s,
-      "langfuse.trace.tags" => OpenTelemetry::Context.value(TRACE_TAGS_KEY),
-      "langfuse.observation.model.name" => model,
-      "langfuse.observation.input" => (@settings.fetch("trace_payload") ? payload : { question_count: questions.size }).to_json
-    }.compact, record_exception: false) do |span|
+    ActivityMonitoring.trace_ai_generation(phase, tracer: @tracer,
+      model:, input: (@settings.fetch("trace_payload") ? payload : { question_count: questions.size })) do |span|
       request_sent = true
       response = @request.post(path: "/v1/systemone", payload:, headers: { "Authorization" => "Bearer #{@token}" })
       validate_response!(response:, questions:)
       usage = response.fetch("usage")
       @cost += input_cost(input_tokens: usage.fetch("input_tokens")) - allowance
-      span.set_attribute("langfuse.observation.output", response.to_json) if @settings.fetch("trace_payload")
-      span.set_attribute("langfuse.observation.usage_details", { input: usage.fetch("input_tokens"), output: usage.fetch("output_tokens") }.to_json)
-      span.set_attribute("langfuse.observation.cost_details", { input: input_cost(input_tokens: usage.fetch("input_tokens")) }.to_json)
-    rescue Error, ProviderRequest::Error
-      span.status = OpenTelemetry::Trace::Status.error("Assessment request failed")
-      span.set_attribute("langfuse.observation.level", "ERROR")
-      raise
+      span.set_output(response) if @settings.fetch("trace_payload")
+      span.set_usage(input: usage.fetch("input_tokens"), output: usage.fetch("output_tokens"))
+      span.set_cost(input: input_cost(input_tokens: usage.fetch("input_tokens")))
     end
     response
   rescue Error, ProviderRequest::Error => error

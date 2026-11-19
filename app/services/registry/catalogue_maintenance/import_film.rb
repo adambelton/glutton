@@ -1,6 +1,9 @@
 module Registry
   module CatalogueMaintenance
     class ImportFilm
+      extend Monitoring::Instrumentation
+      instrument_operations :call
+
       def self.call(tmdb_id:, tmdb_client: Sources::TmdbClient, wikidata_client: Sources::WikidataClient, wikipedia_client: Sources::WikipediaClient)
         new(tmdb_id:, tmdb_client:, wikidata_client:, wikipedia_client:).call
       end

@@ -12,6 +12,7 @@ module Ratings
           rating_film = RatingFilm.find_or_create_by!(user:, film:)
           raise Ratings::Errors::AlreadyRated unless rating_film.can_submit_rating?
 
+          ActivityMonitoring.current_operation_span&.set_operation(ActivityMonitoring::Operations::CREATE_RATING_FILM) if rating_film.previously_new_record?
           rating_film
         end
       end

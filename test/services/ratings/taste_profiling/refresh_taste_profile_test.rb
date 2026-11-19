@@ -12,6 +12,60 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
   end
 
+  test "delayed deliveries keep each submission trace and profile synthesis links both ratings" do
+    original = ActivityMonitoring.operation_tracer
+    exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    provider.add_span_processor(ActivityMonitoring::Processor.new(exporter))
+    ActivityMonitoring.operation_tracer = provider.tracer(ActivityMonitoring::Scopes::OPERATIONS)
+    ratings = 2.times.map do |index|
+      film = Registry::Film.create!(title: "Trace fixture #{index}")
+      candidate = Ratings::RatingFilm.create!(user: @user, film:)
+      ActivityMonitoring.trace_operation("submit rating") do
+        Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
+          value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Private note #{index}")
+      end
+    end
+
+    worker_tracer = provider.tracer(ActivityMonitoring::Scopes::ACTIVE_JOB)
+    worker_tracer.in_span("recovery sweep", kind: :consumer,
+      attributes: { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => DispatchDomainEventsJob.name }) do
+      DispatchDomainEventsJob.perform_now
+    end
+    ai_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    ai_tracer_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    ai_tracer_provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(ai_exporter))
+    enqueue_parent = nil
+    on_enqueue = lambda do |event|
+      enqueue_parent = OpenTelemetry::Trace.current_span.context.span_id if event.payload[:job].is_a?(Ratings::ReassessRatingQualitiesJob)
+    end
+    revision = ActiveSupport::Notifications.subscribed(on_enqueue, "enqueue.active_job") do
+      refresh(tracer_provider: ai_tracer_provider) { synthesis }
+    end
+    Ratings::ReassessRatingQualitiesJob.perform_now(@user.id, revision.id)
+    provider.force_flush
+    spans = exporter.finished_spans
+    sweep = spans.find { |span| span.name == "recovery sweep" }
+    assert_operator sweep.attributes.fetch(ActivityMonitoring::Attributes::DELIVERY_COUNT), :>, 0
+    submissions = spans.select { |span| span.name == "Ratings::RatingRecording::SubmitRating.call" }
+    assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::RATING_ID) }
+    refresh_span = spans.select { |span| span.name == "refresh taste profile" }.sole
+    assert_equal refresh_span.span_id, enqueue_parent
+    ai_workflow_span = ai_exporter.finished_spans.find { |span| span.name == Ratings::TasteProfiling::RefreshTasteProfile::TRACE_NAME }
+    assert_not_equal refresh_span.trace_id, ai_workflow_span.trace_id
+    links = refresh_span.links
+    assert_equal submissions.map(&:span_id).sort, links.map { |link| link.span_context.span_id }.sort
+    deliveries = spans.select { |span| span.name == "deliver RatingSubmitted" }
+    assert_equal submissions.map { |span| [ span.trace_id, span.span_id ] }.sort,
+      deliveries.map { |span| [ span.trace_id, span.parent_span_id ] }.uniq.sort
+    assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::RATING_ID) }.sort
+    assert_not_includes spans.map(&:attributes).inspect, "Private note"
+  ensure
+    ActivityMonitoring.operation_tracer = original
+    provider&.shutdown
+    ai_tracer_provider&.shutdown
+  end
+
   test "synthesis uses current original notes with film context and persists their provenance" do
     first = submit([ "Replaced evidence" ])
     current = revise(first, [ "  The quiet dread worked.\n" ])
