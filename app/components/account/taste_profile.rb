@@ -26,25 +26,10 @@ module Account
           p { t("account.quality_rankings.#{kind}_empty") }
         else
           ul(class: "profile-quality-list", role: "list") do
-            qualities.each { |quality| li { quality_item(quality) } }
+            qualities.each { |quality| li { render Shared::ProfileQualityExpansionItem.new(quality:) } }
           end
         end
       end
-    end
-
-    def quality_item(quality)
-      definition = quality.fetch(:definition)
-      details(class: "profile-quality-item") do
-        summary do
-          quality_heading(quality)
-        end
-        p { definition.presence || t("account.quality_rankings.definition_unavailable") }
-      end
-    end
-
-    def quality_heading(quality)
-      span(class: "profile-quality-name") { quality.fetch(:name) }
-      span(class: "profile-quality-score") { "%+d" % quality.fetch(:score) }
     end
 
     def profile_content

@@ -1,7 +1,8 @@
 module Admin
   class Pagination < Shared::Base
-    def initialize(page:, path:, query: "", private_search: false, show_count: false)
+    def initialize(page:, path:, query: "", private_search: false, show_count: false, frame: nil)
       @page, @path, @query, @private_search, @show_count = page, path, query, private_search, show_count
+      @frame = frame
     end
 
     def view_template
@@ -22,7 +23,7 @@ module Admin
     def page_link(direction, number)
       label = t("admin.pagination.#{direction}")
       if @private_search && @query.present?
-        form_with(url: @path, method: :post, data: { turbo: false }) do
+        form_with(url: @path, method: :post, data: { turbo_frame: @frame }) do
           input(type: "hidden", name: "page", value: number)
           input(type: "hidden", name: "account_email_or_id", value: @query)
           render Shared::GhostButton.new(type: :submit) { label }

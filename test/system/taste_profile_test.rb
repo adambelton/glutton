@@ -68,10 +68,10 @@ class TasteProfileTest < ApplicationSystemTestCase
     page.current_window.resize_to(*original_size) if original_size
   end
 
-  test "a quality row opens with the keyboard and closes when clicked" do
+  test "both profiles use expandable quality rows with right-side chevrons" do
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "profile-chips@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current)
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     quality = quality_categories(:tone).qualities.create!(name: "Quiet dread", match_rule: "Silence builds a sense of dread.",
       not_sufficient: "A single quiet moment.")
     film = Registry::Film.create!(title: "Quiet Dread")
@@ -95,12 +95,32 @@ class TasteProfileTest < ApplicationSystemTestCase
     gap = row.evaluate_script("(() => { const name = this.querySelector('.profile-quality-name'); const score = this.querySelector('.profile-quality-score'); const range = document.createRange(); range.selectNodeContents(name); return score.getBoundingClientRect().left - range.getBoundingClientRect().right; })()")
     assert_operator gap, :>=, 0
     assert_operator gap, :<=, 20
+    assert_equal "1px", row.find(:xpath, "..").style("border-left-width").fetch("border-left-width")
+    assert_quality_expansion(row, quality.match_rule)
+
+    visit glutton_profile_admin_user_path(user.id)
+    row = find(".admin-profile-rankings .profile-quality-item")
+    borders = row.find(:xpath, "..").style("border-left-width", "border-bottom-width")
+    assert_equal "0px", borders.fetch("border-left-width")
+    assert_equal "1px", borders.fetch("border-bottom-width")
+    assert_quality_expansion(row, quality.match_rule)
+  end
+
+  private
+
+  def assert_quality_expansion(row, definition)
     within row do
-      assert_no_text quality.match_rule
-      find("summary").send_keys(:space)
-      assert_text quality.match_rule
-      find("summary").click
-      assert_no_text quality.match_rule
+      summary = find("summary")
+      chevron = "getComputedStyle(this, '::after')"
+      closed_transform = summary.evaluate_script("#{chevron}.transform")
+      refute_equal "none", closed_transform
+      assert_operator summary.evaluate_script("parseFloat(#{chevron}.marginInlineStart)"), :>, 0
+      assert_no_text definition
+      summary.send_keys(:space)
+      assert_text definition
+      refute_equal closed_transform, summary.evaluate_script("#{chevron}.transform")
+      summary.click
+      assert_no_text definition
     end
   end
 end

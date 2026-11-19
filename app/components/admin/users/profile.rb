@@ -56,17 +56,7 @@ module Admin
             p { t("account.quality_rankings.#{kind}_empty") }
           else
             ul do
-              qualities.each do |quality|
-                li do
-                  details do
-                    summary do
-                      span { quality.fetch(:name) }
-                      span { "%+d" % quality.fetch(:score) }
-                    end
-                    p { quality.fetch(:definition).presence || t("account.quality_rankings.definition_unavailable") }
-                  end
-                end
-              end
+              qualities.each { |quality| li { render Shared::ProfileQualityExpansionItem.new(quality:) } }
             end
           end
         end

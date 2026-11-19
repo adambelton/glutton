@@ -25,7 +25,7 @@ module Registry
         render ::Views::Admin::Message.new(key: :invalid), status: :bad_request
         return
       end
-      query = action_name == "index" ? params.fetch(:q, "") : ""
+      query = action_name.in?(%w[index create]) ? params.fetch(:q, "") : ""
       unless query.is_a?(String) && query.bytesize <= 254
         render ::Views::Admin::Message.new(key: :invalid), status: :bad_request
         return
