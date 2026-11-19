@@ -37,7 +37,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
   test "business commands across domains nest in the request, preserve returns and redact failed inputs" do
     user = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Command trace")
-    ActivityMonitoring.trace("business workflow") do
+    ActivityMonitoring.trace_business("business workflow") do
       assert_nil Identity::Authentication::Authenticate.call(email_address: "private@example.com", password: "private password")
       entry = Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
       assert_equal film.id, entry.film_id
@@ -57,6 +57,46 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     assert_equal film.id, assignment.attributes.fetch(ActivityMonitoring::Attributes::FILM_ID)
     assert_empty Array(assignment.events)
     refute_includes commands.map(&:attributes).inspect, "private"
+  end
+
+  test "model failures restore the business parent and each exporter receives only its own spans" do
+    model_exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    model_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    model_provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(model_exporter))
+
+    ActivityMonitoring.trace_business("workflow") do
+      assert_raises(RuntimeError) do
+        ActivityMonitoring.trace_model("assessment", scope: ActivityMonitoring::Scopes::RATINGS, provider: model_provider,
+          tags: [ "assessment" ], input: { count: 1 }) do |_model_span, tracer|
+          ActivityMonitoring.trace_generation("generation", tracer:) do |generation|
+            generation.set_usage(input: 2, output: 1)
+            ActivityMonitoring.current.set_outcome("interrupted")
+            Identity::Authentication::Authenticate.call(email_address: "private@example.com", password: "private")
+            raise "private provider response"
+          end
+        end
+      end
+      ActivityMonitoring.trace_business("recovery") { nil }
+    end
+
+    @provider.force_flush
+    command, recovery, workflow = @exporter.finished_spans
+    assert_equal [ "Identity::Authentication::Authenticate.call", "recovery", "workflow" ], [ command, recovery, workflow ].map(&:name)
+    assert_equal [ workflow.span_id, workflow.span_id ], [ command, recovery ].map(&:parent_span_id)
+    assert_equal "interrupted", workflow.attributes.fetch(ActivityMonitoring::Attributes::OUTCOME)
+    generation, assessment = model_exporter.finished_spans
+    assert_equal [ "generation", "assessment" ], model_exporter.finished_spans.map(&:name)
+    assert_equal assessment.span_id, generation.parent_span_id
+    assert_not_equal workflow.trace_id, assessment.trace_id
+    assert_equal [ "assessment" ], generation.attributes.fetch("langfuse.trace.tags")
+    assert_equal({ "input" => 2, "output" => 1 }, JSON.parse(generation.attributes.fetch("langfuse.observation.usage_details")))
+    model_exporter.finished_spans.each do |span|
+      assert_equal OpenTelemetry::Trace::Status::ERROR, span.status.code
+      assert_empty Array(span.events)
+      refute_includes span.status.description, "private"
+    end
+  ensure
+    model_provider&.shutdown
   end
 
   test "scheduled jobs suppress successful idle runs and enqueues while retaining failures" do
@@ -83,11 +123,11 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do
-    parent = ActivityMonitoring.trace("rating") { ActivityMonitoring.traceparent }
+    parent = ActivityMonitoring.trace_business("rating") { ActivityMonitoring.traceparent }
     assert_raises(RuntimeError) do
-      ActivityMonitoring.trace("delivery", parent:) { raise "private input" }
+      ActivityMonitoring.trace_business("delivery", parent:) { raise "private input" }
     end
-    ActivityMonitoring.trace("profile", parent: nil, links: [ ActivityMonitoring.link(parent) ]) { nil }
+    ActivityMonitoring.trace_business("profile", parent: nil, links: [ ActivityMonitoring.link(parent) ]) { nil }
     @provider.force_flush
     rating, delivery, profile = @exporter.finished_spans
     assert_equal rating.span_id, delivery.parent_span_id

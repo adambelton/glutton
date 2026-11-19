@@ -38,13 +38,6 @@ module AiConfiguration
     raise ArgumentError, "Langfuse base URL is invalid"
   end
 
-  # Each model workflow has its own Langfuse root, even inside a Honeycomb request or job.
-  def self.in_model_trace(tracer, name, attributes:, &block)
-    OpenTelemetry::Context.with_current(OpenTelemetry::Context.empty) do
-      tracer.in_span(name, attributes:, record_exception: false, &block)
-    end
-  end
-
   def self.tracer_provider(options:, environment:)
     return unless options
 

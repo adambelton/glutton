@@ -112,19 +112,11 @@ module Ratings
       end
 
       def synthesize(client)
-        @tracer.in_span("synthesize-taste-profile", attributes: {
-          "langfuse.observation.type" => "generation",
-          "langfuse.trace.tags" => @trace_tags,
-          "langfuse.environment" => Rails.application.config.x.langfuse_environment
-        }, record_exception: false) do |span|
+        ActivityMonitoring.trace_generation("synthesize-taste-profile", tracer: @tracer, tags: @trace_tags) do |span|
           profile, annotations, synthesis = validated_synthesis(request_synthesis(client))
-          span.set_attribute("langfuse.observation.model.name", synthesis.fetch("model"))
-          span.set_attribute("langfuse.observation.usage_details", synthesis.fetch("usage").to_json)
+          span.set_model(synthesis.fetch("model"))
+          span.set_usage(synthesis.fetch("usage"))
           [ profile, annotations, synthesis ]
-        rescue Errors::TasteProfileRefreshFailed
-          span.status = OpenTelemetry::Trace::Status.error("Taste profile synthesis failed")
-          span.set_attribute("langfuse.observation.level", "ERROR")
-          raise
         end
       end
 

@@ -21,15 +21,11 @@ module DomainEvents
             ActivityMonitoring::Attributes::DELIVERY_ID => delivery.id,
             ActivityMonitoring::Attributes::USER_ID => user_id
           }
-          outcome = ActivityMonitoring.trace("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
+          outcome = ActivityMonitoring.trace_business("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
             links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes:) do
             result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
-            span = ActivityMonitoring.current
-            span&.set_attribute(ActivityMonitoring::Attributes::OUTCOME, result.to_s)
-            span&.set_attribute(ActivityMonitoring::Attributes::ATTEMPT, delivery.attempts)
-            span&.set_attribute(ActivityMonitoring::Attributes::DELIVERY_AGE_MS, ((Time.current - event.occurred_at) * 1000).round)
-            span&.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, delivery.last_error_class) if delivery.last_error_class.present?
-            span.status = OpenTelemetry::Trace::Status.error if span && result == :failed
+            ActivityMonitoring.current&.set_delivery_result(outcome: result, attempt: delivery.attempts,
+              age_ms: ((Time.current - event.occurred_at) * 1000).round, error_type: delivery.last_error_class)
             result
           end
           ActiveRecord.after_all_transactions_commit do

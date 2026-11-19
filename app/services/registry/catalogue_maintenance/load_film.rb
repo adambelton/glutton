@@ -5,7 +5,7 @@ module Registry
     class LoadFilm
       def self.call(tmdb_id:, maximum_requests:, maximum_cost_usd:,
         tmdb_client: Sources::TmdbClient, wikidata_client: Sources::WikidataClient, wikipedia_client: Sources::WikipediaClient,
-        type_safe_client_class: TypeSafeClient, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
+        type_safe_client_class: TypeSafeClient, tracer_provider: ActivityMonitoring.model_provider)
         new(tmdb_id:, maximum_requests:, maximum_cost_usd:, tmdb_client:, wikidata_client:, wikipedia_client:,
           type_safe_client_class:, tracer_provider:).call
       end
@@ -23,7 +23,7 @@ module Registry
 
         film = ImportFilm.call(tmdb_id: @tmdb_id, tmdb_client: @tmdb_client,
           wikidata_client: @wikidata_client, wikipedia_client: @wikipedia_client)
-        tracer = (@tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.registry", "1")
+        tracer = ActivityMonitoring.model_tracer(ActivityMonitoring::Scopes::REGISTRY, provider: @tracer_provider)
         client = @type_safe_client_class.new(tracer:, maximum_requests: @maximum_requests, maximum_cost_usd: @maximum_cost_usd, profile: :registry)
         result = QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client:, tracer_provider: @tracer_provider)
         warnings = []

@@ -5,7 +5,7 @@ module Ratings
     has_many :ratings
     has_one :current_rating, -> { order(id: :desc) }, class_name: "Rating"
 
-    after_create { ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::OPERATION, ActivityMonitoring::Operations::CREATE_RATING_FILM) }
+    after_create { ActivityMonitoring.current&.set_operation(ActivityMonitoring::Operations::CREATE_RATING_FILM) }
 
     validates :film_id, uniqueness: { scope: :user_id }
     validates :dismissed, :suppressed, inclusion: { in: [ true, false ] }

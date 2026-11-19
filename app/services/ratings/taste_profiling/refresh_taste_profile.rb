@@ -4,13 +4,12 @@ module Ratings
       TRACE_NAME = "refresh-taste-profile".freeze
       TRACE_TAGS = [ "ratings", "taste-profile" ].freeze
 
-      def self.call(user_id:, client: Rails.application.config.x.openai_client, tracer_provider: Rails.application.config.x.langfuse_tracer_provider)
+      def self.call(user_id:, client: Rails.application.config.x.openai_client, tracer_provider: ActivityMonitoring.model_provider)
         new(user_id:, client:, tracer_provider:).call
       end
 
       def initialize(user_id:, client:, tracer_provider:)
         @user_id, @client, @tracer_provider = user_id, client, tracer_provider
-        @tracer = (tracer_provider || OpenTelemetry::Trace::TracerProvider.new).tracer("glutton.ratings", "1")
       end
 
       def call
@@ -20,38 +19,26 @@ module Ratings
         return current if unchanged
 
         links = Monitoring::TraceContext.links_for_ratings(evidence.pluck("rating_id"))
-        ActivityMonitoring.trace("refresh taste profile", parent: nil, links:, attributes: { ActivityMonitoring::Attributes::USER_ID => @user_id }) do
+        ActivityMonitoring.trace_business("refresh taste profile", parent: nil, links:, attributes: { ActivityMonitoring::Attributes::USER_ID => @user_id }) do
           revision = generate_and_apply(current:, evidence:)
-          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::PROFILE_REVISION_ID, revision.id)
+          ActivityMonitoring.current&.set_profile_revision_id(revision.id)
           revision
         end
-      ensure
-        @tracer_provider&.force_flush(timeout: 5)
       end
 
       private
 
       def generate_and_apply(current:, evidence:)
-        workflow_context = OpenTelemetry::Context.current
-        AiConfiguration.in_model_trace(@tracer, TRACE_NAME, attributes: {
-          "langfuse.trace.name" => TRACE_NAME,
-          "langfuse.trace.tags" => TRACE_TAGS,
-          "langfuse.environment" => Rails.application.config.x.langfuse_environment,
-          "langfuse.observation.type" => "span",
-          "langfuse.observation.input" => { notes_count: evidence.size }.to_json
-        }) do |span|
+        ActivityMonitoring.trace_model(TRACE_NAME, scope: ActivityMonitoring::Scopes::RATINGS, provider: @tracer_provider, tags: TRACE_TAGS,
+          input: { notes_count: evidence.size }) do |span, tracer|
           assessment = GenerateTasteProfile.new(evidence:, basis: current&.incremental_synthesis_basis,
-            trace_id: (span.context.hex_trace_id if span.context.valid?), tracer: @tracer, trace_tags: TRACE_TAGS)
+            trace_id: span.trace_id, tracer:, trace_tags: TRACE_TAGS)
           assessment.call(client: @client)
-          revision = OpenTelemetry::Context.with_current(workflow_context) { record_and_apply(current:, assessment:) }
+          revision = ActivityMonitoring.within_business_context { record_and_apply(current:, assessment:) }
           span.set_attribute("taste_profile_id", revision.taste_profile_id)
           span.set_attribute("taste_profile_revision_id", revision.id)
           span.set_attribute("taste_profile_revision_eval_id", revision.taste_profile_revision_eval_id)
           revision
-        rescue StandardError
-          span.status = OpenTelemetry::Trace::Status.error("Taste profile refresh failed")
-          span.set_attribute("langfuse.observation.level", "ERROR")
-          raise
         end
       end
 

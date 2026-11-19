@@ -17,7 +17,6 @@ class ReportWorkerHealthJob < ApplicationJob
     return if pending.empty?
 
     span = ActivityMonitoring.current
-    span.set_attribute(ActivityMonitoring::Attributes::OVERDUE, true)
-    pending.each { |kind, oldest| span.set_attribute("wait.#{kind}.seconds", (now - oldest).to_i) }
+    pending.each { |kind, oldest| span.set_overdue_wait(kind, (now - oldest).to_i) }
   end
 end

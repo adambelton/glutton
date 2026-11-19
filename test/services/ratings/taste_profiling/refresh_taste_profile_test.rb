@@ -21,7 +21,7 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     ratings = 2.times.map do |index|
       film = Registry::Film.create!(title: "Trace fixture #{index}")
       candidate = Ratings::RatingFilm.create!(user: @user, film:)
-      ActivityMonitoring.trace("submit rating") do
+      ActivityMonitoring.trace_business("submit rating") do
         Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
           value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Private note #{index}")
       end

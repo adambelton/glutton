@@ -18,45 +18,30 @@ class AiConnectionCheck
     raise ArgumentError, "OpenAI and Langfuse must both be configured" unless @client && @provider
     raise ArgumentError, "Set OPENAI_MODEL explicitly for this check" if model.to_s.strip.empty?
 
-    tracer = @provider.tracer("glutton.ai.connection-check", "1")
-    common = {
-      "langfuse.trace.name" => TRACE_NAME,
-      "langfuse.environment" => @environment,
-      "langfuse.trace.tags" => TRACE_TAGS,
-      "langfuse.version" => "1"
-    }
     result = nil
-    tracer.in_span(TRACE_NAME, attributes: common.merge(
-      "langfuse.observation.type" => "span",
-      "langfuse.observation.input" => { purpose: "Verify OpenAI and Langfuse connectivity", model: model }.to_json
-    ), record_exception: false) do |root|
-      tracer.in_span("check-openai-response", attributes: common.merge(
-        "langfuse.observation.type" => "generation",
-        "langfuse.observation.model.name" => model,
-        "langfuse.observation.model.parameters" => { max_output_tokens: 32, store: false }.to_json,
-        "langfuse.observation.input" => { instructions: INSTRUCTIONS, input: INPUT }.to_json
-      ), record_exception: false) do |generation|
+    ActivityMonitoring.trace_model(TRACE_NAME, scope: ActivityMonitoring::Scopes::CONNECTION_CHECK, provider: @provider, tags: TRACE_TAGS, environment: @environment, version: "1",
+      input: { purpose: "Verify OpenAI and Langfuse connectivity", model: model }) do |root, tracer|
+      ActivityMonitoring.trace_generation("check-openai-response", tracer:, tags: TRACE_TAGS, trace_name: TRACE_NAME,
+        environment: @environment, version: "1", model:, parameters: { max_output_tokens: 32, store: false },
+        input: { instructions: INSTRUCTIONS, input: INPUT }) do |generation|
         response = @client.responses.create(
           model: model, instructions: INSTRUCTIONS, input: INPUT, max_output_tokens: 32, store: false
         )
-        generation.set_attribute("langfuse.observation.model.name", response.model)
-        generation.set_attribute("langfuse.observation.output", response.output_text.to_json)
-        generation.set_attribute("langfuse.observation.metadata.response_id", response.id)
-        generation.set_attribute("langfuse.observation.metadata.response_status", response.status.to_s)
+        generation.set_model(response.model)
+        generation.set_output(response.output_text)
+        generation.set_response(id: response.id, status: response.status)
         if response.usage
-          generation.set_attribute("langfuse.observation.usage_details", {
+          generation.set_usage(
             input: response.usage.input_tokens, output: response.usage.output_tokens,
             total: response.usage.total_tokens
-          }.to_json)
+          )
         end
         raise "OpenAI connection check did not complete successfully" unless response.status.to_s == "completed" && response.output_text.strip == "OK"
 
-        result = { trace_id: root.context.hex_trace_id, response_id: response.id, model: response.model, output: response.output_text }
-        root.set_attribute("langfuse.observation.output", { status: "passed", response_id: response.id }.to_json)
+        result = { trace_id: root.trace_id, response_id: response.id, model: response.model, output: response.output_text }
+        root.set_output(status: "passed", response_id: response.id)
       end
     end
     result
-  ensure
-    @provider&.force_flush(timeout: 5)
   end
 end

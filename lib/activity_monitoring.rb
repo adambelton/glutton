@@ -4,11 +4,22 @@ require "opentelemetry/exporter/otlp"
 
 require "opentelemetry-instrumentation-active_job"
 
+require_relative "activity_monitoring/span_session"
+require_relative "activity_monitoring/model_span"
+require_relative "activity_monitoring/business_span"
+
 module ActivityMonitoring
   BUSINESS_OPERATION = "business_operation.glutton".freeze
 
+  MODEL_TAGS = OpenTelemetry::Context.create_key("glutton.model.tags")
+  BUSINESS_CONTEXT = OpenTelemetry::Context.create_key("glutton.business.context")
+  private_constant :MODEL_TAGS, :BUSINESS_CONTEXT
+
   module Scopes
     BUSINESS = "glutton.business".freeze
+    RATINGS = "glutton.ratings".freeze
+    REGISTRY = "glutton.registry".freeze
+    CONNECTION_CHECK = "glutton.ai.connection-check".freeze
     ACTIVE_JOB = OpenTelemetry::Instrumentation::ActiveJob.name
 
     ALL = [ BUSINESS, ACTIVE_JOB ].freeze
@@ -60,27 +71,11 @@ module ActivityMonitoring
 
   class BusinessOperationSubscriber
     def start(_name, _id, payload)
-      tracer = ActivityMonitoring.tracer
-      return unless tracer
-
-      span = tracer.start_span(payload.fetch(:operation), attributes: { Attributes::DOMAIN => payload.fetch(:domain) })
-      payload[:monitoring_span] = span
-      payload[:monitoring_context] = OpenTelemetry::Context.attach(OpenTelemetry::Trace.context_with_span(span))
+      payload[:monitoring_session] = ActivityMonitoring.start_business_operation(payload.fetch(:operation), domain: payload.fetch(:domain))
     end
 
     def finish(_name, _id, payload)
-      span = payload[:monitoring_span]
-      return unless span
-
-      if (error = payload[:exception_object])
-        span.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, error.class.name)
-        span.status = OpenTelemetry::Trace::Status.error
-      end
-    ensure
-      if span
-        OpenTelemetry::Context.detach(payload.fetch(:monitoring_context))
-        span.finish
-      end
+      payload[:monitoring_session]&.finish(error: payload[:exception_object])
     end
   end
 
@@ -150,28 +145,61 @@ module ActivityMonitoring
       at_exit { provider.shutdown(timeout: 5) }
     end
 
-    def trace(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
-      return yield unless tracer
+    def start_business_operation(name, domain:)
+      return unless tracer
 
-      context = context_for(parent)
-      span = tracer.start_span(name, with_parent: context, attributes:, links:, kind:)
-      begin
-        OpenTelemetry::Trace.with_span(span) { yield }
-      rescue StandardError => error
-        span.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, error.class.name)
-        span.status = OpenTelemetry::Trace::Status.error
-        raise
-      ensure
-        span.finish
-      end
+      SpanSession.new(tracer, name, span_class: BusinessSpan, parent: business_context, attributes: { Attributes::DOMAIN => domain })
     end
 
+    def trace_business(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
+      return yield unless tracer
+
+      session = SpanSession.new(tracer, name, span_class: BusinessSpan, parent: context_for(parent), attributes:, links:, kind:)
+      session.record { |span| yield span }
+    end
+
+    def trace_model(name, scope:, tags:, input:, provider: model_provider, environment: Rails.application.config.x.langfuse_environment, version: nil)
+      tracer = model_tracer(scope, provider:)
+      context = OpenTelemetry::Context.empty.set_value(BUSINESS_CONTEXT, business_context).set_value(MODEL_TAGS, tags)
+      OpenTelemetry::Context.with_current(context) do
+        ModelSpan.record(tracer, name, type: "span", trace_name: name, tags:, input:, environment:, version:) do |span|
+          yield span, tracer
+        end
+      end
+    ensure
+      provider&.force_flush(timeout: 5)
+    end
+
+    def trace_generation(name, tracer:, tags: OpenTelemetry::Context.value(MODEL_TAGS), input: nil, environment: Rails.application.config.x.langfuse_environment,
+      model: nil, parameters: nil, trace_name: nil, version: nil, &block)
+      ModelSpan.record(tracer, name, type: "generation", tags:, input:, environment:, model:, parameters:, trace_name:, version:, &block)
+    end
+
+    def model_provider
+      Rails.application.config.x.langfuse_tracer_provider
+    end
+
+    def model_tracer(scope, provider:)
+      (provider || OpenTelemetry::Trace::TracerProvider.new).tracer(scope, "1")
+    end
+
+    def within_business_context(&block)
+      OpenTelemetry::Context.with_current(business_context, &block)
+    end
+
+    def business_context
+      OpenTelemetry::Context.value(BUSINESS_CONTEXT) || OpenTelemetry::Context.current
+    end
+    private :business_context
+
     def current
-      OpenTelemetry::Trace.current_span if tracer
+      BusinessSpan.new(OpenTelemetry::Trace.current_span(business_context)) if tracer
     end
 
     def traceparent
-      context = current&.context
+      return unless tracer
+
+      context = OpenTelemetry::Trace.current_span(business_context).context
       "00-#{context.hex_trace_id}-#{context.hex_span_id}-01" if context&.valid?
     end
 
