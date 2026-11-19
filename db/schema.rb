@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_19_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -37,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
     t.uuid "causation_id"
     t.datetime "occurred_at", null: false
     t.datetime "created_at", null: false
+    t.string "traceparent"
     t.index ["domain_event_stream_id", "sequence"], name: "index_domain_events_on_domain_event_stream_id_and_sequence", unique: true
     t.index ["domain_event_stream_id"], name: "index_domain_events_on_domain_event_stream_id"
     t.check_constraint "jsonb_typeof(payload) = 'object'::text", name: "domain_event_object_payload"
@@ -327,6 +328,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_190000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "traceparent"
     t.index ["rating_film_id", "id"], name: "index_ratings_on_rating_film_id_and_id"
     t.check_constraint "char_length(notes) >= 1 AND char_length(notes) <= 8000", name: "ratings_notes_length"
     t.check_constraint "value::text = ANY (ARRAY['brilliant'::character varying, 'pretty_good'::character varying, 'not_for_me'::character varying, 'garbage'::character varying]::text[])", name: "ratings_value_allowed"

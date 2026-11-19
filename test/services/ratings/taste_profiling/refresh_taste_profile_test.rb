@@ -12,6 +12,38 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     @rating_film = Ratings::RatingFilm.create!(user: @user, film: @film)
   end
 
+  test "delayed deliveries keep each submission trace and profile synthesis links both ratings" do
+    original = ActivityMonitoring.tracer
+    exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    provider.add_span_processor(ActivityMonitoring::Processor.new(exporter))
+    ActivityMonitoring.tracer = provider.tracer("glutton.business")
+    ratings = 2.times.map do |index|
+      film = Registry::Film.create!(title: "Trace fixture #{index}")
+      candidate = Ratings::RatingFilm.create!(user: @user, film:)
+      ActivityMonitoring.trace("submit rating") do
+        Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: candidate.id,
+          value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Private note #{index}")
+      end
+    end
+
+    DispatchDomainEventsJob.perform_now
+    revision = refresh { synthesis }
+    Ratings::ReassessRatingQualitiesJob.perform_now(@user.id, revision.id)
+    provider.force_flush
+    spans = exporter.finished_spans
+    submissions = spans.select { |span| span.name == "submit rating" }
+    assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch("rating.id") }
+    links = spans.select { |span| span.name == "refresh taste profile" }.sole.links
+    assert_equal submissions.map(&:span_id).sort, links.map { |link| link.span_context.span_id }.sort
+    assert_equal submissions.map(&:trace_id).sort, spans.select { |span| span.name == "deliver RatingSubmitted" }.map(&:trace_id).uniq.sort
+    assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch("rating.id") }.sort
+    assert_not_includes spans.map(&:attributes).inspect, "Private note"
+  ensure
+    ActivityMonitoring.tracer = original
+    provider&.shutdown
+  end
+
   test "synthesis uses current original notes with film context and persists their provenance" do
     first = submit([ "Replaced evidence" ])
     current = revise(first, [ "  The quiet dread worked.\n" ])

@@ -13,8 +13,21 @@ module DomainEvents
           return :not_due unless delivery.due_for_attempt?
           return :blocked if delivery.predecessor_pending?(subscription)
 
-          outcome = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
           event = delivery.domain_event
+          outcome = ActivityMonitoring.trace("deliver #{event.name}", parent: event.traceparent,
+            links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes: {
+            "event.id" => event.id, "correlation.id" => event.correlation_id, "subscriber" => subscription.name,
+            "delivery.id" => delivery.id, "user.id" => user_id
+          }) do
+            result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
+            span = ActivityMonitoring.current
+            span&.set_attribute("outcome", result.to_s)
+            span&.set_attribute("attempt", delivery.attempts)
+            span&.set_attribute("delivery.age_ms", ((Time.current - event.occurred_at) * 1000).round)
+            span&.set_attribute("error.type", delivery.last_error_class) if delivery.last_error_class.present?
+            span.status = OpenTelemetry::Trace::Status.error if span && result == :failed
+            result
+          end
           ActiveRecord.after_all_transactions_commit do
             Rails.logger.info({ message: "domain_event_delivery", event_id: event.id,
               correlation_id: event.correlation_id, event_name: event.name, subscriber: subscription.name,

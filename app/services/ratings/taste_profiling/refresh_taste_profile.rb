@@ -19,7 +19,14 @@ module Ratings
         unchanged = notes == texts_by_film(current&.notes || [])
         return current if unchanged
 
-        ActivityMonitoring.profile_refresh { generate_and_apply(current:, evidence:) }
+        links = if ActivityMonitoring.tracer
+          Rating.where(id: evidence.pluck("rating_id")).distinct.pluck(:traceparent).compact.filter_map { |parent| ActivityMonitoring.link(parent) }
+        end
+        ActivityMonitoring.trace("refresh taste profile", parent: nil, links: links || [], attributes: { "user.id" => @user_id }) do
+          revision = generate_and_apply(current:, evidence:)
+          ActivityMonitoring.current&.set_attribute("profile_revision.id", revision.id)
+          revision
+        end
       ensure
         @tracer_provider&.force_flush(timeout: 5)
       end

@@ -15,9 +15,13 @@ class ApplicationController < ActionController::Base
   private
 
   def filter_routine_activity
-    yield
-    if (request.get? || request.head?) && response.status < 400 && !@business_activity
-      ActivityMonitoring.ignore_routine_activity
+    ActivityMonitoring.trace("#{self.class.name}##{action_name}", parent: nil, kind: :server,
+      attributes: { "http.request.method" => request.request_method, "request.id" => request.request_id }) do
+      yield
+      span = ActivityMonitoring.current
+      span&.set_attribute("http.response.status_code", response.status)
+      span.status = OpenTelemetry::Trace::Status.error if span && response.server_error?
+      ActivityMonitoring.ignore_routine_activity if (request.get? || request.head?) && response.status < 400 && !@business_activity
     end
   end
 end

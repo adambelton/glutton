@@ -12,8 +12,12 @@ envVarGroups:
     envVars:
       - key: SECRET_KEY_BASE
         generateValue: true
-      - key: APPSIGNAL_APP_ENV
+      - key: HONEYCOMB_REGION
+        value: eu
+      - key: HONEYCOMB_ENVIRONMENT
         value: staging
+      - key: LANGFUSE_TRACING_ENABLED
+        value: "false"
 
 services:
   - type: web

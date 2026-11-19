@@ -3,7 +3,7 @@ class DispatchDomainEventsJob < ApplicationJob
 
   def perform
     counts = DomainEvents::Delivery::Drain.call
-    Appsignal.set_namespace("idle_domain_events") if counts.empty? && defined?(Appsignal)
+    ActivityMonitoring.ignore_routine_activity if counts.empty?
     counts
   rescue StandardError => error
     # Database exceptions may contain private row values; retain the class only.
