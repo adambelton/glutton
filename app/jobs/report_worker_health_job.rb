@@ -5,5 +5,6 @@ class ReportWorkerHealthJob < ApplicationJob
     return unless defined?(Appsignal) && Appsignal.active?
 
     Appsignal::CheckIn.heartbeat("goodjob_worker")
+    Appsignal.set_namespace("worker_health_check")
   end
 end
