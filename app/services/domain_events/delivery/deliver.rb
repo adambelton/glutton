@@ -21,7 +21,7 @@ module DomainEvents
             ActivityMonitoring::Attributes::DELIVERY_ID => delivery.id,
             ActivityMonitoring::Attributes::USER_ID => user_id
           }
-          outcome = ActivityMonitoring.trace_business("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
+          outcome = ActivityMonitoring.trace_business_operation("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
             links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes:) do
             result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
             ActivityMonitoring.current&.set_delivery_result(outcome: result, attempt: delivery.attempts,

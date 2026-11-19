@@ -151,7 +151,7 @@ module ActivityMonitoring
       SpanSession.new(tracer, name, span_class: BusinessSpan, parent: business_context, attributes: { Attributes::DOMAIN => domain })
     end
 
-    def trace_business(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
+    def trace_business_operation(name, attributes: {}, parent: traceparent, links: [], kind: :internal)
       return yield unless tracer
 
       session = SpanSession.new(tracer, name, span_class: BusinessSpan, parent: context_for(parent), attributes:, links:, kind:)

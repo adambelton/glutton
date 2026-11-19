@@ -37,7 +37,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
   test "business commands across domains nest in the request, preserve returns and redact failed inputs" do
     user = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Command trace")
-    ActivityMonitoring.trace_business("business workflow") do
+    ActivityMonitoring.trace_business_operation("business workflow") do
       assert_nil Identity::Authentication::Authenticate.call(email_address: "private@example.com", password: "private password")
       entry = Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
       assert_equal film.id, entry.film_id
@@ -64,7 +64,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     model_provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     model_provider.add_span_processor(OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(model_exporter))
 
-    ActivityMonitoring.trace_business("workflow") do
+    ActivityMonitoring.trace_business_operation("workflow") do
       assert_raises(RuntimeError) do
         ActivityMonitoring.trace_model("assessment", scope: ActivityMonitoring::Scopes::RATINGS, provider: model_provider,
           tags: [ "assessment" ], input: { count: 1 }) do |_model_span, tracer|
@@ -76,7 +76,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
           end
         end
       end
-      ActivityMonitoring.trace_business("recovery") { nil }
+      ActivityMonitoring.trace_business_operation("recovery") { nil }
     end
 
     @provider.force_flush
@@ -123,11 +123,11 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do
-    parent = ActivityMonitoring.trace_business("rating") { ActivityMonitoring.traceparent }
+    parent = ActivityMonitoring.trace_business_operation("rating") { ActivityMonitoring.traceparent }
     assert_raises(RuntimeError) do
-      ActivityMonitoring.trace_business("delivery", parent:) { raise "private input" }
+      ActivityMonitoring.trace_business_operation("delivery", parent:) { raise "private input" }
     end
-    ActivityMonitoring.trace_business("profile", parent: nil, links: [ ActivityMonitoring.link(parent) ]) { nil }
+    ActivityMonitoring.trace_business_operation("profile", parent: nil, links: [ ActivityMonitoring.link(parent) ]) { nil }
     @provider.force_flush
     rating, delivery, profile = @exporter.finished_spans
     assert_equal rating.span_id, delivery.parent_span_id

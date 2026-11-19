@@ -26,7 +26,7 @@ module Ratings
             ActivityMonitoring::Attributes::RATING_ID => rating.id,
             ActivityMonitoring::Attributes::PROFILE_REVISION_ID => profile_revision_id
           }
-          ActivityMonitoring.trace_business("reassess rating", attributes:) { reassess(rating) }
+          ActivityMonitoring.trace_business_operation("reassess rating", attributes:) { reassess(rating) }
         end
       end
       request.acknowledge!
