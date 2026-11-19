@@ -21,14 +21,14 @@ module Ratings
         ensure_current!(rating_film, rating)
         profile_revision = TasteProfile.find_by(user_id: rating_film.user_id)&.current_revision
         unless rating.can_assess_qualities_for?(profile_revision&.id)
-          ActivityMonitoring.current&.set_attribute("outcome", "already_assessed")
+          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "already_assessed")
           return
         end
 
         explicit_evidence = rating.quality_evidence_for_reassessment
         qualities = explicit_evidence&.fetch("qualities") || capture_qualities(rating_film)
         if qualities.empty?
-          ActivityMonitoring.current&.set_attribute("outcome", "no_qualities")
+          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "no_qualities")
           return
         end
 
@@ -45,7 +45,7 @@ module Ratings
           evaluation = TypeSafeClient.with_trace_tags(TRACE_TAGS) do
             assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
           end
-          operational_span&.set_attribute("outcome", evaluation.present? ? "assessed" : "superseded")
+          operational_span&.set_attribute(ActivityMonitoring::OUTCOME, evaluation.present? ? "assessed" : "superseded")
           span.set_attribute("rating_quality_eval_id", evaluation.id) if evaluation.present?
           evaluation
         rescue StandardError

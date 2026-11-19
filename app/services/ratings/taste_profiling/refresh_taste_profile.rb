@@ -24,7 +24,7 @@ module Ratings
         end
         ActivityMonitoring.trace("refresh taste profile", parent: nil, links: links || [], attributes: { "user.id" => @user_id }) do
           revision = generate_and_apply(current:, evidence:)
-          ActivityMonitoring.current&.set_attribute("profile_revision.id", revision.id)
+          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::PROFILE_REVISION_ID, revision.id)
           revision
         end
       ensure

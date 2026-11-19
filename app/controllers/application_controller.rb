@@ -16,10 +16,10 @@ class ApplicationController < ActionController::Base
 
   def trace_request
     ActivityMonitoring.trace("#{self.class.name}##{action_name}", parent: nil, kind: :server,
-      attributes: { "http.request.method" => request.request_method, "request.id" => request.request_id }) do
+      attributes: { OpenTelemetry::SemConv::HTTP::HTTP_REQUEST_METHOD => request.request_method, "request.id" => request.request_id }) do
       yield
       span = ActivityMonitoring.current
-      span&.set_attribute("http.response.status_code", response.status)
+      span&.set_attribute(OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE, response.status)
       span.status = OpenTelemetry::Trace::Status.error if span && response.server_error?
     end
   end

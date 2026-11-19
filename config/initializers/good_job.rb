@@ -1,3 +1,5 @@
+require Rails.root.join("lib/activity_monitoring")
+
 Rails.application.configure do
   config.good_job.execution_mode = :external
   config.good_job.threads = 2
@@ -7,16 +9,16 @@ Rails.application.configure do
   config.good_job.cron = {
     domain_event_sweep: {
       cron: "*/30 * * * * *",
-      class: "DispatchDomainEventsJob"
+      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:domain_event_sweep)
     },
     worker_backlog: {
       cron: "*/5 * * * * UTC",
-      class: "ReportWorkerHealthJob",
+      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:worker_backlog),
       enabled_by_default: -> { ActivityMonitoring.tracer.present? }
     },
     ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",
-      class: "Ratings::RefreshTasteProfilesJob",
+      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:ratings_taste_profile_refresh),
       enabled_by_default: -> { Rails.env.production? }
     }
   }

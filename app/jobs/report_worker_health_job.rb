@@ -1,11 +1,13 @@
 class ReportWorkerHealthJob < ApplicationJob
+  OVERDUE_AFTER = 30.minutes
+
   queue_as :domain_events
 
   def perform
     return unless ActivityMonitoring.tracer
 
     now = Time.current
-    cutoff = now - 30.minutes
+    cutoff = now - OVERDUE_AFTER
     pending = {
       "job" => GoodJob::Job.unfinished.where(scheduled_at: ..cutoff).minimum(:scheduled_at),
       "profile_refresh" => Ratings::TasteProfileRefreshRequest.where(created_at: ..cutoff).minimum(:created_at),

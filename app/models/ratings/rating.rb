@@ -12,7 +12,7 @@ module Ratings
     MAX_NOTES_LENGTH = 8_000
 
     before_create { self.traceparent = ActivityMonitoring.traceparent }
-    after_create { ActivityMonitoring.current&.set_attribute("rating.id", id) }
+    after_create { ActivityMonitoring.current&.set_attribute(ActivityMonitoring::RATING_ID, id) }
 
     belongs_to :rating_film
     has_many :rating_qualities

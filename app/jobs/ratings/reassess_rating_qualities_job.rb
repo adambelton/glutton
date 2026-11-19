@@ -14,7 +14,7 @@ module Ratings
     end
 
     def perform(user_id, profile_revision_id)
-      ActivityMonitoring.current&.set_attribute("profile_revision.id", profile_revision_id)
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::PROFILE_REVISION_ID, profile_revision_id)
       request = RatingQualityReassessmentRequest.find_by(user_id:, taste_profile_revision_id: profile_revision_id)
       return unless request.present?
 
@@ -22,7 +22,7 @@ module Ratings
         Rating.current.joins(:rating_film).where(rating_films: { user_id: }).find_each do |rating|
           break unless request.pending?
 
-          ActivityMonitoring.trace("reassess rating", attributes: { "rating.id" => rating.id, "profile_revision.id" => profile_revision_id }) { reassess(rating) }
+          ActivityMonitoring.trace("reassess rating", attributes: { ActivityMonitoring::RATING_ID => rating.id, ActivityMonitoring::PROFILE_REVISION_ID => profile_revision_id }) { reassess(rating) }
         end
       end
       request.acknowledge!
@@ -34,10 +34,10 @@ module Ratings
       QualityScoring::ScoreRatingQualities.call(rating_id: rating.id)
     rescue Errors::QualityAssessmentFailed => error
       raise unless error.reason == :stale_rating
-      ActivityMonitoring.current&.set_attribute("outcome", "superseded")
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "superseded")
     rescue ActiveRecord::RecordNotFound
       raise if Rating.exists?(rating.id)
-      ActivityMonitoring.current&.set_attribute("outcome", "removed")
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "removed")
     end
   end
 end

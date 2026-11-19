@@ -21,10 +21,10 @@ module DomainEvents
           }) do
             result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
             span = ActivityMonitoring.current
-            span&.set_attribute("outcome", result.to_s)
+            span&.set_attribute(ActivityMonitoring::OUTCOME, result.to_s)
             span&.set_attribute("attempt", delivery.attempts)
             span&.set_attribute("delivery.age_ms", ((Time.current - event.occurred_at) * 1000).round)
-            span&.set_attribute("error.type", delivery.last_error_class) if delivery.last_error_class.present?
+            span&.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, delivery.last_error_class) if delivery.last_error_class.present?
             span.status = OpenTelemetry::Trace::Status.error if span && result == :failed
             result
           end
@@ -32,10 +32,6 @@ module DomainEvents
             Rails.logger.info({ message: "domain_event_delivery", event_id: event.id,
               correlation_id: event.correlation_id, event_name: event.name, subscriber: subscription.name,
               delivery_id: delivery.id, outcome:, attempts: delivery.attempts, error_class: delivery.last_error_class }.compact.to_json)
-            if outcome == :failed
-              Rails.error.report(Errors::DispatchFailure.new("Domain event delivery failed (#{delivery.last_error_class})"),
-                severity: :error, context: { correlation_id: event.correlation_id, event_id: event.id, delivery_id: delivery.id })
-            end
           end
           outcome
         end

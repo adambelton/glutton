@@ -17,7 +17,7 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
     provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     provider.add_span_processor(ActivityMonitoring::Processor.new(exporter))
-    ActivityMonitoring.tracer = provider.tracer("glutton.business")
+    ActivityMonitoring.tracer = provider.tracer(ActivityMonitoring::TRACER_NAME)
     ratings = 2.times.map do |index|
       film = Registry::Film.create!(title: "Trace fixture #{index}")
       candidate = Ratings::RatingFilm.create!(user: @user, film:)
@@ -33,11 +33,11 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     provider.force_flush
     spans = exporter.finished_spans
     submissions = spans.select { |span| span.name == "submit rating" }
-    assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch("rating.id") }
+    assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch(ActivityMonitoring::RATING_ID) }
     links = spans.select { |span| span.name == "refresh taste profile" }.sole.links
     assert_equal submissions.map(&:span_id).sort, links.map { |link| link.span_context.span_id }.sort
     assert_equal submissions.map(&:trace_id).sort, spans.select { |span| span.name == "deliver RatingSubmitted" }.map(&:trace_id).uniq.sort
-    assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch("rating.id") }.sort
+    assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch(ActivityMonitoring::RATING_ID) }.sort
     assert_not_includes spans.map(&:attributes).inspect, "Private note"
   ensure
     ActivityMonitoring.tracer = original

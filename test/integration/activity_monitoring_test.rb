@@ -9,7 +9,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     @provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     @provider.add_span_processor(ActivityMonitoring::Processor.new(@exporter))
     @original = ActivityMonitoring.tracer
-    ActivityMonitoring.tracer = @provider.tracer("glutton.business")
+    ActivityMonitoring.tracer = @provider.tracer(ActivityMonitoring::TRACER_NAME)
   end
 
   teardown do
@@ -27,11 +27,26 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     get recommendation_path
     get recommendation_path
     2.times { get new_rating_path(film_id: film.id) }
-    Ratings::RefreshTasteProfilesJob.perform_now
     @provider.force_flush
     spans = @exporter.finished_spans
     assert_equal [ "GuestSessionsController#create", "RecommendationsController#show", "RatingsController#new" ], spans.map(&:name)
-    assert_equal [ "rank recommendation films", "create rating film" ], spans.filter_map { |span| span.attributes["glutton.operation"] }
+    assert_equal [ "rank recommendation films", "create rating film" ], spans.filter_map { |span| span.attributes[ActivityMonitoring::OPERATION] }
+  end
+
+  test "scheduled jobs suppress successful idle runs and enqueues while retaining failures" do
+    tracer = @provider.tracer(ActivityMonitoring::ACTIVE_JOB_SCOPE)
+    [ DispatchDomainEventsJob, Ratings::RefreshTasteProfilesJob, ReportWorkerHealthJob ].each do |job|
+      attributes = { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => job.name }
+      tracer.in_span("enqueue #{job.name}", kind: :producer, attributes:) { }
+      tracer.in_span("perform #{job.name}", kind: :consumer, attributes:) { job.perform_now }
+    end
+    tracer.in_span("failed job", kind: :consumer) do |span|
+      ActivityMonitoring.ignore_routine_activity
+      span.status = OpenTelemetry::Trace::Status.error
+    end
+
+    @provider.force_flush
+    assert_equal [ "failed job" ], @exporter.finished_spans.map(&:name)
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do
@@ -44,7 +59,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     rating, delivery, profile = @exporter.finished_spans
     assert_equal rating.span_id, delivery.parent_span_id
     assert_equal rating.trace_id, delivery.trace_id
-    assert_equal "RuntimeError", delivery.attributes["error.type"]
+    assert_equal "RuntimeError", delivery.attributes[OpenTelemetry::SemConv::ERROR::ERROR_TYPE]
     assert_equal rating.span_id, profile.links.first.span_context.span_id
     assert_not_equal rating.trace_id, profile.trace_id
     assert_empty Array(delivery.events)
