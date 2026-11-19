@@ -40,13 +40,20 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
       tracer.in_span("enqueue #{job.name}", kind: :producer, attributes:) { }
       tracer.in_span("perform #{job.name}", kind: :consumer, attributes:) { job.perform_now }
     end
-    tracer.in_span("failed job", kind: :consumer) do |span|
-      ActivityMonitoring.ignore_routine_activity
+    job_attribute = OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE
+    user = Identity::UserGuest.create!
+    Ratings::TasteProfileRefreshRequest.mark_pending!(user_id: user.id)
+    travel ReportWorkerHealthJob::OVERDUE_AFTER + 1.minute do
+      tracer.in_span("overdue backlog", kind: :consumer, attributes: { job_attribute => ReportWorkerHealthJob.name }) do
+        ReportWorkerHealthJob.perform_now
+      end
+    end
+    tracer.in_span("failed job", kind: :consumer, attributes: { job_attribute => DispatchDomainEventsJob.name }) do |span|
       span.status = OpenTelemetry::Trace::Status.error
     end
 
     @provider.force_flush
-    assert_equal [ "failed job" ], @exporter.finished_spans.map(&:name)
+    assert_equal [ "overdue backlog", "failed job" ], @exporter.finished_spans.map(&:name)
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do

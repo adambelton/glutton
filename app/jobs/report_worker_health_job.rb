@@ -14,12 +14,10 @@ class ReportWorkerHealthJob < ApplicationJob
       "reassessment" => Ratings::RatingQualityReassessmentRequest.where(created_at: ..cutoff).minimum(:created_at),
       "event_delivery" => DomainEvents::EventDelivery.due.where(next_attempt_at: ..cutoff).minimum(:next_attempt_at)
     }.compact
-    if pending.empty?
-      ActivityMonitoring.ignore_routine_activity
-    else
-      span = ActivityMonitoring.current
-      span.set_attribute("glutton.overdue", true)
-      pending.each { |kind, oldest| span.set_attribute("wait.#{kind}.seconds", (now - oldest).to_i) }
-    end
+    return if pending.empty?
+
+    span = ActivityMonitoring.current
+    span.set_attribute(ActivityMonitoring::OVERDUE, true)
+    pending.each { |kind, oldest| span.set_attribute("wait.#{kind}.seconds", (now - oldest).to_i) }
   end
 end

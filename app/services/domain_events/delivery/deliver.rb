@@ -14,7 +14,7 @@ module DomainEvents
           return :blocked if delivery.predecessor_pending?(subscription)
 
           event = delivery.domain_event
-          outcome = ActivityMonitoring.trace("deliver #{event.name}", parent: event.traceparent,
+          outcome = ActivityMonitoring.trace("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
             links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes: {
             "event.id" => event.id, "correlation.id" => event.correlation_id, "subscriber" => subscription.name,
             "delivery.id" => delivery.id, "user.id" => user_id

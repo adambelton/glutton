@@ -10,17 +10,13 @@ module Ratings
     def perform(user_id = nil)
       if user_id.present?
         user = Identity::User.find_by(id: user_id)
-        unless user&.active? && user.superuser?
-          ActivityMonitoring.ignore_routine_activity
-          return
-        end
+        return unless user&.active? && user.superuser?
       end
 
       failures = TasteProfiling::ProcessProfileRefreshes.call(user_id:).fetch(:failures)
       if failures.present?
         Rails.logger.warn("Ratings taste profile refresh failures: #{failures.values.tally}")
       end
-      ActivityMonitoring.ignore_routine_activity
     end
   end
 end

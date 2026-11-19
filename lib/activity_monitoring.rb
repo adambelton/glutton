@@ -11,7 +11,8 @@ module ActivityMonitoring
   ACTIVE_JOB_SCOPE = OpenTelemetry::Instrumentation::ActiveJob.name
   EXPORTED_SCOPES = [ TRACER_NAME, ACTIVE_JOB_SCOPE ].freeze
   OPERATION = "glutton.operation"
-  ROUTINE = "glutton.routine"
+  DELIVERY_COUNT = "delivery.count"
+  OVERDUE = "glutton.overdue"
   OUTCOME = "outcome"
   RATING_ID = "rating.id"
   PROFILE_REVISION_ID = "profile_revision.id"
@@ -47,14 +48,13 @@ module ActivityMonitoring
       return super if span.status.code == OpenTelemetry::Trace::Status::ERROR
 
       attributes = span.attributes || {}
-      return if attributes[ROUTINE]
       if span.kind == :server && READ_METHODS.include?(attributes[OpenTelemetry::SemConv::HTTP::HTTP_REQUEST_METHOD])
         status = attributes[OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE]
         return if status && status < Rack::Utils.status_code(:bad_request) && !attributes.key?(OPERATION)
       end
-      if span.kind == :producer
-        job_name = attributes[OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE]
-        return if SCHEDULED_JOBS.value?(job_name)
+      job_name = attributes[OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE]
+      if span.instrumentation_scope.name == ACTIVE_JOB_SCOPE && SCHEDULED_JOBS.value?(job_name)
+        return unless span.kind == :consumer && (attributes.key?(DELIVERY_COUNT) || attributes[OVERDUE])
       end
 
       super
@@ -121,10 +121,6 @@ module ActivityMonitoring
     def link(parent)
       context = OpenTelemetry::Trace.current_span(context_for(parent)).context
       OpenTelemetry::Trace::Link.new(context) if context.valid?
-    end
-
-    def ignore_routine_activity
-      current&.set_attribute(ROUTINE, true)
     end
   end
 end

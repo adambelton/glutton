@@ -27,16 +27,24 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
       end
     end
 
-    DispatchDomainEventsJob.perform_now
+    worker_tracer = provider.tracer(ActivityMonitoring::ACTIVE_JOB_SCOPE)
+    worker_tracer.in_span("recovery sweep", kind: :consumer,
+      attributes: { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => DispatchDomainEventsJob.name }) do
+      DispatchDomainEventsJob.perform_now
+    end
     revision = refresh { synthesis }
     Ratings::ReassessRatingQualitiesJob.perform_now(@user.id, revision.id)
     provider.force_flush
     spans = exporter.finished_spans
+    sweep = spans.find { |span| span.name == "recovery sweep" }
+    assert_operator sweep.attributes.fetch(ActivityMonitoring::DELIVERY_COUNT), :>, 0
     submissions = spans.select { |span| span.name == "submit rating" }
     assert_equal ratings.map(&:id), submissions.map { |span| span.attributes.fetch(ActivityMonitoring::RATING_ID) }
     links = spans.select { |span| span.name == "refresh taste profile" }.sole.links
     assert_equal submissions.map(&:span_id).sort, links.map { |link| link.span_context.span_id }.sort
-    assert_equal submissions.map(&:trace_id).sort, spans.select { |span| span.name == "deliver RatingSubmitted" }.map(&:trace_id).uniq.sort
+    deliveries = spans.select { |span| span.name == "deliver RatingSubmitted" }
+    assert_equal submissions.map { |span| [ span.trace_id, span.span_id ] }.sort,
+      deliveries.map { |span| [ span.trace_id, span.parent_span_id ] }.uniq.sort
     assert_equal ratings.map(&:id).sort, spans.select { |span| span.name == "reassess rating" }.map { |span| span.attributes.fetch(ActivityMonitoring::RATING_ID) }.sort
     assert_not_includes spans.map(&:attributes).inspect, "Private note"
   ensure

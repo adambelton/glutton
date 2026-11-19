@@ -3,7 +3,7 @@ class DispatchDomainEventsJob < ApplicationJob
 
   def perform
     counts = DomainEvents::Delivery::Drain.call
-    ActivityMonitoring.ignore_routine_activity if counts.empty?
+    ActivityMonitoring.current&.set_attribute(ActivityMonitoring::DELIVERY_COUNT, counts.values.sum) if counts.present?
     counts
   rescue StandardError => error
     # Database exceptions may contain private row values; retain the class only.
