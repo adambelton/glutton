@@ -19,6 +19,14 @@ module Ratings
         unchanged = notes == texts_by_film(current&.notes || [])
         return current if unchanged
 
+        ActivityMonitoring.profile_refresh { generate_and_apply(current:, evidence:) }
+      ensure
+        @tracer_provider&.force_flush(timeout: 5)
+      end
+
+      private
+
+      def generate_and_apply(current:, evidence:)
         @tracer.in_span(TRACE_NAME, attributes: {
           "langfuse.trace.name" => TRACE_NAME,
           "langfuse.trace.tags" => TRACE_TAGS,
@@ -39,11 +47,7 @@ module Ratings
           span.set_attribute("langfuse.observation.level", "ERROR")
           raise
         end
-      ensure
-        @tracer_provider&.force_flush(timeout: 5)
       end
-
-      private
 
       def with_owner_lock
         TasteProfile.transaction(requires_new: true) do

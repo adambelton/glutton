@@ -11,5 +11,5 @@ Appsignal.configure do |config|
   config.send_environment_metadata = false
   config.files_world_accessible = false
   config.log_level = "warn"
-  config.ignore_namespaces = [ "idle_domain_events", "worker_health_check" ]
+  config.ignore_namespaces = [ "idle_domain_events", "worker_health_check", "routine_activity" ]
 end

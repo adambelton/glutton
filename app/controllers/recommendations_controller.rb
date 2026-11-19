@@ -11,6 +11,7 @@ class RecommendationsController < ApplicationController
     excluded_film_id = flash[:recommendations_excluded_film_id]
     flash.delete(:recommendations_excluded_film_id)
     result = Recommendations::CandidateSelection::NextRecommendation.call(user_id: current_user.id, excluding_film_id: excluded_film_id)
+    @business_activity = result.assessed_film_count.to_i >= Recommendations::CandidateSelection::NextCandidate::MINIMUM_ASSESSED_FILMS
     render ::Views::Recommendations::Show.new(result:)
   end
 
