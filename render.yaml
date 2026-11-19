@@ -14,10 +14,10 @@ envVarGroups:
         generateValue: true
       - key: HONEYCOMB_REGION
         value: eu
+      - key: LANGFUSE_TRACING_ENVIRONMENT
+        value: staging
       - key: HONEYCOMB_ENVIRONMENT
         value: staging
-      - key: LANGFUSE_TRACING_ENABLED
-        value: "false"
 
 services:
   - type: web

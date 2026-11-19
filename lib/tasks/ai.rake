@@ -5,7 +5,7 @@ namespace :ai do
     result = AiConnectionCheck.new(
       client: Rails.application.config.x.openai_client,
       provider: Rails.application.config.x.langfuse_tracer_provider,
-      environment: Rails.env.to_s
+      environment: Rails.application.config.x.langfuse_environment
     ).call(model: ENV["OPENAI_MODEL"])
     puts JSON.pretty_generate(result)
   rescue StandardError => error

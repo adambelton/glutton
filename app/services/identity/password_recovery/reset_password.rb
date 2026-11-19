@@ -1,6 +1,9 @@
 module Identity
   module PasswordRecovery
     class ResetPassword
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(token:, password:, password_confirmation:)
         raise Errors::PasswordResetUnavailable unless token.is_a?(String) && token.present?
 

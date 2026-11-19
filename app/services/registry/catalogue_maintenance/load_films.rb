@@ -3,6 +3,9 @@ require "bigdecimal"
 module Registry
   module CatalogueMaintenance
     class LoadFilms
+      extend Monitoring::Instrumentation
+      instrument_operations :call
+
       def self.call(tmdb_ids:, maximum_films:, maximum_requests_per_film:, maximum_cost_usd_per_film:, maximum_cost_usd:,
         film_loader: LoadFilm)
         new(tmdb_ids:, maximum_films:, maximum_requests_per_film:, maximum_cost_usd_per_film:, maximum_cost_usd:, film_loader:).call

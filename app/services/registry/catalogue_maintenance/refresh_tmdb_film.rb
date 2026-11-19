@@ -1,6 +1,9 @@
 module Registry
   module CatalogueMaintenance
     class RefreshTmdbFilm
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(film_id:, tmdb_client: Sources::TmdbClient)
         tmdb_id = Film.find(film_id).tmdb_id
         tmdb_data = Sources::FetchTmdbFilm.call(tmdb_id:, tmdb_client:)

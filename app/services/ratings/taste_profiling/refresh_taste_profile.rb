@@ -32,17 +32,18 @@ module Ratings
       private
 
       def generate_and_apply(current:, evidence:)
-        @tracer.in_span(TRACE_NAME, attributes: {
+        workflow_context = OpenTelemetry::Context.current
+        AiConfiguration.in_model_trace(@tracer, TRACE_NAME, attributes: {
           "langfuse.trace.name" => TRACE_NAME,
           "langfuse.trace.tags" => TRACE_TAGS,
-          "langfuse.environment" => Rails.env.to_s,
+          "langfuse.environment" => Rails.application.config.x.langfuse_environment,
           "langfuse.observation.type" => "span",
           "langfuse.observation.input" => { notes_count: evidence.size }.to_json
-        }, record_exception: false) do |span|
+        }) do |span|
           assessment = GenerateTasteProfile.new(evidence:, basis: current&.incremental_synthesis_basis,
             trace_id: (span.context.hex_trace_id if span.context.valid?), tracer: @tracer, trace_tags: TRACE_TAGS)
           assessment.call(client: @client)
-          revision = record_and_apply(current:, assessment:)
+          revision = OpenTelemetry::Context.with_current(workflow_context) { record_and_apply(current:, assessment:) }
           span.set_attribute("taste_profile_id", revision.taste_profile_id)
           span.set_attribute("taste_profile_revision_id", revision.id)
           span.set_attribute("taste_profile_revision_eval_id", revision.taste_profile_revision_eval_id)

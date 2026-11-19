@@ -62,7 +62,7 @@ class TypeSafeClient
     @cost += allowance
     @tracer.in_span(phase, attributes: {
       "langfuse.observation.type" => "generation",
-      "langfuse.environment" => Rails.env.to_s,
+      "langfuse.environment" => Rails.application.config.x.langfuse_environment,
       "langfuse.trace.tags" => OpenTelemetry::Context.value(TRACE_TAGS_KEY),
       "langfuse.observation.model.name" => model,
       "langfuse.observation.input" => (@settings.fetch("trace_payload") ? payload : { question_count: questions.size }).to_json

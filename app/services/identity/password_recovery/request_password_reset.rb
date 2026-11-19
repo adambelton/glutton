@@ -3,6 +3,9 @@ require "net/smtp"
 module Identity
   module PasswordRecovery
     class RequestPasswordReset
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(email_address:)
         user = UserRegistered.find_by_email(email_address)
         return unless user&.can_reset_password?

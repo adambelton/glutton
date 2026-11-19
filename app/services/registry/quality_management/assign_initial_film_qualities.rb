@@ -1,6 +1,9 @@
 module Registry
   module QualityManagement
     class AssignInitialFilmQualities
+      extend Monitoring::Instrumentation
+      instrument_operations :call
+
       TRACE_NAME = "assign-initial-film-qualities".freeze
       TRACE_TAGS = [ "registry", "initial-assignment" ].freeze
 
@@ -16,19 +19,20 @@ module Registry
 
       def call
         film = Film.find(@film_id)
+        ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::FILM_ID, film.id)
         raise Errors::AssignmentFailed.new(reason: :unready_film) unless film.has_source_context?
         raise Errors::AssignmentFailed.new(reason: :already_assigned) if film.has_film_qualities?
         source = { "title" => film.title, "tmdb_id" => film.tmdb_id, "tmdb_metadata" => film.tmdb_metadata,
           "wikidata_id" => film.wikidata_id, "wikipedia_context" => film.wikipedia_context }.deep_dup
         definitions, categories = capture_vocabulary
         result = nil
-        @tracer.in_span(TRACE_NAME, attributes: {
+        AiConfiguration.in_model_trace(@tracer, TRACE_NAME, attributes: {
           "langfuse.trace.name" => TRACE_NAME,
           "langfuse.observation.type" => "span",
           "langfuse.trace.tags" => TRACE_TAGS,
-          "langfuse.environment" => Rails.env.to_s,
+          "langfuse.environment" => Rails.application.config.x.langfuse_environment,
           "langfuse.observation.input" => { source:, definitions:, categories: }.to_json
-        }, record_exception: false) do |root|
+        }) do |root|
           assessment = EvaluateInitialFilmQualities.new(source:, definitions:, categories:,
             trace_id: (root.context.hex_trace_id if root.context.valid?))
           assessment_error = nil

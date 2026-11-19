@@ -1,5 +1,8 @@
 module Recommendations
   class RecordFilmResponse
+    extend Monitoring::Instrumentation
+    instrument_class_operations :call
+
     def self.call(user_id:, film_id:, response:)
       raise ArgumentError, "Invalid recommendation response" unless RecommendationFilm::Responses::ALL.include?(response)
 

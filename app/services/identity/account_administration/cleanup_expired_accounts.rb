@@ -1,6 +1,9 @@
 module Identity
   module AccountAdministration
     class CleanupExpiredAccounts
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(batch_size: 100)
         unless batch_size.is_a?(Integer) && (1..1_000).cover?(batch_size)
           raise ArgumentError, "batch_size must be an integer from 1 to 1000"

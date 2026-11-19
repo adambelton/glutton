@@ -115,7 +115,7 @@ module Ratings
         @tracer.in_span("synthesize-taste-profile", attributes: {
           "langfuse.observation.type" => "generation",
           "langfuse.trace.tags" => @trace_tags,
-          "langfuse.environment" => Rails.env.to_s
+          "langfuse.environment" => Rails.application.config.x.langfuse_environment
         }, record_exception: false) do |span|
           profile, annotations, synthesis = validated_synthesis(request_synthesis(client))
           span.set_attribute("langfuse.observation.model.name", synthesis.fetch("model"))

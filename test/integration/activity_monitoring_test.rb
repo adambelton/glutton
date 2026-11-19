@@ -34,6 +34,31 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     assert_equal [ ActivityMonitoring::Operations::RANK_RECOMMENDATION_FILMS, ActivityMonitoring::Operations::CREATE_RATING_FILM ], operations
   end
 
+  test "business commands across domains nest in the request, preserve returns and redact failed inputs" do
+    user = Identity::UserGuest.create!
+    film = Registry::Film.create!(title: "Command trace")
+    ActivityMonitoring.trace("business workflow") do
+      assert_nil Identity::Authentication::Authenticate.call(email_address: "private@example.com", password: "private password")
+      entry = Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
+      assert_equal film.id, entry.film_id
+      recommendation = Recommendations::RecordFilmResponse.call(user_id: user.id, film_id: film.id,
+        response: Recommendations::RecommendationFilm::Responses::REJECTED)
+      assert_equal film.id, recommendation.film_id
+      assert_raises(Registry::Errors::AssignmentFailed) do
+        Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id)
+      end
+    end
+    @provider.force_flush
+    root = @exporter.finished_spans.find { |span| span.name == "business workflow" }
+    commands = @exporter.finished_spans.select { |span| span.parent_span_id == root.span_id }
+    assert_equal %w[Identity Library Recommendations Registry], commands.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::DOMAIN) }
+    assignment = commands.last
+    assert_equal OpenTelemetry::Trace::Status::ERROR, assignment.status.code
+    assert_equal film.id, assignment.attributes.fetch(ActivityMonitoring::Attributes::FILM_ID)
+    assert_empty Array(assignment.events)
+    refute_includes commands.map(&:attributes).inspect, "private"
+  end
+
   test "scheduled jobs suppress successful idle runs and enqueues while retaining failures" do
     tracer = @provider.tracer(ActivityMonitoring::Scopes::ACTIVE_JOB)
     [ DispatchDomainEventsJob, Ratings::RefreshTasteProfilesJob, ReportWorkerHealthJob ].each do |job|

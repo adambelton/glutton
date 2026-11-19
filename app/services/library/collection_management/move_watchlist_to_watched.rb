@@ -1,6 +1,9 @@
 module Library
   module CollectionManagement
     class MoveWatchlistToWatched
+      extend Monitoring::Instrumentation
+      instrument_class_operations :call
+
       def self.call(user_id:, library_film_id:)
         LibraryFilm.transaction(requires_new: true) do
           user = Identity::User.lock.find_by(id: user_id)

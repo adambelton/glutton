@@ -1,6 +1,9 @@
 module Identity
   module AccountAdministration
     class ReplayAccountDeletions
+      extend Monitoring::Instrumentation
+      instrument_operations :call
+
       def initialize(deletion_log:)
         @deletion_log = deletion_log
       end

@@ -5,6 +5,8 @@ require "opentelemetry/exporter/otlp"
 require "opentelemetry-instrumentation-active_job"
 
 module ActivityMonitoring
+  BUSINESS_OPERATION = "business_operation.glutton".freeze
+
   module Scopes
     BUSINESS = "glutton.business".freeze
     ACTIVE_JOB = OpenTelemetry::Instrumentation::ActiveJob.name
@@ -13,6 +15,8 @@ module ActivityMonitoring
   end
 
   module Attributes
+    DOMAIN = "glutton.domain".freeze
+    FILM_ID = "film.id".freeze
     OPERATION = "glutton.operation".freeze
     OUTCOME = "outcome".freeze
     REQUEST_ID = "request.id".freeze
@@ -53,6 +57,32 @@ module ActivityMonitoring
   end
 
   HONEYCOMB_HOSTS = { "eu" => "api.eu1.honeycomb.io".freeze, "us" => "api.honeycomb.io".freeze }.freeze
+
+  class BusinessOperationSubscriber
+    def start(_name, _id, payload)
+      tracer = ActivityMonitoring.tracer
+      return unless tracer
+
+      span = tracer.start_span(payload.fetch(:operation), attributes: { Attributes::DOMAIN => payload.fetch(:domain) })
+      payload[:monitoring_span] = span
+      payload[:monitoring_context] = OpenTelemetry::Context.attach(OpenTelemetry::Trace.context_with_span(span))
+    end
+
+    def finish(_name, _id, payload)
+      span = payload[:monitoring_span]
+      return unless span
+
+      if (error = payload[:exception_object])
+        span.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, error.class.name)
+        span.status = OpenTelemetry::Trace::Status.error
+      end
+    ensure
+      if span
+        OpenTelemetry::Context.detach(payload.fetch(:monitoring_context))
+        span.finish
+      end
+    end
+  end
 
   class Exporter < OpenTelemetry::Exporter::OTLP::Exporter
     def export(spans, timeout: nil)
