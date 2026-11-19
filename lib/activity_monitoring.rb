@@ -10,7 +10,10 @@ module ActivityMonitoring
       safe_spans = spans.map do |original|
         span = original.dup
         exception_type = Array(original.events).filter_map { |event| event.attributes&.fetch("exception.type", nil) }.first
-        span.attributes = (original.attributes || {}).merge("error.type" => exception_type) if exception_type
+        if exception_type
+          span.attributes = (original.attributes || {}).merge("error.type" => exception_type)
+          span.total_recorded_attributes += 1 unless original.attributes&.key?("error.type")
+        end
         span.events = nil
         span.status = OpenTelemetry::Trace::Status.error if span.status.code == OpenTelemetry::Trace::Status::ERROR
         span
