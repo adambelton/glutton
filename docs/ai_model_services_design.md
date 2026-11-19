@@ -28,6 +28,22 @@ The service captures the minimum inputs the assessment needs, including authorit
 
 Keep the structured requests actually sent in `input`, including their phase and non-secret provider settings. Keep received responses and validated decisions in `output`. Deterministic results have no provider requests. Reused evidence retains its source evaluation link. Store source versions so the evidence explains the applied result. The evidence must explain the saved result after the inputs or policy change. Keep scoring values and other product rules in the owning domain's models or model modules. Load non-secret model settings and request limits from configuration files such as `config/typesafe.json` and `config/taste_profile_synthesis.json`. Reuse the lifecycle pattern across domains while each domain retains its own evaluation model and result semantics.
 
+## Prompt versions
+
+Prompt assets follow the Terms of Service convention. Keep numbered files beside their consuming operation, list the versions in `VERSIONS`, and select the active version through `CURRENT_VERSION`. Each prompt family has its own version sequence. These assets establish the V1 baseline.
+
+| Prompt family | V1 asset | Recorded version |
+| --- | --- | --- |
+| Glutton Profile synthesis | [Instructions](../app/services/ratings/taste_profiling/taste_profile_prompt_v1.txt) and [response schema](../app/services/ratings/taste_profiling/taste_profile_schema_v1.json) | `TasteProfileRevisionEval.output.synthesis.prompt.version` |
+| Explicit rating quality assessment | [Question policy](../app/services/ratings/quality_scoring/evaluate_explicit_qualities_v1.json) | `RatingQualityEval.output.question_policy.version` |
+| Implicit rating quality assessment | [Question policy](../app/services/ratings/quality_scoring/evaluate_implicit_qualities_v1.json) | `RatingQualityEval.output.implicit_assessment.question_policy.version` |
+| Initial film quality assignment | [Question policy](../app/services/registry/quality_management/evaluate_initial_film_qualities_v1.json) | `FilmQualityEval.output.question_policy.version` |
+| AI connection check | [Instructions and input](../lib/ai_connection_check_v1.json) | Version on the diagnostic trace and generation |
+
+After public release, create the next numbered asset when changing instructions, templates, criteria or a versioned response schema. Keep released assets intact, register the new version in the owning operation and verify its request and recorded provenance in the same PR. Deploying the code selects the active version. A rollback selects the earlier asset while keeping both versions available.
+
+Saved evaluations keep the version and request that produced them. Historical evaluations retain their original labels or absent version metadata. Reusing an evaluation preserves its original provenance. Selecting a new prompt version takes effect the next time that operation runs under the existing scheduling rules.
+
 ## Tracing and privacy
 
 Define fixed workflow trace names and tags as `TRACE_NAME` and `TRACE_TAGS` on the orchestration service. Use them for the root span and propagate the relevant tags and environment to generation observations. Link spans to the persisted evaluation, and include model and usage on generation spans. Keep credentials, private notes and private model payloads out of trace attributes and exception details. Any payload capture must follow the domain's explicit privacy policy.

@@ -96,7 +96,7 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::ReadOnlyRecord) { evaluation.save! }
   end
 
-  test "OpenAI synthesizes from imported paragraphs and records the exact instructions" do
+  test "OpenAI receives the reader-facing evidence instructions and publishes the anchored profile" do
     context = wikipedia_context(text: "The crew waits for a transmission.")
     film = Registry::Film.new(tmdb_id: 348).import!(tmdb_data: { title: "Dead Air", release_date: nil,
       tmdb_metadata: { "details" => {} } }, wikipedia_context: context)
@@ -105,10 +105,10 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
       notes: "I liked the long wait.\n\nThe anticipation worked.")
     request = nil
     responses = Object.new
-    narrative = "The viewer responds to dread built through anticipation. In that setting, a long wait can be part of the appeal."
+    narrative = "You enjoyed the dread built through anticipation in Dead Air. The long wait was part of the appeal for you."
     conclusions = [
-      { "anchor" => "The viewer responds to dread built through anticipation.", "claim" => "Anticipation can build dread the viewer enjoys.", "explanation" => "Both reactions connect the wait to anticipation.", "citations" => [ citation(rating.id, "The anticipation worked.") ] },
-      { "anchor" => "In that setting, a long wait can be part of the appeal.", "claim" => "A long wait can work when it builds dread.", "explanation" => "The viewer explicitly praised the long wait.", "citations" => [ citation(rating.id, "I liked the long wait.") ] }
+      { "anchor" => "You enjoyed the dread built through anticipation in Dead Air.", "claim" => "Anticipation can build dread the viewer enjoys.", "explanation" => "Both reactions connect the wait to anticipation.", "citations" => [ citation(rating.id, "The anticipation worked.") ] },
+      { "anchor" => "The long wait was part of the appeal for you.", "claim" => "A long wait can work when it builds dread.", "explanation" => "The viewer explicitly praised the long wait.", "citations" => [ citation(rating.id, "I liked the long wait.") ] }
     ]
     responses.define_singleton_method(:create) do |**payload|
       request = payload
@@ -133,6 +133,10 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     assert_equal request.dig(:reasoning, :effort), output.dig("synthesis", "settings", "effort")
     assert_equal [ 20 ], output.fetch("evidence").pluck("source_revision_id")
     assert_equal "resolved-luna", output.dig("synthesis", "model")
+    assert_match(/address the viewer directly in the second person/i, request.fetch(:instructions))
+    assert_match(/keep an isolated reaction tied to the film or scene/i, request.fetch(:instructions))
+    assert_match(/leave unanswered questions/i, request.fetch(:instructions))
+    assert_equal "1", output.dig("synthesis", "prompt", "version")
     assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
     assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")
     assert_equal narrative, revision.profile

@@ -21,6 +21,8 @@ class AiConnectionCheckTest < ActiveSupport::TestCase
     assert_equal "returned-model", result[:model]
     assert_equal false, requests.first[:store]
     assert_equal 32, requests.first[:max_output_tokens]
+    assert_equal "Reply with exactly OK.", requests.sole.fetch(:instructions)
+    assert_equal "Verify this API connection.", requests.sole.fetch(:input)
     generation, root = @exporter.finished_spans
     assert_equal "check-ai-connection", root.name
     assert_equal "check-ai-connection", root.attributes.fetch("langfuse.trace.name")
@@ -28,6 +30,7 @@ class AiConnectionCheckTest < ActiveSupport::TestCase
     assert_equal root.span_id, generation.parent_span_id
     assert_equal root.trace_id, generation.trace_id
     assert_equal "generation", generation.attributes["langfuse.observation.type"]
+    assert_equal "1", generation.attributes.fetch("langfuse.version")
     assert_equal({ "input" => 10, "output" => 1, "total" => 11 }, JSON.parse(generation.attributes["langfuse.observation.usage_details"]))
     assert_equal "returned-model", generation.attributes["langfuse.observation.model.name"]
     assert_equal "passed", JSON.parse(root.attributes["langfuse.observation.output"])["status"]

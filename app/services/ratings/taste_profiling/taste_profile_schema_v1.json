@@ -1,0 +1,56 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile",
+    "conclusions"
+  ],
+  "properties": {
+    "profile": {
+      "type": "string"
+    },
+    "conclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "anchor",
+          "claim",
+          "explanation",
+          "citations"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "claim": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rating_id",
+                "quote"
+              ],
+              "properties": {
+                "rating_id": {
+                  "type": "integer"
+                },
+                "quote": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ en:
       notes_placeholder: What did you love or hate about the film, and why? Describe the experience. Think about particular moments, characters, atmosphere, pacing, and how the film made you feel.
       save: Save
       save_disabled: Select a rating to save.
-      dismiss: Dismiss
+      dismiss: Skip
       save_unchanged: Change the rating or notes to save.
       saved: Your rating has been saved.
       empty: You have no films waiting to be rated.

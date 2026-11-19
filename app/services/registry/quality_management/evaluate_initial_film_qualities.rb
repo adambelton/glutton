@@ -1,11 +1,14 @@
 module Registry
   module QualityManagement
     class EvaluateInitialFilmQualities
+      VERSIONS = %w[1].freeze
+      CURRENT_VERSION = VERSIONS.last
+
       attr_reader :input, :result
 
       def initialize(source:, definitions:, categories:, trace_id: nil)
         @source, @definitions, @categories = source, definitions, categories
-        @contract = JSON.parse(File.read(File.join(__dir__, "evaluate_initial_film_qualities.json")))
+        @contract = JSON.parse(File.read(File.join(__dir__, "evaluate_initial_film_qualities_v#{CURRENT_VERSION}.json"))).merge("version" => CURRENT_VERSION)
         @trace_id = trace_id
         @calls, @support, @selected_quality_ids = [], {}, []
         @selection_decisions = []
