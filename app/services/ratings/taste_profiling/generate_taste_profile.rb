@@ -2,30 +2,10 @@ module Ratings
   module TasteProfiling
     class GenerateTasteProfile
       CONFIGURATION = JSON.parse(Rails.root.join("config/taste_profile_synthesis.json").read).freeze
-      INSTRUCTIONS = File.read(File.join(__dir__, "taste_profile_prompt.txt")).freeze
-
-      SCHEMA = {
-        type: "object", additionalProperties: false, required: %w[profile conclusions],
-        properties: {
-          profile: { type: "string" },
-          conclusions: {
-            type: "array", items: {
-              type: "object", additionalProperties: false, required: %w[anchor claim explanation citations],
-              properties: {
-                anchor: { type: "string" },
-                claim: { type: "string" },
-                explanation: { type: "string" },
-                citations: {
-                  type: "array", items: {
-                    type: "object", additionalProperties: false, required: %w[rating_id quote],
-                    properties: { rating_id: { type: "integer" }, quote: { type: "string" } }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }.freeze
+      VERSIONS = %w[1].freeze
+      CURRENT_VERSION = VERSIONS.last
+      INSTRUCTIONS = File.read(File.join(__dir__, "taste_profile_prompt_v#{CURRENT_VERSION}.txt")).freeze
+      SCHEMA = JSON.parse(File.read(File.join(__dir__, "taste_profile_schema_v#{CURRENT_VERSION}.json"))).freeze
 
       MAXIMUM_PROFILE_LENGTH = 6_000
 
@@ -173,7 +153,8 @@ module Ratings
 
         annotations = validated_conclusions(profile, conclusions)
         provenance = result.slice("settings").merge(
-          "prompt" => { "instructions" => INSTRUCTIONS, "sha256" => Digest::SHA256.hexdigest(INSTRUCTIONS), "schema" => SCHEMA })
+          "prompt" => { "version" => CURRENT_VERSION, "instructions" => INSTRUCTIONS,
+            "sha256" => Digest::SHA256.hexdigest(INSTRUCTIONS), "schema" => SCHEMA })
         provenance["basis"] = synthesis_basis if @basis.present?
         [ profile, annotations, provenance.merge("provider" => provider, "model" => model, "usage" => usage.slice("input", "output")) ]
       end

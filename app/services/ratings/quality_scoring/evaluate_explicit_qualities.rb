@@ -1,13 +1,16 @@
 module Ratings
   module QualityScoring
     class EvaluateExplicitQualities
+      VERSIONS = %w[1].freeze
+      CURRENT_VERSION = VERSIONS.last
+
       attr_reader :provider_calls, :result
 
       def initialize(notes:, qualities:, trace_id:)
         @notes = notes
         @qualities = qualities
         @trace_id = trace_id
-        @contract = JSON.parse(File.read(File.join(__dir__, "evaluate_explicit_qualities.json")))
+        @contract = JSON.parse(File.read(File.join(__dir__, "evaluate_explicit_qualities_v#{CURRENT_VERSION}.json"))).merge("version" => CURRENT_VERSION)
       end
 
       def call(client:)

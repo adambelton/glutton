@@ -5,8 +5,9 @@ class AiConnectionCheck
   TRACE_NAME = "check-ai-connection".freeze
   TRACE_TAGS = [ "connection-check" ].freeze
 
-  INSTRUCTIONS = "Reply with exactly OK.".freeze
-  INPUT = "Verify this API connection.".freeze
+  VERSIONS = %w[1].freeze
+  CURRENT_VERSION = VERSIONS.last
+  PROMPT = JSON.parse(File.read(File.join(__dir__, "ai_connection_check_v#{CURRENT_VERSION}.json"))).freeze
 
   def initialize(client:, provider:, environment:)
     @client = client
@@ -18,14 +19,16 @@ class AiConnectionCheck
     raise ArgumentError, "OpenAI and Langfuse must both be configured" unless @client && @provider
     raise ArgumentError, "Set OPENAI_MODEL explicitly for this check" if model.to_s.strip.empty?
 
+    instructions = PROMPT.fetch("instructions")
+    input = PROMPT.fetch("input")
     result = nil
-    ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::CONNECTION_CHECK, provider: @provider, tags: TRACE_TAGS, environment: @environment, version: "1",
+    ActivityMonitoring.trace_ai_workflow(TRACE_NAME, scope: ActivityMonitoring::Scopes::CONNECTION_CHECK, provider: @provider, tags: TRACE_TAGS, environment: @environment, version: CURRENT_VERSION,
       input: { purpose: "Verify OpenAI and Langfuse connectivity", model: model }) do |root, tracer|
       ActivityMonitoring.trace_ai_generation("check-openai-response", tracer:, tags: TRACE_TAGS, trace_name: TRACE_NAME,
-        environment: @environment, version: "1", model:, parameters: { max_output_tokens: 32, store: false },
-        input: { instructions: INSTRUCTIONS, input: INPUT }) do |generation|
+        environment: @environment, version: CURRENT_VERSION, model:, parameters: { max_output_tokens: 32, store: false },
+        input: { instructions:, input: }) do |generation|
         response = @client.responses.create(
-          model: model, instructions: INSTRUCTIONS, input: INPUT, max_output_tokens: 32, store: false
+          model: model, instructions:, input:, max_output_tokens: 32, store: false
         )
         generation.set_model(response.model)
         generation.set_output(response.output_text)

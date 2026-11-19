@@ -25,6 +25,7 @@ class Registry::AssignInitialFilmQualitiesTest < ActiveSupport::TestCase
     assert_equal "jev-1.14.0", assessment_result.fetch("model")
     evaluation = result.fetch(:film_quality_eval).reload
     assert_equal assessment_result, evaluation.output
+    assert_equal "1", evaluation.output.dig("question_policy", "version")
     assert_equal film, evaluation.film
     assert_equal [ evaluation.id ], film.film_qualities.distinct.pluck(:film_quality_eval_id)
     assert_equal client.requests.map { |request| request.fetch(:questions).deep_stringify_keys }, evaluation.input.map { |call| call.dig("request", "questions") }

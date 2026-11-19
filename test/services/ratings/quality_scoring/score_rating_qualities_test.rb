@@ -304,6 +304,8 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal evaluation.id, root.attributes.fetch("rating_quality_eval_id")
     assert_equal client.configuration, evaluation.reload.output.dig("configuration", "provider")
     assert_equal client.configuration, evaluation.output.dig("implicit_assessment", "configuration")
+    assert_equal "1", evaluation.output.dig("question_policy", "version")
+    assert_equal "1", evaluation.output.dig("implicit_assessment", "question_policy", "version")
     assert_equal 2, http.requests.size
     assert_equal http.requests.map { |request| JSON.parse(request.body) }, evaluation.input.pluck("request")
     assert_equal evaluation.input.pluck("phase"), evaluation.output.fetch("provider_responses").pluck("phase")

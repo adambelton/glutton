@@ -1,5 +1,4 @@
 {
-  "version": "neutral-context-v0.3-2026-11-15",
   "minimum_support": 0.60,
   "question_type": "noul",
   "question_template": "Do the supplied film evidence support {name} in this film?",

@@ -45,7 +45,7 @@ Registered viewers and active guests can search for horror films from Library an
 
 - **Header account controls.** Anonymous visitors can log in, register or try the app. Registered viewers can log out. Registered viewers can open Account; manual taste profile refresh stays restricted to superusers. The theme control persists the viewer’s choice.
 
-- The Ratings form and read-only landing examples share a three-column desktop card with film information, rating controls, and one visible multiline notes field. On mobile, the layout stacks the same content. Notes are optional, saved with the rating, and editable through a rating revision. The notes field asks what the viewer loved or hated and why, prompting particular moments, characters, atmosphere, pacing and feelings, without a repeated personal-details disclaimer; provider/data-use information remains in the privacy notice.
+- The Ratings form and read-only landing examples share a three-column desktop card with film information, rating controls, and one visible multiline notes field. The card labels the action that skips the current film as Skip. On mobile, the layout stacks the same content. Notes are optional, saved with the rating, and editable through a rating revision. The notes field asks what the viewer loved or hated and why, prompting particular moments, characters, atmosphere, pacing and feelings, without a repeated personal-details disclaimer; provider/data-use information remains in the privacy notice.
 
 - Registry preview data is implemented. Registry supplies read-only films for landing examples and retains complete TMDB movie responses, with typed read adapters for consumed fields; full manual source refresh remains deferred.
 
