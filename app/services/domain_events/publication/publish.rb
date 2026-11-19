@@ -16,7 +16,11 @@ module DomainEvents
           stream.append!(id:, name:, payload: json_payload, schema_version:,
             correlation_id: correlation_id || id, causation_id:, occurred_at: Time.current)
         end
-        ActiveRecord.after_all_transactions_commit { Delivery::Wake.call }
+        ActiveRecord.after_all_transactions_commit do
+          Delivery::Wake.call
+          Rails.logger.info({ message: "domain_event_published", event_id: event.id,
+            correlation_id: event.correlation_id, event_name: event.name }.to_json)
+        end
         event
       end
     end

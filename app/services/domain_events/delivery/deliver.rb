@@ -13,23 +13,35 @@ module DomainEvents
           return :not_due unless delivery.due_for_attempt?
           return :blocked if delivery.predecessor_pending?(subscription)
 
-          unless user&.active?
-            return delivery.skip!
-          end
-
-          delivery.start_attempt!
-          begin
-            EventDelivery.transaction(requires_new: true) do
-              outcome = subscription.handler.call(event: delivery.domain_event, user:)
-              delivery.complete!(outcome)
-            rescue ActiveRecord::Rollback
-              raise ArgumentError, "Handler rolled back without a delivery outcome"
+          outcome = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
+          event = delivery.domain_event
+          ActiveRecord.after_all_transactions_commit do
+            Rails.logger.info({ message: "domain_event_delivery", event_id: event.id,
+              correlation_id: event.correlation_id, event_name: event.name, subscriber: subscription.name,
+              delivery_id: delivery.id, outcome:, attempts: delivery.attempts, error_class: delivery.last_error_class }.compact.to_json)
+            if outcome == :failed
+              Rails.error.report(Errors::DispatchFailure.new("Domain event delivery failed (#{delivery.last_error_class})"),
+                severity: :error, context: { correlation_id: event.correlation_id, event_id: event.id, delivery_id: delivery.id })
             end
-          rescue StandardError => error
-            delivery.reload.record_failure!(error)
           end
+          outcome
         end
       end
+
+      def self.attempt_delivery(delivery, subscription, user:)
+        delivery.start_attempt!
+        begin
+          EventDelivery.transaction(requires_new: true) do
+            outcome = subscription.handler.call(event: delivery.domain_event, user:)
+            delivery.complete!(outcome)
+          rescue ActiveRecord::Rollback
+            raise ArgumentError, "Handler rolled back without a delivery outcome"
+          end
+        rescue StandardError => error
+          delivery.reload.record_failure!(error)
+        end
+      end
+      private_class_method :attempt_delivery
     end
   end
 end

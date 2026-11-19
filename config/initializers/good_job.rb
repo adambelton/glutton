@@ -9,6 +9,11 @@ Rails.application.configure do
       cron: "*/30 * * * * *",
       class: "DispatchDomainEventsJob"
     },
+    appsignal_worker_health: {
+      cron: "*/5 * * * * UTC",
+      class: "ReportWorkerHealthJob",
+      enabled_by_default: -> { defined?(Appsignal) && Appsignal.active? }
+    },
     ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",
       class: "Ratings::RefreshTasteProfilesJob",
