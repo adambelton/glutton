@@ -9,7 +9,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     @provider = OpenTelemetry::SDK::Trace::TracerProvider.new
     @provider.add_span_processor(ActivityMonitoring::Processor.new(@exporter))
     @original = ActivityMonitoring.tracer
-    ActivityMonitoring.tracer = @provider.tracer(ActivityMonitoring::TRACER_NAME)
+    ActivityMonitoring.tracer = @provider.tracer(ActivityMonitoring::Scopes::BUSINESS)
   end
 
   teardown do
@@ -30,11 +30,12 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     @provider.force_flush
     spans = @exporter.finished_spans
     assert_equal [ "GuestSessionsController#create", "RecommendationsController#show", "RatingsController#new" ], spans.map(&:name)
-    assert_equal [ "rank recommendation films", "create rating film" ], spans.filter_map { |span| span.attributes[ActivityMonitoring::OPERATION] }
+    operations = spans.filter_map { |span| span.attributes[ActivityMonitoring::Attributes::OPERATION] }
+    assert_equal [ ActivityMonitoring::Operations::RANK_RECOMMENDATION_FILMS, ActivityMonitoring::Operations::CREATE_RATING_FILM ], operations
   end
 
   test "scheduled jobs suppress successful idle runs and enqueues while retaining failures" do
-    tracer = @provider.tracer(ActivityMonitoring::ACTIVE_JOB_SCOPE)
+    tracer = @provider.tracer(ActivityMonitoring::Scopes::ACTIVE_JOB)
     [ DispatchDomainEventsJob, Ratings::RefreshTasteProfilesJob, ReportWorkerHealthJob ].each do |job|
       attributes = { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => job.name }
       tracer.in_span("enqueue #{job.name}", kind: :producer, attributes:) { }

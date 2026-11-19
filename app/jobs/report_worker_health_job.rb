@@ -1,5 +1,5 @@
 class ReportWorkerHealthJob < ApplicationJob
-  OVERDUE_AFTER = 30.minutes
+  OVERDUE_AFTER = 30.minutes.freeze
 
   queue_as :domain_events
 
@@ -17,7 +17,7 @@ class ReportWorkerHealthJob < ApplicationJob
     return if pending.empty?
 
     span = ActivityMonitoring.current
-    span.set_attribute(ActivityMonitoring::OVERDUE, true)
+    span.set_attribute(ActivityMonitoring::Attributes::OVERDUE, true)
     pending.each { |kind, oldest| span.set_attribute("wait.#{kind}.seconds", (now - oldest).to_i) }
   end
 end

@@ -14,16 +14,20 @@ module DomainEvents
           return :blocked if delivery.predecessor_pending?(subscription)
 
           event = delivery.domain_event
+          attributes = {
+            ActivityMonitoring::Attributes::EVENT_ID => event.id,
+            ActivityMonitoring::Attributes::CORRELATION_ID => event.correlation_id,
+            ActivityMonitoring::Attributes::SUBSCRIBER => subscription.name,
+            ActivityMonitoring::Attributes::DELIVERY_ID => delivery.id,
+            ActivityMonitoring::Attributes::USER_ID => user_id
+          }
           outcome = ActivityMonitoring.trace("deliver #{event.name}", parent: Monitoring::TraceContext.parent_for_event(event.id),
-            links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes: {
-            "event.id" => event.id, "correlation.id" => event.correlation_id, "subscriber" => subscription.name,
-            "delivery.id" => delivery.id, "user.id" => user_id
-          }) do
+            links: Array.wrap(ActivityMonitoring.link(ActivityMonitoring.traceparent)), attributes:) do
             result = user&.active? ? attempt_delivery(delivery, subscription, user:) : delivery.skip!
             span = ActivityMonitoring.current
-            span&.set_attribute(ActivityMonitoring::OUTCOME, result.to_s)
-            span&.set_attribute("attempt", delivery.attempts)
-            span&.set_attribute("delivery.age_ms", ((Time.current - event.occurred_at) * 1000).round)
+            span&.set_attribute(ActivityMonitoring::Attributes::OUTCOME, result.to_s)
+            span&.set_attribute(ActivityMonitoring::Attributes::ATTEMPT, delivery.attempts)
+            span&.set_attribute(ActivityMonitoring::Attributes::DELIVERY_AGE_MS, ((Time.current - event.occurred_at) * 1000).round)
             span&.set_attribute(OpenTelemetry::SemConv::ERROR::ERROR_TYPE, delivery.last_error_class) if delivery.last_error_class.present?
             span.status = OpenTelemetry::Trace::Status.error if span && result == :failed
             result

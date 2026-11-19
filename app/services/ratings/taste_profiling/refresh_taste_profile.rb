@@ -20,9 +20,9 @@ module Ratings
         return current if unchanged
 
         links = Monitoring::TraceContext.links_for_ratings(evidence.pluck("rating_id"))
-        ActivityMonitoring.trace("refresh taste profile", parent: nil, links:, attributes: { "user.id" => @user_id }) do
+        ActivityMonitoring.trace("refresh taste profile", parent: nil, links:, attributes: { ActivityMonitoring::Attributes::USER_ID => @user_id }) do
           revision = generate_and_apply(current:, evidence:)
-          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::PROFILE_REVISION_ID, revision.id)
+          ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::PROFILE_REVISION_ID, revision.id)
           revision
         end
       ensure

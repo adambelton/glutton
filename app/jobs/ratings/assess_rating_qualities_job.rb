@@ -14,14 +14,14 @@ module Ratings
     end
 
     def perform(rating_id)
-      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::RATING_ID, rating_id)
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::RATING_ID, rating_id)
       QualityScoring::ScoreRatingQualities.call(rating_id:)
     rescue Errors::QualityAssessmentFailed => error
       raise unless error.reason == :stale_rating
-      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "superseded")
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::OUTCOME, ActivityMonitoring::AssessmentOutcomes::SUPERSEDED)
     rescue ActiveRecord::RecordNotFound
       raise if Rating.exists?(rating_id)
-      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::OUTCOME, "removed")
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::OUTCOME, ActivityMonitoring::AssessmentOutcomes::REMOVED)
     end
   end
 end

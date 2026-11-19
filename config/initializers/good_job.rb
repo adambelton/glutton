@@ -9,16 +9,16 @@ Rails.application.configure do
   config.good_job.cron = {
     domain_event_sweep: {
       cron: "*/30 * * * * *",
-      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:domain_event_sweep)
+      class: ActivityMonitoring::ScheduledJobs::DOMAIN_EVENT_SWEEP
     },
     worker_backlog: {
       cron: "*/5 * * * * UTC",
-      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:worker_backlog),
+      class: ActivityMonitoring::ScheduledJobs::WORKER_BACKLOG,
       enabled_by_default: -> { ActivityMonitoring.tracer.present? }
     },
     ratings_taste_profile_refresh: {
       cron: "*/15 * * * * UTC",
-      class: ActivityMonitoring::SCHEDULED_JOBS.fetch(:ratings_taste_profile_refresh),
+      class: ActivityMonitoring::ScheduledJobs::RATINGS_TASTE_PROFILE_REFRESH,
       enabled_by_default: -> { Rails.env.production? }
     }
   }

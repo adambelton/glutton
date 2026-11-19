@@ -13,7 +13,7 @@ module Ratings
 
     after_create do
       Monitoring::TraceContext.capture!(rating_id: id)
-      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::RATING_ID, id)
+      ActivityMonitoring.current&.set_attribute(ActivityMonitoring::Attributes::RATING_ID, id)
     end
 
     belongs_to :rating_film

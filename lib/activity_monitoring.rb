@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 require "opentelemetry/sdk"
 require "opentelemetry/semconv"
 require "opentelemetry/exporter/otlp"
@@ -7,22 +5,54 @@ require "opentelemetry/exporter/otlp"
 require "opentelemetry-instrumentation-active_job"
 
 module ActivityMonitoring
-  TRACER_NAME = "glutton.business"
-  ACTIVE_JOB_SCOPE = OpenTelemetry::Instrumentation::ActiveJob.name
-  EXPORTED_SCOPES = [ TRACER_NAME, ACTIVE_JOB_SCOPE ].freeze
-  OPERATION = "glutton.operation"
-  DELIVERY_COUNT = "delivery.count"
-  OVERDUE = "glutton.overdue"
-  OUTCOME = "outcome"
-  RATING_ID = "rating.id"
-  PROFILE_REVISION_ID = "profile_revision.id"
-  SCHEDULED_JOBS = {
-    domain_event_sweep: "DispatchDomainEventsJob",
-    worker_backlog: "ReportWorkerHealthJob",
-    ratings_taste_profile_refresh: "Ratings::RefreshTasteProfilesJob"
-  }.freeze
-  READ_METHODS = %w[GET HEAD].freeze
-  HONEYCOMB_HOSTS = { "eu" => "api.eu1.honeycomb.io", "us" => "api.honeycomb.io" }.freeze
+  module Scopes
+    BUSINESS = "glutton.business".freeze
+    ACTIVE_JOB = OpenTelemetry::Instrumentation::ActiveJob.name
+
+    ALL = [ BUSINESS, ACTIVE_JOB ].freeze
+  end
+
+  module Attributes
+    OPERATION = "glutton.operation".freeze
+    OUTCOME = "outcome".freeze
+    REQUEST_ID = "request.id".freeze
+    USER_ID = "user.id".freeze
+    RATING_ID = "rating.id".freeze
+    PROFILE_REVISION_ID = "profile_revision.id".freeze
+    PROFILE_REFRESH_REQUESTED = "profile_refresh.requested".freeze
+    EVENT_ID = "event.id".freeze
+    CORRELATION_ID = "correlation.id".freeze
+    SUBSCRIBER = "subscriber".freeze
+    DELIVERY_ID = "delivery.id".freeze
+    DELIVERY_COUNT = "delivery.count".freeze
+    DELIVERY_AGE_MS = "delivery.age_ms".freeze
+    ATTEMPT = "attempt".freeze
+    OVERDUE = "glutton.overdue".freeze
+  end
+
+  module Operations
+    SEARCH_FILMS = "search films".freeze
+    RANK_RECOMMENDATION_FILMS = "rank recommendation films".freeze
+    CREATE_RATING_FILM = "create rating film".freeze
+  end
+
+  module AssessmentOutcomes
+    ALREADY_ASSESSED = "already_assessed".freeze
+    NO_QUALITIES = "no_qualities".freeze
+    ASSESSED = "assessed".freeze
+    SUPERSEDED = "superseded".freeze
+    REMOVED = "removed".freeze
+  end
+
+  module ScheduledJobs
+    DOMAIN_EVENT_SWEEP = "DispatchDomainEventsJob".freeze
+    WORKER_BACKLOG = "ReportWorkerHealthJob".freeze
+    RATINGS_TASTE_PROFILE_REFRESH = "Ratings::RefreshTasteProfilesJob".freeze
+
+    ALL = [ DOMAIN_EVENT_SWEEP, WORKER_BACKLOG, RATINGS_TASTE_PROFILE_REFRESH ].freeze
+  end
+
+  HONEYCOMB_HOSTS = { "eu" => "api.eu1.honeycomb.io".freeze, "us" => "api.honeycomb.io".freeze }.freeze
 
   class Exporter < OpenTelemetry::Exporter::OTLP::Exporter
     def export(spans, timeout: nil)
@@ -43,18 +73,20 @@ module ActivityMonitoring
   end
 
   class Processor < OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor
+    READ_METHODS = [ "GET".freeze, "HEAD".freeze ].freeze
+
     def on_finish(span)
-      return unless EXPORTED_SCOPES.include?(span.instrumentation_scope.name)
+      return unless Scopes::ALL.include?(span.instrumentation_scope.name)
       return super if span.status.code == OpenTelemetry::Trace::Status::ERROR
 
       attributes = span.attributes || {}
       if span.kind == :server && READ_METHODS.include?(attributes[OpenTelemetry::SemConv::HTTP::HTTP_REQUEST_METHOD])
         status = attributes[OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE]
-        return if status && status < Rack::Utils.status_code(:bad_request) && !attributes.key?(OPERATION)
+        return if status && status < Rack::Utils.status_code(:bad_request) && !attributes.key?(Attributes::OPERATION)
       end
       job_name = attributes[OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE]
-      if span.instrumentation_scope.name == ACTIVE_JOB_SCOPE && SCHEDULED_JOBS.value?(job_name)
-        return unless span.kind == :consumer && (attributes.key?(DELIVERY_COUNT) || attributes[OVERDUE])
+      if span.instrumentation_scope.name == Scopes::ACTIVE_JOB && ScheduledJobs::ALL.include?(job_name)
+        return unless span.kind == :consumer && (attributes.key?(Attributes::DELIVERY_COUNT) || attributes[Attributes::OVERDUE])
       end
 
       super
@@ -81,10 +113,10 @@ module ActivityMonitoring
         config.resource = resource
         config.propagators = [ OpenTelemetry::Trace::Propagation::TraceContext.text_map_propagator ]
         config.add_span_processor(Processor.new(exporter))
-        config.use(ACTIVE_JOB_SCOPE, span_naming: :job_class, propagation_style: :child)
+        config.use(Scopes::ACTIVE_JOB, span_naming: :job_class, propagation_style: :child)
       end
       provider = OpenTelemetry.tracer_provider
-      self.tracer = provider.tracer(TRACER_NAME)
+      self.tracer = provider.tracer(Scopes::BUSINESS)
       at_exit { provider.shutdown(timeout: 5) }
     end
 
