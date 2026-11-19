@@ -23,12 +23,15 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     get availability_recommendation_path
     assert_response :accepted
     unlock_recommendations_for(user: Identity::UserGuest.last)
-    Registry::Film.create!(title: "Candidate")
+    film = Registry::Film.create!(title: "Candidate")
     get recommendation_path
     get recommendation_path
+    2.times { get new_rating_path(film_id: film.id) }
     Ratings::RefreshTasteProfilesJob.perform_now
     @provider.force_flush
-    assert_equal [ "GuestSessionsController#create", "RecommendationsController#show" ], @exporter.finished_spans.map(&:name)
+    spans = @exporter.finished_spans
+    assert_equal [ "GuestSessionsController#create", "RecommendationsController#show", "RatingsController#new" ], spans.map(&:name)
+    assert_equal [ "rank recommendation films", "create rating film" ], spans.filter_map { |span| span.attributes["glutton.operation"] }
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do

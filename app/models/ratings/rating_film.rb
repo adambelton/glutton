@@ -5,6 +5,8 @@ module Ratings
     has_many :ratings
     has_one :current_rating, -> { order(id: :desc) }, class_name: "Rating"
 
+    after_create { ActivityMonitoring.current&.set_attribute("glutton.operation", "create rating film") }
+
     validates :film_id, uniqueness: { scope: :user_id }
     validates :dismissed, :suppressed, inclusion: { in: [ true, false ] }
 

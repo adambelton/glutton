@@ -25,6 +25,11 @@ module ActivityMonitoring
   class Processor < OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor
     def on_finish(span)
       return unless %w[glutton.business OpenTelemetry::Instrumentation::ActiveJob].include?(span.instrumentation_scope.name)
+      if span.kind == :server && %w[GET HEAD].include?(span.attributes["http.request.method"])
+        status = span.attributes["http.response.status_code"]
+        return if status && status < 400 && span.status.code != OpenTelemetry::Trace::Status::ERROR && !span.attributes.key?("glutton.operation")
+      end
+
       scheduled = %w[DispatchDomainEventsJob Ratings::RefreshTasteProfilesJob ReportWorkerHealthJob].include?(span.attributes&.fetch("code.namespace", nil))
       return if scheduled && span.kind == :producer && span.status.code != OpenTelemetry::Trace::Status::ERROR
 

@@ -24,7 +24,6 @@ class RatingsController < ApplicationController
     else
       load_next_candidate
     end
-    @business_activity = @rating_film&.previously_new_record?
     render_new
   end
 
