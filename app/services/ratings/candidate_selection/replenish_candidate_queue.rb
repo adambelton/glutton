@@ -17,9 +17,11 @@ module Ratings
           if shortfall.positive?
             queued_film_ids = RatingFilm.where(user_id: user.id).pluck(:film_id)
             queued_film_ids |= [ excluding_film_id ] if excluding_film_id.present?
-            yield(queued_film_ids, shortfall).each do |film_id|
+            film_ids = yield(queued_film_ids, shortfall)
+            film_ids.each do |film_id|
               candidates << RatingFilm.create!(user:, film_id:)
             end
+            ActivityMonitoring.current_operation_span&.set_operation(ActivityMonitoring::Operations::CREATE_RATING_FILM) if film_ids.present?
           end
           candidates
         end

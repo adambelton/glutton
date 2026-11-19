@@ -34,6 +34,56 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     assert_equal [ ActivityMonitoring::Operations::RANK_RECOMMENDATION_FILMS, ActivityMonitoring::Operations::CREATE_RATING_FILM ], operations
   end
 
+  test "automatic candidate selection captures a queue refill and skips reads of the same candidate" do
+    post guest_session_path
+    user = Identity::UserGuest.last
+    first_film = Registry::Film.create!(title: "First candidate")
+    Ratings::RatingFilm.create!(user:, film: first_film).dismiss!
+    Registry::Film.create!(title: "Next candidate")
+
+    assert_difference -> { Ratings::RatingFilm.where(user:).count }, 1 do
+      get new_rating_path
+      assert_response :success
+    end
+    assert_no_difference -> { Ratings::RatingFilm.where(user:).count } do
+      get new_rating_path
+      assert_response :success
+    end
+    @provider.force_flush
+    request = @exporter.finished_spans.select { |span| span.name == "RatingsController#new" }.sole
+    assert_equal ActivityMonitoring::Operations::CREATE_RATING_FILM, request.attributes.fetch(ActivityMonitoring::Attributes::OPERATION)
+  end
+
+  test "creating a rating film during Library event delivery leaves the delivery operation intact" do
+    user = Identity::UserGuest.create!
+    film = Registry::Film.create!(title: "Added to watchlist")
+    Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
+    assert_difference -> { Ratings::RatingFilm.where(user:, film:).count }, 1 do
+      DispatchDomainEventsJob.perform_now
+    end
+
+    @provider.force_flush
+    delivery = @exporter.finished_spans.select { |span| span.attributes[ActivityMonitoring::Attributes::SUBSCRIBER] == Ratings::EventHandlers::ConsumeLibraryEvent::SUBSCRIBER }.sole
+    assert_equal "deliver #{Library::Events::FILM_ADDED_TO_WATCHLIST}", delivery.name
+    refute delivery.attributes.key?(ActivityMonitoring::Attributes::OPERATION)
+  end
+
+  test "a rating without notes keeps its submission and event trace but stores no rating context" do
+    user = Identity::UserGuest.create!
+    film = Registry::Film.create!(title: "Plain rating")
+    candidate = Ratings::RatingFilm.create!(user:, film:)
+    rating = Ratings::RatingRecording::SubmitRating.call(user_id: user.id, rating_film_id: candidate.id,
+      value: Ratings::Rating::Values::PRETTY_GOOD)
+
+    assert_not Monitoring::TraceContext.exists?(rating_id: rating.id)
+    @provider.force_flush
+    submission = @exporter.finished_spans.select { |span| span.name == "Ratings::RatingRecording::SubmitRating.call" }.sole
+    assert_equal rating.id, submission.attributes.fetch(ActivityMonitoring::Attributes::RATING_ID)
+    event = DomainEvents::DomainEvent.joins(:domain_event_stream).where(name: Ratings::Events::RATING_SUBMITTED, domain_event_streams: { user_id: user.id }).sole
+    parent = ActivityMonitoring.link(Monitoring::TraceContext.parent_for_event(event.id)).span_context
+    assert_equal [ submission.trace_id, submission.span_id ], [ parent.trace_id, parent.span_id ]
+  end
+
   test "business commands across domains nest in the request, preserve returns and redact failed inputs" do
     user = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Command trace")
