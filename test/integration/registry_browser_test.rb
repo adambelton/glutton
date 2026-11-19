@@ -20,7 +20,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     film = Registry::Film.create!(title: "Raw metadata", tmdb_id: 999,
       tmdb_metadata: { details: { overview: [], poster_path: 123, runtime: "117", genres: "Horror",
         production_companies: [ false, { name: [] } ], production_countries: {}, spoken_languages: [ "English" ] } })
-    get registry_film_path(film)
+    get admin_film_path(film)
     assert_response :success
     get new_rating_path(film_id: film.id)
     assert_response :success
@@ -38,7 +38,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
     [ registered_user, Identity::UserGuest.create! ].each do |user|
       bind_user(user)
-      (paths + [ registry_film_path(999999999) ]).each do |path|
+      (paths + [ admin_film_path(999999999) ]).each do |path|
         get path
         assert_response :forbidden
         assert_select "h1", I18n.t("registry.errors.forbidden.title")
@@ -59,7 +59,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
     bind_user(@user)
     Identity::Session.revoke(id: @authentication.id)
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     assert_redirected_to new_session_path
 
     # A pre-existing session may outlive its account. This fixture does not implement deletion.
@@ -67,21 +67,21 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
     jar.signed[:session_id] = { value: { id: @authentication.id, user_id: deleted.id } }
     cookies[:session_id] = jar[:session_id]
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     assert_response :gone
     assert_select "h1", I18n.t("identity.sessions.deleted_title")
     assert_select "a.record-link", count: 0
   end
 
   test "revocation applies to the same browser on its next request" do
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     assert_response :success
     Identity::AccountAdministration::RevokeSuperuser.call(user_id: @user.id, actor_user_id: @user.id)
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     assert_response :forbidden
     assert Identity::Session.find(@authentication.id).active?
     get root_path
-    assert_select "a[href=?]", registry_root_path, count: 0
+    assert_select "header a[href=?]", admin_path, count: 0
   end
 
   test "superusers browse escaped records and related links without domain writes or jobs" do
@@ -93,12 +93,11 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
           get path
           assert_response :success
           assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'
-          assert_select "a.wordmark", "glutton."
-          assert_select 'button[data-controller="theme"][aria-pressed="false"][aria-label=?]', I18n.t("ui.dark_mode")
-          assert_select "header.ui-header a[href=?]", library_path
-          assert_select "main#main-content.registry-page .ui-card"
-          assert_select "main nav.registry-tabs a[aria-current=page]", count: 1
-          assert_select "main form", count: 0
+          assert_select "aside.admin-sidebar > a.admin-wordmark:first-child[href=?]", library_path
+          assert_select "body.admin-page > main#main-content.admin-content"
+          assert_select "header.ui-header, .ui-card, .registry-panel", count: 0
+          assert_select "aside.admin-sidebar nav.admin-navigation a[aria-current=location]", count: 1
+          assert_select "main form[method=post]", count: 0
           assert_select "script", text: /overview|quality|Current source/, count: 0
           assert_no_match(/translation missing/i, response.body)
           assert_equal "no-store", response.headers["Cache-Control"]
@@ -107,11 +106,16 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
     assert_empty writes
     get library_path
-    assert_select "header a[href=?]", registry_root_path
-    get registry_film_path(@film)
-    assert_select "h1", @film.title
-    assert_select "a[href=?]", registry_quality_path(@quality), text: @quality.name
-    assert_select "a[href=?]", registry_quality_category_path(@category), text: @category.name
+    assert_select "header a[href=?]", admin_path
+    get admin_film_path(@film)
+    assert_select "main > a.admin-back[href=?] + h1", admin_films_path, text: @film.title
+    assert_select "a.admin-back[href=?]", admin_films_path do
+      assert_select "span[aria-hidden=true]", "←"
+      assert_select "span", "Back to films"
+    end
+    assert_select "section[aria-labelledby=film-details-heading]"
+    assert_select "a[href=?]", admin_quality_path(@quality), text: @quality.name
+    assert_select "a[href=?]", admin_quality_category_path(@category), text: @category.name
     assert_select "summary", I18n.t("registry.context_spoilers")
     assert_select "a[href=?]", @film.wikipedia_context.fetch("revision_url")
     assert_select "a[href=?]", @film.wikipedia_context.fetch("history_url")
@@ -119,15 +123,15 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "p", I18n.t("registry.no_evidence")
     assert_includes response.body, "Current source &lt;script&gt;text&lt;/script&gt;"
     assert_includes response.body, "Stored &lt;script&gt;overview&lt;/script&gt;"
-    get registry_quality_path(@quality)
-    assert_select "h1", @quality.name
+    get admin_quality_path(@quality)
+    assert_select "main > a.admin-back[href=?] + h1", admin_qualities_path, text: @quality.name
     assert_select "p", @quality.match_rule
     assert_select "p", @quality.not_sufficient
-    assert_select "a[href=?]", registry_film_path(@film), text: @film.title
-    get registry_quality_category_path(@category)
+    assert_select "a[href=?]", admin_film_path(@film), text: @film.title
+    get admin_quality_category_path(@category)
     assert_select "dd", @category.maximum_qualities.to_s
     assert_select "dd", @category.weight.to_s("F")
-    assert_select "a[href=?]", registry_quality_path(@quality)
+    assert_select "a[href=?]", admin_quality_path(@quality)
   end
 
   test "accepted associations show their saved evidence rather than substituting current source" do
@@ -145,7 +149,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       "selection_decisions" => [], "status" => "completed", "usage_complete" => true
     })
     association = Registry::FilmQuality.create!(film: @film, quality:, film_quality_eval: evaluation)
-    get registry_film_path(@film)
+    get admin_film_path(@film)
     assert_response :success
     assert_select ".evidence-content" do
       assert_select "p", I18n.t("registry.support", value: 75)
@@ -154,7 +158,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "article#evidence-#{association.id}-P1 p", "Original evidence <script>quote</script>"
       assert_select "script", count: 0
     end
-    assert_select "a[href=?]", registry_quality_path(candidate), count: 0
+    assert_select "a[href=?]", admin_quality_path(candidate), count: 0
     assert_select "article#source-P1 p", "Current source <script>text</script>"
   end
 
@@ -164,7 +168,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       wikipedia_context: wikipedia_context(tmdb_id: 800003))
     result = Registry::QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client: QualityAssessmentSources::Client.new)
     assert_empty result.fetch(:film_quality_eval).output.fetch("evidence")
-    get registry_film_path(film)
+    get admin_film_path(film)
     assert_response :success
     assert_select ".evidence-content" do
       assert_select "p", I18n.t("registry.support", value: 70)
@@ -177,24 +181,24 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
 
   test "optional fields empty associations missing records and invalid parameters have explicit states" do
     unsourced = Registry::Film.create!(title: "Unsourced")
-    get registry_film_path(unsourced)
+    get admin_film_path(unsourced)
     assert_response :success
     [ :no_metadata, :no_context, :no_qualities, :source_incomplete ].each do |key|
       assert_includes response.body, I18n.t("registry.#{key}")
     end
-    [ registry_film_path(999999999), registry_quality_path("invalid"), registry_quality_category_path("0") ].each do |path|
+    [ admin_film_path(999999999), admin_quality_path("invalid"), admin_quality_category_path("0") ].each do |path|
       get path
       assert_response :not_found
       assert_select "h1", I18n.t("registry.errors.not_found.title")
     end
     [ "0", "-1", "9999999", "abc", [ "1" ], { number: "1" } ].each do |page|
-      get registry_films_path, params: { page: }
+      get admin_films_path, params: { page: }
       assert_response :bad_request
     end
-    get registry_films_path(page: 999999)
+    get admin_films_path(page: 999999)
     assert_response :success
     assert_select ".empty-state", I18n.t("registry.empty")
-    get registry_quality_path(Registry::Quality.create!(name: "Unassigned", quality_category: @category))
+    get admin_quality_path(Registry::Quality.create!(name: "Unassigned", quality_category: @category))
     assert_select ".empty-state", I18n.t("registry.empty")
   end
 
@@ -203,7 +207,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     context["article_url"] = "javascript:alert(1)"
     context["license"]["url"] = "https://name:password@example.test"
     film = Registry::Film.create!(title: "Legacy context", wikipedia_context: context)
-    get registry_film_path(film)
+    get admin_film_path(film)
     assert_response :success
     assert_select 'a[href^="javascript:"]', count: 0
     assert_select 'a[href*="password"]', count: 0
@@ -211,7 +215,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "Registry stylesheet serves its local wordmark font without background imagery" do
-    get registry_films_path
+    get admin_films_path
     stylesheet = Nokogiri::HTML(response.body).at_css('link[rel="stylesheet"]')["href"]
     get stylesheet
     assert_response :success
@@ -224,44 +228,79 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "all catalogue collection searches filter before pagination and can be cleared" do
+    11.times do |number|
+      Registry::Film.create!(title: "Match film %02d" % number)
+      category = Registry::QualityCategory.create!(name: "Match category %02d" % number, maximum_qualities: 1, weight: 1)
+      Registry::Quality.create!(name: "Match quality %02d" % number, quality_category: category)
+    end
+    [ admin_films_path, admin_qualities_path, admin_quality_categories_path ].each do |path|
+      get path, params: { q: " MATCH " }
+      assert_response :success
+      assert_select "tbody tr", count: 10
+      assert_select "tbody tr:first-child a", text: /Match .*00/
+      assert_select "input[type=search][value=MATCH]"
+      assert_select ".admin-search-field > a[aria-label=?][href=?]", "Clear search", path
+      next_link = Nokogiri::HTML(response.body).at_css(".admin-page-links a")
+      assert_equal "#{path}?page=2&q=MATCH", next_link["href"]
+      get next_link["href"]
+      assert_select "tbody tr", count: 1
+      assert_select "tbody tr a", text: /Match .*10/
+      assert_select "a", text: "Next page", count: 0
+      assert_select ".admin-page-summary p", "11 results"
+      get path
+      assert_select "tbody tr", count: 10
+      assert_select "a[aria-label=?]", "Clear search", count: 0
+    end
+
+    Registry::Film.create!(title: "Half % of a film")
+    get admin_films_path, params: { q: "%" }
+    assert_select "tbody tr", count: 1
+    assert_select "tbody tr a", "Half % of a film"
+    get admin_films_path, params: { q: "_" }
+    assert_select "main [role=status]", "No records match your search."
+    get admin_films_path, params: { q: [ "Match" ] }
+    assert_response :bad_request
+  end
+
   test "lists and related sets have bounded deterministic pagination" do
     25.times { |number| Registry::Film.create!(title: "A film #{number.to_s.rjust(2, '0')}") }
-    get registry_films_path
-    assert_select "tbody tr", count: 25
+    get admin_films_path
+    assert_select "tbody tr", count: 10
     assert_select "tbody tr:first-child a", "A film 00"
-    assert_select "a[href=?]", registry_films_path(page: 2)
-    get registry_films_path(page: 2)
-    assert_select "tbody tr", count: 1
+    assert_select "a[href=?]", admin_films_path(page: 2)
+    get admin_films_path(page: 3)
+    assert_select "tbody tr", count: 6
     assert_select "tbody tr a", @film.title
-    assert_select "a[href=?]", registry_films_path(page: 1)
-    assert_select "a", text: I18n.t("registry.next"), count: 0
+    assert_select "a[href=?]", admin_films_path(page: 2)
+    assert_select "a", text: "Next page", count: 0
 
     26.times do |number|
       quality = Registry::Quality.create!(name: "Quality #{number.to_s.rjust(2, '0')}", quality_category: @category)
       Registry::FilmQuality.create!(film: @film, quality:)
       Registry::FilmQuality.create!(film: Registry::Film.find_by!(title: "A film #{number.to_s.rjust(2, '0')}"), quality: @quality) if number < 25
     end
-    get registry_qualities_path
+    get admin_qualities_path
+    assert_select "tbody tr", count: 10
+    get admin_quality_category_path(@category)
     assert_select "tbody tr", count: 25
-    get registry_quality_category_path(@category)
+    assert_select "a[href=?]", admin_quality_category_path(@category, page: 2)
+    get admin_quality_path(@quality)
     assert_select "tbody tr", count: 25
-    assert_select "a[href=?]", registry_quality_category_path(@category, page: 2)
-    get registry_quality_path(@quality)
-    assert_select "tbody tr", count: 25
-    assert_select "a[href=?]", registry_quality_path(@quality, page: 2)
-    get registry_film_path(@film)
+    assert_select "a[href=?]", admin_quality_path(@quality, page: 2)
+    get admin_film_path(@film)
     assert_select ".accepted-quality", count: 25
-    assert_select "a[href=?]", registry_film_path(@film, page: 2)
-    get registry_film_path(@film, page: 2)
+    assert_select "a[href=?]", admin_film_path(@film, page: 2)
+    get admin_film_path(@film, page: 2)
     assert_select ".accepted-quality", count: 2
-    assert_select "a", text: I18n.t("registry.next"), count: 0
+    assert_select "a", text: "Next page", count: 0
   end
 
   private
 
   def paths
-    [ registry_root_path, registry_films_path, registry_quality_categories_path, registry_qualities_path,
-      registry_film_path(@film), registry_quality_category_path(@category), registry_quality_path(@quality) ]
+    [ admin_films_path, admin_quality_categories_path, admin_qualities_path,
+      admin_film_path(@film), admin_quality_category_path(@category), admin_quality_path(@quality) ]
   end
 
   def registered_user(superuser: false)

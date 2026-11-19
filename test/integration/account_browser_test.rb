@@ -45,7 +45,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     get account_taste_profile_path, params: { user_id: other.id }
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
-    assert_select "header nav a[href=?] + a[href=?]", account_settings_path, registry_root_path
+    assert_select "header nav a[href=?] + a[href=?]", account_settings_path, admin_path
     assert_select "header form[action=?]", session_path, count: 0
     assert_select ".account-tabs a[aria-current=page]", I18n.t("account.profile")
     assert_select ".profile-narrative", revision.profile

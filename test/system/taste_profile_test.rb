@@ -34,21 +34,25 @@ class TasteProfileTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     original_size = page.current_window.size
     page.current_window.resize_to(768, 950)
-    assert_selector ".ui-nav a", text: I18n.t("registry.title")
+    assert_selector ".ui-nav a", text: I18n.t("admin.title")
     page.current_window.resize_to(390, 950)
-    assert_no_selector ".ui-nav a", text: I18n.t("registry.title")
+    assert_no_selector ".ui-nav a", text: I18n.t("admin.title")
     navigation = find("select.ui-primary-navigation")
     assert_in_delta 0, navigation.evaluate_script("this.parentElement.clientWidth - this.getBoundingClientRect().width"), 1
     assert_equal library_path, navigation.value
     assert_in_delta 1, find("main h1").evaluate_script("this.getBoundingClientRect().width"), 0.5
     search = find("#library-film-query[placeholder='Add films to library']")
     assert_in_delta 0, search.evaluate_script("this.closest('.ui-page-heading').clientWidth - this.getBoundingClientRect().width"), 1
-    navigation.find("option", text: I18n.t("registry.title")).select_option
-    assert_current_path registry_root_path
-    assert_equal registry_root_path, find("select.ui-primary-navigation").value
+    navigation.find("option", text: I18n.t("admin.title")).select_option
+    assert_current_path admin_users_path
+    within(".admin-navigation") { click_link I18n.t("registry.films") }
+    assert_current_path admin_films_path
+    assert_selector ".admin-navigation a[aria-current=location]", text: I18n.t("registry.films")
     page.current_window.resize_to(768, 950)
-    assert_operator find("main h1").evaluate_script("this.getBoundingClientRect().width"), :>, 1
+    assert_selector "main h1.sr-only", text: I18n.t("registry.films")
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
+    click_link I18n.t("admin.back_to_glutton")
+    assert_current_path library_path
     within(".ui-nav") { click_link I18n.t("account.title") }
     within(".account-tabs") { click_link I18n.t("account.profile") }
     within(".profile-narrative") do
