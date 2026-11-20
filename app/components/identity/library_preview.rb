@@ -11,10 +11,10 @@ module Identity
         div(class: "ui-page-heading") do
           h3 { t("library.browser.title") }
           fieldset(disabled: true, class: "library-preview-search") do
-            render ::Library::FilmSearchForm.new(dropdown: true)
+            render ::Library::TmdbFilmSearchForm.new(dropdown: true)
           end
         end
-        ::Library::CollectionManagement::Browse::Views::ALL.each { |view| library_sample(view) }
+        ::Library::CollectionManagement::InspectFilmCollection::Views::ALL.each { |view| library_sample(view) }
         p(class: "library-preview-status", aria: { live: "polite", atomic: "true" }, data: { library_preview_target: "status" })
       end
     end
@@ -22,14 +22,14 @@ module Identity
     private
 
     def library_sample(view)
-      watched = view == ::Library::CollectionManagement::Browse::Views::WATCHED
+      watched = view == ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED
       samples = watched ? MarketingSamples::WATCHED : MarketingSamples::RECOMMENDATION_FILM_IDS.map { |id| { tmdb_id: id, rating: nil, notes: false } }
       samples = samples.select { |sample| @films[sample.fetch(:tmdb_id)].present? }
       entries = samples.map { |sample| ::Library::LibraryFilm.new(film: @films.fetch(sample.fetch(:tmdb_id))) }
       ratings = []
       div(class: "library-preview-panel", hidden: view != "watchlist", data: { library_preview_target: "panel", view: }) do
-        render ::Library::Collection.new(view:, page: ::Library::CollectionManagement::Browse::Page.new(entries:, next_page: false),
-          page_number: 1, ratings:, local_browsing: true) do |library_film, index|
+        render ::Library::FilmCollection.new(view:, page: ::Library::CollectionManagement::InspectFilmCollection::Page.new(entries:, next_page: false),
+          page_number: 1, ratings:, preview: true) do |library_film, index|
           sample_library_actions(library_film.film, watched:, sample: samples.fetch(index))
         end
         p(class: "library-preview-empty", hidden: true) { t("identity.entry.library_empty") }
@@ -39,7 +39,7 @@ module Identity
     def sample_library_actions(film, watched:, sample:)
       value = sample.fetch(:rating)
       notes = sample.fetch(:notes)
-      div(class: "library-card-actions", data: { sample_rating: (value || ::Library::CollectionManagement::Browse::UNRATED if watched) }) do
+      div(class: "library-card-actions", data: { sample_rating: (value || ::Library::CollectionManagement::InspectFilmCollection::UNRATED if watched) }) do
         if watched
           label = value.present? ? t("library.browser.edit_film_rating", title: film.title) : t("library.browser.rate_film", title: film.title)
           render ::Library::CardAction.new(label:, tooltip: nil, readonly: true, class: "ui-action-button library-rating-icon",

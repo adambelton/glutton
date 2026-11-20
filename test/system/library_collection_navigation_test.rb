@@ -7,7 +7,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     client.define_singleton_method(:search) do |query:, page:, **|
       sleep 0.4
       results = (page == 1 ? 7 : 5).times.map do |index|
-        { "id" => 348 + index, "title" => (page == 1 && index.zero? ? query : "#{query} #{page}-#{index + 1}"),
+        { "id" => 348 + 20 * (page - 1) + index, "title" => (page == 1 && index.zero? ? query : "#{query} #{page}-#{index + 1}"),
           "release_date" => "1979-05-25", "poster_path" => ("/alien.jpg" unless index == 6), "genre_ids" => [ 27 ],
           "overview" => "A crew answers a distress signal on a distant moon." }
       end
@@ -17,8 +17,13 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
 
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
+    click_button I18n.t("ui.search.tmdb")
     heading = find(".ui-page-heading h1").rect
     search_field = find("#library-film-query").rect
+    modes = find(".search-bar-modes").rect
+    assert_in_delta 480, search_field.width, 1
+    assert_operator modes.x + modes.width, :<, search_field.x
+    assert_equal [ 72, 72 ], all(".search-bar-modes button").map { |button| button.rect.width }
     assert_in_delta heading.height, search_field.height, 1
     assert_in_delta heading.y, search_field.y, 1
     within ".ui-page-heading" do
@@ -45,22 +50,42 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_current_path library_path
     within ".library-film-search-dropdown" do
       assert_selector "li", count: 5
-      assert_text "Page 1 of 2"
+      assert_text "Page 1"
       assert_selector "h3 .film-year", text: "(1979)", count: 5
       last_result = all("li", count: 5).last.rect
       pagination = find(".library-pagination").rect
       assert_operator last_result.y + last_result.height, :<=, pagination.y
+      watchlist_button = first("li").find_button(I18n.t("library.detail.add_to_watchlist"))
+      watchlist_button.hover
+      tooltip = find(".film-search-tooltip", text: I18n.t("library.detail.add_to_watchlist"))
+      assert_operator tooltip.rect.y, :<, find(".film-search-content").rect.y
+      assert tooltip.evaluate_script(<<~JS)
+        (() => {
+          const box = this.getBoundingClientRect()
+          this.style.pointerEvents = "auto"
+          const visible = document.elementFromPoint(box.x + box.width / 2, box.y + 2) === this
+          this.style.pointerEvents = ""
+          return visible
+        })()
+      JS
+      find(".film-search-results-heading").hover
+      assert_no_selector ".film-search-tooltip"
+      watchlist_button.execute_script("this.focus()")
+      assert_selector ".film-search-tooltip", text: I18n.t("library.detail.add_to_watchlist")
       click_link I18n.t("library.browser.next")
-      assert_selector "li", count: 2
+      assert_selector "li", count: 5
       assert_text "Alien 1-7"
-      poster = find("img.film-poster").rect
-      within all("li", count: 2).last do
+      assert_text "Alien 2-3"
+      poster = first("img.film-poster").rect
+      within find("li", text: "Alien 1-7") do
         placeholder = find(".film-poster.poster-wordmark", text: I18n.t("ui.short_wordmark")).rect
         assert_equal [ poster.width, poster.height ], [ placeholder.width, placeholder.height ]
         assert_selector ".film-search-overview", text: "A crew answers a distress signal"
       end
       click_link I18n.t("library.browser.next")
+      assert_selector "li", count: 2
       assert_text "Alien 2-5"
+      assert_no_link I18n.t("library.browser.next")
       assert_current_path library_path
       click_link I18n.t("library.browser.previous")
       assert_text "Alien 1-7"
@@ -68,11 +93,46 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_selector "h3", text: "Alien (1979)", exact_text: true
       first("li").click_button I18n.t("library.detail.add_to_watchlist")
     end
-    assert_text I18n.t("library.search.in_watchlist")
+    within find(".film-search-results li", text: I18n.t("library.search.in_watchlist")) do
+      assert_no_selector "button"
+    end
     click_link I18n.t("library.browser.return")
     assert_selector ".library-film h3", text: "Alien"
   ensure
     client.define_singleton_method(:search, original_search)
+  end
+
+  test "local search filters the Library and the in-field clear restores the collection" do
+    visit library_path
+    click_button I18n.t("identity.entry.try_it_out")
+    label = I18n.t("library.browser.search")
+    assert_field label
+    user = Identity::UserGuest.last
+    [ "Alien", "The Thing" ].each do |title|
+      film = Registry::Film.create!(title:)
+      Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
+    end
+    visit library_path
+    assert_button I18n.t("library.browser.title"), exact: true
+    assert_no_field I18n.t("library.search.label")
+    fill_in label, with: "alien"
+    assert_selector ".library-film h3", text: "Alien"
+    assert_no_selector ".library-film h3", text: "The Thing"
+    assert_current_path %r{\A/library\?(?:view=watchlist&q=alien|q=alien&view=watchlist)\z}
+
+    click_button I18n.t("ui.search.tmdb")
+    assert_no_field label
+    assert_field I18n.t("library.search.label")
+    assert_no_selector ".library-film h3", text: "The Thing"
+    click_button I18n.t("library.browser.title")
+    assert_field label, with: "alien"
+    assert_selector "#library-collection-query:focus"
+    within ".collection-search-field" do
+      click_link I18n.t("ui.search.clear")
+    end
+    assert_current_path library_path(view: "watchlist")
+    assert_field label, with: ""
+    assert_selector ".library-film h3", text: "The Thing"
   end
 
   test "Watched filters share the Watchlist divider position when they fit beside the tabs" do

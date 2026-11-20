@@ -142,13 +142,26 @@ class Registry::WikipediaImportSourcesTest < ActiveSupport::TestCase
   test "a revision response cannot substitute page revision or usable source content" do
     [ { "pageid" => 11, "revid" => 20, "text" => article_html },
       { "pageid" => 10, "revid" => 21, "text" => article_html },
-      { "pageid" => 10, "revid" => 20, "text" => "<div>Invalid body</div>" },
-      { "pageid" => 10, "revid" => 20, "text" => '<div class="mw-parser-output"><p>Only a title.</p></div>' } ].each do |parsed|
+      { "pageid" => 10, "revid" => 20, "text" => "<div>Invalid body</div>" } ].each do |parsed|
       http = RoutedHttp.new(routes: ->(_host, _path, parameters) { parameters["action"] == "query" ? page_query : { "parse" => parsed } })
       assert_raises(Registry::Errors::ImportIncomplete) do
         Registry::Sources::WikipediaClient.new(http_class: http).context(title: "Alien (film)", wikidata_id: "Q1", tmdb_id: 348)
       end
     end
+  end
+
+  test "a verified revision with limited prose retains its source packet without becoming ready" do
+    parsed = { "pageid" => 10, "revid" => 20, "text" => '<div class="mw-parser-output"><p>Alien is a film.</p></div>' }
+    http = RoutedHttp.new(routes: ->(_host, _path, parameters) { parameters["action"] == "query" ? page_query : { "parse" => parsed } })
+    wikipedia_client = Registry::Sources::WikipediaClient.new(http_class: http)
+    context = wikipedia_client.context(title: "Alien (film)", wikidata_id: "Q1", tmdb_id: 348)
+    assert_equal 20, context.fetch("revision_id")
+    assert_equal "Alien is a film.", context.fetch("source_paragraphs").first.fetch("text")
+    assert_not Registry::Sources::WikipediaContext.usable?(context, tmdb_id: 348)
+
+    source = Registry::Sources::FetchWikipediaContext.call(tmdb_id: 348, tmdb_client: tmdb_source, wikidata_client: wikidata_source, wikipedia_client:)
+    assert_equal "Q1", source.wikidata_id
+    assert_equal 20, source.wikipedia_context.fetch("revision_id")
   end
 
   test "redirect-normalised page title is accepted only with the same identity and revision" do

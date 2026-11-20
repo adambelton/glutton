@@ -5,6 +5,7 @@ module Registry
     has_many :qualities, through: :film_qualities
 
     scope :without_qualities, -> { where.missing(:film_qualities) }
+    scope :matching_title, ->(query) { where("films.title ILIKE ?", "%#{sanitize_sql_like(query)}%") }
 
     def tmdb_details
       Sources::TmdbMetadata.new(tmdb_metadata)
@@ -32,20 +33,24 @@ module Registry
     end
 
     def import!(tmdb_data:, wikipedia_context:)
-      raise Registry::Errors::ImportIncomplete.new(stage: :persistence, reason: :existing_film) if persisted?
+      ensure_new_import!
       unless Registry::Sources::WikipediaContext.usable?(wikipedia_context, tmdb_id:)
         raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :invalid_response)
       end
-      self.title = tmdb_data.fetch(:title)
-      self.release_date = tmdb_data.fetch(:release_date)
-      self.tmdb_metadata = tmdb_data.fetch(:tmdb_metadata)
-      unless tmdb_metadata?
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response)
-      end
       self.wikipedia_context = wikipedia_context
       self.wikidata_id = wikipedia_context.fetch("wikidata_id")
-      save!
-      self
+      save_imported_tmdb_data!(tmdb_data)
+    end
+
+    def import_with_available_sources!(tmdb_data:, wikidata_id:, wikipedia_context:)
+      ensure_new_import!
+      unless wikipedia_context.empty? || (Sources::WikipediaContext.valid?(wikipedia_context, tmdb_id:) &&
+          wikipedia_context["wikidata_id"] == wikidata_id)
+        raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :invalid_response)
+      end
+      self.wikipedia_context = wikipedia_context
+      self.wikidata_id = wikidata_id
+      save_imported_tmdb_data!(tmdb_data)
     end
 
     def refresh_tmdb!(tmdb_data:)
@@ -64,6 +69,21 @@ module Registry
     validate :source_objects
 
     private
+
+    def ensure_new_import!
+      raise Registry::Errors::ImportIncomplete.new(stage: :persistence, reason: :existing_film) if persisted?
+    end
+
+    def save_imported_tmdb_data!(tmdb_data)
+      self.title = tmdb_data.fetch(:title)
+      self.release_date = tmdb_data.fetch(:release_date)
+      self.tmdb_metadata = tmdb_data.fetch(:tmdb_metadata)
+      unless tmdb_metadata?
+        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response)
+      end
+      save!
+      self
+    end
 
     def wikipedia_context?
       Registry::Sources::WikipediaContext.usable?(wikipedia_context, tmdb_id:) && wikipedia_context["wikidata_id"] == wikidata_id

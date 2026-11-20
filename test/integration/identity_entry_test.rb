@@ -108,7 +108,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select ".demo-frame", count: 6
     assert_select ".marketing-preview a[href], .marketing-preview iframe", count: 0
     assert_select ".marketing-preview form", count: 1
-    assert_select '.library-preview-search[disabled] form[method="get"][action=?]', library_film_search_path, count: 1
+    assert_select '.library-preview-search[disabled] form[method="get"][action=?]', library_tmdb_film_search_path, count: 1
     assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 2
     assert_select ".demo-controls .demo-rotation", count: 0
     assert_select ".demo-frame textarea[readonly]", count: 3

@@ -1,5 +1,5 @@
 module Shared
-  class FilmSearchResult < Base
+  class TmdbFilmSearchResultRow < Base
     def initialize(candidate:, status: nil)
       @candidate, @status = candidate, status
     end
@@ -21,7 +21,7 @@ module Shared
             p(class: "film-search-overview") { overview } if overview.present?
             p { @status } if @status.present?
           end
-          div(class: "film-search-actions") { yield }
+          div(class: "film-search-actions") { yield } if block_given?
         end
       end
     end

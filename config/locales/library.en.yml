@@ -9,6 +9,8 @@ en:
         film_id: Film
   library:
     browser:
+      search: Search your library
+      no_matches: No films match this search.
       title: Library
       view: Library view
       rating_filters: Filter by rating
@@ -39,8 +41,7 @@ en:
       placeholder: Add films to library
       loading: Fetching film results
       empty: No matching horror films on this page.
-      page: "Page %{number} of %{total}"
-      in_watchlist: On your Watchlist
+      in_watchlist: In your Watchlist
       in_watched: In Watched
       invalid: Enter a valid film title and try again.
       unavailable: Film search is temporarily unavailable. Try again later.

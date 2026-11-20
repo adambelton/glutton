@@ -1,6 +1,6 @@
 module Library
   module CollectionManagement
-    class Browse
+    class InspectFilmCollection
       PAGE_SIZE = 25
       UNRATED = "unrated".freeze
       RATING_FILTERS = [ *Ratings::Rating::Values::ALL, UNRATED ].freeze
@@ -13,29 +13,30 @@ module Library
 
       Page = Data.define(:entries, :next_page)
 
-      def self.call(user_id:, view:, page:, ratings: [])
+      def self.call(user_id:, view:, page:, ratings: [], title_query: "")
         user = Identity::User.find_by(id: user_id)
         raise Identity::Errors::Unavailable unless user&.active?
 
-        entries = case view
+        library_films = case view
         when Views::WATCHLIST then LibraryFilm.watchlist.order(created_at: :desc, id: :desc)
         when Views::WATCHED then LibraryFilm.watched.order(watched_at: :desc, id: :desc)
         else raise ArgumentError, "Unknown Library view"
         end
-        entries = entries.where(user_id: user.id)
+        library_films = library_films.where(user_id: user.id)
+        library_films = library_films.where(film_id: Registry::Film.matching_title(title_query).select(:id)) if title_query.present?
         if ratings.present?
           rating_films = Ratings::RatingFilm.where(user_id: user.id)
           matching = rating_films.joins(:ratings).merge(Ratings::Rating.current.where(value: ratings - [ UNRATED ]))
-          filtered = entries.where(film_id: matching.select(:film_id))
+          filtered = library_films.where(film_id: matching.select(:film_id))
           if ratings.include?(UNRATED)
-            filtered = filtered.or(entries.where.not(film_id: rating_films.rated.select(:film_id)))
+            filtered = filtered.or(library_films.where.not(film_id: rating_films.rated.select(:film_id)))
           end
-          entries = filtered
+          library_films = filtered
         end
-        entries = entries.includes(:film).preload(rated_rating_film: :current_rating)
+        library_films = library_films.includes(:film).preload(rated_rating_film: :current_rating)
           .offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE + 1).to_a
-        next_page = entries.size > PAGE_SIZE
-        Page.new(entries: entries.first(PAGE_SIZE), next_page:)
+        next_page = library_films.size > PAGE_SIZE
+        Page.new(entries: library_films.first(PAGE_SIZE), next_page:)
       end
     end
   end

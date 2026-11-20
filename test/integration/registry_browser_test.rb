@@ -240,7 +240,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "tbody tr", count: 10
       assert_select "tbody tr:first-child a", text: /Match .*00/
       assert_select "input[type=search][value=MATCH]"
-      assert_select ".admin-search-field > a[aria-label=?][href=?]", "Clear search", path
+      assert_select ".collection-search-field > a[aria-label=?][href=?]", "Clear search", path
       next_link = Nokogiri::HTML(response.body).at_css(".admin-page-links a")
       assert_equal "#{path}?page=2&q=MATCH", next_link["href"]
       get next_link["href"]
@@ -260,6 +260,16 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     get admin_films_path, params: { q: "_" }
     assert_select "main [role=status]", "No records match your search."
     get admin_films_path, params: { q: [ "Match" ] }
+    assert_response :bad_request
+  end
+
+  test "catalogue search accepts 254 multibyte characters" do
+    query = "é" * 254
+    get admin_films_path(q: query)
+    assert_response :success
+    assert_select "input[type=search][value=?]", query
+
+    get admin_films_path(q: query + "é")
     assert_response :bad_request
   end
 

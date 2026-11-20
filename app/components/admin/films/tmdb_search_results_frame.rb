@@ -1,6 +1,6 @@
 module Admin
   module Films
-    class TmdbResults < Shared::Base
+    class TmdbSearchResultsFrame < Shared::Base
       FRAME_ID = "admin-tmdb-film-results"
 
       def initialize(query:, result:, error:, catalogue_context:)
@@ -13,7 +13,7 @@ module Admin
             section(class: "admin-tmdb-results film-search-dropdown", aria: { label: t("admin.tmdb.results") },
               data: { tmdb_query: @query }) do
               empty_message = t("admin.tmdb.empty") if @result.present? && @result.fetch(:candidates).empty?
-              render Shared::FilmSearchResults.new(error: @error, empty_message:) do
+              render Shared::TmdbFilmSearchResultsPanel.new(error: @error, empty_message:) do
                 @result.fetch(:candidates).each { |candidate| film_result(candidate) }
               end
               pagination if @result.present?
@@ -27,14 +27,14 @@ module Admin
       def film_result(candidate)
         tmdb_id = candidate.fetch(:tmdb_id)
         film_id = @result.fetch(:registry_ids)[tmdb_id]
-        render Shared::FilmSearchResult.new(candidate:) do
+        render Shared::TmdbFilmSearchResultRow.new(candidate:) do
           if film_id.present?
             render RubyUI::Link.new(href: admin_film_path(film_id), variant: :ghost, size: :sm,
               aria: { label: t("admin.tmdb.record", title: candidate.fetch(:title)) }, data: { turbo_frame: "_top" }) do
               t("admin.tmdb.present")
             end
           else
-            render Shared::ActionForm.new(url: admin_films_path,
+            render Shared::ActionForm.new(url: admin_import_tmdb_film_path,
               params: selection_params(tmdb_id),
               data: { turbo: false, action: "submit->admin-tmdb-search#useCatalogueContext" }) do
               render Shared::PrimaryButton.new(type: :submit, size: :sm) { t("admin.tmdb.add") }
@@ -78,7 +78,7 @@ module Admin
       end
 
       def page_link(direction, page, batch = 1)
-        text_link(t("admin.pagination.#{direction}"), search_admin_films_path(**@catalogue_context, tmdb_query: @query,
+        text_link(t("admin.pagination.#{direction}"), tmdb_search_admin_films_path(**@catalogue_context, tmdb_query: @query,
           tmdb_page: page, tmdb_batch: (batch unless batch == 1)))
       end
     end

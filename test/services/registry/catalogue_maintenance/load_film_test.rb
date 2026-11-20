@@ -45,11 +45,15 @@ class Registry::LoadFilmTest < ActiveSupport::TestCase
     assert_equal 1, @sources.assessment_requests.size
   end
 
-  test "incomplete source acquisition creates no film and never starts assessment" do
+  test "incomplete source acquisition saves the film and skips assessment" do
     sources = loading_sources(wikipedia_failure_ids: [ TMDB_IDS.first ])
-    error = assert_raises(Registry::Errors::ImportIncomplete) { load_film(sources:) }
-    assert_equal [ :wikipedia, :missing_article ], [ error.stage, error.reason ]
-    assert_not Registry::Film.exists?(tmdb_id: TMDB_IDS.first)
+    result = load_film(sources:)
+    film = Registry::Film.find_by!(tmdb_id: TMDB_IDS.first)
+    assert_equal film, result.fetch(:film)
+    assert_empty film.wikipedia_context
+    assert_empty result.fetch(:film_qualities)
+    assert_nil result.fetch(:film_quality_eval)
+    assert_equal :unready_film, result.fetch(:warnings).sole.fetch(:reason)
     assert_empty sources.assessment_requests
   end
 

@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { fitFilmSearchDropdown } from "controllers/fit_film_search_dropdown"
+import { fitTmdbFilmSearchDropdown } from "controllers/fit_tmdb_film_search_dropdown"
 
 export default class extends Controller {
   static targets = ["form", "input", "clearButton", "results"]
@@ -43,7 +43,7 @@ export default class extends Controller {
   }
 
   fitDropdown() {
-    fitFilmSearchDropdown(this.resultsTarget.querySelector(".film-search-dropdown"))
+    fitTmdbFilmSearchDropdown(this.resultsTarget.querySelector(".film-search-dropdown"))
   }
 
   clear(event) {

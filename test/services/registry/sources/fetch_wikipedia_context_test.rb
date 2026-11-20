@@ -12,7 +12,7 @@ class Registry::FetchWikipediaContextTest < ActiveSupport::TestCase
     client = Object.new
     client.define_singleton_method(:external_ids) { |tmdb_id:| { "id" => tmdb_id, "wikidata_id" => "Q1" } }
     assert_no_difference "Registry::Film.count" do
-      assert_equal wikipedia_context, fetch(tmdb_client: client)
+      assert_equal wikipedia_context, fetch(tmdb_client: client).wikipedia_context
     end
   end
 
@@ -21,24 +21,24 @@ class Registry::FetchWikipediaContextTest < ActiveSupport::TestCase
     packet = wikipedia_context(text: "Fresh source paragraph.")
     source = Object.new
     source.define_singleton_method(:context) { |**| packet }
-    assert_equal packet, fetch(wikipedia_client: source)
+    assert_equal packet, fetch(wikipedia_client: source).wikipedia_context
     assert_equal wikipedia_context, film.reload.wikipedia_context
   end
 
-  test "missing identity is an explicit failure" do
-    error = assert_raises(Registry::Errors::ImportIncomplete) { fetch(tmdb_id: nil, tmdb_client: Object.new) }
-    assert_equal [ :tmdb, :missing_identity ], [ error.stage, error.reason ]
+  test "missing identity ends enrichment" do
+    result = fetch(tmdb_id: nil, tmdb_client: Object.new)
+    assert_nil result.wikidata_id
+    assert_empty result.wikipedia_context
   end
 
-  test "external identity provider errors include the selected identity without a film" do
-    [ [ Registry::Errors::TmdbUnavailable.new(reason: :timeout), :timeout ],
-      [ Registry::Errors::TmdbNotFound.new, :not_found ],
-      [ Registry::Errors::TmdbConfigurationError.new, :configuration ],
-      [ Registry::Errors::InvalidTmdbResponse.new, :invalid_response ] ].each do |failure, reason|
+  test "external identity provider errors end enrichment" do
+    [ Registry::Errors::TmdbUnavailable.new(reason: :timeout), Registry::Errors::TmdbNotFound.new,
+      Registry::Errors::TmdbConfigurationError.new, Registry::Errors::InvalidTmdbResponse.new ].each do |failure|
       client = Object.new
       client.define_singleton_method(:external_ids) { |**| raise failure }
-      error = assert_raises(Registry::Errors::ImportIncomplete) { fetch(tmdb_client: client) }
-      assert_equal [ :tmdb, reason, 348 ], [ error.stage, error.reason, error.tmdb_id ]
+      result = fetch(tmdb_client: client)
+      assert_nil result.wikidata_id
+      assert_empty result.wikipedia_context
     end
   end
 end

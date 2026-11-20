@@ -1,14 +1,14 @@
 module Library
-  class Collection < Shared::Base
-    def initialize(view:, page:, page_number:, ratings:, local_browsing: false)
-      @view, @page, @page_number, @ratings, @local_browsing = view, page, page_number, ratings, local_browsing
+  class FilmCollection < Shared::Base
+    def initialize(view:, page:, page_number:, ratings:, query: "", preview: false)
+      @view, @page, @page_number, @ratings, @query, @preview = view, page, page_number, ratings, query, preview
     end
 
     def view_template(&block)
       collection_navigation
       h2(class: "sr-only") { t("library.browser.views.#{@view}") }
       if @page.entries.empty?
-        p(class: "ui-empty") { t("library.browser.empty.#{@view}") }
+        p(class: "ui-empty") { t(@query.present? ? "library.browser.no_matches" : "library.browser.empty.#{@view}") }
       else
         render ::Library::FilmGrid.new(entries: @page.entries), &block
       end
@@ -22,25 +22,25 @@ module Library
     private
 
     def pagination_link(direction, number)
-      if @local_browsing
+      if @preview
         span(class: "ui-link") { t("library.browser.#{direction}") }
       else
-        text_link(t("library.browser.#{direction}"), library_path(view: @view, page: number, ratings: @ratings.presence))
+        text_link(t("library.browser.#{direction}"), library_path(view: @view, page: number, ratings: @ratings.presence, q: @query.presence))
       end
     end
 
     def watched_view?
-      @view == ::Library::CollectionManagement::Browse::Views::WATCHED
+      @view == ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED
     end
 
     def collection_navigation
       div(class: "library-collection-navigation") do
         nav(class: "library-tabs", aria: { label: t("library.browser.view") }) do
-          ::Library::CollectionManagement::Browse::Views::ALL.each do |view|
-            if @local_browsing
+          ::Library::CollectionManagement::InspectFilmCollection::Views::ALL.each do |view|
+            if @preview
               button(type: "button", value: view, aria: { current: ("page" if @view == view) }, data: { action: "library-preview#changeView" }) { t("library.browser.views.#{view}") }
             else
-              a(href: library_path(view:), aria: { current: ("page" if @view == view) }) { t("library.browser.views.#{view}") }
+              a(href: library_path(view:, q: @query.presence), aria: { current: ("page" if @view == view) }) { t("library.browser.views.#{view}") }
             end
           end
         end
@@ -50,19 +50,19 @@ module Library
 
     def rating_filters
       nav(class: "library-rating-filters", aria: { label: t("library.browser.rating_filters") }) do
-        ::Library::CollectionManagement::Browse::RATING_FILTERS.each do |rating|
+        ::Library::CollectionManagement::InspectFilmCollection::RATING_FILTERS.each do |rating|
           selected = @ratings.include?(rating)
           next_ratings = selected ? @ratings - [ rating ] : @ratings + [ rating ]
-          unrated = rating == ::Library::CollectionManagement::Browse::UNRATED
+          unrated = rating == ::Library::CollectionManagement::InspectFilmCollection::UNRATED
           label = unrated ? t("library.browser.unrated") : t("ratings.values.#{rating}")
-          if @local_browsing
+          if @preview
             button(type: "button", value: rating, data: { selected: ("true" if selected), action: "library-preview#filter", library_preview_target: "rating" },
               aria: { label:, pressed: selected.to_s }) do
               render ::Ratings::RatingValueIcon.new(value: (rating unless unrated), size: 14)
               span(class: "library-rating-filter-label") { label }
             end
           else
-            a(href: library_path(view: @view, ratings: next_ratings.presence),
+            a(href: library_path(view: @view, ratings: next_ratings.presence, q: @query.presence),
               data: { selected: ("true" if selected) }, aria: { label: (selected ? t("library.browser.selected_rating", rating: label) : label) }) do
               render ::Ratings::RatingValueIcon.new(value: (rating unless unrated), size: 14)
               span(class: "library-rating-filter-label") { label }
@@ -76,7 +76,7 @@ module Library
     def clear_rating_filters
       label = t("library.browser.clear_rating_filters")
       enabled = @ratings.present?
-      if @local_browsing
+      if @preview
         render Shared::IconButton.new(variant: :plain, class: "library-clear-filters", disabled: !enabled, aria: { label: },
           data: { action: "library-preview#clear", library_preview_target: "clear" }) { render Shared::CloseIcon.new }
         return
@@ -84,6 +84,7 @@ module Library
 
       form_with(url: library_path, method: :get, class: "library-clear-filters-form") do
         input(type: "hidden", name: "view", value: @view)
+        input(type: "hidden", name: "q", value: @query) if @query.present?
         render Shared::IconButton.new(type: :submit, variant: :plain, class: "library-clear-filters",
           disabled: !enabled, aria: { label: }, data: { tooltip: (label if enabled) }) { render Shared::CloseIcon.new }
       end

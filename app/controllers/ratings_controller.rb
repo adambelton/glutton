@@ -112,7 +112,7 @@ class RatingsController < ApplicationController
   private
 
   def watched_library_path
-    library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+    library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
   end
 
   def render_picker(error: nil, status: :ok)
