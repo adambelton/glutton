@@ -45,10 +45,9 @@ Rails.application.routes.draw do
   post "library/from_recommendations/watched", to: "library#add_to_watched_from_recommendations", as: :add_to_watched_from_recommendations
 
   resource :library, only: :show, controller: :library
-  get "library/search", to: "library/film_search#index", as: :library_film_search
-  post "library/search/watchlist", to: "library#add_to_watchlist_from_search", as: :library_search_watchlist
-  post "library/search/watched", to: "library#add_to_watched_from_search", as: :library_search_watched
-  post "library/search/move_to_watched", to: "library#move_to_watched_from_search", as: :library_search_move_to_watched
+  get "library/search", to: "library/tmdb_film_search#index", as: :library_tmdb_film_search
+  post "library/search/watchlist", to: "library/tmdb_film_search#add_to_watchlist", as: :library_tmdb_search_watchlist
+  post "library/search/watched", to: "library/tmdb_film_search#add_to_watched", as: :library_tmdb_search_watched
 
   post "library/films/:id/move_to_watched", to: "library#move_to_watched", as: :move_to_watched_library_film
   post "library/films/:id/move_to_watchlist", to: "library#move_to_watchlist", as: :move_to_watchlist_library_film
@@ -64,8 +63,9 @@ Rails.application.routes.draw do
       delete "sessions/:session_id", action: :revoke_session, as: :session, on: :member
       get "glutton-profile", to: "ratings/profile_inspections#show", as: :glutton_profile, on: :member
     end
-    resources :films, only: [ :index, :show, :create ], controller: "registry/films" do
-      get "search", to: "registry/film_search#index", on: :collection
+    post "films", to: "registry/tmdb_film_search#create", as: :import_tmdb_film
+    resources :films, only: [ :index, :show ], controller: "registry/films" do
+      get "search", to: "registry/tmdb_film_search#index", on: :collection, as: :tmdb_search
     end
     resources :qualities, only: [ :index, :show ], controller: "registry/qualities"
     resources :quality_categories, path: "quality-categories", only: [ :index, :show ], controller: "registry/quality_categories"

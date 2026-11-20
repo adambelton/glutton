@@ -28,7 +28,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select "h3", count: 1
       assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view: "watchlist"), text: "Watchlist"
       assert_select ".library-films img[src=?]", "https://image.tmdb.org/t/p/w500/watchlist.jpg"
-      { Library::CollectionManagement::Browse::Views::WATCHED => watched }.each do |view, row|
+      { Library::CollectionManagement::InspectFilmCollection::Views::WATCHED => watched }.each do |view, row|
         get library_path(view:)
         assert_select "h3", text: row.film.title, count: 1
         assert_select "h3", count: 1
@@ -46,7 +46,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     end
     foreign = Ratings::RatingFilm.create!(user: Identity::UserGuest.create!, film: rows.first.film)
     foreign.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-    get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+    get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
     assert_select ".library-film p", text: "Awaiting rating", count: 0
     assert_select "main form[action=?] button.library-rating-icon", new_rating_path, count: 5
     assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, rows.first.film_id.to_s
@@ -55,16 +55,51 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id, value: Ratings::Rating::Values::BRILLIANT)
     absent = Ratings::RatingFilm.create!(user: @user, film: Registry::Film.create!(title: "Not in Library"))
     absent.submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
-    get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+    get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
     assert_select ".library-film p", text: "Rated", count: 0
     assert_select "main form[action=?] button.library-rating-icon", new_rating_path, count: 4
     assert_select "h3", count: 5
     assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, rows.last.film_id.to_s, count: 0
   end
 
+  test "local search matches titles before pagination and preserves tab and rating filters" do
+    film = entry(title: "The 50% film").film
+    26.times { |number| entry(title: "Other film #{number}") }
+    entry(watched: false, title: "The 50% watchlist film")
+    entry(user: Identity::UserGuest.create!, title: "The 50% private film")
+    rated = entry(title: "The 50% rated film").film
+    Ratings::RatingFilm.create!(user: @user, film: rated).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+
+    get library_path(view: "watched", ratings: [ "unrated" ], q: " 50% FILM ")
+    assert_response :success
+    assert_select ".library-films h3", text: film.title, count: 1
+    assert_select ".library-films h3", count: 1
+    assert_select 'input[type="search"][value="50% FILM"]'
+    assert_select "a[href=?]", library_path(view: "watched", ratings: [ "unrated" ]), text: "×"
+
+    get library_path(view: "watched", ratings: [ "unrated" ], q: "%")
+    assert_select ".library-films h3", count: 1
+    assert_select ".library-films h3", text: film.title
+
+    get library_path(view: "watched", q: "film")
+    assert_select "a[href=?]", library_path(view: "watched", q: "film", page: 2)
+    get library_path(q: [ "film" ])
+    assert_response :bad_request
+  end
+
+  test "local search accepts 254 multibyte characters" do
+    query = "é" * 254
+    get library_path(q: query)
+    assert_response :success
+    assert_select "input[type=search][value=?]", query
+
+    get library_path(q: query + "é")
+    assert_response :bad_request
+  end
+
   test "watched page rendering keeps database queries bounded as entries grow" do
     entry
-    path = library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+    path = library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
     get path # Warm lazy Rails lookups before measuring requests.
     count_queries = lambda do
       count = 0
@@ -87,7 +122,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     [ nil, [ true, false ], [ false, true ], [ true, true ] ].each do |flags|
       row = entry
       candidate = Ratings::RatingFilm.create!(user: @user, film: row.film, suppressed: flags.first, dismissed: flags.last) if flags
-      get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+      get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
       assert_select 'form[action=?][method="get"] input[name="film_id"][value=?]', new_rating_path, row.film_id.to_s
       link = new_rating_path(film_id: row.film_id)
       assert_difference "Ratings::RatingFilm.count", flags ? 0 : 1 do
@@ -98,7 +133,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       assert_select 'input[name="rating_film_id"][value=?]', candidate.id.to_s
       post rating_path, params: { rating_film_id: candidate.id, value: Ratings::Rating::Values::PRETTY_GOOD }
       assert_response :see_other
-      get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+      get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
       assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, row.film_id.to_s, count: 0
       get link
       assert_response :conflict
@@ -108,20 +143,20 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   test "pagination is bounded stable and preserves view while tabs reset page" do
     freeze_time do
       rows = 27.times.map { |i| entry(title: "Film #{i}") }
-      get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+      get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
       assert_select "h3", count: 25
       assert_equal rows.reverse.first(25).map { |row| row.film.title }, Nokogiri::HTML(response.body).css("h3").map(&:text)
-      assert_select "a[href=?]", library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 2)
-      get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 2)
+      assert_select "a[href=?]", library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 2)
+      get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 2)
       assert_select "h3", count: 2
-      assert_select "a[href=?]", library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 1)
+      assert_select "a[href=?]", library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 1)
       assert_select "a", text: "Next", count: 0
       assert_select "nav.library-tabs" do
         assert_select "a", count: 2
         assert_select "a[href=?]", library_path(view: "watchlist")
         assert_select 'a[aria-current="page"][href=?]', library_path(view: "watched")
       end
-      get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED, page: 3)
+      get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 3)
       assert_select "h3", count: 0
       assert_select "p", "No watched films on this page."
     end
@@ -176,7 +211,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   test "titles are escaped dates optional and page is private" do
     entry(title: "<script>alert('film')</script>", release_date: Date.new(2001, 1, 1))
     entry(title: "No release date")
-    get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+    get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
     assert_select "h3", text: "<script>alert('film')</script> (2001)"
     assert_select "script", text: /alert\('film'\)/, count: 0
     assert_select "h3 .film-year", text: "(2001)", count: 1
@@ -226,7 +261,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
         previous_rating_id: original.id, value: Ratings::Rating::Values::PRETTY_GOOD, notes: "Current")
       edit_link = edit_rating_path(film_id: watched.film_id)
       assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-        get library_path(view: Library::CollectionManagement::Browse::Views::WATCHED)
+        get library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
         assert_response :success
         assert_select "form[action=?] button[aria-label=?]", edit_rating_path, "Edit your rating for #{watched.film.title}", count: 1
         assert_select 'form[action=?] button[data-tooltip="Pretty Good · Edit rating"][aria-description="Has rating notes"]', edit_rating_path

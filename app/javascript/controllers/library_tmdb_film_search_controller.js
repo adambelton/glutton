@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { fitFilmSearchDropdown } from "controllers/fit_film_search_dropdown"
+import { fitTmdbFilmSearchDropdown } from "controllers/fit_tmdb_film_search_dropdown"
 
 export default class extends Controller {
   static values = { error: String }
@@ -62,7 +62,7 @@ export default class extends Controller {
   }
 
   fitDropdown() {
-    if (this.element.contains(this.results)) fitFilmSearchDropdown(this.results)
+    if (this.element.contains(this.results)) fitTmdbFilmSearchDropdown(this.results)
   }
 
   paginate(event) {
@@ -73,7 +73,7 @@ export default class extends Controller {
     this.cancel()
     const url = new URL(link.href)
     this.input.focus()
-    this.search(url.searchParams.get("query"), url.searchParams.get("page"), url.searchParams.get("batch"))
+    this.search(url.searchParams.get("query"), url.searchParams)
   }
 
   query() {
@@ -88,14 +88,13 @@ export default class extends Controller {
     return this.element.ownerDocument.getElementById("library-film-search-results")
   }
 
-  async search(query, page = null, batch = null) {
+  async search(query, parameters = "") {
     const results = this.results
     const request = new AbortController()
     this.request = request
     const url = new URL(this.input.form.action)
+    url.search = parameters
     url.searchParams.set("query", query)
-    if (page) url.searchParams.set("page", page)
-    if (batch) url.searchParams.set("batch", batch)
     this.setLoading(true)
 
     try {

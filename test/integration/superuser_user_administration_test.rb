@@ -59,7 +59,7 @@ class SuperuserUserAdministrationTest < ActionDispatch::IntegrationTest
     assert_select "tbody tr", count: 10
     assert_select "tbody a[href=?]", admin_user_path(@actor.id), count: 0
     assert_select "input[type=search][value=MATCH]"
-    assert_select ".admin-search-field > a[aria-label=?][href=?]", "Clear search", admin_users_path
+    assert_select ".collection-search-field > a[aria-label=?][href=?]", "Clear search", admin_users_path
 
     pagination_form = Nokogiri::HTML(response.body).at_css(".admin-page-links form")
     fields = pagination_form.css("input[type=hidden]").to_h { |input| [ input["name"], input["value"] ] }
@@ -87,6 +87,20 @@ class SuperuserUserAdministrationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "main [role=status]", "No records match your search."
     assert_select "tbody tr", count: 0
+  end
+
+  test "private search accepts 254 multibyte characters" do
+    bind_session(Identity::Session.create!(user: @actor))
+    get admin_users_path
+    query = "é" * 254
+    token = form_token(admin_users_path)
+    post admin_users_path, params: { authenticity_token: token, account_email_or_id: query }
+    assert_response :success
+    assert_select "input[type=search][value=?]", query
+
+    token = form_token(admin_users_path)
+    post admin_users_path, params: { authenticity_token: token, account_email_or_id: query + "é" }
+    assert_response :bad_request
   end
 
   test "revocation expires only the selected browser session and reports a stale form" do

@@ -1,6 +1,6 @@
 module Registry
   module CatalogueQueries
-    class SearchFilmsForImport
+    class SearchTmdbFilmsForImport
       PAGE_SIZE = 5
 
       def self.call(query:, page:, batch:)

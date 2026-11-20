@@ -1,6 +1,6 @@
 module Library
-  module FilmSearch
-    class ExecuteLibraryAction
+  module TmdbFilmSearch
+    class ResolveTmdbFilmAndApplyLibraryAction
       def self.call(user_id:, tmdb_id:, library_action:)
         film_id = yield tmdb_id
         library_action.call(user_id:, film_id:)

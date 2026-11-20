@@ -2,7 +2,6 @@ module Identity
   module AccountAdministration
     module InspectUsers
       PAGE_SIZE = 10
-      Page = Data.define(:entries, :number, :total, :total_pages)
 
       def self.page(number:, query:)
         users = User.order(id: :desc)
@@ -12,9 +11,7 @@ module Identity
           users = users.where("email_address ILIKE ?", "%#{User.sanitize_sql_like(query)}%")
         end
 
-        total = users.count
-        entries = users.offset((number - 1) * PAGE_SIZE).limit(PAGE_SIZE).to_a
-        Page.new(entries:, number:, total:, total_pages: [ (total.to_f / PAGE_SIZE).ceil, 1 ].max)
+        CountedPage.load(users, number:, page_size: PAGE_SIZE)
       end
 
       def self.detail(user_id:)

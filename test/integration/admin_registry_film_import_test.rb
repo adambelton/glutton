@@ -10,7 +10,7 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
     operator = Identity::UserRegistered.create!(email_address: "registry-import@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     sign_in(operator)
-    @forgery = [ Registry::FilmSearchController, Registry::FilmsController ].to_h do |controller|
+    @forgery = [ Registry::TmdbFilmSearchController, Registry::FilmsController ].to_h do |controller|
       [ controller, controller.allow_forgery_protection ]
     end
     @forgery.each_key { |controller| controller.allow_forgery_protection = true }
@@ -23,7 +23,7 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
   test "the TMDB frame shows films across genres and their registry status" do
     film = Registry::Film.create!(title: "Alien", tmdb_id: 348)
     with_search do
-      get search_admin_films_path, params: { tmdb_query: "Alien", q: "local" }, headers: { "Turbo-Frame" => "admin-tmdb-film-results" }
+      get tmdb_search_admin_films_path, params: { tmdb_query: "Alien", q: "local" }, headers: { "Turbo-Frame" => "admin-tmdb-film-results" }
     end
     assert_response :success
     assert_select ".admin-sidebar", count: 0
@@ -36,25 +36,25 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
         assert_select "a[href=?]", admin_film_path(film), text: I18n.t("admin.tmdb.present")
         assert_select "form", count: 0
       end
-      assert_select "a[href=?]", search_admin_films_path(q: "local", tmdb_query: "Alien", tmdb_page: 2)
+      assert_select "a[href=?]", tmdb_search_admin_films_path(q: "local", tmdb_query: "Alien", tmdb_page: 2)
     end
   end
 
   test "selecting a missing film imports both sources and queues one Registry assignment" do
     with_search do
-      get search_admin_films_path(tmdb_query: "Alien", q: "Alien")
+      get tmdb_search_admin_films_path(tmdb_query: "Alien", q: "Alien")
       selection = import_selection
       with_import_sources do
         assert_no_difference "Library::LibraryFilm.count" do
           assert_enqueued_jobs(1, only: Registry::AssignInitialFilmQualitiesJob) do
             assert_difference "Registry::Film.count", 1 do
-              post admin_films_path, params: selection
+              post admin_import_tmdb_film_path, params: selection
             end
           end
         end
       end
       assert_response :see_other
-      assert_redirected_to search_admin_films_path(tmdb_query: "Alien", q: "Alien", tmdb_page: 1)
+      assert_redirected_to tmdb_search_admin_films_path(tmdb_query: "Alien", q: "Alien", tmdb_page: 1)
       film = Registry::Film.find_by!(tmdb_id: 348)
       assert film.has_source_context?
       assert_enqueued_with(job: Registry::AssignInitialFilmQualitiesJob, queue: "registry_assignment", args: [ { film_ids: [ film.id ] } ])
@@ -65,12 +65,12 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
   end
 
   test "a direct import only needs a TMDB ID and returns to the Films collection" do
-    with_search { get search_admin_films_path(tmdb_query: "Alien") }
+    with_search { get tmdb_search_admin_films_path(tmdb_query: "Alien") }
     selection = import_selection.slice("tmdb_id", "authenticity_token")
 
     with_import_sources do
       assert_enqueued_jobs(1, only: Registry::AssignInitialFilmQualitiesJob) do
-        post admin_films_path, params: selection
+        post admin_import_tmdb_film_path, params: selection
       end
     end
 
@@ -82,15 +82,32 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
     assert_select "tbody a[href=?]", admin_film_path(film)
   end
 
+  test "admin imports preserve the film and skip assignment if Wikipedia is unavailable" do
+    with_search { get tmdb_search_admin_films_path(tmdb_query: "Alien") }
+    selection = import_selection
+    unavailable = ->(**) { raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :timeout) }
+    with_import_sources do
+      replace_method(Registry::Sources::WikipediaClient, :context, unavailable) do
+        assert_no_enqueued_jobs(only: Registry::AssignInitialFilmQualitiesJob) do
+          post admin_import_tmdb_film_path, params: selection
+        end
+      end
+    end
+    assert_redirected_to tmdb_search_admin_films_path(tmdb_query: "Alien", tmdb_page: 1)
+    film = Registry::Film.find_by!(tmdb_id: 348)
+    assert_equal "Q1", film.wikidata_id
+    assert_empty film.wikipedia_context
+  end
+
   test "a stale selection reports a conflict before fetching sources or queueing another job" do
     with_search do
-      get search_admin_films_path(tmdb_query: "Alien")
+      get tmdb_search_admin_films_path(tmdb_query: "Alien")
       selection = import_selection
       film = Registry::Film.create!(title: "Alien", tmdb_id: 348)
       replace_method(Registry::Sources::TmdbClient, :movie, ->(**) { flunk "An existing film reached TMDB" }) do
         assert_no_enqueued_jobs(only: Registry::AssignInitialFilmQualitiesJob) do
           assert_no_difference [ "Registry::Film.count", "Library::LibraryFilm.count" ] do
-            post admin_films_path, params: selection
+            post admin_import_tmdb_film_path, params: selection
           end
         end
       end
@@ -103,12 +120,12 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
 
   test "unavailable source data leaves no partial film or assignment" do
     with_search do
-      get search_admin_films_path(tmdb_query: "Alien")
+      get tmdb_search_admin_films_path(tmdb_query: "Alien")
       selection = import_selection
       replace_method(Registry::Sources::TmdbClient, :movie, ->(**) { raise Registry::Errors::TmdbNotFound }) do
         assert_no_enqueued_jobs(only: Registry::AssignInitialFilmQualitiesJob) do
           assert_no_difference "Registry::Film.count" do
-            post admin_films_path, params: selection
+            post admin_import_tmdb_film_path, params: selection
           end
         end
       end
@@ -119,31 +136,43 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
 
   test "TMDB search errors stay inside the results frame" do
     replace_method(Registry::Sources::TmdbClient, :search, ->(**) { raise Registry::Errors::TmdbUnavailable.new(reason: :http_error) }) do
-      get search_admin_films_path, params: { tmdb_query: "Alien" }, headers: { "Turbo-Frame" => "admin-tmdb-film-results" }
+      get tmdb_search_admin_films_path, params: { tmdb_query: "Alien" }, headers: { "Turbo-Frame" => "admin-tmdb-film-results" }
     end
     assert_response :service_unavailable
     assert_select 'turbo-frame [role="alert"]', I18n.t("admin.tmdb.unavailable")
   end
 
+  test "the film collection uses local search parameters independently of TMDB" do
+    film = Registry::Film.create!(title: "Alien")
+    replace_method(Registry::Sources::TmdbClient, :search, ->(**) { flunk "Unexpected TMDB lookup" }) do
+      get admin_films_path, params: { q: "Alien", tmdb_page: "invalid" }
+      assert_response :success
+      assert_select "tbody a[href=?]", admin_film_path(film), text: "Alien"
+
+      get tmdb_search_admin_films_path, params: { q: "Alien", tmdb_query: "Alien", tmdb_page: "invalid" }
+      assert_response :bad_request
+    end
+  end
+
   test "ordinary users and malformed selections are rejected before catalogue changes" do
-    with_search { get search_admin_films_path(tmdb_query: "Alien") }
+    with_search { get tmdb_search_admin_films_path(tmdb_query: "Alien") }
     selection = import_selection
     replace_method(Registry::Sources::TmdbClient, :movie, ->(**) { flunk "An invalid selection reached TMDB" }) do
-      post admin_films_path, params: selection.merge("tmdb_id" => [ "348" ])
+      post admin_import_tmdb_film_path, params: selection.merge("tmdb_id" => [ "348" ])
       assert_response :bad_request
     end
 
     cookies.delete("session_id")
-    get search_admin_films_path(tmdb_query: "Alien")
+    get tmdb_search_admin_films_path(tmdb_query: "Alien")
     assert_redirected_to new_session_path
     sign_in(Identity::UserGuest.create!)
     replace_method(Registry::Sources::TmdbClient, :search, ->(**) { flunk "A guest request reached TMDB" }) do
-      get search_admin_films_path(tmdb_query: "Alien")
+      get tmdb_search_admin_films_path(tmdb_query: "Alien")
       assert_response :forbidden
     end
     token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
     assert_no_difference "Registry::Film.count" do
-      post admin_films_path, params: selection.merge("authenticity_token" => token)
+      post admin_import_tmdb_film_path, params: selection.merge("authenticity_token" => token)
     end
     assert_response :forbidden
   end

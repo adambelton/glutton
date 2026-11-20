@@ -30,5 +30,6 @@ en:
         not_found: The requested assessment model or endpoint was not found.
       warnings:
         no_qualities: "Film %{film_id} has no supported qualities and needs manual review."
+        unready_film: "Film %{film_id} was imported. Quality assignment needs usable Wikipedia context."
         assessment_failed: "Film %{film_id} could not be assessed and needs manual review: %{detail}"
         unexpected_failure: "Film %{film_id} could not be assessed because of an unexpected failure and needs manual review."

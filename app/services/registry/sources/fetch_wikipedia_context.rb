@@ -1,6 +1,8 @@
 module Registry
   module Sources
     class FetchWikipediaContext
+      Source = Data.define(:wikidata_id, :wikipedia_context)
+
       def self.call(tmdb_id:, tmdb_client: TmdbClient, wikidata_client: WikidataClient, wikipedia_client: WikipediaClient)
         new(tmdb_id:, tmdb_client:, wikidata_client:, wikipedia_client:).call
       end
@@ -10,33 +12,30 @@ module Registry
       end
 
       def call
-        fetch_context
-      rescue Registry::Errors::ImportIncomplete => error
-        raise Registry::Errors::ImportIncomplete.new(stage: error.stage, reason: error.reason, tmdb_id: @tmdb_id), cause: nil
-      rescue Errors::TmdbUnavailable => error
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: error.reason, tmdb_id: @tmdb_id), cause: nil
-      rescue Errors::TmdbNotFound
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :not_found, tmdb_id: @tmdb_id), cause: nil
-      rescue Errors::TmdbConfigurationError
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :configuration, tmdb_id: @tmdb_id), cause: nil
-      rescue Registry::Errors::InvalidTmdbResponse
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response, tmdb_id: @tmdb_id), cause: nil
+        wikidata_id = fetch_wikidata_id
+        wikipedia_context = fetch_verified_revision(wikidata_id) if wikidata_id.present?
+        Source.new(wikidata_id:, wikipedia_context: wikipedia_context || {})
+      rescue Registry::Errors::ImportIncomplete, Errors::TmdbUnavailable, Errors::TmdbNotFound,
+        Errors::TmdbConfigurationError, Errors::InvalidTmdbResponse
+        Source.new(wikidata_id:, wikipedia_context: {})
       end
 
       private
 
-      def fetch_context
-        raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :missing_identity) if @tmdb_id.nil?
+      def fetch_wikidata_id
+        return if @tmdb_id.nil?
+
         external_ids = @tmdb_client.external_ids(tmdb_id: @tmdb_id)
-        unless external_ids.is_a?(Hash) && external_ids["id"].is_a?(Integer) && external_ids["id"] == @tmdb_id
-          raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :invalid_response)
-        end
+        return unless external_ids.is_a?(Hash) && external_ids["id"].is_a?(Integer) && external_ids["id"] == @tmdb_id
+
         wikidata_id = external_ids["wikidata_id"]
-        unless wikidata_id.is_a?(String) && wikidata_id.match?(/\AQ[1-9][0-9]*\z/)
-          raise Registry::Errors::ImportIncomplete.new(stage: :tmdb, reason: :missing_identity)
-        end
+        wikidata_id if wikidata_id.is_a?(String) && wikidata_id.match?(/\AQ[1-9][0-9]*\z/)
+      end
+
+      def fetch_verified_revision(wikidata_id)
         title = @wikidata_client.wikipedia_title(wikidata_id:)
-        @wikipedia_client.context(title:, wikidata_id:, tmdb_id: @tmdb_id)
+        context = @wikipedia_client.context(title:, wikidata_id:, tmdb_id: @tmdb_id)
+        context if WikipediaContext.valid?(context, tmdb_id: @tmdb_id) && context["wikidata_id"] == wikidata_id
       end
     end
   end

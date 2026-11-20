@@ -23,20 +23,24 @@ module Registry
 
         film = ImportFilm.call(tmdb_id: @tmdb_id, tmdb_client: @tmdb_client,
           wikidata_client: @wikidata_client, wikipedia_client: @wikipedia_client)
+        unless film.has_source_context?
+          return { film:, film_qualities: [], film_quality_eval: nil, warnings: [ assignment_warning(film, :unready_film) ] }
+        end
         tracer = ActivityMonitoring.ai_tracer(ActivityMonitoring::Scopes::REGISTRY, provider: @tracer_provider)
         client = @type_safe_client_class.new(tracer:, maximum_requests: @maximum_requests, maximum_cost_usd: @maximum_cost_usd, profile: :registry)
         result = QualityManagement::AssignInitialFilmQualities.call(film_id: film.id, client:, tracer_provider: @tracer_provider)
-        warnings = []
-        if result.fetch(:film_qualities).empty?
-          warning = { tmdb_id: @tmdb_id, film_id: film.id, reason: :no_qualities,
-            message: I18n.t("registry.assignment.warnings.no_qualities", film_id: film.id) }
-          Rails.logger.warn(warning.to_json)
-          warnings << warning
-        end
+        warnings = result.fetch(:film_qualities).empty? ? [ assignment_warning(film, :no_qualities) ] : []
         result.merge(warnings:)
       end
 
       private
+
+      def assignment_warning(film, reason)
+        warning = { tmdb_id: @tmdb_id, film_id: film.id, reason:,
+          message: I18n.t("registry.assignment.warnings.#{reason}", film_id: film.id) }
+        Rails.logger.warn(warning.to_json)
+        warning
+      end
 
       def validate_limits!
         # These operator-supplied bounds are validated before any provider request.

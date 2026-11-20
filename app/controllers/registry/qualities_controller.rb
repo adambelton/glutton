@@ -1,11 +1,18 @@
 module Registry
   class QualitiesController < BaseController
     def index
-      render ::Views::Admin::Qualities::Index.new(page: CatalogueQueries::InspectCatalogue.qualities(page: @page_number, query: @query), query: @query)
+      search = catalogue_search_parameters
+      return render_invalid_parameters unless search.present?
+
+      page = CatalogueQueries::InspectCatalogue.qualities(page: search.page, query: search.query)
+      render ::Views::Admin::Qualities::Index.new(page:, query: search.query)
     end
 
     def show
-      render ::Views::Admin::Qualities::Show.new(detail: CatalogueQueries::InspectCatalogue.quality(id: params[:id], page: @page_number))
+      page = catalogue_page_number
+      return render_invalid_parameters unless page.present?
+
+      render ::Views::Admin::Qualities::Show.new(detail: CatalogueQueries::InspectCatalogue.quality(id: catalogue_record_id, page:))
     end
   end
 end

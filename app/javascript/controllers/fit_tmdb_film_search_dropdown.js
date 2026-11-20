@@ -1,4 +1,4 @@
-export function fitFilmSearchDropdown(dropdown) {
+export function fitTmdbFilmSearchDropdown(dropdown) {
   if (!dropdown?.getClientRects().length) return
 
   const available = window.innerHeight - dropdown.getBoundingClientRect().top - 12

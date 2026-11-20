@@ -46,7 +46,7 @@ module Registry
           "retrieved_at" => Time.current.utc.iso8601, "license" => { "name" => rights.fetch("text"), "url" => rights.fetch("url") },
           "source_paragraphs" => WikipediaParagraphs.call(html: parsed["text"])
         }
-        invalid! unless WikipediaContext.usable?(context, tmdb_id:)
+        invalid! unless WikipediaContext.valid?(context, tmdb_id:)
         context
       end
 

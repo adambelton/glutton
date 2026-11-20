@@ -8,36 +8,33 @@ class Registry::ImportFilmRecoveryTest < ActiveSupport::TestCase
     Registry::CatalogueMaintenance::ImportFilm.call(tmdb_id: 348, tmdb_client:, wikidata_client:, wikipedia_client:)
   end
 
-  test "source failure creates no film and retry fetches both inputs" do
+  test "a Wikipedia timeout retains TMDB metadata and the Wikidata ID" do
     source = Object.new
     source.define_singleton_method(:context) { |**| raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :timeout) }
-    assert_no_difference "Registry::Film.count" do
-      error = assert_raises(Registry::Errors::ImportIncomplete) { run_import(wikipedia_client: source) }
-      assert_equal [ :wikipedia, :timeout, 348 ], [ error.stage, error.reason, error.tmdb_id ]
-    end
-    assert_not Registry::Film.exists?(tmdb_id: 348)
-    assert_difference "Registry::Film.count", 1 do
-      assert run_import.has_source_context?
-    end
+    film = assert_difference("Registry::Film.count", 1) { run_import(wikipedia_client: source) }
+    assert_equal "Alien", film.reload.title
+    assert_equal "Q1", film.wikidata_id
+    assert_empty film.wikipedia_context
   end
 
-  test "missing or mismatched external identity creates no film" do
+  test "missing or mismatched external identity leaves the film with verified TMDB metadata alone" do
     [ nil, {}, { "id" => 349, "wikidata_id" => "Q1" }, { "id" => 348 }, { "id" => 348, "wikidata_id" => "Q0" } ].each do |external_ids|
       client = tmdb_source
       client.define_singleton_method(:external_ids) { |**| external_ids }
-      error = assert_raises(Registry::Errors::ImportIncomplete) { run_import(tmdb_client: client) }
-      assert_equal :tmdb, error.stage
-      assert_includes [ :invalid_response, :missing_identity ], error.reason
-      assert_not Registry::Film.exists?(tmdb_id: 348)
+      film = run_import(tmdb_client: client).reload
+      assert_equal 348, film.tmdb_id
+      assert_nil film.wikidata_id
+      assert_empty film.wikipedia_context
+      film.destroy!
     end
   end
 
-  test "invalid packets cannot create a film" do
+  test "invalid Wikipedia packets are discarded while the film is imported" do
     source = Object.new
     source.define_singleton_method(:context) { |**| { "source_paragraphs" => [] } }
-    error = assert_raises(Registry::Errors::ImportIncomplete) { run_import(wikipedia_client: source) }
-    assert_equal [ :wikipedia, :invalid_response ], [ error.stage, error.reason ]
-    assert_not Registry::Film.exists?(tmdb_id: 348)
+    film = run_import(wikipedia_client: source).reload
+    assert_equal "Q1", film.wikidata_id
+    assert_empty film.wikipedia_context
   end
 
   test "existing incomplete context needs review and is never overwritten" do

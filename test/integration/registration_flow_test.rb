@@ -28,7 +28,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       get "admin", to: "admin#show", as: :admin
       get "account/settings", to: "account_settings#show", as: :account_settings
       resource :library, only: :show, controller: :library
-      get "library/search", to: "library/film_search#index", as: :library_film_search
+      get "library/search", to: "library/tmdb_film_search#index", as: :library_tmdb_film_search
       resource :recommendation, only: :show, controller: :recommendations
       resource :rating, only: [ :new, :create, :edit, :update ], controller: :ratings do
         get :choose_films

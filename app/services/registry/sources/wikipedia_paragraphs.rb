@@ -25,9 +25,6 @@ module Registry
             paragraphs << { "id" => "P#{paragraphs.size + 1}", "section" => headings.values.join(" / ").presence, "text" => text }
           end
         end
-        unless paragraphs.any? { |paragraph| WikipediaContext.narrative_section?(paragraph["section"]) }
-          raise Registry::Errors::ImportIncomplete.new(stage: :wikipedia, reason: :insufficient_context)
-        end
         paragraphs
       end
     end

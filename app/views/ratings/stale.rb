@@ -9,7 +9,7 @@ module Views
         page(title: t("ratings.browser.edit_title")) do
           p(role: "alert") { @error }
           p { text_link(t("ratings.browser.reload"), edit_rating_path(film_id: @rating_film.film_id)) }
-          p { text_link(t("library.browser.return"), library_path(view: ::Library::CollectionManagement::Browse::Views::WATCHED)) }
+          p { text_link(t("library.browser.return"), library_path(view: ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)) }
         end
       end
     end

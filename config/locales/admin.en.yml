@@ -8,7 +8,6 @@ en:
       films: Search films
       qualities: Search qualities
       quality_categories: Search quality categories
-      clear: Clear search
       no_matches: No records match your search.
     tmdb:
       search: Search TMDB

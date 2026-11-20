@@ -109,8 +109,8 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_no_selector ".admin-search button"
     dimensions = page.evaluate_script(<<~JS)
       (() => {
-        const input = document.querySelector(".admin-search-field input").getBoundingClientRect()
-        const clearLink = document.querySelector(".admin-clear-search:not([hidden])")
+        const input = document.querySelector(".collection-search-field input").getBoundingClientRect()
+        const clearLink = document.querySelector(".collection-search-clear:not([hidden])")
         const clear = clearLink?.getBoundingClientRect()
         return {
           inputHeight: input.height,

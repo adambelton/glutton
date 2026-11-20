@@ -11,15 +11,12 @@ module Identity
     end
 
     def index
-      page = params.fetch(:page, "1")
-      return head :bad_request unless page.is_a?(String) && page.match?(/\A[1-9]\d{0,5}\z/)
+      query = request.post? ? params.fetch(:account_email_or_id, "") : ""
+      search = CollectionSearchParameters.parse(query:, page: params.fetch(:page, "1"), max_digits: 6)
+      return head :bad_request unless search.present?
 
-      input = request.post? ? params.fetch(:account_email_or_id, "") : ""
-      return head :bad_request unless input.is_a?(String) && input.bytesize <= 254
-
-      query = input.strip
-      users = AccountAdministration::InspectUsers.page(number: page.to_i, query:)
-      render ::Views::Admin::Users::Index.new(page: users, query:)
+      users = AccountAdministration::InspectUsers.page(number: search.page, query: search.query)
+      render ::Views::Admin::Users::Index.new(page: users, query: search.query)
     end
 
     def show
