@@ -111,8 +111,8 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     assert_current_path admin_films_path(q: "re-release")
     click_button I18n.t("ui.search.tmdb")
     click_button "Add to Registry"
-    assert_text I18n.t("admin.tmdb.already_present")
     assert_current_path tmdb_search_admin_films_path(q: "re-release", tmdb_query: "Alien", tmdb_page: 1, tmdb_batch: 2)
+    assert_selector ".admin-alert", exact_text: I18n.t("admin.tmdb.already_present")
     assert_selector "tbody tr", text: "Alien re-release", count: 1
     within("#admin-tmdb-film-results") do
       assert_selector "li", count: 2
