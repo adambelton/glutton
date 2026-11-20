@@ -14,7 +14,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   def entry(watched: true, user: @user, title: "A film", **attributes)
-    Library::LibraryFilm.create!(watched:, user:, film: Registry::Film.create!(title:, **attributes))
+    Library::LibraryFilm.create!(watched_at: (Time.current if watched), user:, film: Registry::Film.create!(title:, **attributes))
   end
 
   test "two views isolate membership and owner and default to watchlist without writes" do

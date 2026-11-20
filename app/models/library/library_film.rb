@@ -6,8 +6,14 @@ module Library
     has_one :rated_rating_film, -> { rated }, class_name: "Ratings::RatingFilm",
       primary_key: [ :user_id, :film_id ], foreign_key: [ :user_id, :film_id ]
 
-    validates :watched, inclusion: { in: [ true, false ] }
     validates :film_id, uniqueness: { scope: :user_id }
+
+    scope :watched, -> { where.not(watched_at: nil) }
+    scope :watchlist, -> { where(watched_at: nil) }
+
+    def watched?
+      watched_at.present?
+    end
 
     def can_rate?
       watched? && !rated?
@@ -29,7 +35,7 @@ module Library
       raise Errors::AddToWatchlistUnavailable unless can_add_to_watchlist?
 
       transaction do
-        update!(watched: false)
+        update!(watched_at: nil)
         publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST, correlation_id:, causation_id:)
       end
       self
@@ -53,7 +59,7 @@ module Library
       raise Errors::NotWatched unless can_move_to_watchlist?
 
       transaction do
-        update!(watched: false)
+        update!(watched_at: nil)
         publish_event!(name: Events::FILM_ADDED_TO_WATCHLIST)
       end
       self
@@ -102,7 +108,7 @@ module Library
 
     def save_as_watched!(correlation_id:, causation_id:)
       transaction do
-        update!(watched: true)
+        update!(watched_at: Time.current)
         publish_event!(name: Events::FILM_MARKED_WATCHED, correlation_id:, causation_id:)
       end
       self

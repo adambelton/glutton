@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -222,11 +222,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_19_120000) do
   end
 
   create_table "library_films", force: :cascade do |t|
-    t.boolean "watched", default: false, null: false
     t.bigint "user_id", null: false
     t.bigint "film_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "watched_at"
     t.index ["film_id"], name: "index_library_films_on_film_id"
     t.index ["user_id", "film_id"], name: "index_library_films_on_user_id_and_film_id", unique: true
   end

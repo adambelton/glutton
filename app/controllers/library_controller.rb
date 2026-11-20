@@ -45,8 +45,9 @@ class LibraryController < ApplicationController
   end
 
   def move_to_watched
-    Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
-    redirect_to library_path(view: Library::CollectionManagement::Browse::Views::WATCHED), status: :see_other
+    library_film = Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
+    redirect_to(library_film.can_rate? ? new_rating_path(film_id: library_film.film_id) :
+      library_path(view: Library::CollectionManagement::Browse::Views::WATCHED), status: :see_other)
   end
 
   def add_to_watchlist_from_ratings

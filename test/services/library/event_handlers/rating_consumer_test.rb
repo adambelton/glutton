@@ -38,7 +38,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     end
     assert_equal "Atmosphere", rating.reload.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, rating.value
-    assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
+    assert Library::LibraryFilm.watched.exists?(user: @user, film: @film)
     event = derived.sole
     assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
     assert_equal 1, event.schema_version
@@ -87,7 +87,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     connection.execute("ALTER TABLE domain_events DROP CONSTRAINT consumer_test_block_watched")
     travel 5.seconds
     assert_equal({ processed: 1 }, dispatch)
-    assert Library::LibraryFilm.where(watched: true).exists?(entry.id)
+    assert Library::LibraryFilm.watched.exists?(entry.id)
     assert_equal 1, derived.count
   ensure
     connection&.execute("ALTER TABLE domain_events DROP CONSTRAINT IF EXISTS consumer_test_block_watched")
@@ -131,7 +131,7 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
       @film = Registry::Film.create!(title: "Viewing evidence")
       publish(payload: { user_id: @user.id, film_id: @film.id }.merge(fields))
       assert_equal({ processed: 1 }, dispatch)
-      assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
+      assert Library::LibraryFilm.watched.exists?(user: @user, film: @film)
     end
   end
 

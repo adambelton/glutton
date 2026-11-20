@@ -43,7 +43,9 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     assert_no_match(/translation missing/i, response.body)
   end
 
-  test "mark watched retains relationship and redirects to Watched before event delivery" do
+  test "mark watched commits the move before opening the optional rating form" do
+    older_watched = Library::LibraryFilm.create!(user: @user, film: Registry::Film.create!(title: "Earlier watch"),
+      watched_at: 1.hour.ago)
     get library_path
     original_id, original_created_at = @entry.id, @entry.created_at
     other = Identity::UserGuest.create!
@@ -52,7 +54,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
         watch(user_id: other.id, film_id: Registry::Film.create!(title: "Ignore").id, watched: false)
       end
     end
-    assert_redirected_to library_path(view: "watched")
+    assert_redirected_to new_rating_path(film_id: @film.id)
     assert_response :see_other
     row = Library::LibraryFilm.find(original_id)
     assert_equal original_created_at, row.created_at
@@ -60,7 +62,13 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     event = DomainEvents::DomainEvent.joins(:domain_event_stream).find_by!(domain_event_streams: { user_id: @user.id }, name: Library::Events::FILM_MARKED_WATCHED)
     assert_equal @film.id, event.payload.fetch("film_id")
     follow_redirect!
+    assert_response :success
+    assert_select "h2", "#{@film.title} (2001)"
+    assert_select "a[href=?]", library_path(view: "watched"), text: I18n.t("library.browser.return")
+
+    get library_path(view: "watched", ratings: [ "unrated" ])
     assert_select ".ui-toast", count: 0
+    assert_equal [ "#{@film.title} (2001)", older_watched.film.title ], css_select(".library-films h3").map { |heading| heading.text.strip }
     assert_select "form[action=?]", move_to_watchlist_library_film_path(@entry)
     assert_select "form[action=?]", remove_from_watched_library_film_path(@entry)
     assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, @film.id.to_s
@@ -68,9 +76,6 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
       watch
       assert_response :conflict
     end
-    get new_rating_path(film_id: @film.id)
-    assert_response :success
-    assert_select "h2", "#{@film.title} (2001)"
   end
 
   test "rated films can move and leave Library with their ratings intact" do
@@ -91,6 +96,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     assert_response :conflict
 
     post move_to_watched_library_film_path(@entry), params: { authenticity_token: csrf }
+    assert_redirected_to library_path(view: "watched")
     DomainEvents::Delivery::Dispatch.call
     assert_not candidate.reload.suppressed?
     delete remove_from_watched_library_film_path(@entry), params: { authenticity_token: csrf }

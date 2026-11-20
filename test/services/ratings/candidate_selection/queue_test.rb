@@ -25,7 +25,7 @@ class Ratings::QueueTest < ActiveSupport::TestCase
   test "empty queue admits catalogue and watched films without touching shared or personal evidence" do
     film = catalogue_film("CatalogueQueries", votes: 100)
     watched = catalogue_film("Watched", votes: 50)
-    Library::LibraryFilm.create!(watched: true, user: @user, film: watched)
+    Library::LibraryFilm.create!(watched_at: Time.current, user: @user, film: watched)
     assert_no_difference [ "Registry::Film.count", "Library::LibraryFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_difference "Ratings::RatingFilm.count", 2 do
         assert_equal [ film.id, watched.id ], candidates(limit: 2).map(&:film_id)

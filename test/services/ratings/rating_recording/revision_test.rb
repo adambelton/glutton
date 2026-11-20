@@ -17,7 +17,7 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "successive replacements retain evidence without publishing events" do
-    library_film = Library::LibraryFilm.create!(watched: true, user: @user, film: @film)
+    library_film = Library::LibraryFilm.create!(watched_at: Time.current, user: @user, film: @film)
     previous = @original
     original_expression_id = @original.id
     created_at = @rating_film.created_at

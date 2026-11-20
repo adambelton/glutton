@@ -1,6 +1,6 @@
 # Glutton — Implementation progress
 
-Updated: 19 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 20 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
 
@@ -11,7 +11,7 @@ Updated: 19 November 2026. This document describes current progress, agreed orde
 - Ratings: candidate queue, dismissal and suppression, first submission with optional film notes, rating replacement/history, browser editing and targeted Library entry are implemented. Saving from a film-specific rating page returns to Watched with confirmation. Rating edits compare current inputs with the saved revision even after validation fails.
 - Ratings saves optional film notes on submission and durably queues assessment of the saved rating version. The assessment gives direct evidence from notes precedence, uses the latest completed profile for eligible qualities, and assigns baseline scores where neither applies. One evaluation records the evidence for each complete score set. Only a newer profile revision can supersede applied scores for the same rating version.
 
-- Library browsing uses Watchlist and Watched poster grids. Watched supports combined rating filters retained in the URL.
+- Library browsing uses Watchlist and Watched poster grids. Watched shows the most recently marked films first and supports combined rating filters retained in the URL. Mark Watched on a Watchlist card saves the move and opens the existing optional film-specific form for unrated films. Library search moves return to search results.
 - Ratings and Recommendations use the same responsive film card, with Library shortcuts in their action rows. Recommendations shows the Registry trailer in the card when available and offers in-card expansion. Ratings notes extend to the action row. The header wordmark takes signed-in viewers and active guests to Ratings. The Account link opens Settings. On mobile the primary navigation uses a full-width selector beneath the wordmark. Tablet Recommendations place the synopsis and trailer beside the poster, with actions below.
 
 Guests can discard their activity and sign out from the header. Identity uses the same deletion rules as guest expiry.
