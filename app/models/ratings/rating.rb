@@ -61,36 +61,17 @@ module Ratings
 
     def ensure_explicit_evidence_current!(evaluation)
       applied = current_rating_quality_eval
-      return if applied&.explicit_source_id == evaluation.inherited_explicit_evaluation_id
+      return if applied&.explicit_evidence_for_reassessment&.fetch("explicit_source_evaluation_id") == evaluation.inherited_explicit_evaluation_id
 
       raise Errors::QualityAssessmentFailed.new(reason: :explicit_evidence_changed)
     end
 
     def apply_quality_scores!(evaluation)
       evidence = evaluation.quality_evidence
-      carried_scores = carried_explicit_scores(evaluation)
       evidence.fetch(:quality_ids).each do |quality_id|
-        classification = classify_quality(quality_id, evidence)
-        score = carried_scores.fetch(quality_id) { RatingQualityScores::ALL.fetch(classification).fetch(value) }
+        classification, score = RatingQualityScores.for(rating_value: value,
+          direct: evidence.fetch(:direct)[quality_id], inferred: evidence.fetch(:inferred)[quality_id])
         rating_qualities.create!(rating_quality_eval: evaluation, quality_id:, classification:, score:)
-      end
-    end
-
-    def carried_explicit_scores(evaluation)
-      source_id = evaluation.inherited_explicit_evaluation_id
-      return {} unless source_id.present?
-
-      rating_qualities.where(rating_quality_eval_id: source_id,
-        classification: RatingQuality::Classifications::EXPLICITLY_EXPRESSED).pluck(:quality_id, :score).to_h
-    end
-
-    def classify_quality(quality_id, evidence)
-      if evidence.fetch(:explicit_ids).include?(quality_id)
-        RatingQuality::Classifications::EXPLICITLY_EXPRESSED
-      elsif evidence.fetch(:implicit_ids).include?(quality_id)
-        RatingQuality::Classifications::IMPLICITLY_EXPRESSED
-      else
-        RatingQuality::Classifications::UNEXPRESSED
       end
     end
 

@@ -50,7 +50,7 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
     [ @target, @other_target ].each do |rating|
       evaluation = rating.rating_quality_evals.sole
       assert_equal newest.id, evaluation.profile_revision_id
-      assert_equal [ 4 ], evaluation.rating_qualities.pluck(:score)
+      assert_equal [ 3 ], evaluation.rating_qualities.pluck(:score)
     end
   end
 
@@ -151,6 +151,6 @@ class Ratings::ReassessRatingQualitiesJobTest < ActiveSupport::TestCase
 
   def response(questions)
     { "model" => "jev-1.14.0", "usage" => { "input_tokens" => 10, "output_tokens" => 2 },
-      "answers" => questions.keys.index_with({ "type" => "noul", "noul" => 0.90 }) }
+      "answers" => questions.keys.index_with { |id| { "type" => "noul", "noul" => (id.end_with?("_reinforces") ? 0.90 : 0.1) } } }
   end
 end

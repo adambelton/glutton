@@ -170,7 +170,7 @@
   content: attr(data-tooltip) / "";
 }
 :is(.ui-action-button, .rating-actions .ui-submit, .library-clear-filters)[data-tooltip]::after,
-.recommendations-nav-lock [role="tooltip"] {
+:is(.recommendations-nav-lock, .recommendation-match) [role="tooltip"] {
   position: absolute;
   z-index: 2;
   inset-inline-end: 0;
@@ -407,6 +407,38 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .recommendation-film { grid-template-rows: minmax(0, 1fr); grid-template-areas: "response details artwork"; }
 .recommendation-artwork { grid-area: artwork; }
 .recommendation-details { grid-area: details; min-width: 0; }
+.recommendation-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin-block: 10px 16px;
+}
+.recommendation-metadata > .rating-film-links { margin: 0; }
+.recommendation-metadata > .rating-film-links:empty { display: none; }
+.recommendation-match {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--glutton-primary);
+}
+.recommendation-match-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: currentColor;
+  mask: url("/glutton-mark.svg") center / contain no-repeat;
+}
+.recommendation-match-value { font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.recommendation-match:focus-visible { outline: 2px solid var(--glutton-foreground); outline-offset: 2px; }
+.recommendation-match [role="tooltip"] { inset-inline: 0 auto; bottom: calc(100% + 4px); }
+.recommendation-match:is(:hover, :focus) [role="tooltip"] { visibility: visible; }
+.recommendation-match-limited {
+  display: block;
+  color: var(--glutton-muted-foreground);
+  font-size: 14px;
+}
 @media (min-width: 651px) {
   .recommendation-details { min-height: 0; overflow-y: auto; }
 }

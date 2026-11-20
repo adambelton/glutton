@@ -46,16 +46,18 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
     client = Client.new(lambda do |**request|
       requests << request
       response(request.fetch(:questions), {
-        "notes_#{rating.id}_quality_#{@quality.id}" => 0.60,
-        "notes_#{rating.id}_quality_#{@other_quality.id}" => 0.59
+        "notes_#{rating.id}_quality_#{@quality.id}_reinforces" => 0.80,
+        "notes_#{rating.id}_quality_#{@other_quality.id}_reinforces" => 0.79
       })
     end)
 
     evaluation = assess(rating, client)
 
-    assert_equal 0.60, evaluation.reload.output.fetch("minimum_support")
-    assert_equal 2, requests.sole.fetch(:questions).size
+    assert_equal 0.80, evaluation.reload.output.fetch("minimum_support")
+    assert_equal 10, requests.sole.fetch(:questions).size
     assert_equal [ :notes, :qualities ], requests.sole.fetch(:state).keys.sort
+    assert_includes requests.sole.fetch(:questions).fetch("notes_#{rating.id}_quality_#{@quality.id}_reinforces").fetch("instructions"),
+      "contribute to why the viewer liked the film"
     assert_equal [ rating.id ], evaluation.output.fetch("decisions").first.fetch("supporting_rating_ids")
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
     assert_nil assess(rating, no_call_client)
@@ -75,7 +77,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
 
     evaluation = assess(rating, client)
 
-    assert_equal 28, JSON.parse(http.requests.sole.body).fetch("questions").size
+    assert_equal 140, JSON.parse(http.requests.sole.body).fetch("questions").size
     assert_equal 28, evaluation.rating_qualities.count
   end
 
@@ -97,7 +99,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
 
     assert_equal 1, http.requests.size
     sent = http.requests.map { |request| JSON.parse(request.body) }
-    assert_equal 28, sent.sum { |payload| payload.fetch("questions").size }
+    assert_equal 140, sent.sum { |payload| payload.fetch("questions").size }
     assert_equal sent, evaluation.input.pluck("request")
     assert_equal 28, evaluation.rating_qualities.count
   end
@@ -111,11 +113,14 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
       state = payload.fetch("state")
       phases << state.keys
       if state.key?("notes")
-        response(questions, { "notes_#{rating.id}_quality_#{@quality.id}" => 0.60 })
+        response(questions, { "notes_#{rating.id}_quality_#{@quality.id}_reinforces" => 0.80 })
       else
+        assert_equal %w[qualities taste_profile], state.keys.sort
         assert_equal revision.profile, state.fetch("taste_profile")
         assert_equal [ @other_quality.id.to_s ], state.fetch("qualities").keys
-        response(questions, questions.keys.index_with(0.60))
+        assert_includes questions.fetch("quality_#{@other_quality.id}_reinforces").fetch("instructions"),
+          "contributed to why the viewer liked the film"
+        response(questions, questions.keys.grep(/_reinforces\z/).index_with(0.80))
       end
     end)
     client = TypeSafeClient.new(token: "test-token", http_class: http, profile: :ratings)
@@ -124,7 +129,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
 
     assert_equal 2, phases.size
     assert_equal revision.id, evaluation.output.dig("implicit_assessment", "profile_revision_id")
-    assert_equal({ @quality.id => [ "explicitly_expressed", 5 ], @other_quality.id => [ "implicitly_expressed", 4 ] },
+    assert_equal({ @quality.id => [ "explicitly_expressed", 5 ], @other_quality.id => [ "implicitly_expressed", 3 ] },
       evaluation.rating_qualities.pluck(:quality_id, :classification, :score).to_h { |id, classification, score| [ id, [ classification, score ] ] })
     assert_nil assess(rating, no_call_client)
   end
@@ -139,16 +144,16 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
       phases << phase
       if phase == "assess-explicit-quality-evidence"
         initial_client = Client.new(lambda do |questions:, **|
-          response(questions, { "notes_#{rating_id}_quality_#{@quality.id}" => 0.99 })
+          response(questions, { "notes_#{rating_id}_quality_#{@quality.id}_reinforces" => 0.99 })
         end)
         # Record an initial assessment that started before the profile was published.
         initial_assessment = Ratings::QualityScoring::EvaluateRatingQualities.new(notes: state.fetch(:notes),
-          qualities: state.fetch(:qualities), profile_revision_id: nil, profile: nil, trace_id: nil).call(client: initial_client)
+          qualities: state.fetch(:qualities), rating_value: rating.value, profile_revision_id: nil, profile: nil, trace_id: nil).call(client: initial_client)
         initial = Ratings::RatingQualityEval.record!(rating:, assessment: initial_assessment)
         rating.apply_quality_evaluation!(evaluation: initial)
-        response(questions, { "notes_#{rating_id}_quality_#{@other_quality.id}" => 0.99 })
+        response(questions, { "notes_#{rating_id}_quality_#{@other_quality.id}_reinforces" => 0.99 })
       else
-        response(questions, questions.keys.index_with(0.99))
+        response(questions, questions.keys.grep(/_reinforces\z/).index_with(0.99))
       end
     end)
 
@@ -157,7 +162,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
     assert_equal [ "assess-explicit-quality-evidence", "assess-implicit-quality-evidence", "assess-implicit-quality-evidence" ], phases
     assert_equal revision.id, result.profile_revision_id
     assert_equal initial.id, result.output.fetch("explicit_source_evaluation_id")
-    assert_equal({ @quality.id => 5, @other_quality.id => 4 }, result.rating_qualities.pluck(:quality_id, :score).to_h)
+    assert_equal({ @quality.id => 5, @other_quality.id => 3 }, result.rating_qualities.pluck(:quality_id, :score).to_h)
     assert_equal({ @quality.id => 5, @other_quality.id => 2 }, initial.rating_qualities.pluck(:quality_id, :score).to_h)
   end
 
@@ -170,18 +175,18 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
       assert_equal revision.profile, state.fetch(:taste_profile)
       cleared = publish_profile
       assert_empty cleared.profile
-      response(questions, { @quality.id.to_s => 0.60, @other_quality.id.to_s => 0.59 })
+      response(questions, { "quality_#{@quality.id}_reinforces" => 0.80, "quality_#{@other_quality.id}_reinforces" => 0.79 })
     end)
 
     evaluation = assess(rating, client)
 
     assert_equal revision.id, evaluation.output.dig("implicit_assessment", "profile_revision_id")
-    assert_equal({ @quality.id => -2, @other_quality.id => -1 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
+    assert_equal({ @quality.id => -3, @other_quality.id => -1 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
 
     next_evaluation = assess(rating, no_call_client)
     assert_empty next_evaluation.output.dig("implicit_assessment", "calls")
     assert_equal [ -1, -1 ], next_evaluation.rating_qualities.pluck(:score)
-    assert_equal [ -2, -1 ], evaluation.rating_qualities.order(:quality_id).pluck(:score)
+    assert_equal [ -3, -1 ], evaluation.rating_qualities.order(:quality_id).pluck(:score)
     assert_nil assess(rating, no_call_client)
 
     older_assessment = Struct.new(:result, :input).new(evaluation.output, [])
@@ -200,7 +205,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
       cleared = publish_profile
       newer_evaluation = assess(rating, no_call_client)
       assert_equal cleared.id, newer_evaluation.output.dig("implicit_assessment", "profile_revision_id")
-      response(questions, questions.keys.index_with(0.99))
+      response(questions, questions.keys.grep(/_reinforces\z/).index_with(0.99))
     end)
 
     result = assess(rating, client)
@@ -208,6 +213,65 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
     assert_nil result
     assert_equal newer_evaluation, rating.rating_quality_evals.sole
     assert_equal [ 2, 2 ], newer_evaluation.rating_qualities.pluck(:score)
+  end
+
+  test "a direct exception outweighs execution criticism and conflicting direct judgments fall back to profile" do
+    rating = @rating_film.submit_rating!(value: "garbage",
+      notes: "I love practical effects, but the movement looked rubbery.")
+    publish_profile
+    client = Client.new(lambda do |state:, questions:, **|
+      if state.key?(:notes)
+        assert_includes questions.fetch("notes_#{rating.id}_quality_#{@quality.id}_exception").fetch("instructions"),
+          "which they disliked"
+        response(questions, {
+          "notes_#{rating.id}_quality_#{@quality.id}_exception" => 0.95,
+          "notes_#{rating.id}_quality_#{@quality.id}_criticises_execution" => 0.95,
+          "notes_#{rating.id}_quality_#{@other_quality.id}_reinforces" => 0.90,
+          "notes_#{rating.id}_quality_#{@other_quality.id}_exception" => 0.85
+        })
+      else
+        assert_equal [ @other_quality.id.to_s ], state.fetch(:qualities).keys
+        assert_includes questions.fetch("quality_#{@other_quality.id}_exception").fetch("instructions"), "which they disliked"
+        response(questions, { "quality_#{@other_quality.id}_exception" => 0.91 })
+      end
+    end)
+
+    evaluation = assess(rating, client)
+
+    assert_equal({ @quality.id => 5, @other_quality.id => 0 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
+  end
+
+  test "execution praise provides an inferred uplift and a direct exclusion overrides profile evidence" do
+    rating = @rating_film.submit_rating!(value: "pretty_good",
+      notes: "The effects looked great. Isolation did not affect my rating.")
+    publish_profile
+    client = Client.new(lambda do |state:, questions:, **|
+      assert state.key?(:notes)
+      response(questions, {
+        "notes_#{rating.id}_quality_#{@quality.id}_praises_execution" => 0.95,
+        "notes_#{rating.id}_quality_#{@other_quality.id}_ruled_out" => 0.95
+      })
+    end)
+
+    evaluation = assess(rating, client)
+
+    assert_equal({ @quality.id => [ "implicitly_expressed", 3 ], @other_quality.id => [ "explicitly_expressed", 0 ] },
+      evaluation.rating_qualities.pluck(:quality_id, :classification, :score).to_h { |id, classification, score| [ id, [ classification, score ] ] })
+  end
+
+  test "disliking a quality in a positive film records negative points and execution criticism records zero" do
+    rating = @rating_film.submit_rating!(value: "pretty_good",
+      notes: "I liked the film overall despite the dread. The sense of isolation felt forced.")
+    client = Client.new(lambda do |questions:, **|
+      response(questions, {
+        "notes_#{rating.id}_quality_#{@quality.id}_exception" => 0.95,
+        "notes_#{rating.id}_quality_#{@other_quality.id}_criticises_execution" => 0.95
+      })
+    end)
+
+    evaluation = assess(rating, client)
+
+    assert_equal({ @quality.id => -5, @other_quality.id => 0 }, evaluation.rating_qualities.pluck(:quality_id, :score).to_h)
   end
 
   test "no expressions produce baseline rows and an empty call history" do
@@ -259,7 +323,7 @@ class Ratings::ScoreRatingQualitiesTest < ActiveSupport::TestCase
     other_client = Client.new(->(questions:, **) { response(questions) })
     client = Client.new(lambda do |questions:, **|
       winner = assess(rating, other_client)
-      response(questions, questions.keys.index_with(0.99))
+      response(questions, questions.keys.grep(/_reinforces\z/).index_with(0.99))
     end)
 
     actual = assess(rating, client)

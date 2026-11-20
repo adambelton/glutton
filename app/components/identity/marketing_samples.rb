@@ -6,7 +6,8 @@ module Identity
       { key: "the_substance", tmdb_id: 933260, rating: ::Ratings::Rating::Values::PRETTY_GOOD }
     ].freeze
 
-    RECOMMENDATION_FILM_IDS = [ 2671, 310131, 1083381 ].freeze
+    RECOMMENDATION_MATCHES = { 2671 => 91, 310131 => 87, 1083381 => 82 }.freeze
+    RECOMMENDATION_FILM_IDS = RECOMMENDATION_MATCHES.keys.freeze
 
     WATCHED = [
       { tmdb_id: 348, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },

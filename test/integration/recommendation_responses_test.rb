@@ -88,6 +88,36 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", "https://www.youtube.com/watch?v=JarbtubycQg", count: 0
   end
 
+  test "displays a percentage only when the current viewer has enough relevant evidence" do
+    quality_set = 5.times.map { |index| quality_categories(:tone).qualities.create!(name: "Match quality #{index}") }
+    quality_set.each { |quality| Registry::FilmQuality.create!(film: @film, quality:) }
+    8.times do |index|
+      viewer = index < 7 ? @user : Identity::UserGuest.create!
+      film = Registry::Film.create!(title: "Match source #{index}")
+      quality_set.each { |quality| Registry::FilmQuality.create!(film:, quality:) }
+      rating = Ratings::RatingFilm.create!(user: viewer, film:).submit_rating!(value: "brilliant")
+      Ratings::QualityScoring::ScoreRatingQualities.call(rating_id: rating.id)
+      Recommendations::RecommendationFilm.new(user: @user, film:).suppress!
+    end
+
+    get recommendation_path
+    assert_select "h2", @film.title
+    assert_select ".recommendation-match", I18n.t("recommendations.match.limited")
+
+    film = Registry::Film.create!(title: "Eighth current viewer source")
+    quality_set.each { |quality| Registry::FilmQuality.create!(film:, quality:) }
+    rating = Ratings::RatingFilm.create!(user: @user, film:).submit_rating!(value: "brilliant")
+    Ratings::QualityScoring::ScoreRatingQualities.call(rating_id: rating.id)
+    get recommendation_path
+
+    assert_select "h2", @film.title
+    tooltip_id = "recommendation-match-tooltip-#{@film.id}"
+    assert_select ".recommendation-match[aria-describedby=?]", tooltip_id do
+      assert_select ".recommendation-match-value", I18n.t("recommendations.match.percentage", percentage: 65)
+      assert_select '[role="tooltip"][id=?]', tooltip_id, I18n.t("recommendations.match.label")
+    end
+  end
+
   test "a stale or repeated submission fails without changing the recorded choice" do
     unlock_recommendations_for(user: @user)
     get recommendation_path

@@ -2,7 +2,7 @@ module Recommendations
   module CandidateSelection
     class NextCandidate
       MINIMUM_ASSESSED_FILMS = 5
-      Result = Data.define(:assessed_film_count, :minimum_assessed_films, :candidate, :film) do
+      Result = Data.define(:assessed_film_count, :minimum_assessed_films, :candidate, :film, :match_percentage) do
         def unlocked?
           assessed_film_count >= minimum_assessed_films
         end
@@ -30,7 +30,11 @@ module Recommendations
 
         film = Registry::Film.find_by(id: candidate.film_id) if candidate.present?
         candidate = nil unless film.present?
-        Result.new(assessed_film_count:, minimum_assessed_films: MINIMUM_ASSESSED_FILMS, candidate:, film:)
+        if candidate.present?
+          match_percentage = CalculateRecommendationMatch.call(quality_ids: quality_ids_by_film.fetch(candidate.film_id, []),
+            rating_scores: scores, points: candidate.score)
+        end
+        Result.new(assessed_film_count:, minimum_assessed_films: MINIMUM_ASSESSED_FILMS, candidate:, film:, match_percentage:)
       end
     end
   end

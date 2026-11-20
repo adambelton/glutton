@@ -7,24 +7,26 @@ module Ratings
       Rating::Values::GARBAGE => -2
     }.freeze
 
-    IMPLICITLY_EXPRESSED = {
-      Rating::Values::BRILLIANT => 4,
-      Rating::Values::PRETTY_GOOD => 2,
-      Rating::Values::NOT_FOR_ME => -2,
-      Rating::Values::GARBAGE => -4
-    }.freeze
+    def self.film_reaction(rating_value)
+      UNEXPRESSED.fetch(rating_value).positive? ? "liked" : "disliked"
+    end
 
-    EXPLICITLY_EXPRESSED = {
-      Rating::Values::BRILLIANT => 5,
-      Rating::Values::PRETTY_GOOD => 3,
-      Rating::Values::NOT_FOR_ME => -3,
-      Rating::Values::GARBAGE => -5
-    }.freeze
+    def self.for(rating_value:, direct:, inferred:)
+      baseline = UNEXPRESSED.fetch(rating_value)
+      sign = baseline <=> 0
+      classifications = RatingQuality::Classifications
 
-    ALL = {
-      RatingQuality::Classifications::UNEXPRESSED => UNEXPRESSED,
-      RatingQuality::Classifications::IMPLICITLY_EXPRESSED => IMPLICITLY_EXPRESSED,
-      RatingQuality::Classifications::EXPLICITLY_EXPRESSED => EXPLICITLY_EXPRESSED
-    }.freeze
+      case direct
+      when "reinforces" then [ classifications::EXPLICITLY_EXPRESSED, 5 * sign ]
+      when "exception" then [ classifications::EXPLICITLY_EXPRESSED, -5 * sign ]
+      when "ruled_out" then [ classifications::EXPLICITLY_EXPRESSED, 0 ]
+      when "praises_execution" then [ classifications::IMPLICITLY_EXPRESSED, 3 ]
+      when "criticises_execution" then [ classifications::IMPLICITLY_EXPRESSED, 0 ]
+      else
+        return [ classifications::IMPLICITLY_EXPRESSED, inferred == "reinforces" ? 3 * sign : 0 ] if inferred.present?
+
+        [ classifications::UNEXPRESSED, baseline ]
+      end
+    end
   end
 end

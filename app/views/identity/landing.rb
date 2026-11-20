@@ -27,7 +27,9 @@ module Views
               films = ::Identity::MarketingSamples::RECOMMENDATION_FILM_IDS.filter_map { |id| @films[id] }.select { |film| film.tmdb_details.youtube_trailer_id.present? }
               if films.present?
                 render ::Identity::PreviewCarousel.new(feature: :recommendations, labels: films.map(&:title)) do |index|
-                  render ::Recommendations::FilmCard.new(film: films.fetch(index), readonly: true)
+                  film = films.fetch(index)
+                  match_percentage = ::Identity::MarketingSamples::RECOMMENDATION_MATCHES.fetch(film.tmdb_id)
+                  render ::Recommendations::FilmCard.new(film:, match_percentage:, readonly: true)
                 end
               else
                 empty_preview

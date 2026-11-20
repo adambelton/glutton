@@ -1,10 +1,47 @@
 {
-  "minimum_support": 0.60,
+  "minimum_support": 0.8,
+  "competing_support": 0.6,
   "maximum_pairs": 560,
-  "question_type": "noul",
-  "question_template": "Does notes[\"{rating_id}\"] address qualities[\"{quality_id}\"] as defined?",
-  "criteria": {
-    "true": "The notes describe or directly refer to the defined quality.",
-    "false": "The notes concern something else or only match the quality's exclusion."
+  "questions": {
+    "reinforces": {
+      "type": "noul",
+      "instructions": "According to notes[\"{rating_id}\"], did the presence of qualities[\"{quality_id}\"] contribute to why the viewer {film_reaction} the film?",
+      "criteria": {
+        "true": "The viewer identifies the presence of the defined quality as a reason they felt that way about the film.",
+        "false": "The viewer only mentions the quality, discusses its execution, or reacts to the quality differently from the film as a whole."
+      }
+    },
+    "ruled_out": {
+      "type": "noul",
+      "instructions": "According to notes[\"{rating_id}\"], did the viewer rule out qualities[\"{quality_id}\"] as a factor in how they felt about the film?",
+      "criteria": {
+        "true": "The viewer says this defined quality did not affect how they felt about the film or that they did not experience it.",
+        "false": "The note is silent about the quality, describes its execution, or identifies it as a reason for the overall reaction or an exception to it."
+      }
+    },
+    "exception": {
+      "type": "noul",
+      "instructions": "According to notes[\"{rating_id}\"], was the presence of qualities[\"{quality_id}\"] an exception to how the viewer felt about the film, which they {film_reaction}?",
+      "criteria": {
+        "true": "The viewer disliked the presence of the defined quality in a film they liked, or liked its presence in a film they disliked.",
+        "false": "The viewer merely mentions the quality, describes its execution alone, or singles out a different quality."
+      }
+    },
+    "praises_execution": {
+      "type": "noul",
+      "instructions": "Does notes[\"{rating_id}\"] praise how this film realised qualities[\"{quality_id}\"]?",
+      "criteria": {
+        "true": "The viewer praises the specific way this film executed the defined quality.",
+        "false": "The viewer praises the choice to include the quality, merely describes the execution, or praises a different quality."
+      }
+    },
+    "criticises_execution": {
+      "type": "noul",
+      "instructions": "Does notes[\"{rating_id}\"] criticise how this film realised qualities[\"{quality_id}\"]?",
+      "criteria": {
+        "true": "The viewer criticises a specific aspect of how this film executed the defined quality.",
+        "false": "The viewer criticises the underlying quality itself, merely describes the execution, or criticises a different quality."
+      }
+    }
   }
 }

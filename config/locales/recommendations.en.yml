@@ -4,6 +4,10 @@ en:
     navigation_locked: "Rate %{required} films to unlock"
     progress: "Recommendations unlock after %{required} films are assessed. %{assessed} assessed so far."
     empty: No recommendations are available right now.
+    match:
+      label: Your match score
+      percentage: "%{percentage}%"
+      limited: Limited evidence for a match
     accept: Accept
     reject: Reject
     responses:

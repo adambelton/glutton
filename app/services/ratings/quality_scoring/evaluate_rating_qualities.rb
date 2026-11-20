@@ -3,8 +3,9 @@ module Ratings
     class EvaluateRatingQualities
       attr_reader :input, :result
 
-      def initialize(notes:, qualities:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_assessment: nil)
+      def initialize(notes:, qualities:, rating_value:, profile_revision_id:, profile:, trace_id:, explicit_evidence: nil, previous_assessment: nil)
         @qualities = qualities
+        @rating_value = rating_value
         @profile_revision_id = profile_revision_id
         @profile = profile
         @notes = notes
@@ -19,7 +20,7 @@ module Ratings
         @result = if @explicit_evidence.present?
           @explicit_evidence.merge("trace_id" => @trace_id)
         else
-          explicit = EvaluateExplicitQualities.new(notes: @notes, qualities: @qualities, trace_id: @trace_id).call(client:)
+          explicit = EvaluateExplicitQualities.new(notes: @notes, qualities: @qualities, rating_value: @rating_value, trace_id: @trace_id).call(client:)
           capture_calls(explicit)
           explicit.result
         end
@@ -30,7 +31,7 @@ module Ratings
         implicit = if @previous_result.present? && eligible == eligible_qualities(@previous_result)
           @previous_result.fetch("implicit_assessment")
         else
-          assessment = EvaluateImplicitQualities.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible).call(client:)
+          assessment = EvaluateImplicitQualities.new(profile_revision_id: @profile_revision_id, profile: @profile, qualities: eligible, rating_value: @rating_value).call(client:)
           capture_calls(assessment)
           assessment.result
         end
@@ -48,7 +49,7 @@ module Ratings
       end
 
       def eligible_qualities(result)
-        explicit_ids = result.fetch("decisions").select { |decision| decision.fetch("applicable") }.pluck("quality_id")
+        explicit_ids = result.fetch("decisions").select { |decision| decision.fetch("determination").present? }.pluck("quality_id")
         result.fetch("qualities").except(*explicit_ids.map(&:to_s))
       end
     end
