@@ -14,7 +14,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
     registered = Identity::UserRegistered.create!(email_address: "library-keep@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     film = Registry::Film.create!(title: "Shared Library film")
-    [ guest, active, registered ].each { |user| Library::LibraryFilm.create!(watched: true, user:, film:) }
+    [ guest, active, registered ].each { |user| Library::LibraryFilm.create!(watched_at: Time.current, user:, film:) }
     session = Identity::Session.create!(user: guest)
     travel Identity::UserGuest::EXPIRY_DURATION / 2 + 1.second do
       assert_equal({ guests_deleted: 1, pending_registrations_deleted: 0 }, Identity::AccountAdministration::CleanupExpiredAccounts.call)
@@ -29,7 +29,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "in-place registration preserves relationship identity and watched confirmation" do
     guest = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Claim retained film")
-    Library::LibraryFilm.create!(watched: true, user: guest, film:)
+    Library::LibraryFilm.create!(watched_at: Time.current, user: guest, film:)
     row = Library::LibraryFilm.find_by!(user_id: guest.id)
     before = [ row.id, row.created_at, row.updated_at ]
     session = claim(guest)
@@ -41,7 +41,7 @@ class Library::RetentionTest < ActiveSupport::TestCase
   test "a restrictive dependent still rolls back cleanup and restores Library and Identity rows" do
     guest = Identity::UserGuest.create!(created_at: (Identity::UserGuest::EXPIRY_DURATION / 2).ago)
     film = Registry::Film.create!(title: "Rollback retention film")
-    Library::LibraryFilm.create!(watched: true, user: guest, film:)
+    Library::LibraryFilm.create!(watched_at: Time.current, user: guest, film:)
     session = Identity::Session.create!(user: guest)
     connection = Identity::User.connection
     connection.execute("CREATE TABLE library_cleanup_blocker (user_id bigint REFERENCES users(id))")

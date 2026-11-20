@@ -120,7 +120,7 @@ class Library::RatingConsumerConcurrencyTest < ActiveSupport::TestCase
       travel Identity::UserGuest::EXPIRY_DURATION
     end
     assert_equal :processed, Timeout.timeout(5) { contender.value }
-    assert Library::LibraryFilm.exists?(watched: true, user_id: @guest.id, film: @film)
+    assert Library::LibraryFilm.watched.exists?(user_id: @guest.id, film: @film)
     assert_equal 0, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
     assert_equal 1, watched_events.count
   end

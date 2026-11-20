@@ -157,7 +157,7 @@ class Ratings::LibraryConsumerTest < ActiveSupport::TestCase
       rating = Ratings::RatingRecording::SubmitRating.call(user_id: @user.id, rating_film_id: row.id,
         value: Ratings::Rating::Values::BRILLIANT, notes: "Still original")
       5.times { DomainEvents::Delivery::Dispatch.call }
-      assert Library::LibraryFilm.exists?(watched: true, user: @user, film: @film)
+      assert Library::LibraryFilm.watched.exists?(user: @user, film: @film)
       assert row.reload.dismissed?
       assert_not row.suppressed?
       assert_equal "Still original", rating.notes

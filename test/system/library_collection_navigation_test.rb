@@ -125,6 +125,9 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       click_button "Mark #{film.title} watched"
     end
 
+    assert_current_path new_rating_path(film_id: film.id)
+    assert_selector "h2", text: film.title
+    click_link I18n.t("library.browser.return")
     assert_current_path library_path(view: "watched")
     within ".library-film" do
       rating = find_button("Rate #{film.title}")

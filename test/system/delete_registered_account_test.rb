@@ -8,7 +8,7 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
     other_session = Identity::Session.create!(user:)
     film = Registry::Film.create!(title: "Shared film")
     rating = Ratings::RatingFilm.create!(user:, film:).submit_rating!(value: "brilliant", notes: "My notes")
-    library_film = Library::LibraryFilm.create!(user:, film:, watched: true)
+    library_film = Library::LibraryFilm.create!(user:, film:, watched_at: Time.current)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password

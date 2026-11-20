@@ -351,6 +351,6 @@ Agreed product structure: Ratings, Recommendations and Library are the three pri
 
 
 
-Watchlist cards expose Mark Watched and Remove from Watchlist. Watched cards offer Add Rating or Edit Rating, Move to Watchlist and Remove from Library. The rating icon changes when the current rating has notes.
+Watchlist cards expose Mark Watched and Remove from Watchlist. Mark Watched saves the move and opens the rating form if the film is unrated. Viewers can return to Watched without rating. Watched lists the most recently marked films first. Watched cards offer Add Rating or Edit Rating, Move to Watchlist and Remove from Library. The rating icon changes when the current rating has notes.
 
 Rating submission and recommendation acceptance can create Library entries through events. The direct Library shortcuts also create entries.

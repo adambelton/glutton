@@ -18,8 +18,8 @@ module Library
         raise Identity::Errors::Unavailable unless user&.active?
 
         entries = case view
-        when Views::WATCHLIST then LibraryFilm.where(watched: false)
-        when Views::WATCHED then LibraryFilm.where(watched: true)
+        when Views::WATCHLIST then LibraryFilm.watchlist.order(created_at: :desc, id: :desc)
+        when Views::WATCHED then LibraryFilm.watched.order(watched_at: :desc, id: :desc)
         else raise ArgumentError, "Unknown Library view"
         end
         entries = entries.where(user_id: user.id)
@@ -33,7 +33,7 @@ module Library
           entries = filtered
         end
         entries = entries.includes(:film).preload(rated_rating_film: :current_rating)
-          .order(created_at: :desc, id: :desc).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE + 1).to_a
+          .offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE + 1).to_a
         next_page = entries.size > PAGE_SIZE
         Page.new(entries: entries.first(PAGE_SIZE), next_page:)
       end

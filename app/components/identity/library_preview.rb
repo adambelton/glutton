@@ -25,7 +25,7 @@ module Identity
       watched = view == ::Library::CollectionManagement::Browse::Views::WATCHED
       samples = watched ? MarketingSamples::WATCHED : MarketingSamples::RECOMMENDATION_FILM_IDS.map { |id| { tmdb_id: id, rating: nil, notes: false } }
       samples = samples.select { |sample| @films[sample.fetch(:tmdb_id)].present? }
-      entries = samples.map { |sample| ::Library::LibraryFilm.new(film: @films.fetch(sample.fetch(:tmdb_id)), watched:) }
+      entries = samples.map { |sample| ::Library::LibraryFilm.new(film: @films.fetch(sample.fetch(:tmdb_id))) }
       ratings = []
       div(class: "library-preview-panel", hidden: view != "watchlist", data: { library_preview_target: "panel", view: }) do
         render ::Library::Collection.new(view:, page: ::Library::CollectionManagement::Browse::Page.new(entries:, next_page: false),

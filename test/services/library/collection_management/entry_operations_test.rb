@@ -49,7 +49,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
       end
       assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
         assert_raises(error) { operation.call(user_id: @user.id, library_film_id: entry.id) }
-        watched = Library::LibraryFilm.create!(watched: true, user: @user, film: Registry::Film.create!(title: "Watched"))
+        watched = Library::LibraryFilm.create!(watched_at: Time.current, user: @user, film: Registry::Film.create!(title: "Watched"))
         assert_raises(rejection) { operation.call(user_id: @user.id, library_film_id: watched.id) }
         watched.destroy!
       end
