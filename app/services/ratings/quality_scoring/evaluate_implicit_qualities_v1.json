@@ -1,9 +1,30 @@
 {
-  "minimum_support": 0.60,
-  "question_type": "noul",
-  "question_template": "Does the viewer's taste_profile support inferring a reaction to qualities[\"{quality_id}\"] as defined?",
-  "criteria": {
-    "true": "The profile supports a positive or negative reaction to the defined quality and any conditions stated in the profile are met by the quality definition.",
-    "false": "The profile provides no clear basis for a reaction, the quality only matches an exclusion, or the quality definition does not establish a condition required by the profile."
+  "minimum_support": 0.8,
+  "competing_support": 0.6,
+  "questions": {
+    "reinforces": {
+      "type": "noul",
+      "instructions": "Does taste_profile support inferring that the presence of qualities[\"{quality_id}\"] contributed to why the viewer {film_reaction} the film?",
+      "criteria": {
+        "true": "The profile supports a preference about the presence of the exact quality that could help explain why the viewer felt that way about the film. The quality definition establishes any stated conditions.",
+        "false": "The profile describes a different quality, an isolated execution reaction, or a condition the quality definition does not establish."
+      }
+    },
+    "ruled_out": {
+      "type": "noul",
+      "instructions": "Does taste_profile support treating qualities[\"{quality_id}\"] as irrelevant to the viewer’s judgment?",
+      "criteria": {
+        "true": "The profile indicates that this exact quality does not affect the viewer’s judgment under the conditions established by its definition.",
+        "false": "The profile is silent about the quality, mentions a broader topic, or describes a preference that depends on an unestablished condition."
+      }
+    },
+    "exception": {
+      "type": "noul",
+      "instructions": "Does taste_profile support inferring that the presence of qualities[\"{quality_id}\"] was an exception to how the viewer felt about the film, which they {film_reaction}?",
+      "criteria": {
+        "true": "The profile supports disliking the presence of the exact quality in a film the viewer liked, or liking its presence in a film the viewer disliked. The quality definition establishes any stated conditions.",
+        "false": "The profile describes a different quality, an isolated execution reaction, or a condition the quality definition does not establish."
+      }
+    }
   }
 }

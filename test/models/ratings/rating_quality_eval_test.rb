@@ -105,21 +105,27 @@ class Ratings::RatingQualityEvalTest < ActiveSupport::TestCase
     Ratings::RatingQualityEval.record!(rating: @rating, assessment:)
   end
 
-  def assessment_output(rating_id: @rating.id, quality_id: @quality.id, result_id: "q1")
+  def assessment_output(rating_id: @rating.id, quality_id: @quality.id, result_id: nil)
+    judgments = %w[reinforces ruled_out exception praises_execution criticises_execution]
+    calls = []
+    decisions = [ @quality, @other_quality ].map do |quality|
+      reinforces = quality == @quality
+      ids = judgments.map do |judgment|
+        id = "notes_#{@rating.id}_quality_#{quality.id}_#{judgment}"
+        calls << { id:, question: "Assess #{judgment}", result: { noul: (reinforces && judgment == "reinforces" ? 0.95 : 0.05) } }
+        id
+      end
+      { quality_id: (reinforces ? quality_id : quality.id), determination: ("reinforces" if reinforces),
+        supporting_rating_ids: (reinforces ? [ rating_id ] : []), result_ids: (reinforces && result_id ? [ result_id ] : ids) }
+    end
     {
       notes: { @rating.id.to_s => @rating.notes },
       qualities: {
         @quality.id.to_s => { name: @quality.name, match_rule: @quality.match_rule, not_sufficient: @quality.not_sufficient },
         @other_quality.id.to_s => { name: @other_quality.name, match_rule: nil, not_sufficient: nil }
       },
-      calls: [ [
-        { id: "q1", question: "Does the expression address dread?", result: { probability: 0.95 } },
-        { id: "q2", question: "Does the expression address isolation?", result: { probability: 0.05 } }
-      ] ],
-      decisions: [
-        { quality_id:, applicable: true, supporting_rating_ids: [ rating_id ], result_ids: [ result_id ] },
-        { quality_id: @other_quality.id, applicable: false, supporting_rating_ids: [], result_ids: [ "q2" ] }
-      ]
+      question_policy: { minimum_support: 0.80, competing_support: 0.60, questions: judgments.index_with({}) },
+      calls: [ calls ], decisions:
     }
   end
 end

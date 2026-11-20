@@ -140,7 +140,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
       notes: {}, calls: [],
       qualities: qualities.to_h { |quality| [ quality.id.to_s, { name: quality.name, match_rule: nil, not_sufficient: nil } ] },
-      decisions: qualities.map { |quality| { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } }
+      decisions: qualities.map { |quality| { quality_id: quality.id, determination: nil, supporting_rating_ids: [], result_ids: [] } }
     })
     rating.apply_quality_evaluation!(evaluation:)
     rating

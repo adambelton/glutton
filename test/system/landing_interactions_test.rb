@@ -95,8 +95,12 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     create_preview_catalogue
     visit root_path
     within preview(:recommendations) do
+      assert_selector ".recommendation-match-value", exact_text: I18n.t("recommendations.match.percentage", percentage: 91)
+      find(".recommendation-match").hover
+      assert_no_selector '[role="tooltip"], .recommendation-match[tabindex]', visible: :all
       click_button I18n.t("identity.entry.demo.select", position: 3, count: 3)
       assert_selector "h2", text: "Backrooms"
+      assert_selector ".recommendation-match-value", exact_text: I18n.t("recommendations.match.percentage", percentage: 82)
     end
     within preview(:ratings) do
       assert_selector "h2", text: "Alien"

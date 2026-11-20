@@ -49,6 +49,52 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_current_path library_path
   end
 
+  test "the match percentage sits with the film sources and explains itself on hover and keyboard focus" do
+    film = Registry::Film.create!(title: "A recommendation with a match score", tmdb_id: 19_807, wikipedia_context: { page_id: 123 })
+    visit recommendation_path
+    click_button I18n.t("identity.entry.try_it_out")
+    assert_current_path recommendation_path
+    user = Identity::Session.last.user
+
+    qualities = 5.times.map { |index| quality_categories(:tone).qualities.create!(name: "Match quality #{index}") }
+    qualities.each { |quality| Registry::FilmQuality.create!(film:, quality:) }
+    8.times do |index|
+      source = Registry::Film.create!(title: "Match source #{index}")
+      qualities.each { |quality| Registry::FilmQuality.create!(film: source, quality:) }
+      rating = Ratings::RatingFilm.create!(user:, film: source).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
+      Ratings::QualityScoring::ScoreRatingQualities.call(rating_id: rating.id)
+      Recommendations::RecommendationFilm.new(user:, film: source).suppress!
+    end
+
+    visit recommendation_path
+    assert_selector "h2", text: film.title
+    score = find(".recommendation-match", text: I18n.t("recommendations.match.percentage", percentage: 65))
+    mark = score.find('.recommendation-match-mark[aria-hidden="true"]')
+    assert_includes mark.style("mask-image").fetch("mask-image"), "/glutton-mark.svg"
+    assert_equal score.style("color").fetch("color"), mark.style("background-color").fetch("background-color")
+    tooltip = "##{score["aria-describedby"]}"
+    label = I18n.t("recommendations.match.label")
+    assert_no_selector tooltip
+    score.hover
+    assert_selector tooltip, exact_text: label
+    find(".recommendation-details h2").hover
+    assert_no_selector tooltip
+    score.send_keys(:shift)
+    assert_selector tooltip, exact_text: label
+
+    [ 1400, 390 ].each do |width|
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
+      score_rect = score.rect
+      [ "tmdb", "wikipedia" ].each do |source|
+        link = find_link(I18n.t("registry.film_presentation.#{source}")).rect
+        assert_in_delta score_rect.y + score_rect.height / 2.0, link.y + link.height / 2.0, 1
+        assert_operator link.x, :>, score_rect.x + score_rect.width
+      end
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
   test "expanding a trailer fills the card and keeps the same player" do
     film = Registry::Film.create!(title: "A recommendation with a trailer", tmdb_metadata: { details: {
       overview: "A visitor arrives in a town where nobody goes out after dark.",
@@ -60,6 +106,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     unlock_recommendations_for(user: Identity::Session.last.user)
     visit recommendation_path
     assert_selector "h2", text: film.title
+    assert_selector ".recommendation-match", exact_text: I18n.t("recommendations.match.limited")
 
     player = find("#recommendation-trailer-player")
     original_width = player.rect.width

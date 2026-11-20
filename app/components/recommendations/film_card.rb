@@ -1,7 +1,7 @@
 module Recommendations
   class FilmCard < Shared::Base
-    def initialize(film:, readonly: false)
-      @film, @readonly = film, readonly
+    def initialize(film:, match_percentage: nil, readonly: false)
+      @film, @match_percentage, @readonly = film, match_percentage, readonly
     end
 
     def view_template
@@ -12,7 +12,10 @@ module Recommendations
         div(class: "recommendation-artwork") { render ::Registry::FilmPoster.new(film: @film) }
         div(class: "recommendation-details") do
           h2 { render ::Registry::FilmTitle.new(film: @film) }
-          render ::Registry::FilmLinks.new(film: @film, readonly: @readonly)
+          div(class: "recommendation-metadata") do
+            match_score if @match_percentage.present? || !@readonly
+            render ::Registry::FilmLinks.new(film: @film, readonly: @readonly)
+          end
           overview = details.overview
           p(class: "recommendation-synopsis") { overview } if overview.present?
         end
@@ -37,6 +40,19 @@ module Recommendations
     end
 
     private
+
+    def match_score
+      unless @match_percentage.present?
+        return p(class: "recommendation-match recommendation-match-limited") { t("recommendations.match.limited") }
+      end
+
+      tooltip_id = "recommendation-match-tooltip-#{@film.id}" unless @readonly
+      p(class: "recommendation-match", tabindex: ("0" if tooltip_id.present?), aria: ({ describedby: tooltip_id } if tooltip_id.present?)) do
+        span(class: "recommendation-match-mark", aria: { hidden: "true" })
+        span(class: "recommendation-match-value") { t("recommendations.match.percentage", percentage: @match_percentage) }
+        span(id: tooltip_id, role: "tooltip") { t("recommendations.match.label") } if tooltip_id.present?
+      end
+    end
 
     def response_action(url:, params:, &block)
       if @readonly

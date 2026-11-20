@@ -61,7 +61,7 @@ class Ratings::AssessRatingQualitiesJobTest < ActiveSupport::TestCase
       assert perform_next.retried?
       assert_nil jobs.find_by!(active_job_id: duplicate.job_id).finished_at
       { "model" => "jev-1.14.0", "usage" => { "input_tokens" => 10, "output_tokens" => 2 },
-        "answers" => questions.keys.index_with({ "type" => "noul", "noul" => 0.9 }) }
+        "answers" => questions.keys.index_with { |id| { "type" => "noul", "noul" => (id.end_with?("_reinforces") ? 0.9 : 0.1) } } }
     end
 
     assert_nil perform_next.unhandled_error

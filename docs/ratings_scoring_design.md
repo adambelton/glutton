@@ -39,24 +39,24 @@ Read [Rating quality assessment](#rating-quality-assessment) for how a rating be
 
 Classification applies to a rating quality, not to the shared quality globally.
 
-| Classification | Evidence | Association |
-| --- | --- | --- |
-| Unexpressed | The overall rating supplies the evidence; no applicable evidence from notes or profile interpretation. | Rating and quality; no applicable notes. |
-| Implicitly expressed | The user's current taste profile provides applicable evidence, without direct evidence in the notes for this rating quality. | Rating and quality; interpreted using the current taste profile, with no applicable notes. |
-| Explicitly expressed | The notes on this rating directly address the quality. | Rating, quality and the source rating’s notes. |
+| Classification | Evidence |
+| --- | --- |
+| Unexpressed | The overall film rating supplies the baseline. |
+| Implicitly expressed | The Glutton Profile supports a judgment about the exact quality, or the notes support a judgment about its execution in this film. |
+| Explicitly expressed | The notes directly address the underlying quality. |
 
-Classification identifies the source of evidence. For the initial release, applicable direct judgments follow the direction of the overall rating. Explicit evidence takes precedence over profile interpretation, and the overall rating supplies the baseline for qualities without applicable interpreted evidence.
+| Rating | Unexpressed | Profile reinforces | Direct reinforcement | Direct exception |
+| --- | ---: | ---: | ---: | ---: |
+| Brilliant | +2 | +3 | +5 | −5 |
+| Pretty Good | +1 | +3 | +5 | −5 |
+| Not For Me | −1 | −3 | −5 | +5 |
+| Garbage | −2 | −3 | −5 | +5 |
 
-| Rating | Unexpressed | Implicitly expressed | Explicitly expressed |
-| --- | ---: | ---: | ---: |
-| Brilliant | +2 | +4 | +5 |
-| Pretty Good | +1 | +2 | +3 |
-| Not For Me | −1 | −2 | −3 |
-| Garbage | −2 | −4 | −5 |
+A direct judgment about the underlying quality takes precedence. Explicitly ruling a quality out yields zero points. Strong profile evidence can reinforce the rating or yield zero points when it rules out the quality or supports an exception. A clear criticism of film-specific execution yields zero points. Praise of execution in a positively rated film yields +3. Praise of execution in a negatively rated film falls through to the profile or baseline.
 
 ## Rating quality assessment
 
-After a rating is submitted or revised, the assessment job uses the latest completed taste profile available when it starts. Each applicable quality gets the weight for its evidence classification and the overall rating value.
+After a rating is submitted or revised, the assessment job uses the latest completed taste profile available when it starts. Each quality gets points based on the accepted judgment and the overall rating value.
 
 ### From submission to applied scores
 
@@ -77,7 +77,7 @@ sequenceDiagram
     Queue->>Job: Run assessment for the saved rating
     Job->>Job: Capture accepted film qualities and latest completed profile
     opt Notes are present
-        Job->>JEV: Check which qualities the notes address
+        Job->>JEV: Assess the underlying qualities and their execution in the notes
         JEV-->>Job: Explicit judgments
     end
     opt Profile text and qualities without direct evidence
@@ -99,11 +99,11 @@ flowchart TD
     C --> D{"Current rating, accepted qualities, and assessment needed?"}
     D -- No --> E["Skip scoring"]
     D -- Yes --> F{"Any original notes?"}
-    F -- Yes --> G["Ask JEV which qualities the notes address"]
+    F -- Yes --> G["Assess underlying qualities and execution in the notes"]
     F -- No --> H{"Profile text and qualities without direct evidence?"}
     G --> H
     H -- Yes --> I["Ask JEV which remaining qualities the profile supports"]
-    I --> J["Use implicit weight at 0.60 or above and baseline below"]
+    I --> J["Use accepted profile judgments and fall back to the baseline"]
     H -- No --> K["Use baseline for qualities without direct evidence"]
     J --> L["Build one evaluation for the complete score set"]
     K --> L
@@ -137,9 +137,9 @@ The synthesis adapter keeps the full film context and uses a 4,000,000-byte appl
 
 Score each rating using the evidence available when it is evaluated. As new evidence becomes available, reevaluate affected scores so they catch up over time. Initial scoring can start as soon as the rating is saved, and the timing of provider work depends on when the product needs the scores. Use the latest completed taste profile available when processing starts. Record the profile version used. Publishing a revision queues reevaluation of the viewer’s current ratings in the same transaction. If the profile changes during initial evaluation, the affected rating still needs to be reevaluated against the newer version.
 
-Profile changes trigger recomputation of eligible rating qualities: only unexpressed and implicitly expressed qualities. They may move between those classifications as applicability changes. Explicitly expressed qualities retain their notes provenance and are unaffected by profile-only changes. Changes to their own rating or notes are a separate reassessment concern.
+Profile changes trigger recomputation for qualities without a resolved notes judgment. Those qualities may move between the unexpressed and implicitly expressed classifications as the profile changes. A profile-only change preserves accepted notes judgments, including those about execution, with their notes provenance.
 
-Implicitly expressed qualities are interpreted against the user's current taste profile, without direct evidence in the notes. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during notes capture. Each viewer has one pending reassessment revision. Older queued jobs skip, and an in-flight job can acknowledge only its captured revision.
+Profile inference uses the viewer’s current taste profile for qualities without a resolved note judgment. This conceptual association does not require a per-quality profile foreign key or a captured pre-submission profile during notes capture. Each viewer has one pending reassessment revision. Older queued jobs skip, and an in-flight job can acknowledge only its captured revision.
 
 ### Reassessment after profile publication
 
@@ -150,8 +150,8 @@ flowchart TD
     A["Publish a new immutable profile revision"] --> B["Replace pending revision and queue a wakeup"]
     B --> P{"Is this still the pending revision?"}
     P -- No --> S["Skip before calling JEV"]
-    P -- Yes --> C{"Does the rating have an applied score set?"}
-    C -- Yes --> D["Carry forward explicit judgments and score values"]
+    P -- Yes --> C{"Does the rating have reusable notes evidence?"}
+    C -- Yes --> D["Carry forward accepted notes judgments"]
     D --> E["Recheck implicit and baseline qualities against the new profile"]
     C -- No --> F["Run the full assessment including explicit checks"]
     E --> G["Build a complete candidate linked to the new profile revision"]
@@ -161,7 +161,7 @@ flowchart TD
     H -- No --> J["Keep the applied set"]
 ```
 
-For a Brilliant rating, an explicit score of +5, an implicit score of +4, and a baseline score of +2 can become +5, +2, and +2 when the newer profile no longer supports the implicit judgment. The earlier rows stay linked to their original evaluation. The new evaluation records the source of any carried-forward explicit evidence.
+For a Brilliant rating, an explicit score of +5, an implicit score of +3, and a baseline score of +2 can become +5, +2, and +2 when the newer profile no longer supports the implicit judgment. The earlier rows stay linked to their original evaluation. The new evaluation records the source of any carried-forward explicit evidence.
 
 ### When the newer assessment finishes first
 
@@ -190,9 +190,9 @@ Apply the [AI model services design](ai_model_services_design.md) before impleme
 
 ## Evaluation persistence
 
-Ratings stores completed assessments as immutable RatingQualityEval snapshots tied to a rating version. When a profile revision is captured, the snapshot also records its ID, text, and the implicit assessment evidence. A snapshot contains the saved notes keyed by rating ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured rating IDs, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. The Ratings question template, criteria, cutoff and pair limit come from [evaluate_explicit_qualities_v1.json](../app/services/ratings/quality_scoring/evaluate_explicit_qualities_v1.json). A rating can store up to 8,000 characters of notes. With notes present, Ratings sends one explicit request with one question per accepted quality. The TypeSafe client enforces the existing 192 KiB request guard and shared per-assessment cost ceiling. The `Ratings::RatingQualityScores` model module defines the default score weights. Rating uses those weights when applying a score set. Historical scores remain stored with the evaluations that produced them. Explicit applicability uses an inclusive 0.60 threshold. Evaluations retain the actual threshold, assessment limits and non-secret provider settings alongside the questions, results and returned model. Provider adapters validate external responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
+Ratings stores completed assessments as immutable RatingQualityEval snapshots tied to a rating version. When a profile revision is captured, the snapshot also records its ID, text, and the implicit assessment evidence. A snapshot contains the saved notes keyed by rating ID, assessed quality definitions by ID, ordered calls with question and result pairs, and decisions that reference the captured rating IDs, qualities and result IDs. RatingQualityEval validates the question and result format and the references in the completed snapshot. The Ratings question template, criteria, cutoff and pair limit come from [evaluate_explicit_qualities_v1.json](../app/services/ratings/quality_scoring/evaluate_explicit_qualities_v1.json). A rating can store up to 8,000 characters of notes. With notes present, Ratings sends one request with five questions per accepted quality. Three concern the underlying quality and two concern execution. If a profile is available, Ratings sends three questions for each unresolved quality. The v1 templates say whether the viewer liked or disliked the film when asking if a quality contributed to that reaction or was an exception to it. Rails uses the exact grade to calculate the baseline. The TypeSafe client enforces the existing 192 KiB request guard and shared per-assessment cost ceiling. The `Ratings::RatingQualityScores` model module defines the default score weights. Rating uses those weights when applying a score set. Historical scores remain stored with the evaluations that produced them. An accepted judgment requires at least 0.80 support and less than 0.60 for each competing judgment in the same group. Evaluations retain the actual threshold, assessment limits and non-secret provider settings alongside the questions, results and returned model. The configured TypeSafe client validates the provider responses before assessment results reach persistence. Each recorded assessment has its own database ID. The workflow that runs an assessment owns any retry policy.
 
-Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The assessment service runs provider work before acquiring the rating-film lock. Under the lock, Ratings checks freshness, records the evaluation, and applies scores in one transaction. A candidate can apply if it is the first set or uses a strictly newer profile revision. Ratings without notes can use implicit evidence when a profile is available. With neither evidence source, scoring uses the baseline. Profile-only reassessment preserves existing explicit judgments.
+Applying an assessment creates a complete set of RatingQuality rows linked to that evaluation. Each row carries its final score and classification. The latest applied set is current. The assessment service runs provider work before acquiring the rating-film lock. Under the lock, Ratings checks freshness, records the evaluation, and applies scores in one transaction. A candidate can apply if it is the first set or uses a strictly newer profile revision. Ratings without notes can use implicit evidence when a profile is available. With neither evidence source, scoring uses the baseline. Profile-only reassessment reuses notes judgments in the current format. Ordinary reassessment recaptures earlier notes evidence when needed.
 
 Submitting or revising a rating enqueues its ID on `ratings_assessment` in the same PostgreSQL transaction. The viewer can continue once that transaction commits. GoodJob serializes queued executions per rating version. Missing or superseded versions finish without applying scores, and an already applied profile revision skips provider work. Films with no accepted qualities require no evaluation. Provider failures and interrupted executions remain visible as failed jobs without an automatic provider retry because the previous request may already have been billed. An operator can explicitly enqueue a fresh job for a still-current rating after investigating the failure and checking the budget.
 
@@ -202,7 +202,7 @@ Taste-profile synthesis/updates require an LLM call, with no assumed JEV gate. J
 
 ## Recommendation scoring
 
-Aggregate the user's rating-quality points by quality. Score each eligible recommendation candidate by summing the user's points for its associated qualities. Repeated positive evidence across films raises the matching contribution; negative evidence reduces it. This is the proposed initial additive ranking model.
+Aggregate the user's rating-quality points by quality. Score each eligible recommendation candidate by summing the user's points for its associated qualities. Repeated positive evidence across films raises the matching contribution; negative evidence reduces it. The recommendation card converts this same total to Your Glutton Match when enough rated films support enough of the candidate’s qualities.
 
 Owner clarification, 28 October 2026: qualities and categories have equal **base** treatment initially (category multiplier conceptually 1). There is no additional multiplier for global importance, narrative centrality, category prestige or JEV confidence. This does not replace the rating-strength and evidence-classification rules above; those describe a user's evidence and can produce different contributions. Film-source support probabilities are not preference scores.
 
@@ -210,7 +210,7 @@ System- or user-controlled category weighting is a possible later capability, no
 
 Reprocessing must replace derived contributions, never accumulate duplicates. Repeated mentions within a rating must not automatically multiply its contribution. Only current applicable scores contribute to current preferences; late processing of superseded inputs must not restore their contributions. The timestamped lifecycle below replaces the earlier conceptual decision to rely solely on highest-ID currentness; current rating replacement derives currentness from the highest rating ID; these proposed lifecycle fields are not implemented.
 
-Evaluate common-quality frequency and unequal numbers of film qualities before deciding on normalization. Normalization, complete weights and ranking evaluation remain future scoring work, not requirements for original notes persistence.
+Evaluate common-quality frequency and unequal numbers of film qualities before deciding on normalization. Revisit ranking normalization when there is more evaluation evidence.
 
 ## Historical ratings and quality scores
 

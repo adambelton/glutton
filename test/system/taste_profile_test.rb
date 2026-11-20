@@ -85,7 +85,7 @@ class TasteProfileTest < ApplicationSystemTestCase
     evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
       notes: {}, calls: [],
       qualities: { quality.id.to_s => { name: quality.name, match_rule: quality.match_rule, not_sufficient: quality.not_sufficient } },
-      decisions: [ { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } ]
+      decisions: [ { quality_id: quality.id, determination: nil, supporting_rating_ids: [], result_ids: [] } ]
     })
     rating.apply_quality_evaluation!(evaluation:)
 

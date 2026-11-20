@@ -136,6 +136,7 @@ class Ratings::RefreshTasteProfileTest < ActiveSupport::TestCase
     assert_match(/address the viewer directly in the second person/i, request.fetch(:instructions))
     assert_match(/keep an isolated reaction tied to the film or scene/i, request.fetch(:instructions))
     assert_match(/leave unanswered questions/i, request.fetch(:instructions))
+    assert_match(/distinguish preferences for a quality from reactions to how a particular film executed it/i, request.fetch(:instructions))
     assert_equal "1", output.dig("synthesis", "prompt", "version")
     assert_equal request.fetch(:instructions), output.dig("synthesis", "prompt", "instructions")
     assert_equal Digest::SHA256.hexdigest(request.fetch(:instructions)), output.dig("synthesis", "prompt", "sha256")

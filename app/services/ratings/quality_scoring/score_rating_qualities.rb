@@ -52,7 +52,7 @@ module Ratings
       end
 
       def assess_and_record(rating:, notes:, qualities:, profile_revision:, trace_id:, explicit_evidence:)
-        assessment = EvaluateRatingQualities.new(notes:, qualities:, profile_revision_id: profile_revision&.id,
+        assessment = EvaluateRatingQualities.new(notes:, qualities:, rating_value: rating.value, profile_revision_id: profile_revision&.id,
           profile: profile_revision&.profile, trace_id:, explicit_evidence:).call(client: @client)
         record_and_apply(rating:, assessment:)
       rescue Errors::QualityAssessmentFailed => error
@@ -60,7 +60,7 @@ module Ratings
         return unless rating.can_assess_qualities_for?(profile_revision.id)
 
         explicit_evidence = rating.quality_evidence_for_reassessment
-        assessment = EvaluateRatingQualities.new(notes:, qualities:, profile_revision_id: profile_revision.id,
+        assessment = EvaluateRatingQualities.new(notes:, qualities:, rating_value: rating.value, profile_revision_id: profile_revision.id,
           profile: profile_revision.profile, trace_id:, explicit_evidence:, previous_assessment: assessment).call(client: @client)
         record_and_apply(rating:, assessment:)
       end

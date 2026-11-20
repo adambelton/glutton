@@ -9,7 +9,7 @@ module Views
       def view_template
         page(title: t("recommendations.title"), heading_outside_card: true) do
           if @film.present?
-            render ::Recommendations::FilmCard.new(film: @film)
+            render ::Recommendations::FilmCard.new(film: @film, match_percentage: @result.match_percentage)
           elsif @result.unlocked?
             p(class: "ui-empty") { t("recommendations.empty") }
           else

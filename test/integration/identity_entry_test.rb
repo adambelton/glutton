@@ -69,6 +69,10 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_equal [ @film.title, "The Thing (1982)", "The Substance (2024)" ], ratings.map { |panel| panel.at_css("h2").text }
     recommendations = document.css('[aria-labelledby="recommendations-preview-heading"] .demo-frame')
     assert_equal [ "Ring (1998)", "The Witch (2016)", "Backrooms (2026)" ], recommendations.map { |panel| panel.at_css("h2").text }
+    assert_equal [ "91%", "87%", "82%" ], recommendations.map { |panel| panel.at_css(".recommendation-match-value").text }
+    assert_select '[aria-labelledby="recommendations-preview-heading"]' do
+      assert_select '[role="tooltip"], .recommendation-match[tabindex], .recommendation-match[aria-describedby]', count: 0
+    end
     assert_select '[aria-labelledby="ratings-preview-heading"] .demo-dot', count: 3
     assert_select '[aria-labelledby="recommendations-preview-heading"] .demo-dot', count: 3
     assert_select '[aria-labelledby="library-preview-heading"] .demo-dot', count: 0

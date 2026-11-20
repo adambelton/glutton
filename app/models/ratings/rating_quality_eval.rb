@@ -12,15 +12,14 @@ module Ratings
 
     def quality_evidence
       decisions = output.fetch("decisions")
-      unless decisions.map { |decision| decision.fetch("quality_id").to_s }.uniq.size == decisions.size
+      quality_ids = output.fetch("qualities").keys.map(&:to_i)
+      direct = decisions.to_h { |decision| decision.values_at("quality_id", "determination") }
+      unless direct.size == decisions.size && direct.keys.sort == quality_ids.sort
         raise Errors::QualityApplicationUnavailable
       end
 
-      {
-        quality_ids: output.fetch("qualities").keys.map(&:to_i),
-        explicit_ids: decisions.select { |decision| decision.fetch("applicable") }.pluck("quality_id").map(&:to_i),
-        implicit_ids: output.dig("implicit_assessment", "applicable_quality_ids") || []
-      }
+      inferred = output.dig("implicit_assessment", "determinations") || {}
+      { quality_ids:, direct:, inferred: inferred.transform_keys(&:to_i) }
     end
 
     def profile_revision_id
@@ -36,13 +35,11 @@ module Ratings
       output["explicit_source_evaluation_id"]
     end
 
-    def explicit_source_id
-      inherited_explicit_evaluation_id || id
-    end
-
     def explicit_evidence_for_reassessment
+      return unless output.dig("question_policy", "questions").present?
+
       output.slice("notes", "qualities", "calls", "decisions", "question_policy", "minimum_support",
-        "configuration", "model", "usage").merge("explicit_source_evaluation_id" => explicit_source_id)
+        "configuration", "model", "usage").merge("explicit_source_evaluation_id" => inherited_explicit_evaluation_id || id)
     end
 
     def readonly?
@@ -62,18 +59,17 @@ module Ratings
       return false unless valid_notes?(notes) && valid_qualities?(qualities)
       return false unless decisions.is_a?(Array) && decisions.present?
 
-      return false unless valid_implicit_assessment?(qualities, decisions)
+      direct = QualityScoring::InterpretQualityEvidence::PREFERENCE_QUESTIONS + QualityScoring::InterpretQualityEvidence::EXECUTION_QUESTIONS
+      probabilities = probabilities_by_id(calls)
+      return false unless probabilities
 
-      if notes.empty?
-        return calls == [] && decisions.all? do |decision|
-          valid_decision?(decision, notes, qualities, [])
-        end
-      end
+      policy = output["question_policy"]
+      expected_ids = notes.present? ? qualities.keys.flat_map { |id| direct.map { |judgment| "notes_#{rating.id}_quality_#{id}_#{judgment}" } } : []
+      return false unless probabilities.keys.sort == expected_ids.sort
+      return false if notes.present? && !valid_policy?(policy, direct)
 
-      question_ids = assessment_question_ids(calls)
-      return false unless question_ids
-
-      decisions.all? { |decision| valid_decision?(decision, notes, qualities, question_ids) }
+      decisions.all? { |decision| valid_decision?(decision, notes, qualities, probabilities, direct, policy) } &&
+        valid_implicit_assessment?(qualities, decisions)
     end
 
     def valid_implicit_assessment?(qualities, decisions)
@@ -82,46 +78,48 @@ module Ratings
       implicit = output["implicit_assessment"]
       return false unless implicit.is_a?(Hash)
 
-      revision_id, profile, calls, applicable_ids = implicit.values_at(
-        "profile_revision_id", "profile", "calls", "applicable_quality_ids")
-      return false unless revision_id.is_a?(Integer) && profile.is_a?(String) && applicable_ids.is_a?(Array)
+      revision_id, profile, calls, determinations, policy = implicit.values_at(
+        "profile_revision_id", "profile", "calls", "determinations", "question_policy")
+      return false unless revision_id.is_a?(Integer) && profile.is_a?(String) && determinations.is_a?(Hash)
       return false unless TasteProfileRevision.joins(:taste_profile)
         .exists?(id: revision_id, profile:, taste_profiles: { user_id: rating.rating_film.user_id })
-      return false unless decisions.all? { |decision| decision.is_a?(Hash) }
 
-      explicit_ids = decisions.select { |decision| decision["applicable"] }.pluck("quality_id").map(&:to_s)
-      eligible_ids = qualities.keys - explicit_ids
-      return calls == [] && applicable_ids.empty? if profile.blank? || eligible_ids.empty?
-      return false unless calls.is_a?(Array) && calls.size == 1
-      return false unless assessment_question_ids(calls)&.sort == eligible_ids.sort
+      direct_ids = decisions.filter_map { |decision| decision.fetch("quality_id").to_s if decision["determination"].present? }
+      eligible_ids = profile.present? ? qualities.keys - direct_ids : []
+      judgments = QualityScoring::InterpretQualityEvidence::PREFERENCE_QUESTIONS
+      return calls == [] && determinations.empty? if eligible_ids.empty?
 
-      threshold = implicit.dig("question_policy", "minimum_support") if implicit["question_policy"].is_a?(Hash)
-      return false unless threshold.is_a?(Numeric) && threshold.between?(0, 1)
+      probabilities = probabilities_by_id(calls)
+      expected_ids = eligible_ids.flat_map { |id| judgments.map { |judgment| "quality_#{id}_#{judgment}" } }
+      return false unless probabilities && probabilities.keys.sort == expected_ids.sort && valid_policy?(policy, judgments)
 
-      exchanges = calls.first
-      return false unless exchanges.all? do |exchange|
+      determinations == eligible_ids.filter_map do |id|
+        answers = judgments.index_with { |judgment| probabilities.fetch("quality_#{id}_#{judgment}") }
+        determination = QualityScoring::InterpretQualityEvidence.call(probabilities: answers, policy:, positive: false)
+        [ id, determination ] if determination.present?
+      end.to_h
+    end
+
+    def probabilities_by_id(calls)
+      return unless calls.is_a?(Array) && calls.all? { |call| call.is_a?(Array) && call.present? }
+
+      exchanges = calls.flatten(1)
+      return unless exchanges.all? do |exchange|
+        next false unless exchange.is_a?(Hash) && exchange["id"].is_a?(String) && exchange["question"].present?
+
         result = exchange["result"]
         result.is_a?(Hash) && result["noul"].is_a?(Numeric) && result["noul"].between?(0, 1)
       end
 
-      applicable_ids == exchanges.filter_map do |exchange|
-        exchange.fetch("id").to_i if exchange.fetch("result").fetch("noul") >= threshold
-      end
+      probabilities = exchanges.to_h { |exchange| [ exchange.fetch("id"), exchange.fetch("result").fetch("noul") ] }
+      probabilities if probabilities.size == exchanges.size
     end
 
-    def assessment_question_ids(calls)
-      return unless calls.is_a?(Array) && calls.present? && calls.all? { |call| call.is_a?(Array) && call.present? }
+    def valid_policy?(policy, judgments)
+      return false unless policy.is_a?(Hash) && policy["questions"].is_a?(Hash) && policy["questions"].keys.sort == judgments.sort
 
-      exchanges = calls.flatten(1)
-      return unless exchanges.all? { |exchange| valid_exchange?(exchange) }
-
-      question_ids = exchanges.pluck("id")
-      question_ids if question_ids.uniq.size == question_ids.size
-    end
-
-    def valid_exchange?(exchange)
-      exchange.is_a?(Hash) && exchange["id"].is_a?(String) && exchange["id"].present? &&
-        exchange["question"].present? && exchange.key?("result")
+      high, competing = policy.values_at("minimum_support", "competing_support")
+      high.is_a?(Numeric) && competing.is_a?(Numeric) && competing.between?(0, high) && high <= 1
     end
 
     def valid_notes?(notes)
@@ -136,16 +134,21 @@ module Ratings
       end
     end
 
-    def valid_decision?(decision, notes, qualities, question_ids)
-      return false unless decision.is_a?(Hash)
+    def valid_decision?(decision, notes, qualities, probabilities, judgments, policy)
+      return false unless decision.is_a?(Hash) && decision.key?("determination")
 
-      quality_id, applicable, supporting_ids, result_ids = decision.values_at(
-        "quality_id", "applicable", "supporting_rating_ids", "result_ids")
-      qualities.key?(quality_id.to_s) && [ true, false ].include?(applicable) &&
-        supporting_ids.is_a?(Array) && applicable == supporting_ids.present? &&
-        supporting_ids.all? { |id| notes.key?(id.to_s) } &&
-        result_ids.is_a?(Array) && (notes.empty? ? result_ids.empty? : result_ids.present?) &&
-        (result_ids - question_ids).empty?
+      quality_id, determination, supporting_ids, result_ids = decision.values_at(
+        "quality_id", "determination", "supporting_rating_ids", "result_ids")
+      return false unless quality_id.is_a?(Integer) && qualities.key?(quality_id.to_s)
+      return determination.nil? && supporting_ids == [] && result_ids == [] if notes.empty?
+
+      ids = judgments.index_with { |judgment| "notes_#{rating.id}_quality_#{quality_id}_#{judgment}" }
+      return false unless result_ids.is_a?(Array) && result_ids.sort == ids.values.sort
+
+      answers = ids.transform_values { |id| probabilities.fetch(id) }
+      expected = QualityScoring::InterpretQualityEvidence.call(probabilities: answers, policy:,
+        positive: RatingQualityScores::UNEXPRESSED.fetch(rating.value).positive?)
+      determination == expected && supporting_ids == (expected.present? ? [ rating.id ] : [])
     end
   end
 end

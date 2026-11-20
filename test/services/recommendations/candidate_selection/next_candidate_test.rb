@@ -30,7 +30,7 @@ class Recommendations::NextCandidateTest < ActiveSupport::TestCase
   def record_evaluation(rating:, quality:)
     Ratings::RatingQualityEval.create!(rating:, input: [], output: {
       notes: {}, qualities: { quality.id.to_s => { name: quality.name, match_rule: nil, not_sufficient: nil } },
-      calls: [], decisions: [ { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } ]
+      calls: [], decisions: [ { quality_id: quality.id, determination: nil, supporting_rating_ids: [], result_ids: [] } ]
     })
   end
 
@@ -62,17 +62,15 @@ class Recommendations::NextCandidateTest < ActiveSupport::TestCase
     Recommendations::RecommendationFilm.new(user: @user, film: evidence).suppress!
 
     qualities = [ @positive, implicit_quality, @negative ]
-    output = {
-      notes: { rating.id.to_s => rating.notes },
-      qualities: qualities.to_h { |quality| [ quality.id.to_s, { name: quality.name, match_rule: nil, not_sufficient: nil } ] },
-      calls: [ qualities.map { |quality| { id: quality.id.to_s, question: "Is this quality in the notes?", result: {} } } ],
-      decisions: qualities.map do |quality|
-        explicit = quality == @positive
-        { quality_id: quality.id, applicable: explicit, supporting_rating_ids: explicit ? [ rating.id ] : [], result_ids: [ quality.id.to_s ] }
-      end
-    }
-    first = Ratings::RatingQualityEval.create!(rating:, input: [], output:)
-    assert rating.apply_quality_evaluation!(evaluation: first)
+    client = Object.new
+    client.define_singleton_method(:configuration) { { "model" => "fixture" } }
+    accepted = [ "notes_#{rating.id}_quality_#{@positive.id}_reinforces", "quality_#{implicit_quality.id}_reinforces" ]
+    client.define_singleton_method(:answer) do |questions:, **|
+      { "model" => "fixture", "usage" => { "input_tokens" => 0, "output_tokens" => 0 },
+        "answers" => questions.keys.index_with { |id| { "type" => "noul", "noul" => (accepted.include?(id) ? 0.95 : 0.05) } } }
+    end
+    first = Ratings::QualityScoring::ScoreRatingQualities.call(rating_id: rating.id, client:, tracer_provider: nil)
+    assert_equal 3, first.rating_qualities.size
 
     profile = Ratings::TasteProfile.create!(user: @user)
     profile_evaluation = Ratings::TasteProfileRevisionEval.create!(taste_profile: profile, input: [], output: {
@@ -82,22 +80,17 @@ class Recommendations::NextCandidateTest < ActiveSupport::TestCase
       trace_id: nil
     })
     revision = profile.publish_revision!(evaluation: profile_evaluation)
-    newest = Ratings::RatingQualityEval.create!(rating:, input: [], output: output.merge(explicit_source_evaluation_id: first.id, implicit_assessment: {
-      profile_revision_id: revision.id, profile: revision.profile,
-      calls: [ [ { id: implicit_quality.id.to_s, question: "Is quiet supported?", result: { noul: 0.9 } },
-        { id: @negative.id.to_s, question: "Are rapid cuts supported?", result: { noul: 0.1 } } ] ],
-      applicable_quality_ids: [ implicit_quality.id ], question_policy: { minimum_support: 0.6 }
-    }))
-    assert rating.apply_quality_evaluation!(evaluation: newest)
-    Ratings::RatingQualityEval.create!(rating:, input: [], output:)
+    newest = Ratings::QualityScoring::ScoreRatingQualities.call(rating_id: rating.id, client:, tracer_provider: nil)
+    assert_equal revision.id, newest.profile_revision_id
+    Ratings::RatingQualityEval.create!(rating:, input: [], output: first.output)
 
     4.times { assess(quality: @negative, value: "garbage") }
     expected = film("All qualities", *qualities)
     result = next_candidate
     assert_equal expected, result.film
     assert_equal 5, result.assessed_film_count
-    assert_equal({ @positive.id => 5, implicit_quality.id => 4, @negative.id => -6 }, result.candidate.contributions)
-    assert_equal 3, result.candidate.score
+    assert_equal({ @positive.id => 5, implicit_quality.id => 3, @negative.id => -6 }, result.candidate.contributions)
+    assert_equal 2, result.candidate.score
   end
 
   test "a pending revision drops the old scores from the threshold and unapplied evaluations do not unlock" do

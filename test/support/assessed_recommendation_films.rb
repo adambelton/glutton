@@ -18,7 +18,7 @@ module AssessedRecommendationFilms
   def apply_recommendation_assessment(rating:, quality:)
     evaluation = Ratings::RatingQualityEval.create!(rating:, input: [], output: {
       notes: {}, qualities: { quality.id.to_s => { name: quality.name, match_rule: nil, not_sufficient: nil } },
-      calls: [], decisions: [ { quality_id: quality.id, applicable: false, supporting_rating_ids: [], result_ids: [] } ]
+      calls: [], decisions: [ { quality_id: quality.id, determination: nil, supporting_rating_ids: [], result_ids: [] } ]
     })
     rating.apply_quality_evaluation!(evaluation:)
   end
