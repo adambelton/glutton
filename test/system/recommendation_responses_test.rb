@@ -7,7 +7,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
   test "navigation explains the lock on keyboard focus and unlocks after assessment" do
     visit recommendation_path
     click_button I18n.t("identity.entry.try_it_out")
-    locked_link = find('.ui-nav [role="link"][aria-disabled="true"]')
+    locked_link = find('.ui-nav [aria-describedby="recommendations-nav-tooltip"][aria-disabled="true"]')
     assert_no_link I18n.t("recommendations.title")
     locked_link.send_keys(:shift)
     tooltip = find('[role="tooltip"]', text: I18n.t("recommendations.navigation_locked", required: 5))
@@ -39,7 +39,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     Registry::FilmQuality.create!(film: pending_film, quality:)
     rating = Ratings::RatingFilm.create!(user:, film: pending_film).submit_rating!(value: Ratings::Rating::Values::BRILLIANT)
     visit library_path
-    assert_selector '.ui-nav [role="link"][aria-disabled="true"]'
+    assert_selector '.ui-nav [aria-describedby="recommendations-nav-tooltip"][aria-disabled="true"]'
     option = ".ui-primary-navigation option[value='#{recommendation_path}']"
     assert_selector "#{option}[disabled]", visible: :all
 
@@ -100,15 +100,24 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
       overview: "A visitor arrives in a town where nobody goes out after dark.",
       videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
     } })
-    visit recommendation_path
-    click_button I18n.t("identity.entry.try_it_out")
+    password = "a long test password"
+    user = Identity::UserRegistered.create!(email_address: "trailer-member@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current)
+    unlock_recommendations_for(user:)
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: user.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    visit account_settings_path
+    page.execute_script("window.trailerTestStartedInAccount = true")
+    within(".ui-nav") { click_link I18n.t("recommendations.title") }
     assert_current_path recommendation_path
-    unlock_recommendations_for(user: Identity::Session.last.user)
-    visit recommendation_path
+    assert page.evaluate_script("window.trailerTestStartedInAccount")
     assert_selector "h2", text: film.title
     assert_selector ".recommendation-match", exact_text: I18n.t("recommendations.match.limited")
 
-    player = find("#recommendation-trailer-player")
+    player = find('#recommendation-trailer-player[referrerpolicy="strict-origin-when-cross-origin"]')
     original_width = player.rect.width
     original_height = find(".recommendation-film").rect.height
     expand = find_button(I18n.t("recommendations.expand_trailer"))

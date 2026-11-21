@@ -7,6 +7,9 @@ Rails.application.routes.draw do
 
   get "privacy", to: "privacy_notices#show", as: :privacy_notice
   get "terms", to: "terms_of_service#show", as: :terms_of_service
+  get "community/code-of-conduct", to: "community/code_of_conduct#show", as: :community_code_of_conduct
+  get "community", to: "community/onboarding#show", as: :community
+  post "community/code-of-conduct/acceptance", to: "community/onboarding#accept", as: :community_code_of_conduct_acceptance
 
   resource :registration, only: [ :new, :create, :show ]
   resource :registration_email, only: :create
@@ -27,6 +30,8 @@ Rails.application.routes.draw do
 
   get "account", to: redirect("/account/settings", status: 302), as: :account
   get "account/settings", to: "account_settings#show", as: :account_settings
+  get "account/community", to: "account_settings#show_community", as: :account_community
+  patch "account/community/username", to: "account_settings#change_community_username", as: :account_community_username
   get "account/taste-profile", to: "account#show", as: :account_taste_profile
   post "account/refresh_taste_profile", to: "account#refresh_taste_profile", as: :refresh_taste_profile_account
   post "account/email", to: "account_settings#request_email", as: :account_email

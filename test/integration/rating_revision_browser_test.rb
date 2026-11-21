@@ -37,6 +37,10 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       get edit_rating_path(film_id: @film.id)
       assert_response :success
+      assert_select "main > h1 + .ui-page-body.ui-card", count: 1
+      assert_select "main h1", text: I18n.t("ratings.browser.title"), count: 1
+      assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", library_path(view: "watched"),
+        text: I18n.t("library.browser.return")
       assert_select 'input[name="_method"][value="patch"]'
       assert_select 'input[name="previous_rating_id"][value=?]', latest.id.to_s
       assert_select "input[checked][value=?]", latest.value
@@ -82,9 +86,14 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       revise(token:, notes: { bad: "shape" })
       assert_response :unprocessable_entity
+      assert_select "main > h1", text: I18n.t("ratings.browser.title")
       assert_select 'input[name="previous_rating_id"][value=?]', @original.id.to_s
       revise(token:)
       assert_response :conflict
+      assert_select "main > h1 + .ui-page-body.ui-card", count: 1
+      assert_select "main h1", text: I18n.t("ratings.browser.title"), count: 1
+      assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", library_path(view: "watched"),
+        text: I18n.t("library.browser.return")
       assert_select '[role="alert"]', I18n.t("ratings.errors.stale_rating")
       assert_select "a[href=?]", edit_rating_path(film_id: @film.id)
     end

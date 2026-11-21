@@ -37,6 +37,10 @@ Library stores Watchlist and Watched entries. Marking a film Watched makes it av
 
 A separate conversational reflection interface is a possible future feature, not required for the core product or initial architecture. Community editing, streaming availability, donations and affiliate integrations are also later concerns.
 
+### Participate in Community
+
+Community Endorsements launches with request posts on the Community board. Each request has film nominations ordered by endorsement count and optional conversations that begin with an endorsement comment. Film Debrief follows, with one spoiler-friendly post per film and branching replies. The preferred direction is a shared board for both post types. Each type uses Community’s comment mechanics and supplies its own access and lifecycle rules. See the [launch architecture](community_endorsements_architecture.md).
+
 ## 3. Proposed system shape
 
 Use a cohesive Ruby on Rails application backed by PostgreSQL. Initial scaffolding uses server-rendered views and Hotwire; the scoped implementation plan records the delivery sequence. No current behaviour requires independently deployed services.
@@ -65,6 +69,7 @@ Boundaries follow distinct activities and their language, not a generic user–f
 | Library | Canonical user–film relationship: Watchlist and Watched; library management | Does not own purpose-specific presentation histories, ratings or inferred preferences |
 | Ratings | Rating presentations and responses, ratings, original expressions, scoring, taste profiles and inferred preferences | Rating submission, scoring and profile building are distinct capabilities; Ratings publishes completed-viewing facts and explicit Library action requests |
 | Recommendations | Selection, eligibility, ranking, explanations, presentation and response history | Maintains projections from Library/Rating events; publishes response choices without owning Library state |
+| Community | Requests, nominations, endorsements, conversations, reporting, moderator roles and moderation UI | Moderation is authorized and served within Community, independently of site Admin. Uses Registry film identity, Library Watched state, Identity membership and public profiles, and Recommendations match context through the [launch design](community_endorsements_architecture.md#domain-ownership) |
 
 Owner clarification, 26 October 2026: domain boundaries are ownership boundaries, not read-access barriers. All domains may read the shared database, including another domain’s models/scopes, while respecting session/user access controls. Each domain owns its mutations, invariants and lifecycle. Read-only presentation queries do not require event-derived copies or new provider/consumer tasks. Durable events remain the agreed mechanism for existing cross-domain state-changing reactions; this clarification does not replace those workflows. For example, Library derives rated/awaiting-rating display from Ratings-owned records without storing its own rated flag.
 

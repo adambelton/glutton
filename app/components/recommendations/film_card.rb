@@ -85,7 +85,7 @@ module Recommendations
 
     def trailer_player(video_id:)
       iframe(id: "recommendation-trailer-player", src: "https://www.youtube.com/embed/#{video_id}", title: t("recommendations.trailer_for", title: @film.title),
-        loading: "lazy", allowfullscreen: true)
+        loading: "lazy", allowfullscreen: true, referrerpolicy: "strict-origin-when-cross-origin")
       render Shared::IconButton.new(variant: :plain, class: "recommendation-trailer-toggle", hidden: true,
         aria: { controls: "recommendation-trailer-player", expanded: "false", label: t("recommendations.expand_trailer") },
         data: { recommendation_trailer_target: "toggle", action: "recommendation-trailer#toggle",

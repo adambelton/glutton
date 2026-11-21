@@ -2,7 +2,7 @@
 
 **Status:** Project kickoff / product definition  
 **Date:** 18 October 2026 (updated after product and architecture discussion)  
-**Updated:** 17 November 2026 — post-film journaling engagement goal  
+**Updated:** 21 November 2026 — Community launch direction  
 **Working title:** Glutton (provisional; naming and domain purchase deferred until after MVP)  
 **Audience:** Product owner and implementation/architecture collaborators (including Codex)
 
@@ -268,9 +268,16 @@ Test coverage (important characteristics captured), overlap (meaningful similari
 - A separate conversational reflection or rewatch experience is an optional future experiment, not a committed milestone.
 - More expressive recommendations and richer feedback, including optional rejection reasons, where evidence justifies it.
 
+**Community launch**
+
+- **Community Endorsements** launches on the Community board. Members describe a horror experience in a request, nominate films and endorse nominations. Endorsements can start spoiler-free conversations, and the requester sees their own Glutton Match where available. Members can add nominated films to their own Watchlist or mark them Watched. Requesters can share feedback by editing an open unprotected request or appending an update to an open protected request. See the [launch architecture](community_endorsements_architecture.md).
+- **Film Debrief** follows. Each film can have one spoiler-friendly post with branching conversations for members who have marked it Watched. The preferred direction is to show debriefs and requests on the same Community board. Community contributions are deliberate and separate from private ratings, notes and profiles. See the [social and community direction](glutton-social-community-direction.md).
+- **Community posting** requires explicit acceptance of the release Code of Conduct and a chosen public username and avatar. Members can choose a Glutton avatar or upload their own. Confirmed members can browse before completing this setup. See [Community onboarding](community_endorsements_architecture.md#community-onboarding).
+- **Community moderation** launches with its own moderator role and workspace outside site Admin. The owner can grant and revoke the role. Moderators can review reports and apply Community content and member restrictions. See [Moderation and deletion](community_endorsements_architecture.md#moderation-and-deletion).
+
 **Explicitly out of scope initially**
 
-- User-edited analyses and community moderation/reputation systems.
+- User-edited film analyses and member reputation systems. Community launch moderation is part of Endorsements.
 - Separate objective film-quality ratings.
 - Forced positive-and-negative characteristic capture for every film.
 - Social following, shared viewing and broad film coverage beyond horror.

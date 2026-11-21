@@ -6,17 +6,22 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
   setup do
     @forgery_protection = AccountSettingsController.allow_forgery_protection
+    @session_forgery_protection = SessionsController.allow_forgery_protection
     AccountSettingsController.allow_forgery_protection = true
+    SessionsController.allow_forgery_protection = true
     AccountSettingsController::RATE_LIMIT_STORE.clear
+    SessionsController::RATE_LIMIT_STORE.clear
     @previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example"
-    @user = registered_user("settings@example.test")
+    @user = registered_user("settings@example.test", superuser: true)
   end
 
   teardown do
     ENV["APP_ORIGIN"] = @previous_origin
     AccountSettingsController.allow_forgery_protection = @forgery_protection
+    SessionsController.allow_forgery_protection = @session_forgery_protection
     AccountSettingsController::RATE_LIMIT_STORE.clear
+    SessionsController::RATE_LIMIT_STORE.clear
   end
 
   test "account settings reject signed-out viewers and guests" do
@@ -25,6 +30,113 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     sign_in(Identity::UserGuest.create!)
     get account_settings_path
     assert_response :forbidden
+  end
+
+  test "a member signs in with email and claims and changes only their own public username" do
+    other = registered_user("someone-else@example.test")
+    get new_session_path
+    post session_path, params: { email_address: @user.email_address, password: PASSWORD, authenticity_token: csrf_token(session_path) }
+    assert_response :see_other
+
+    get account_settings_path
+    assert_response :success
+    assert_select ".account-tabs a[href='#{account_community_path}']", text: I18n.t("community.title")
+    assert_select "input#community_username", count: 0
+
+    get account_community_path
+    assert_response :success
+    assert_select ".account-tabs a[aria-current=page][href='#{account_community_path}']"
+    assert_select 'input#community_username[autocomplete="off"][data-bwignore="true"][data-1p-ignore="true"]', count: 1
+    assert_select "input#community_username[value]", count: 0
+    assert_select "button", text: I18n.t("identity.settings.cancel"), count: 0
+    patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
+      community_username: "Scream_Queen", user_id: other.id }
+    assert_redirected_to account_community_path
+    assert_equal "Scream_Queen", @user.reload.community_username
+    assert_nil other.reload.community_username
+
+    follow_redirect!
+    assert_select ".account-settings-field p", "Scream_Queen"
+    assert_select "button", text: I18n.t("identity.settings.community_username.change")
+    assert_select "input#community_username", count: 0
+
+    get account_community_path(edit: "username")
+    assert_select 'input#community_username[value="Scream_Queen"]'
+    assert_select "button[form='cancel-community-username']", text: I18n.t("identity.settings.cancel")
+    assert_select "form#cancel-community-username[action='#{account_community_path}'][method=get]"
+    patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
+      community_username: "scream_queen" }
+    assert_redirected_to account_community_path
+    assert_equal "scream_queen", @user.reload.community_username
+    follow_redirect!
+    assert_select ".account-settings-field p", "scream_queen"
+    assert_select "input#community_username", count: 0
+  end
+
+  test "direct username submissions require account access and CSRF" do
+    get account_community_path
+    assert_redirected_to new_session_path
+
+    get new_session_path
+    patch account_community_username_path, params: { authenticity_token: page_csrf_token, community_username: "Scream_Queen" }
+    assert_response :unauthorized
+
+    guest = Identity::UserGuest.create!
+    sign_in(guest)
+    get account_community_path
+    assert_response :forbidden
+
+    get new_session_path
+    patch account_community_username_path, params: { authenticity_token: page_csrf_token, community_username: "Scream_Queen" }
+    assert_response :forbidden
+    assert_nil guest.reload.community_username
+
+    sign_in(@user)
+    patch account_community_username_path, params: { community_username: "Scream_Queen" }
+    assert_response :unprocessable_entity
+    assert_nil @user.reload.community_username
+  end
+
+  test "username conflicts return a localized form error and preserve the saved name" do
+    other = registered_user("someone-else@example.test")
+    other.change_community_username!(community_username: "Scream_Queen")
+    @user.change_community_username!(community_username: "Old_Name")
+    sign_in(@user)
+    get account_community_path(edit: "username")
+
+    patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
+      community_username: "scream_queen" }
+
+    assert_response :unprocessable_entity
+    assert_select '[role="alert"] li', text: username_error(:taken)
+    assert_select 'input#community_username[value="scream_queen"][aria-invalid="true"]'
+    assert_select "button[form='cancel-community-username']", text: I18n.t("identity.settings.cancel")
+    assert_equal "Old_Name", @user.reload.community_username
+    assert_equal "Scream_Queen", other.reload.community_username
+  end
+
+  test "invalid or reserved username submissions leave the saved name in place" do
+    @user.change_community_username!(community_username: "Old_Name")
+    sign_in(@user)
+    get account_community_path(edit: "username")
+
+    [ [ "ab", :invalid ], [ "a" * 25, :invalid ], [ "has space", :invalid ], [ "Écho", :invalid ],
+      [ { unexpected: "valid_name" }, :invalid ], [ "GlUtToN", :reserved ], [ nil, :invalid ] ].each do |name, error|
+      patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
+        community_username: name }
+
+      assert_response :unprocessable_entity
+      assert_select '[role="alert"] li', text: username_error(error)
+      assert_equal "Old_Name", @user.reload.community_username
+    end
+
+    [ "a_1", "a" * 24 ].each do |name|
+      get account_community_path(edit: "username")
+      patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
+        community_username: name }
+      assert_redirected_to account_community_path
+      assert_equal name, @user.reload.community_username
+    end
   end
 
   test "account deletion rejects a request without a CSRF token" do
@@ -131,8 +243,8 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
   private
 
-  def registered_user(email_address)
-    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current)
+  def registered_user(email_address, superuser: false)
+    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current, superuser:)
   end
 
   def sign_in(user)
@@ -144,5 +256,15 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
   def csrf_token(action)
     Nokogiri::HTML(response.body).at_css("form[action='#{action}'] input[name=authenticity_token]")&.[]("value")
+  end
+
+  def page_csrf_token
+    Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+  end
+
+  def username_error(type)
+    attribute = I18n.t("activerecord.attributes.identity/user_registered.community_username")
+    message = I18n.t("activerecord.errors.models.identity/user_registered.attributes.community_username.#{type}")
+    "#{attribute} #{message}"
   end
 end

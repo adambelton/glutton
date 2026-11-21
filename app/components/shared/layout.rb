@@ -8,6 +8,7 @@ module Shared
 
     def view_template
       user = current_user if @account_controls
+      community_unlocked = user.present? && Community::PreviewAccess.allowed?(user:)
       wordmark_path = user.present? ? new_rating_path : root_path
       recommendations_unlocked = Recommendations::CandidateSelection::RecommendationUnlock.unlocked?(user:) if user.present?
       watch_unlock = user.present? && !recommendations_unlocked &&
@@ -22,8 +23,8 @@ module Shared
           div(class: "ui-width ui-header-inner") do
             a(href: wordmark_path, class: "wordmark", aria: { label: t("ui.wordmark") }) { t("ui.wordmark") }
             if user.present?
-              primary_navigation(user, recommendations_unlocked:)
-              mobile_navigation(user, recommendations_unlocked:)
+              primary_navigation(user, recommendations_unlocked:, community_unlocked:)
+              mobile_navigation(user, recommendations_unlocked:, community_unlocked:)
             end
             render ThemeToggle.new
             if user.nil? || user.can_register?
@@ -58,11 +59,16 @@ module Shared
 
     private
 
-    def primary_navigation(user, recommendations_unlocked:)
+    def primary_navigation(user, recommendations_unlocked:, community_unlocked:)
       nav(aria: { label: t("ui.navigation") }, class: "ui-nav ui-nav-wide") do
         a(href: new_rating_path) { t("ratings.browser.title") }
         render Recommendations::RecommendationsNavLink.new(unlocked: recommendations_unlocked)
         a(href: library_path) { t("library.browser.title") }
+        if community_unlocked
+          a(href: community_path) { t("community.title") }
+        else
+          render LockedNavigationLink.new(label: t("community.title"), tooltip: t("community.coming_soon"), tooltip_id: "community-nav-tooltip")
+        end
         a(href: account_settings_path) { t("account.title") } if user.can_view_account?
         a(href: admin_path) { t("admin.title") } if user.superuser?
       end
@@ -73,15 +79,16 @@ module Shared
       when "rating" then t("ratings.browser.title")
       when "recommendation" then t("recommendations.title")
       when "library" then t("library.browser.title")
+      when "community" then t("community.title")
       when "account" then t("account.title")
       end
     end
 
-    def mobile_navigation(user, recommendations_unlocked:)
+    def mobile_navigation(user, recommendations_unlocked:, community_unlocked:)
       current_section = request.path.split("/")[1]
       select(class: "ui-primary-navigation ui-input", aria: { label: t("ui.navigation") },
         data: { controller: "mobile-navigation", action: "change->mobile-navigation#navigate" }) do
-        option(value: "", disabled: true, selected: !%w[ rating recommendation library account ].include?(current_section)) { t("ui.navigation") }
+        option(value: "", disabled: true, selected: !%w[ rating recommendation library community account ].include?(current_section)) { t("ui.navigation") }
         navigation_option("rating", new_rating_path, t("ratings.browser.title"), current_section:)
         recommendation_label = t("recommendations.title")
         unless recommendations_unlocked
@@ -92,6 +99,11 @@ module Shared
           current_section:, disabled: !recommendations_unlocked,
           data: { recommendations_unlock_target: "option", unlocked_label: t("recommendations.title") })
         navigation_option("library", library_path, t("library.browser.title"), current_section:)
+        community_label = t("community.title")
+        unless community_unlocked
+          community_label = t("ui.locked_navigation_option", label: community_label, reason: t("community.coming_soon"))
+        end
+        navigation_option("community", community_path, community_label, current_section:, disabled: !community_unlocked)
         navigation_option("account", account_settings_path, t("account.title"), current_section:) if user.can_view_account?
         navigation_option("admin", admin_path, t("admin.title"), current_section:) if user.superuser?
       end
