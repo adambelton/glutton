@@ -24,6 +24,7 @@ module Identity
     def require_identity
       return if current_user.present?
 
+      ActivityMonitoring.current_operation_span&.set_outcome("sign_in_required")
       if request.get? && request.format.html?
         remember_entry_destination
         redirect_to new_session_path

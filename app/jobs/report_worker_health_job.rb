@@ -14,9 +14,8 @@ class ReportWorkerHealthJob < ApplicationJob
       "reassessment" => Ratings::RatingQualityReassessmentRequest.where(created_at: ..cutoff).minimum(:created_at),
       "event_delivery" => DomainEvents::EventDelivery.due.where(next_attempt_at: ..cutoff).minimum(:next_attempt_at)
     }.compact
-    return if pending.empty?
-
     span = ActivityMonitoring.current_operation_span
+    span.set_outcome(pending.empty? ? "healthy" : "overdue")
     pending.each { |kind, oldest| span.set_overdue_wait(kind, (now - oldest).to_i) }
   end
 end

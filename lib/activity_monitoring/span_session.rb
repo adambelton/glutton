@@ -18,8 +18,10 @@ module ActivityMonitoring
       finish
     end
 
-    def finish(error: nil)
-      @record.record_failure(error) if error
+    def finish(error: nil, expected_failure: false)
+      if error
+        expected_failure ? @record.record_expected_failure(error) : @record.record_failure(error)
+      end
     ensure
       OpenTelemetry::Context.detach(@token)
       @span.finish

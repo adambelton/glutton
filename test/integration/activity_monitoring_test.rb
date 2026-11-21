@@ -17,7 +17,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     @provider.shutdown
   end
 
-  test "web actions and worker hooks capture business activity without successful polling or idle scheduling" do
+  test "ordinary reads and polling export alongside business activity" do
     get root_path
     post guest_session_path
     get availability_recommendation_path
@@ -29,12 +29,74 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     2.times { get new_rating_path(film_id: film.id) }
     @provider.force_flush
     spans = @exporter.finished_spans
-    assert_equal [ "GuestSessionsController#create", "RecommendationsController#show", "RatingsController#new" ], spans.map(&:name)
+    assert_equal [ "LandingController#show", "GuestSessionsController#create", "RecommendationsController#availability",
+      "RecommendationsController#show", "RecommendationsController#show", "RatingsController#new", "RatingsController#new" ], spans.map(&:name)
     operations = spans.filter_map { |span| span.attributes[ActivityMonitoring::Attributes::OPERATION] }
     assert_equal [ ActivityMonitoring::Operations::RANK_RECOMMENDATION_FILMS, ActivityMonitoring::Operations::CREATE_RATING_FILM ], operations
   end
 
-  test "automatic candidate selection captures a queue refill and skips reads of the same candidate" do
+  test "a signed-out Community request records the response and sign-in requirement" do
+    get community_path, as: :json
+    assert_response :unauthorized
+    get community_path
+    assert_redirected_to new_session_path
+
+    @provider.force_flush
+    spans = @exporter.finished_spans.select { |span| span.name == "Community::OnboardingController#show" }
+    assert_equal [ 401, 302 ], spans.map { |span| span.attributes.fetch(OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE) }
+    assert spans.all? { |span| span.attributes[ActivityMonitoring::Attributes::OUTCOME] == "sign_in_required" }
+    assert spans.none? { |span| span.status.code == OpenTelemetry::Trace::Status::ERROR }
+  end
+
+  test "handled registration conflicts and unavailable pages record their final status" do
+    get registration_path
+    assert_response :unprocessable_entity
+    password = "a long test password"
+    user = Identity::UserRegistered.create!(email_address: "trace-registration@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current)
+    post session_path, params: { email_address: user.email_address, password: }
+    assert_response :see_other
+    get registration_path
+    assert_response :conflict
+
+    @provider.force_flush
+    spans = @exporter.finished_spans.select { |span| span.name == "RegistrationsController#show" }
+    assert_equal [ 422, 409 ], spans.map { |span| span.attributes.fetch(OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE) }
+    assert_equal %w[registration_unavailable registration_conflict], spans.map { |span| span.attributes.fetch(ActivityMonitoring::Attributes::OUTCOME) }
+    assert spans.none? { |span| span.status.code == OpenTelemetry::Trace::Status::ERROR }
+  end
+
+  test "registration form validation records the rejected input as an expected outcome" do
+    post registration_path, params: { registration: {
+      email_address: "private-registration@example.test", password: "too-short", password_confirmation: "too-short",
+      terms_accepted: "1", terms_version: Identity::TermsOfService.current.version,
+      privacy_notice_version: Identity::PrivacyNotice.current.version
+    } }
+    assert_response :unprocessable_entity
+
+    @provider.force_flush
+    operation = @exporter.finished_spans.find { |span| span.name == "Identity::Registration::StartBrowserRegistration.call" }
+    assert_equal "rejected", operation.attributes.fetch(ActivityMonitoring::Attributes::OUTCOME)
+    assert_equal "ActiveRecord::RecordInvalid", operation.attributes.fetch(ActivityMonitoring::Attributes::REJECTION_TYPE)
+    assert @exporter.finished_spans.none? { |span| span.status.code == OpenTelemetry::Trace::Status::ERROR }
+    refute_includes operation.attributes.values, "private-registration@example.test"
+  end
+
+  test "a handled dependency failure still records an error for its HTTP 503" do
+    token = ENV.delete("TMDB_API_READ_ACCESS_TOKEN")
+    post guest_session_path
+    get library_tmdb_film_search_path(query: "Alien")
+    assert_response :service_unavailable
+
+    @provider.force_flush
+    request = @exporter.finished_spans.find { |span| span.name == "Library::TmdbFilmSearchController#index" }
+    assert_equal 503, request.attributes.fetch(OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE)
+    assert_equal OpenTelemetry::Trace::Status::ERROR, request.status.code
+  ensure
+    ENV["TMDB_API_READ_ACCESS_TOKEN"] = token
+  end
+
+  test "automatic candidate selection identifies the request that refills the queue" do
     post guest_session_path
     user = Identity::UserGuest.last
     first_film = Registry::Film.create!(title: "First candidate")
@@ -50,7 +112,9 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
     @provider.force_flush
-    request = @exporter.finished_spans.select { |span| span.name == "RatingsController#new" }.sole
+    requests = @exporter.finished_spans.select { |span| span.name == "RatingsController#new" }
+    assert_equal 2, requests.size
+    request = requests.select { |span| span.attributes.key?(ActivityMonitoring::Attributes::OPERATION) }.sole
     assert_equal ActivityMonitoring::Operations::CREATE_RATING_FILM, request.attributes.fetch(ActivityMonitoring::Attributes::OPERATION)
   end
 
@@ -149,9 +213,10 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     ai_tracer_provider&.shutdown
   end
 
-  test "scheduled jobs suppress successful idle runs and enqueues while retaining failures" do
+  test "scheduled jobs export enqueues, idle runs, overdue work and failures" do
     tracer = @provider.tracer(ActivityMonitoring::Scopes::ACTIVE_JOB)
-    [ DispatchDomainEventsJob, Ratings::RefreshTasteProfilesJob, ReportWorkerHealthJob ].each do |job|
+    jobs = [ DispatchDomainEventsJob, Ratings::RefreshTasteProfilesJob, ReportWorkerHealthJob ]
+    jobs.each do |job|
       attributes = { OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE => job.name }
       tracer.in_span("enqueue #{job.name}", kind: :producer, attributes:) { }
       tracer.in_span("perform #{job.name}", kind: :consumer, attributes:) { job.perform_now }
@@ -169,7 +234,14 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     end
 
     @provider.force_flush
-    assert_equal [ "overdue backlog", "failed job" ], @exporter.finished_spans.map(&:name)
+    spans = @exporter.finished_spans
+    assert_equal jobs.flat_map { |job| [ "enqueue #{job.name}", "perform #{job.name}" ] } + [ "overdue backlog", "failed job" ], spans.map(&:name)
+    assert_equal [ "overdue backlog" ], spans.select { |span| span.attributes[ActivityMonitoring::Attributes::OVERDUE] }.map(&:name)
+    healthy_check = spans.find { |span| span.name == "perform ReportWorkerHealthJob" }
+    overdue_check = spans.find { |span| span.name == "overdue backlog" }
+    assert_equal "healthy", healthy_check.attributes.fetch(ActivityMonitoring::Attributes::OUTCOME)
+    assert_equal "overdue", overdue_check.attributes.fetch(ActivityMonitoring::Attributes::OUTCOME)
+    assert_equal OpenTelemetry::Trace::Status::ERROR, spans.last.status.code
   end
 
   test "durable parent and span links connect delayed work and errors omit exception text" do

@@ -8,9 +8,11 @@ module Identity
     included do
       before_action :registration_headers
       rescue_from Identity::Errors::RegistrationUnavailable do
+        ActivityMonitoring.current_operation_span&.set_outcome("registration_unavailable")
         render ::Views::Identity::RegistrationUnavailable.new, status: :unprocessable_entity
       end
       rescue_from Identity::Errors::RegistrationConflict do
+        ActivityMonitoring.current_operation_span&.set_outcome("registration_conflict")
         render ::Views::Identity::RegistrationConflict.new(warning: current_user&.sign_out_warning), status: :conflict
       end
       rescue_from Identity::Errors::ConfirmationDeliveryLimited do

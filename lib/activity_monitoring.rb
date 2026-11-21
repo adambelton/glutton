@@ -30,6 +30,7 @@ module ActivityMonitoring
     FILM_ID = "film.id".freeze
     OPERATION = "glutton.operation".freeze
     OUTCOME = "outcome".freeze
+    REJECTION_TYPE = "glutton.rejection.type".freeze
     REQUEST_ID = "request.id".freeze
     USER_ID = "user.id".freeze
     RATING_ID = "rating.id".freeze
@@ -63,8 +64,6 @@ module ActivityMonitoring
     DOMAIN_EVENT_SWEEP = "DispatchDomainEventsJob".freeze
     WORKER_BACKLOG = "ReportWorkerHealthJob".freeze
     RATINGS_TASTE_PROFILE_REFRESH = "Ratings::RefreshTasteProfilesJob".freeze
-
-    ALL = [ DOMAIN_EVENT_SWEEP, WORKER_BACKLOG, RATINGS_TASTE_PROFILE_REFRESH ].freeze
   end
 
   HONEYCOMB_HOSTS = { "eu" => "api.eu1.honeycomb.io".freeze, "us" => "api.honeycomb.io".freeze }.freeze
@@ -75,7 +74,7 @@ module ActivityMonitoring
     end
 
     def finish(_name, _id, payload)
-      payload[:monitoring_session]&.finish(error: payload[:exception_object])
+      payload[:monitoring_session]&.finish(error: payload[:exception_object], expected_failure: payload[:expected_failure])
     end
   end
 
@@ -98,21 +97,8 @@ module ActivityMonitoring
   end
 
   class Processor < OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor
-    READ_METHODS = [ "GET".freeze, "HEAD".freeze ].freeze
-
     def on_finish(span)
       return unless Scopes::ALL.include?(span.instrumentation_scope.name)
-      return super if span.status.code == OpenTelemetry::Trace::Status::ERROR
-
-      attributes = span.attributes || {}
-      if span.kind == :server && READ_METHODS.include?(attributes[OpenTelemetry::SemConv::HTTP::HTTP_REQUEST_METHOD])
-        status = attributes[OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE]
-        return if status && status < Rack::Utils.status_code(:bad_request) && !attributes.key?(Attributes::OPERATION)
-      end
-      job_name = attributes[OpenTelemetry::SemConv::Incubating::CODE::CODE_NAMESPACE]
-      if span.instrumentation_scope.name == Scopes::ACTIVE_JOB && ScheduledJobs::ALL.include?(job_name)
-        return unless span.kind == :consumer && (attributes.key?(Attributes::DELIVERY_COUNT) || attributes[Attributes::OVERDUE])
-      end
 
       super
     end
