@@ -37,6 +37,11 @@ module Registry
         text(@details["poster_path"])
       end
 
+      def backdrop_path
+        path = text(@details["backdrop_path"])
+        path if path.present? && path.match?(/\A\/[a-zA-Z0-9_-]+\.(?:jpg|png|webp)\z/)
+      end
+
       def youtube_trailer_id
         videos = @details["videos"]
         return unless videos.is_a?(Hash) && videos["results"].is_a?(Array)

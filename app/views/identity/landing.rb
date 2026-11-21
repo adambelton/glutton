@@ -17,14 +17,14 @@ module Views
                 render ::Identity::PreviewCarousel.new(feature: :ratings, labels: @examples.map { |example| example.fetch(:film).title }) do |index|
                   example = @examples.fetch(index)
                   render ::Ratings::Form.new(film: example.fetch(:film), value: example.fetch(:rating),
-                    notes: t("identity.entry.demo.examples.#{example.fetch(:key)}.notes"), readonly: true)
+                    notes: t("identity.entry.demo.examples.#{example.fetch(:key)}.notes"), readonly: true, dismissible: true)
                 end
               else
                 empty_preview
               end
             end
             feature_section(:recommendations) do
-              films = ::Identity::MarketingSamples::RECOMMENDATION_FILM_IDS.filter_map { |id| @films[id] }.select { |film| film.tmdb_details.youtube_trailer_id.present? }
+              films = ::Identity::MarketingSamples::RECOMMENDATION_FILM_IDS.filter_map { |id| @films[id] }
               if films.present?
                 render ::Identity::PreviewCarousel.new(feature: :recommendations, labels: films.map(&:title)) do |index|
                   film = films.fetch(index)

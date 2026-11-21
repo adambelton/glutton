@@ -25,7 +25,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     get new_rating_path(film_id: film.id)
     assert_response :success
     assert_select ".poster-placeholder"
-    assert_select ".rating-synopsis", count: 0
+    assert_select ".film-synopsis-text", count: 0
     assert_select "h2", "Raw metadata"
   end
 

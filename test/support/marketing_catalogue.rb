@@ -14,11 +14,12 @@ module MarketingCatalogue
   }.freeze
   TRAILERS = { 2671 => "yAmO3vanfDQ", 310131 => "97OQ7MQC5Ck", 1083381 => "0HjdiohVOik" }.freeze
 
-  def create_preview_catalogue(except: [], poster_paths: {})
+  def create_preview_catalogue(except: [], poster_paths: {}, overviews: {})
     FILMS.each do |tmdb_id, (title, year)|
       next if except.include?(tmdb_id)
 
       details = { poster_path: poster_paths.fetch(tmdb_id, "/poster.jpg") }
+      details[:overview] = overviews[tmdb_id] if overviews.key?(tmdb_id)
       key = TRAILERS[tmdb_id]
       details[:videos] = { results: [ { site: "YouTube", type: "Trailer", official: true, key: } ] } if key.present?
       Registry::Film.create!(tmdb_id:, title:, release_date: Date.new(year, 1, 1), tmdb_metadata: { details: })

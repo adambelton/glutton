@@ -5,9 +5,7 @@ module Identity
     end
 
     def view_template
-      div(class: "demo-browser library-page library-preview", data: { controller: "library-preview",
-        library_preview_count_one_value: t("identity.entry.library_count", count: 1),
-        library_preview_count_other_value: t("identity.entry.library_count", count: "%{count}") }) do
+      div(class: "demo-browser library-page library-preview", data: { controller: "library-preview" }) do
         div(class: "ui-page-heading") do
           h3 { t("library.browser.title") }
           fieldset(disabled: true, class: "library-preview-search") do
@@ -15,7 +13,6 @@ module Identity
           end
         end
         ::Library::CollectionManagement::InspectFilmCollection::Views::ALL.each { |view| library_sample(view) }
-        p(class: "library-preview-status", aria: { live: "polite", atomic: "true" }, data: { library_preview_target: "status" })
       end
     end
 

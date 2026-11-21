@@ -16,5 +16,6 @@ en:
     invalid_film: The film could not be identified.
     return: Return to Recommendations
     trailer_for: "Trailer for %{title}"
+    backdrop_for: "Backdrop for %{title}"
     expand_trailer: Expand trailer
     collapse_trailer: Collapse trailer
