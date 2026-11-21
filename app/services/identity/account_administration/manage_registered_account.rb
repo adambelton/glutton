@@ -10,6 +10,10 @@ module Identity
         @user_id = user_id
       end
 
+      def change_community_username(community_username:)
+        with_account { |account| account.change_community_username!(community_username:) }
+      end
+
       def change_password(current_password:, password:, password_confirmation:)
         with_account do |account|
           account.authorize_credential_change!(current_password:)

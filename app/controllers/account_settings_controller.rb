@@ -1,5 +1,6 @@
 class AccountSettingsController < ApplicationController
   before_action :require_account_access
+  before_action :require_community_preview_access, only: [ :show_community, :change_community_username ]
 
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
   rate_limit to: 5, within: 3.minutes, by: -> { current_user.id }, store: RATE_LIMIT_STORE,
@@ -34,6 +35,10 @@ class AccountSettingsController < ApplicationController
     render_settings
   end
 
+  def show_community
+    render_community_settings(editing_username: params[:edit] == "username")
+  end
+
   def request_email
     credentials = params.permit(:current_password, :email_address)
     settings.request_email_change(current_password: credentials[:current_password], email_address: credentials[:email_address])
@@ -58,6 +63,17 @@ class AccountSettingsController < ApplicationController
     finish_session(new_session_path, t("identity.settings.password_changed"))
   end
 
+  def change_community_username
+    community_username = params[:community_username]
+    settings.change_community_username(community_username: community_username.is_a?(String) ? community_username : nil)
+    redirect_to account_community_path, notice: t("identity.settings.community_username.saved"), status: :see_other
+  rescue ActiveRecord::RecordInvalid => error
+    raise if error.record.errors[:community_username].empty?
+
+    render_community_settings(editing_username: true, form_username: error.record.community_username,
+      username_errors: error.record.errors.full_messages_for(:community_username), status: :unprocessable_entity)
+  end
+
   def destroy
     settings.close_account
     finish_session(root_path, t("identity.settings.deleted"))
@@ -75,6 +91,10 @@ class AccountSettingsController < ApplicationController
     head :forbidden unless current_user.can_view_account?
   end
 
+  def require_community_preview_access
+    head :forbidden unless Community::PreviewAccess.allowed?(user: current_user)
+  end
+
   def render_credential_errors(errors)
     dialog = { "request_email" => :email, "change_password" => :password }[action_name]
     render_settings(errors:, open_dialog: dialog, status: :unprocessable_entity)
@@ -82,6 +102,11 @@ class AccountSettingsController < ApplicationController
 
   def render_settings(errors: [], open_dialog: nil, status: :ok)
     render Views::Identity::AccountSettings.new(email_address: current_user.email_address, validation_errors: errors, open_dialog:), status:
+  end
+
+  def render_community_settings(editing_username:, form_username: current_user.community_username, username_errors: [], status: :ok)
+    render Views::Identity::AccountCommunity.new(community_username: current_user.community_username,
+      editing_username:, form_username:, username_errors:), status:
   end
 
   def finish_session(destination, message)

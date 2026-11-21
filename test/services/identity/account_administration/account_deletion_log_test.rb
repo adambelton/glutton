@@ -11,6 +11,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   end
 
   test "writes only the deletion replay ID and timestamp before deleting account and session" do
+    @account.change_community_username!(community_username: "Former_Member")
     @client.stub_responses(:put_object, ->(context) do
       assert Identity::UserRegistered.exists?(@account.id)
       assert Identity::Session.exists?(@session.id)
@@ -26,6 +27,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
 
     assert_not Identity::UserRegistered.exists?(@account.id)
     assert_not Identity::Session.exists?(@session.id)
+    assert_username_released
   end
 
   test "keeps the account and session when R2 refuses the record" do
@@ -47,6 +49,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   end
 
   test "validates the full log before replay and skips accounts already purged" do
+    @account.change_community_username!(community_username: "Former_Member")
     key = "account-deletions/v1/recovery/#{@account.deletion_replay_id}.json"
     @client.stub_responses(:list_objects_v2, contents: [ { key: }, { key: "account-deletions/v1/recovery/invalid.json" } ])
     @client.stub_responses(:get_object, body: JSON.generate(account_id: @account.deletion_replay_id, recorded_at: Time.current.iso8601))
@@ -59,5 +62,16 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
     assert_equal 1, replay.call
     assert_equal 0, replay.call
     assert_not Identity::Session.exists?(@session.id)
+    assert_username_released
+  end
+
+  private
+
+  def assert_username_released
+    password = "a long test password"
+    replacement = Identity::UserRegistered.create!(email_address: "replacement@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current)
+    replacement.change_community_username!(community_username: "former_member")
+    assert_equal "former_member", replacement.reload.community_username
   end
 end

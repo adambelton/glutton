@@ -1,0 +1,32 @@
+en:
+  community:
+    title: Community
+    coming_soon: Coming soon
+    conduct:
+      title: Community Code of Conduct
+      version: "Version %{version}"
+      read: Read the Code of Conduct
+      agreement: I agree to the Community Code of Conduct.
+      accept: Accept Code of Conduct
+      accepted: You accepted the Community Code of Conduct.
+      accepted_version: "You’ve accepted version %{version}."
+      acceptance_required: Confirm that you agree to the Code of Conduct before submitting.
+      version_changed: The Code of Conduct has changed. Read the current version before accepting it.
+    code_of_conduct_v1:
+      intro: Glutton is a place to talk about films and help people find something worth watching. Keep it enjoyable for the next person who shows up.
+      respect:
+        title: Keep it about the film
+        description: Disagree as strongly as you like about a film. Leave personal attacks, harassment, threats and hate out of it. Give people room to disagree and keep other people’s private information private.
+      spoilers:
+        title: Keep Endorsements spoiler-free
+        description: Explain why a film fits the request without giving away reveals, endings or surprises. Check the rules of the discussion before posting a spoiler.
+      avatars:
+        title: Pick an avatar people can see anywhere
+        description: Horror imagery is welcome. Keep graphic gore, explicit sexual imagery and imagery used to promote hate out of avatars. They appear alongside everything you post.
+      moderation:
+        title: Report problems
+        description: Use the report option when you see a problem with a post, comment, username or avatar. Moderators can review reports, remove content and restrict Community access when needed.
+      copyright:
+        title: Copyright complaints
+        description: Custom avatars may be subject to copyright infringement notices. If we receive a complaint about your avatar, we may remove it. Send copyright notices to the address below.
+        email: hello@adambelton.com

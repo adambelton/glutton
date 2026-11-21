@@ -135,7 +135,9 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
       (() => {
         const navigation = document.querySelector(".admin-sidebar").getBoundingClientRect()
         const content = document.querySelector("#main-content").getBoundingClientRect()
-        return navigation.right <= content.left && navigation.top === 0 && navigation.bottom >= window.innerHeight - 1 && content.right >= window.innerWidth - 1
+        const layout = document.body.getBoundingClientRect()
+        return navigation.right <= content.left && navigation.top === 0 &&
+          navigation.bottom >= window.innerHeight - 1 && Math.abs(content.right - layout.right) <= 1
       })()
     JS
   end

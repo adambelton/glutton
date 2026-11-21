@@ -32,7 +32,7 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
   test "navigation renders the lock without admitting a recommendation" do
     assert_no_difference "Recommendations::RecommendationFilm.count" do
       get library_path
-      assert_select '.ui-nav [role="link"][aria-disabled="true"]'
+      assert_select '.ui-nav [aria-describedby="recommendations-nav-tooltip"][aria-disabled="true"]'
       assert_select ".ui-nav a[href=?]", recommendation_path, count: 0
     end
 
@@ -83,7 +83,7 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
     assert_select ".recommendation-details h2 .film-year", "(2025)"
     assert_select ".recommendation-facts", count: 0
     assert_select ".recommendation-trailer h2", count: 0
-    assert_select "iframe[src=?][title=?]", "https://www.youtube.com/embed/JarbtubycQg",
+    assert_select "iframe[src=?][title=?][referrerpolicy='strict-origin-when-cross-origin']", "https://www.youtube.com/embed/JarbtubycQg",
       I18n.t("recommendations.trailer_for", title: film.title)
     assert_select "a[href=?]", "https://www.youtube.com/watch?v=JarbtubycQg", count: 0
   end

@@ -2,6 +2,8 @@ require "digest"
 
 module Identity
   class UserRegistered < User
+    RESERVED_COMMUNITY_USERNAMES = %w[admin administrator moderator glutton support].freeze
+
     has_secure_password reset_token: { expires_in: 15.minutes }
 
     normalizes :email_address, with: ->(email) { email.strip.downcase }
@@ -11,6 +13,8 @@ module Identity
     validates :password, presence: true, on: [ :create, :password_reset ]
     validates :password, length: { minimum: 15 }, allow_nil: true
     validates :password_confirmation, presence: true, if: -> { password.present? }
+    validates :community_username, format: { with: /\A[A-Za-z0-9_]{3,24}\z/ }, allow_nil: true
+    validate :community_username_is_not_reserved
 
     def default_entry_path
       "/library"
@@ -18,6 +22,18 @@ module Identity
 
     def can_view_account?
       active?
+    end
+
+    def change_community_username!(community_username:)
+      raise Errors::Unavailable unless can_view_account?
+
+      update!(community_username: community_username || "")
+    rescue ActiveRecord::RecordNotUnique => error
+      constraint = error.cause&.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME)
+      raise unless constraint == "users_community_username_unique"
+
+      errors.add(:community_username, :taken)
+      raise ActiveRecord::RecordInvalid, self
     end
 
     def grant_superuser!(actor:)
@@ -102,6 +118,12 @@ module Identity
       return unless URI::MailTo::EMAIL_REGEXP.match?(canonical_email)
 
       find_by(email_address: canonical_email)
+    end
+
+    private
+
+    def community_username_is_not_reserved
+      errors.add(:community_username, :reserved) if RESERVED_COMMUNITY_USERNAMES.include?(community_username&.downcase)
     end
   end
 end

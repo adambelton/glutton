@@ -27,3 +27,21 @@ en:
       rate_limited: Too many attempts. Wait a few minutes and try again.
       mail_subject: Confirm your Glutton email change
       mail_introduction: Open this link while signed in to confirm your new email address. The link expires in 30 minutes.
+      community_username:
+        label: Public username
+        hint: Use 3–24 letters (A–Z), numbers or underscores.
+        change: Change username
+        save: Save username
+        saved: Your Community username was saved.
+  activerecord:
+    attributes:
+      identity/user_registered:
+        community_username: Public username
+    errors:
+      models:
+        identity/user_registered:
+          attributes:
+            community_username:
+              invalid: must use 3–24 letters (A–Z), numbers or underscores.
+              reserved: is reserved.
+              taken: is already taken.

@@ -148,6 +148,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
 
   test "unrelated guest and its pending registration survive reset without merging" do
     Rails.application.routes.draw do
+      get "community", to: "community/onboarding#show", as: :community
       get "privacy", to: "privacy_notices#show", as: :privacy_notice
       get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "ratings#new"

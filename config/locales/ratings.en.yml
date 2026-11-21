@@ -15,7 +15,6 @@ en:
     browser:
       film_details: Film details
       title: Ratings
-      edit_title: Edit your rating
       reload: Reload current rating
       choice: What did you think?
       notes: Your notes (optional)
