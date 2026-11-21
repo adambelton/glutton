@@ -7,11 +7,6 @@ class SessionsController < ApplicationController
   rate_limit to: 10, within: 3.minutes, store: RATE_LIMIT_STORE, only: :create,
     with: -> { render plain: I18n.t("identity.sessions.rate_limited"), status: :too_many_requests }
 
-  rescue_from Identity::Errors::AccountDeleted do
-    render ::Views::Identity::SignIn.new(error: @error, account_controls: false),
-      status: @error.present? ? :unprocessable_entity : :ok
-  end
-
   def new
     render ::Views::Identity::SignIn.new
   end
@@ -27,8 +22,7 @@ class SessionsController < ApplicationController
       bind_session(new_session)
       redirect_to entry_destination, status: :see_other
     else
-      @error = I18n.t("identity.sessions.invalid_credentials")
-      render ::Views::Identity::SignIn.new(error: @error), status: :unprocessable_entity
+      render ::Views::Identity::SignIn.new(error: I18n.t("identity.sessions.invalid_credentials")), status: :unprocessable_entity
     end
   end
 

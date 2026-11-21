@@ -175,22 +175,15 @@ class DomainEvents::DeliveryTest < ActiveSupport::TestCase
     assert_equal DomainEvents::EventDelivery::Statuses::IGNORED, delivery(event, subscriber: "ignored").status
   end
 
-  test "expired and deleted owners skip handlers and physical cleanup cascades payloads" do
-    expired_event = publish
-    deleted = Identity::UserDeleted.create!
-    other = Identity::UserGuest.create!
-    other_event = publish(user_id: other.id)
-    # The stored owner can change after publication; consumption must re-read it.
-    other.update_columns(type: "UserDeleted")
+  test "expired owners skip handlers and physical cleanup cascades payloads" do
+    event = publish
     travel Identity::UserGuest::EXPIRY_DURATION
-    assert_equal({ skipped: 2 }, dispatch(subscription))
+    assert_equal({ skipped: 1 }, dispatch(subscription))
     assert_equal 0, EventEffect.count
-    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, delivery(other_event).status
+    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, delivery(event).status
     assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
-    assert_not DomainEvents::DomainEvent.exists?(expired_event.id)
-    assert_not DomainEvents::EventDelivery.exists?(domain_event_id: expired_event.id)
-    assert DomainEvents::DomainEvent.exists?(other_event.id)
-    assert Identity::User.exists?(deleted.id)
+    assert_not DomainEvents::DomainEvent.exists?(event.id)
+    assert_not DomainEvents::EventDelivery.exists?(domain_event_id: event.id)
   end
 
   test "claim preserves owner and events beyond the guest deadline" do

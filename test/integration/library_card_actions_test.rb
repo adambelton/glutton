@@ -165,11 +165,6 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
       Identity::Session.revoke(id: @authentication.id)
       get library_path
       assert_redirected_to new_session_path
-      bind_user
-      # Existing cookie with a deleted owner is a storage fixture for the unimplemented deletion transition.
-      @user.update_columns(type: "UserDeleted")
-      get library_path
-      assert_response :gone
     end
   end
 end

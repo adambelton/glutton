@@ -19,7 +19,6 @@ class Identity::UserTypePersistenceTest < ActiveSupport::TestCase
 
   test "namespaced lifecycle classes retain existing STI labels and users table" do
     assert_equal "UserGuest", Identity::UserGuest.create!.reload.type
-    assert_equal "UserDeleted", Identity::UserDeleted.create!.reload.type
     assert_equal "UserRegistered", Identity::UserRegistered.sti_name
     assert_equal "Identity::UserRegistered", Identity::User.sti_class_for("UserRegistered").name
     assert_equal "users", Identity::UserRegistered.table_name

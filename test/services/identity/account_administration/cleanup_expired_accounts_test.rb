@@ -11,18 +11,13 @@ module Identity
       AccountAdministration::CleanupExpiredAccounts.call(**attributes)
     end
 
-    test "guest expiry is exact and deletes dependent identities without touching other subtypes" do
+    test "guest expiry is exact and deletes dependent identities while preserving registered accounts" do
       freeze_time
       guest = Identity::UserGuest.create!
       2.times { Identity::Session.create!(user: guest) }
       registered = Identity::UserRegistered.create!(email_address: "retained@example.test", password: "private password phrase",
         password_confirmation: "private password phrase", email_confirmed_at: Time.current)
       registered_session = Identity::Session.create!(user: registered)
-      deleted = Identity::UserGuest.create!
-      deleted_session = Identity::Session.create!(user: deleted)
-      deleted.update_columns(type: "UserDeleted")
-      base = Identity::User.find(Identity::User.insert_all!([ { type: "User" } ]).rows.first.first)
-      base_session = Identity::Session.create!(user: base)
       travel Identity::UserGuest::EXPIRY_DURATION - 1.second
       linked = pending(guest:)
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
@@ -32,9 +27,7 @@ module Identity
       assert_nil Identity::PendingRegistration.find_by(id: linked.id)
       assert_not Identity::Session.exists?(user_id: guest.id)
       assert registered_session.active?
-      assert Identity::Session.exists?(deleted_session.id)
-      assert base_session.active?
-      [ registered, deleted, base ].each { |record| assert Identity::User.exists?(record.id) }
+      assert Identity::UserRegistered.exists?(registered.id)
       assert_equal({ guests_deleted: 0, pending_registrations_deleted: 0 }, cleanup)
     end
 

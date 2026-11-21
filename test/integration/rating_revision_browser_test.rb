@@ -172,7 +172,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_select "b", count: 0
   end
 
-  test "csrf expired revoked signed out and deleted sessions cannot revise" do
+  test "csrf expired revoked and signed out sessions cannot revise" do
     get edit_rating_path(film_id: @film.id)
     token = csrf_token
     assert_no_difference "Ratings::Rating.count" do
@@ -191,10 +191,6 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
       cookies.delete(:session_id)
       get edit_rating_path(film_id: @film.id)
       assert_redirected_to new_session_path
-      bind_user(@user)
-      @user.update_columns(type: "UserDeleted")
-      get edit_rating_path(film_id: @film.id)
-      assert_response :gone
     end
   end
 end

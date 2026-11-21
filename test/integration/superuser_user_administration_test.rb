@@ -12,10 +12,9 @@ class SuperuserUserAdministrationTest < ActionDispatch::IntegrationTest
     Identity::UsersController.allow_forgery_protection = @previous_forgery_protection
   end
 
-  test "the table includes stored guests and deleted rows and opens a selected account" do
+  test "the table includes stored guests and omits purged accounts" do
     expired = Identity::UserGuest.create!(created_at: 25.hours.ago)
     guest = Identity::UserGuest.create!
-    deleted = Identity::UserDeleted.create!
     purged = Identity::UserGuest.create!
     purged.destroy_with_activity!
     bind_session(Identity::Session.create!(user: @actor))
@@ -23,7 +22,7 @@ class SuperuserUserAdministrationTest < ActionDispatch::IntegrationTest
     get admin_users_path
     assert_response :success
     assert_equal "no-store", response.headers.fetch("Cache-Control")
-    [ @user, guest, expired, deleted ].each do |user|
+    [ @user, guest, expired ].each do |user|
       assert_select "tbody a[href=?]", admin_user_path(user.id), text: user.email_address || "User ##{user.id}"
     end
     assert_select "tbody a[href=?]", admin_user_path(purged.id), count: 0

@@ -212,13 +212,6 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
       get new_rating_path
       assert_redirected_to new_session_path
     end
-    bind_user(@user)
-    # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.
-    @user.update_columns(type: "UserDeleted")
-    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
-      get new_rating_path
-      assert_response :gone
-    end
   end
 
   test "csrf is enforced for both writes and expression parameters are filtered" do

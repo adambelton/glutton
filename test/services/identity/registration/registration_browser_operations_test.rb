@@ -23,14 +23,13 @@ module Identity
       assert_equal guest.id, record.reload.guest_user_id
     end
 
-    test "attachment rejects expired missing deleted and registered owners without mutation" do
+    test "attachment rejects expired missing and registered owners without mutation" do
       freeze_time
       record = prepare
-      guest = Identity::UserGuest.create!
-      guest.update_columns(type: "UserDeleted")
+      expired = Identity::UserGuest.create!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
       registered = Identity::UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-      [ -1, guest.id, registered.id ].each do |id|
+      [ -1, expired.id, registered.id ].each do |id|
         assert_raises(Errors::RegistrationUnavailable) { Registration::AttachRegistration.call(pending_registration_id: record.id, guest_user_id: id) }
       end
       fresh_guest = Identity::UserGuest.create!

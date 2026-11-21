@@ -24,23 +24,9 @@ class Identity::UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "active guest scope evaluates the current time and excludes the expiry boundary" do
-    guest = freeze_time { Identity::UserGuest.create! }
-    travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
-      assert_includes Identity::UserGuest.active, guest
-    end
-    travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION do
-      assert_not_includes Identity::UserGuest.active, guest
-      assert_not guest.active?
-    end
-  end
-
-  test "root construction fails while existing base rows can still be loaded" do
+  test "root construction requires a concrete user subtype" do
     assert_raises(NotImplementedError) { Identity::User.new }
     assert_raises(NotImplementedError) { Identity::User.create! }
-    id = Identity::User.insert_all!([ { type: "User" } ]).rows.first.first
-    assert Identity::User.find(id).active?
-    assert_not Identity::User.find(id).can_register?
   end
 
   test "guest expires exactly at its deadline" do
@@ -82,21 +68,11 @@ class Identity::UserTest < ActiveSupport::TestCase
     end
   end
 
-  test "registration permission follows the guest deadline and is denied by default" do
+  test "registration permission follows the guest deadline" do
     guest = freeze_time { Identity::UserGuest.create! }
     assert guest.can_register?
-    assert_not Identity::UserDeleted.create!.can_register?
     travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION do
       assert_not guest.can_register?
-    end
-  end
-
-  test "deleted users are inactive regardless of age" do
-    user = Identity::UserDeleted.create!
-    assert_not Identity::User.find(user.id).active?
-
-    travel 48.hours do
-      assert_not Identity::User.find(user.id).active?
     end
   end
 
@@ -107,5 +83,16 @@ class Identity::UserTest < ActiveSupport::TestCase
       end
     end
     assert Identity::UserGuest.create!.persisted?
+  end
+
+  test "database rejects the base type and unknown types" do
+    [ "User", "Unsupported" ].each do |type|
+      error = assert_raises(ActiveRecord::StatementInvalid) do
+        Identity::User.transaction(requires_new: true) do
+          Identity::User.insert_all!([ { type: } ])
+        end
+      end
+      assert_includes error.message, "users_supported_type"
+    end
   end
 end

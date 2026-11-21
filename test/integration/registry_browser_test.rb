@@ -48,7 +48,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "guest expiry revoked sessions and deleted accounts preserve Identity handling" do
+  test "guest expiry and revoked sessions preserve Identity handling" do
     guest = Identity::UserGuest.create!
     bind_user(guest)
     travel (Identity::UserGuest::EXPIRY_DURATION + 1.second) do
@@ -61,16 +61,6 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     Identity::Session.revoke(id: @authentication.id)
     get admin_film_path(@film)
     assert_redirected_to new_session_path
-
-    # A pre-existing session may outlive its account. This fixture does not implement deletion.
-    deleted = Identity::UserDeleted.create!
-    jar = ActionDispatch::Request.new(Rails.application.env_config.dup).cookie_jar
-    jar.signed[:session_id] = { value: { id: @authentication.id, user_id: deleted.id } }
-    cookies[:session_id] = jar[:session_id]
-    get admin_film_path(@film)
-    assert_response :gone
-    assert_select "h1", I18n.t("identity.sessions.deleted_title")
-    assert_select "a.record-link", count: 0
   end
 
   test "revocation applies to the same browser on its next request" do

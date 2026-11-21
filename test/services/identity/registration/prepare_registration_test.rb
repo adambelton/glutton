@@ -65,17 +65,16 @@ module Identity
       assert_equal 1, Identity::PendingRegistration.where(guest_user_id: guest.id).count
     end
 
-    test "missing registered deleted and expired guests cannot prepare" do
+    test "missing registered and expired identities cannot prepare" do
       registered = Identity::UserRegistered.create!(email_address: "registered@example.test", password: "a long password phrase",
         password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-      deleted = Identity::UserDeleted.create!
       guest = freeze_time { Identity::UserGuest.create! }
       travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
         assert prepare(guest_user_id: guest.id).persisted?
       end
       travel_to guest.created_at + Identity::UserGuest::EXPIRY_DURATION do
         assert_no_difference [ "Identity::PendingRegistration.count", "Identity::User.count", "Identity::Session.count" ] do
-          [ -1, registered.id, deleted.id, guest.id ].each do |id|
+          [ -1, registered.id, guest.id ].each do |id|
             assert_raises(Errors::RegistrationUnavailable) { prepare(guest_user_id: id) }
           end
         end
@@ -85,8 +84,8 @@ module Identity
 
     test "stored lifecycle wins over a cached guest and pending email never selects a user" do
       cached = Identity::UserGuest.create!
-      cached.update_columns(type: "UserDeleted")
-      assert_not (cached).can_reset_password?
+      AccountAdministration::DiscardGuestAccount.call(user_id: cached.id)
+      assert cached.can_register?
       assert_raises(Errors::RegistrationUnavailable) { prepare(guest_user_id: cached.id) }
       registered = Identity::UserRegistered.create!(email_address: "reader@example.test", password: "registered password",
         password_confirmation: "registered password", email_confirmed_at: Time.current)

@@ -5,11 +5,6 @@ module Identity
     included do
       helper_method :current_user, :current_pending_registration
       before_action :prevent_identity_caching
-
-      rescue_from Identity::Errors::AccountDeleted do
-        session.delete(:pending_registration_id)
-        render ::Views::Identity::Deleted.new, status: :gone
-      end
     end
 
     private
@@ -21,9 +16,6 @@ module Identity
       @current_user = Identity::Session.resume(id: payload["id"], user_id: payload["user_id"]) if payload
       clear_identity_cookie unless @current_user
       @current_user
-    rescue Identity::Errors::GuestExpired
-      clear_identity_cookie
-      nil
     end
 
     def ensure_guest_user!

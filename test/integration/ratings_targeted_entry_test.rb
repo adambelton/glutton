@@ -217,13 +217,6 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
       get new_rating_path(film_id: @film.id)
       assert_redirected_to new_session_path
     end
-    bind_user
-    # Explicit existing-session/deleted-row storage fixture; deletion workflow remains separate.
-    @user.update_columns(type: "UserDeleted")
-    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
-      get new_rating_path(film_id: @film.id)
-      assert_response :gone
-    end
   end
 
   test "only omission selects the queue while malformed film IDs are rejected" do

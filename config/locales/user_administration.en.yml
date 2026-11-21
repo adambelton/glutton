@@ -20,7 +20,6 @@ en:
       types:
         identity_user_registered: Registered
         identity_user_guest: Guest
-        identity_user_deleted: Deleted
       lookup_label: User ID or email address
       lookup: Find user
       lookup_missed: No account matches that user ID or email address.

@@ -87,10 +87,9 @@ class Ratings::RevisionTest < ActiveSupport::TestCase
   end
 
   test "inactive and missing owners are rejected using fresh state" do
-    deleted = Identity::UserDeleted.create!
     travel Identity::UserGuest::EXPIRY_DURATION
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
-      [ @user.id, deleted.id, -1 ].each do |user_id|
+      [ @user.id, -1 ].each do |user_id|
         assert_raises(Identity::Errors::Unavailable) { revise(user_id:) }
       end
     end

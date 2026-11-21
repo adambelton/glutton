@@ -478,17 +478,6 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal 1, record.reload.confirmation_delivery_attempts
   end
 
-  test "deleted browser identity retains its explicit failure even with pending state" do
-    created = guest
-    signup
-    created.update_columns(type: "UserDeleted")
-    get registration_path
-    assert_response :gone
-    get root_path
-    assert_response :gone
-    assert_select "h1", text: I18n.t("identity.sessions.deleted_title")
-  end
-
   test "confirmation rotates CSRF state and produces secure cookies under SSL middleware" do
     signup
     token = email_token
