@@ -114,33 +114,6 @@ class SignInTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "deleted revoked binding still reports deletion but can explicitly sign out or sign in" do
-    sign_in
-    authentication = Identity::Session.last
-    other = open_session
-    other.cookies[:session_id] = cookies[:session_id]
-    @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
-    Identity::Session.revoke(id: authentication.id)
-    [ self, other ].each do |client|
-      2.times do
-        client.get root_path
-        assert_equal 410, client.response.status
-        assert_includes client.response.body, "This account has been deleted."
-      end
-    end
-    assert_select 'form[action="/session"] input[name="_method"][value="delete"]'
-    delete session_path, params: { authenticity_token: token }
-    get root_path
-    assert_response :success
-    replacement = Identity::UserRegistered.create!(email_address: "other@example.test", password: "a long password phrase",
-      password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
-    other.post session_path, params: { email_address: replacement.email_address, password: "a long password phrase", authenticity_token: token(other) }
-    assert_equal 303, other.response.status
-    other.get root_path
-    assert_equal 302, other.response.status
-    assert_equal "http://www.example.com/library", other.response.location
-  end
-
   test "failed prior-session revocation rolls back the issued replacement" do
     sign_in
     previous = Identity::Session.last

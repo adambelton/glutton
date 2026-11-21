@@ -92,6 +92,7 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     end
     travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION do
       assert_nil lookup["id"]
+      assert_empty cookies[:session_id].to_s
       assert_nil lookup["stored_id"]
     end
     travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION + 1.second do
@@ -101,25 +102,18 @@ class UserSessionsTest < ActionDispatch::IntegrationTest
     assert_equal original_time, user.reload.created_at
   end
 
-  test "deleted account fails explicitly across browsers without guest replacement" do
-    user = Identity::User.find(create_guest["id"])
+  test "discarding a guest clears stale cookies without automatically replacing the guest" do
+    user_id = create_guest.fetch("id")
     other = open_session
-    key = :session_id
-    other.cookies[key] = cookies[key]
-    tokens = [ lookup["token"], lookup(other)["token"] ]
-    user.update_column(:type, "UserDeleted")
-    Identity::Session.where(user_id: user.id).delete_all
+    other.cookies[:session_id] = cookies[:session_id]
+    assert_equal user_id, lookup(other)["id"]
 
-    assert_no_difference "Identity::User.count" do
-      [ self, other ].zip(tokens).each do |client, token|
-        2.times do
-          client.get "/identity-probe"
-          assert_equal 410, client.response.status
-          assert_includes client.response.body, "This account has been deleted."
-          client.post "/identity-probe", params: { authenticity_token: token }
-          assert_equal 410, client.response.status
-          assert_includes client.response.body, "This account has been deleted."
-        end
+    Identity::AccountAdministration::DiscardGuestAccount.call(user_id:)
+
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      [ self, other ].each do |client|
+        assert_nil lookup(client)["id"]
+        assert_empty client.cookies[:session_id].to_s
       end
     end
   end

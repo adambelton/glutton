@@ -62,13 +62,14 @@ module Identity
           assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
         end
       end
-      guest = Identity::UserGuest.create!
+      freeze_time
+      guest = Identity::UserGuest.create!(created_at: (Identity::UserGuest::EXPIRY_DURATION - 1.second).ago)
       record = prepare(guest_user_id: guest.id)
       token = token_for(record)
-      guest.update_columns(type: "UserDeleted")
+      travel 1.second
       assert_raises(Errors::RegistrationUnavailable) { Registration::CompleteRegistration.call(token:) }
       assert Identity::PendingRegistration.exists?(record.id)
-      assert_not (Identity::User.find(guest.id)).active?
+      assert_not guest.reload.active?
     end
 
     test "email conflict never authenticates or changes the existing account" do

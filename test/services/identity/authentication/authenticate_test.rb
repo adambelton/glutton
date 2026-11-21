@@ -36,9 +36,9 @@ class Identity::AuthenticateTest < ActiveSupport::TestCase
     end
   end
 
-  test "guest and deleted identities cannot authenticate with registered credentials" do
+  test "guest and purged identities cannot authenticate with registered credentials" do
     guest = Identity::UserGuest.create!
-    @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+    @user.destroy_with_activity!
     assert_no_difference [ "Identity::Session.count", "Identity::User.count" ] do
       assert_nil Identity::Authentication::Authenticate.call(email_address: "viewer@example.test", password: "a long password phrase")
       assert_nil Identity::Authentication::Authenticate.call(email_address: guest.email_address, password: "a long password phrase")

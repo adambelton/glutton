@@ -133,7 +133,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert @user.reload.authenticate("replacement password phrase")
   end
 
-  test "another registered browser conflicts and deleted browser fails explicitly" do
+  test "another registered browser conflicts without changing either account" do
     other = Identity::UserRegistered.create!(email_address: "different@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
     sign_in(user: other)
@@ -144,9 +144,6 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_response :conflict
     assert_equal cookie, cookies[:session_id]
     assert @user.reload.authenticate("original password phrase")
-    other.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
-    get new_password_reset_path
-    assert_response :gone
   end
 
   test "unrelated guest and its pending registration survive reset without merging" do

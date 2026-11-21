@@ -12,10 +12,6 @@ module Identity
       raise NotImplementedError
     end
 
-    def inactive_error
-      nil
-    end
-
     def session_duration
       nil
     end

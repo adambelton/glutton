@@ -1,12 +1,12 @@
 module Views
   module Identity
     class SignIn < ::Views::Base
-      def initialize(error: nil, account_controls: true)
-        @error, @account_controls = error, account_controls
+      def initialize(error: nil)
+        @error = error
       end
 
       def view_template
-        page(title: t("identity.sessions.sign_in"), narrow: true, pending_reminder: false, account_controls: @account_controls) do
+        page(title: t("identity.sessions.sign_in"), narrow: true, pending_reminder: false) do
           p(role: "status", class: "ui-reminder") { flash[:page_notice] } if flash[:page_notice].present?
           p(role: "alert", class: "ui-errors") { @error } if @error
           form_with(url: session_path) do

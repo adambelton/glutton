@@ -13,14 +13,7 @@ module Identity
 
     def self.resume(id:, user_id:)
       user = User.find_by(id: user_id)
-      return unless user
-
-      unless user.active?
-        error = user.inactive_error
-        raise error if error
-
-        return
-      end
+      return unless user&.active?
 
       user if exists?(id:, user_id:)
     end

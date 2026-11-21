@@ -37,6 +37,28 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert Identity::User.exists?(@user.id)
   end
 
+  test "account deletion signs out a browser still holding a session cookie" do
+    sign_in(@user)
+    other = open_session
+    other.cookies[:session_id] = cookies[:session_id]
+    other.get account_settings_path
+    assert_equal 200, other.response.status
+
+    get account_settings_path
+    assert_response :success
+    delete account_path, params: { authenticity_token: csrf_token(account_path) }
+    assert_redirected_to root_path
+    assert_not Identity::User.exists?(@user.id)
+    assert_not Identity::Session.exists?(user_id: @user.id)
+
+    assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      other.get account_settings_path
+      assert_equal 302, other.response.status
+      assert_equal new_session_url, other.response.location
+      assert_empty other.cookies[:session_id].to_s
+    end
+  end
+
   test "account deletion reports a retry and keeps the session when the log is unavailable" do
     previous_endpoint = ENV["ACCOUNT_DELETION_R2_ENDPOINT"]
     ENV["ACCOUNT_DELETION_R2_ENDPOINT"] = "invalid-endpoint"

@@ -166,11 +166,10 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     assert_not film.reload.dismissed?
   end
 
-  test "missing expired and deleted owners cannot select or dismiss" do
+  test "missing and expired owners cannot select or dismiss" do
     film = candidate
-    deleted = Identity::UserDeleted.create!
     travel Identity::UserGuest::EXPIRY_DURATION
-    [ @user.id, deleted.id, -1 ].each do |user_id|
+    [ @user.id, -1 ].each do |user_id|
       assert_raises(Identity::Errors::Unavailable) { Ratings::CandidateSelection::NextCandidates.call(user_id:) }
       assert_raises(Identity::Errors::Unavailable) { Ratings::CandidateSelection::Dismiss.call(user_id:, rating_film_id: film.id) }
     end

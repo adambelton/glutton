@@ -59,8 +59,6 @@ en:
       rate_limited: Too many sign-in attempts. Please try again later.
       email: Email
       password: Password
-      deleted_title: This account has been deleted.
-      deleted_description: Sign out to start again, or sign in to a different account.
     account_mailer:
       unexpected_request: If you did not request this, you can ignore this email.
       confirmation:

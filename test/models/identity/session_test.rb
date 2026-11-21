@@ -17,22 +17,19 @@ class Identity::SessionTest < ActiveSupport::TestCase
     assert_nil Identity::Session.resume(id: authentication.id, user_id: user.id)
   end
 
-  test "expired guests cannot resume and deleted accounts reject even a missing session" do
+  test "expired guests cannot resume even with a missing session" do
     freeze_time
     user = Identity::UserGuest.create!
     authentication = Identity::Session.create!(user:)
     travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION - 1.second do
-      assert_nil user.inactive_error
       assert_equal user, Identity::Session.resume(id: authentication.id, user_id: user.id)
     end
     [ 0.seconds, 1.second ].each do |offset|
       travel_to user.created_at + Identity::UserGuest::EXPIRY_DURATION + offset do
-        assert_raises(Identity::Errors::GuestExpired) { Identity::Session.resume(id: authentication.id, user_id: user.id) }
-        assert_raises(Identity::Errors::GuestExpired) { Identity::Session.resume(id: nil, user_id: user.id) }
+        assert_nil Identity::Session.resume(id: authentication.id, user_id: user.id)
+        assert_nil Identity::Session.resume(id: nil, user_id: user.id)
       end
     end
-    deleted = Identity::UserDeleted.create!
-    assert_raises(Identity::Errors::AccountDeleted) { Identity::Session.resume(id: nil, user_id: deleted.id) }
   end
 
   test "guest issuance preserves account identity and deadline" do
@@ -74,18 +71,19 @@ class Identity::SessionTest < ActiveSupport::TestCase
     end
   end
 
-  test "deleted owner is detected despite cached associations" do
+  test "purged owner is unavailable despite a cached session" do
     user = registered_user
     session = Identity::Session.create!(user: user)
-    assert session.user.can_reset_password?
-    user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+    assert session.active?
+
+    user.destroy_with_activity!
+
     assert_not session.active?
-    assert_not Identity::Session.find(session.id).user.active?
-    assert_not Identity::Session.new(user: user).valid?
+    assert_nil Identity::Session.resume(id: session.id, user_id: user.id)
   end
 
   test "only persisted active owners can hold sessions" do
-    [ nil, Identity::UserGuest.new, Identity::UserDeleted.create! ].each do |owner|
+    [ nil, Identity::UserGuest.new ].each do |owner|
       assert_not Identity::Session.new(user: owner).valid?
     end
     assert_not Identity::Session.new.active?
@@ -104,7 +102,8 @@ class Identity::SessionTest < ActiveSupport::TestCase
   end
 
   test "inactive owner errors retain a symbol and translated message" do
-    session = Identity::Session.new(user: Identity::UserDeleted.create!)
+    guest = Identity::UserGuest.create!(created_at: Identity::UserGuest::EXPIRY_DURATION.ago)
+    session = Identity::Session.new(user: guest)
     assert_not session.valid?
     assert_includes session.errors.details[:user], { error: :inactive }
     assert_includes session.errors[:user], "must be active"

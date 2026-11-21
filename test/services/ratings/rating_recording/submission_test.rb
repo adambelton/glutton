@@ -76,9 +76,8 @@ class Ratings::SubmissionTest < ActiveSupport::TestCase
     assert_no_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ] do
       assert_raises(Ratings::Errors::FilmUnavailable) { submit(user_id: other.id) }
       assert_raises(Ratings::Errors::FilmUnavailable) { submit(rating_film_id: -1) }
-      deleted = Identity::UserDeleted.create!
       travel Identity::UserGuest::EXPIRY_DURATION
-      [ @user.id, deleted.id, -1 ].each do |user_id|
+      [ @user.id, -1 ].each do |user_id|
         assert_raises(Identity::Errors::Unavailable) { submit(user_id:) }
       end
     end

@@ -57,7 +57,7 @@ class Library::EntryOperationsTest < ActiveSupport::TestCase
 
     test "#{operation} validates fresh identity and permits registered users beyond guest expiry" do
       entry = source.create!(user: @user, film: @film)
-      [ nil, -1, Identity::UserDeleted.create!.id ].each do |id|
+      [ nil, -1 ].each do |id|
         assert_raises(Identity::Errors::Unavailable) { operation.call(user_id: id, library_film_id: entry.id) }
       end
       travel_to @user.created_at + Identity::UserGuest::EXPIRY_DURATION do

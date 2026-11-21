@@ -221,7 +221,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_no_match(/translation missing/i, response.body)
   end
 
-  test "registered access and signed out revoked expired deleted identity outcomes" do
+  test "registered access and signed out revoked expired identity outcomes" do
     @user = Identity::UserRegistered.create!(email_address: "library@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
     bind_user
@@ -241,11 +241,6 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
       get library_path
       assert_redirected_to new_session_path
     end
-    bind_user
-    # Existing cookie with a deleted owner is a storage fixture for the unimplemented deletion transition.
-    @user.update_columns(type: "UserDeleted")
-    get library_path
-    assert_response :gone
   end
   test "edit links expose latest owner evidence on poster cards without writes" do
     [ @user, Identity::UserRegistered.create!(email_address: "edit-library@example.test",

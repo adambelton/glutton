@@ -30,14 +30,11 @@ module Identity
     test "unsupported and missing identities reject both operations" do
       freeze_time
       guest = Identity::UserGuest.create!
-      deleted = Identity::UserDeleted.create!
-      [ guest, deleted ].each do |user|
-        assert_not user.superuser?
-        assert_raises(Errors::SuperuserUnavailable) { user.grant_superuser!(actor: @actor) }
-        assert_raises(Errors::SuperuserUnavailable) { user.revoke_superuser!(actor: @actor) }
-      end
+      assert_not guest.superuser?
+      assert_raises(Errors::SuperuserUnavailable) { guest.grant_superuser!(actor: @actor) }
+      assert_raises(Errors::SuperuserUnavailable) { guest.revoke_superuser!(actor: @actor) }
       travel Identity::UserGuest::EXPIRY_DURATION
-      [ guest.id, deleted.id, -1 ].each do |user_id|
+      [ guest.id, -1 ].each do |user_id|
         assert_raises(Errors::SuperuserUnavailable) { AccountAdministration::GrantSuperuser.call(user_id:, actor_user_id: @actor.id) }
         assert_raises(Errors::SuperuserUnavailable) { AccountAdministration::RevokeSuperuser.call(user_id:, actor_user_id: @actor.id) }
       end
@@ -58,8 +55,7 @@ module Identity
     test "only current superusers can authorize grants and revocations including direct model actions" do
       user = account
       guest = Identity::UserGuest.create!
-      deleted = Identity::UserDeleted.create!
-      [ user, guest, deleted ].each do |actor|
+      [ user, guest ].each do |actor|
         assert_raises(Errors::SuperuserRequired) { AccountAdministration::GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id) }
         assert_raises(Errors::SuperuserRequired) { AccountAdministration::RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id) }
         assert_raises(Errors::SuperuserRequired) { user.grant_superuser!(actor:) }
@@ -84,33 +80,15 @@ module Identity
       assert user.reload.superuser?
     end
 
-    test "storage requires clearing superuser privilege when anonymizing a deleted account" do
-      # Explicit storage-contract test: deletion workflow is not implemented yet.
-      deleted_attributes = { type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil }
+    test "storage and model validation restrict permission to registered accounts" do
+      assert_not Identity::UserGuest.new(superuser: true).valid?
       error = assert_raises(ActiveRecord::StatementInvalid) do
-        Identity::User.transaction(requires_new: true) { @actor.update_columns(deleted_attributes) }
+        Identity::User.transaction(requires_new: true) do
+          Identity::User.insert_all!([ { type: Identity::UserGuest.sti_name, superuser: true,
+            created_at: Time.current, updated_at: Time.current } ])
+        end
       end
       assert_includes error.message, "only_registered_users_can_be_superusers"
-      assert @actor.reload.superuser?
-
-      @actor.update_columns(deleted_attributes.merge(superuser: false))
-      deleted_user = Identity::User.find(@actor.id)
-      assert_not deleted_user.superuser?
-      assert_not deleted_user.active?
-      assert_raises(Errors::SuperuserRequired) { AccountAdministration::GrantSuperuser.call(user_id: account.id, actor_user_id: deleted_user.id) }
-    end
-
-    test "storage and model validation restrict permission to registered accounts" do
-      [ Identity::UserGuest, Identity::UserDeleted ].each do |model|
-        assert_not model.new(superuser: true).valid?
-        error = assert_raises(ActiveRecord::StatementInvalid) do
-          Identity::User.transaction(requires_new: true) do
-            Identity::User.insert_all!([ { type: model.sti_name, superuser: true,
-              created_at: Time.current, updated_at: Time.current } ])
-          end
-        end
-        assert_includes error.message, "only_registered_users_can_be_superusers"
-      end
       user = account
       error = assert_raises(ActiveRecord::NotNullViolation) do
         Identity::User.transaction(requires_new: true) { user.update_columns(superuser: nil) }

@@ -28,10 +28,10 @@ module Identity
       assert_equal digest, @user.reload.password_digest
     end
 
-    test "unknown pending malformed and deleted identities send nothing" do
+    test "unknown pending malformed and purged identities send nothing" do
       Registration::PrepareRegistration.call(email_address: "pending@example.test", password: "original password phrase",
         password_confirmation: "original password phrase")
-      @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+      @user.destroy_with_activity!
       assert_no_difference [ "Identity::User.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
         [ "unknown@example.test", "pending@example.test", "mail-reset@example.test", nil, [], "invalid" ].each do |email|
           assert_nil PasswordRecovery::RequestPasswordReset.call(email_address: email)

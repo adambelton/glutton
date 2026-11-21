@@ -159,15 +159,9 @@ class Library::RatingConsumerTest < ActiveSupport::TestCase
     assert_equal 1, derived.count
   end
 
-  test "expired and deleted identities are skipped" do
+  test "expired identities are skipped" do
     event = publish
     travel Identity::UserGuest::EXPIRY_DURATION
-    assert_equal({ skipped: 1 }, dispatch)
-    assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
-    @user = Identity::UserGuest.create!
-    event = publish
-    # Simulate a deleted owner with an existing event until Identity implements this transition.
-    @user.update_columns(type: "UserDeleted")
     assert_equal({ skipped: 1 }, dispatch)
     assert_equal DomainEvents::EventDelivery::Statuses::SKIPPED, receipt(event).status
     assert_empty Library::LibraryFilm.all

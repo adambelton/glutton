@@ -64,16 +64,13 @@ class Identity::UserRegisteredTest < ActiveSupport::TestCase
     assert_not_equal user, Identity::UserRegistered.find_by_email("viewer+extra@example.test")
     assert_nil Identity::UserRegistered.find_by_email(nil)
     Identity::UserGuest.create!
-    Identity::UserDeleted.create!
     assert_equal user, Identity::UserRegistered.find_by_email(user.email_address)
   end
 
-  test "guests and deleted users reject any credential field" do
-    [ Identity::UserGuest, Identity::UserDeleted ].each do |model|
-      { email_address: "viewer@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
-        assert_not model.new(field => value).valid?
-        assert model.new.valid?
-      end
+  test "guests reject any credential field" do
+    assert Identity::UserGuest.new.valid?
+    { email_address: "viewer@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
+      assert_not Identity::UserGuest.new(field => value).valid?
     end
   end
 
@@ -91,12 +88,10 @@ class Identity::UserRegisteredTest < ActiveSupport::TestCase
     end
   end
 
-  test "database keeps guest and deleted credentials null" do
-    [ "UserGuest", "UserDeleted" ].each do |type|
-      row = { type: type, created_at: Time.current, updated_at: Time.current }
-      { email_address: "db@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
-        assert_constraint_rejects(row.merge(field => value), "other_users_have_no_credentials")
-      end
+  test "database keeps guest credentials null" do
+    row = { type: "UserGuest", created_at: Time.current, updated_at: Time.current }
+    { email_address: "db@example.test", password_digest: "digest", email_confirmed_at: Time.current }.each do |field, value|
+      assert_constraint_rejects(row.merge(field => value), "other_users_have_no_credentials")
     end
   end
 

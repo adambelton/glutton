@@ -27,12 +27,11 @@ module Identity
       [ nil, "", "tampered", @user.signed_id(purpose: :other) ].each do |token|
         assert_raises(Errors::PasswordResetUnavailable) { reset(token:) }
       end
-      [ Identity::UserGuest.create!, Identity::UserDeleted.create! ].each do |user|
-        assert_not user.can_reset_password?
-        assert_no_difference "Identity::Session.count" do
-          assert_raises(Errors::PasswordResetUnavailable) do
-            user.reset_password!(password: "replacement password phrase", password_confirmation: "replacement password phrase")
-          end
+      guest = Identity::UserGuest.create!
+      assert_not guest.can_reset_password?
+      assert_no_difference "Identity::Session.count" do
+        assert_raises(Errors::PasswordResetUnavailable) do
+          guest.reset_password!(password: "replacement password phrase", password_confirmation: "replacement password phrase")
         end
       end
     end
@@ -82,7 +81,7 @@ module Identity
     end
 
     test "deleted account cannot redeem an earlier token" do
-      @user.update_columns(type: "UserDeleted", email_address: nil, password_digest: nil, email_confirmed_at: nil)
+      @user.destroy_with_activity!
       assert_raises(Errors::PasswordResetUnavailable) { reset }
     end
   end

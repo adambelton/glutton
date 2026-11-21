@@ -6,15 +6,10 @@ module Identity
 
     validates :email_address, :password_digest, :email_confirmed_at, inclusion: { in: [ nil ] }
 
-    scope :active, -> { where(arel_table[:created_at].gt(EXPIRY_DURATION.ago)) }
     scope :expired, -> { where(arel_table[:created_at].lteq(EXPIRY_DURATION.ago)) }
 
     def default_entry_path
       "/rating/new"
-    end
-
-    def inactive_error
-      Identity::Errors::GuestExpired.new unless active?
     end
 
     def sign_out_warning
