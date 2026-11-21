@@ -9,6 +9,11 @@ module ActivityMonitoring
       @span.status = OpenTelemetry::Trace::Status.error
     end
 
+    def record_expected_failure(error)
+      @span.set_attribute(Attributes::REJECTION_TYPE, error.class.name)
+      set_outcome("rejected")
+    end
+
     def set_operation(operation)
       @span.set_attribute(Attributes::OPERATION, operation)
     end
