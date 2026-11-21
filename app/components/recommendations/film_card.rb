@@ -9,37 +9,55 @@ module Recommendations
       video_id = details.youtube_trailer_id
       render Shared::FilmCard.new(layout: "recommendation-film", data: ({ controller: "recommendation-trailer",
         action: "keydown.esc->recommendation-trailer#collapse resize@window->recommendation-trailer#fitViewport" } if video_id.present? && !@readonly)) do
+        media(details:, video_id:)
         div(class: "recommendation-artwork") { render ::Registry::FilmPoster.new(film: @film) }
         div(class: "recommendation-details") do
-          h2 { render ::Registry::FilmTitle.new(film: @film) }
-          div(class: "recommendation-metadata") do
-            match_score if @match_percentage.present? || !@readonly
-            render ::Registry::FilmLinks.new(film: @film, readonly: @readonly)
+          header(class: "recommendation-heading") do
+            h2 { render ::Registry::FilmTitle.new(film: @film) }
+            div(class: "recommendation-metadata") do
+              match_score if @match_percentage.present? || !@readonly
+              render ::Registry::FilmLinks.new(film: @film, readonly: @readonly)
+            end
           end
-          overview = details.overview
-          p(class: "recommendation-synopsis") { overview } if overview.present?
-        end
-        div(class: "recommendation-response") do
-          trailer(video_id:) if video_id.present?
-          div(class: "film-actions recommendation-actions") do
-            params = { film_id: @film.id }
-            response_action(url: accept_recommendation_path, params:) do
-              render Shared::PrimaryButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.accept") }
-            end
-            response_action(url: reject_recommendation_path, params:) do
-              render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.reject") }
-            end
-            label = t("library.detail.add_to_watched")
-            response_action(url: add_to_watched_from_recommendations_path, params:) do
-              render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
-                aria: { label: }, data: { tooltip: label }) { render ::Library::EyeCheckIcon.new }
-            end
+          div(class: "recommendation-response") do
+            render Shared::FilmSynopsis.new(text: details.overview, id: "recommendation-synopsis-#{@film.id}")
+            actions
           end
         end
       end
     end
 
     private
+
+    def media(details:, video_id:)
+      if video_id.present?
+        trailer(video_id:)
+      elsif (backdrop_path = details.backdrop_path).present?
+        img(class: "recommendation-media recommendation-backdrop", src: "https://image.tmdb.org/t/p/w780#{backdrop_path}",
+          alt: t("recommendations.backdrop_for", title: @film.title), width: 780, height: 439, referrerpolicy: "no-referrer")
+      else
+        div(class: "recommendation-media recommendation-placeholder", aria: { hidden: "true" })
+      end
+    end
+
+    def actions
+      div(class: "film-actions recommendation-actions") do
+        params = { film_id: @film.id }
+        render Shared::ActionForm.new(url: accept_recommendation_path, params:, readonly: @readonly) do
+          render Shared::PrimaryButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.accept") }
+        end
+        render Shared::ActionForm.new(url: reject_recommendation_path, params:, readonly: @readonly) do
+          render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.reject") }
+        end
+        render Shared::ActionForm.new(url: add_to_watched_from_recommendations_path, params:, readonly: @readonly) do
+          label = t("library.detail.add_to_watched")
+          render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
+            aria: { label: }, data: ({ tooltip: label } unless @readonly)) do
+            render ::Library::EyeCheckIcon.new
+          end
+        end
+      end
+    end
 
     def match_score
       unless @match_percentage.present?
@@ -54,16 +72,8 @@ module Recommendations
       end
     end
 
-    def response_action(url:, params:, &block)
-      if @readonly
-        div(class: "ui-action-form", &block)
-      else
-        render Shared::ActionForm.new(url:, params:), &block
-      end
-    end
-
     def trailer(video_id:)
-      div(class: "recommendation-trailer") do
+      div(class: "recommendation-media recommendation-trailer") do
         div(class: "recommendation-trailer-frame") do
           if @readonly
             div(class: "recommendation-trailer-thumbnail") do
@@ -75,7 +85,6 @@ module Recommendations
                 end
               end
             end
-            p(class: "recommendation-trailer-caption") { t("identity.entry.static_trailer") }
           else
             trailer_player(video_id:)
           end

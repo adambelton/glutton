@@ -13,11 +13,14 @@ en:
       selection_required: "Select at least %{count} different films to continue."
       unavailable: Your rating queue has already started.
     browser:
-      film_details: Film details
       title: Ratings
       reload: Reload current rating
       choice: What did you think?
       notes: Your notes (optional)
+      panels:
+        label: Film reaction
+        rating: Rating
+        journal: Journal
       notes_placeholder: What did you love or hate about the film, and why? Describe the experience. Think about particular moments, characters, atmosphere, pacing, and how the film made you feel.
       save: Save
       save_disabled: Select a rating to save.

@@ -24,10 +24,6 @@ en:
       confirm_discard_guest: All your guest activity will be permanently lost, and your guest account will be destroyed.
       cancel_discard_guest: Cancel
       library_empty: No example films match. Try changing the rating filters.
-      library_count:
-        one: 1 example film
-        other: "%{count} example films"
-      static_trailer: Trailer preview — playback is available in the app.
       features:
         ratings:
           samples: Rating samples

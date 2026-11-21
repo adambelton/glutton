@@ -122,6 +122,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_equal 1, notes.second.lines.size
     assert_select '.demo-browser input[name="rating_film_id"]', count: 0
     assert_select ".demo-browser .rating-choices[disabled]", count: 3
+    assert_select ".demo-browser .rating-actions button[disabled]", count: 9
     assert_select ".demo-browser fieldset[disabled] input[checked]", count: 3
     document = Nokogiri::HTML(response.body)
     groups = document.css('.demo-frame input[type="radio"]').map { |node| node["name"] }.uniq
@@ -142,7 +143,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select 'img.recommendation-trailer-still[src="https://i.ytimg.com/vi/97OQ7MQC5Ck/hqdefault.jpg"]'
     assert_select ".recommendation-trailer-still", count: 3
     assert_select '.recommendation-trailer-play[aria-hidden="true"] svg', count: 3
-    assert_select ".recommendation-trailer-caption", text: I18n.t("identity.entry.static_trailer"), count: 3
+    assert_select ".recommendation-trailer-caption", count: 0
     assert_select ".marketing-preview iframe, .marketing-preview a[href]", count: 0
   end
 
@@ -228,11 +229,17 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_select ".demo-entry form[action=?]", guest_session_path
   end
 
-  test "recommendation preview omits films without stored usable trailers" do
-    Registry::Film.create!(tmdb_id: 310131, title: "No trailer")
+  test "recommendation preview uses backdrops and the Glutton placeholder when trailers are missing" do
+    backdrop_film = Registry::Film.create!(tmdb_id: 310131, title: "Film with backdrop", tmdb_metadata: { details: { backdrop_path: "/still.jpg" } })
+    Registry::Film.create!(tmdb_id: 2671, title: "Film with invalid backdrop", tmdb_metadata: { details: { backdrop_path: "//example.test/still.jpg" } })
     get root_path
-    assert_select '[aria-labelledby="recommendations-preview-heading"] .preview-empty'
-    assert_select ".recommendation-trailer-still", count: 0
+    assert_response :success
+    assert_select '[aria-labelledby="recommendations-preview-heading"]' do
+      assert_select ".recommendation-media.recommendation-backdrop[src=?][alt=?]", "https://image.tmdb.org/t/p/w780/still.jpg",
+        I18n.t("recommendations.backdrop_for", title: backdrop_film.title), count: 1
+      assert_select '.recommendation-media.recommendation-placeholder[aria-hidden="true"]', count: 1
+      assert_select ".recommendation-trailer-still, iframe", count: 0
+    end
   end
 
   test "protected resource returns after explicit guest entry and root then uses guest default" do

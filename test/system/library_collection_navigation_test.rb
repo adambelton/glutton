@@ -208,9 +208,13 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_selector "h2", text: film.title
     assert_link I18n.t("library.browser.return"), href: library_path(view: "watched")
     save = I18n.t("ratings.browser.save")
+    journal = I18n.t("ratings.browser.panels.journal")
     toast = I18n.t("ratings.browser.saved")
-    assert_button save, disabled: true
+    save_button = find_button(save, disabled: true).rect
+    rating_card = find(".rating-interface").rect
+    assert_in_delta rating_card.x + rating_card.width, save_button.x + save_button.width, 1
     find('label[for="rating-brilliant"]').click
+    find('[role="tab"]', text: journal).click
     fill_in "notes", with: "Original notes"
     click_button save
     assert_current_path library_path(view: "watched")
@@ -227,11 +231,13 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_button save, disabled: true
 
     oversized_notes = "x" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)
+    find('[role="tab"]', text: journal).click
     notes = find_field("notes")
     notes.execute_script("this.removeAttribute('maxlength')")
     notes.set(oversized_notes)
     click_button save
     assert_selector "#rating-errors"
+    find('[role="tab"]', text: journal).click
     assert_field "notes", with: oversized_notes
     assert_button save, disabled: false
     fill_in "notes", with: "Revised notes"
@@ -243,6 +249,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_current_path library_path(view: "watched")
     assert_selector ".ui-toast", text: toast
     click_button I18n.t("library.browser.edit_film_rating", title: film.title)
+    find('[role="tab"]', text: journal).click
     assert_field "notes", with: "Revised notes"
     assert_button save, disabled: true
   end

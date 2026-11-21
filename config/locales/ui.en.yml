@@ -12,6 +12,9 @@ en:
     dark_mode: Dark mode
     skip: Skip to content
     navigation: Main navigation
+    synopsis:
+      expand: Expand synopsis
+      collapse: Collapse synopsis
     search:
       mode: Film search source
       tmdb: TMDB

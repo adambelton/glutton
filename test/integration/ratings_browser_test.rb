@@ -40,9 +40,9 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     linked = Ratings::RatingFilm.create!(user: @user, film:)
     get new_rating_path(film_id: film.id)
     assert_response :success
-    assert_select ".rating-film-info" do
+    assert_select ".rating-film-details" do
       assert_select "h2", "Linked film (1979)"
-      assert_select "h2 + .rating-film-links + .rating-description .rating-synopsis", overview
+      assert_select "#rating-panel .film-synopsis-text", overview
       assert_select 'a[href="https://www.themoviedb.org/movie/348"]', I18n.t("registry.film_presentation.tmdb")
       assert_select "a[href=?]", "https://en.wikipedia.org/w/index.php?curid=123", text: I18n.t("registry.film_presentation.wikipedia")
       assert_select "a", count: 2
@@ -83,7 +83,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     end
     assert_select "form#rating-form form", count: 0
     assert_select 'input[name="rating_film_id"][value=?]', @candidate.id.to_s
-    assert_select ".rating-film-info .muted", count: 0
+    assert_select ".rating-film-details .muted", count: 0
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_difference [ "Ratings::Rating.count", "DomainEvents::DomainEvent.count" ], 1 do
       assert_no_difference "Library::LibraryFilm.count" do

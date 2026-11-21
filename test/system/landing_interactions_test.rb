@@ -104,8 +104,10 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     end
     within preview(:ratings) do
       assert_selector "h2", text: "Alien"
+      find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_includes find("textarea").value, "The industrial spaceship felt like a real workplace."
       click_button I18n.t("identity.entry.demo.select", position: 2, count: 3)
+      find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_equal I18n.t("identity.entry.demo.examples.the_thing.notes"), find("textarea").value
     end
     within(preview(:recommendations)) { assert_selector "h2", text: "Backrooms" }
@@ -147,6 +149,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
         assert_selector ".library-film", count: 3
         find("button", text: I18n.t("library.browser.views.watched"), exact_text: true).send_keys(:enter)
         assert_selector ".library-film", count: 20
+        assert_no_text "20 example films"
         click_button I18n.t("ratings.values.brilliant")
         assert_selector ".library-film", count: 5
         assert_selector ".library-film h3", text: "The Thing (1982)"
@@ -175,7 +178,6 @@ class LandingInteractionsTest < ApplicationSystemTestCase
         assert_selector ".library-film", count: 3
         click_button I18n.t("library.browser.views.watched")
         assert_selector ".library-film", count: 2
-        assert_text I18n.t("identity.entry.library_count", count: 2)
         click_button I18n.t("library.browser.clear_rating_filters")
         assert_selector ".library-film", count: 20
         assert_selector '.library-preview-search:disabled form[method="get"]', count: 1
@@ -195,10 +197,48 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       click_button I18n.t("ratings.values.not_for_me")
       assert_no_selector ".library-film"
       assert_text I18n.t("identity.entry.library_empty")
-      assert_text I18n.t("identity.entry.library_count", count: 0)
       click_button I18n.t("library.browser.clear_rating_filters")
       assert_selector ".library-film", count: 16
     end
+  end
+
+  test "ratings and recommendation previews disclose long synopses" do
+    overview = ("A visitor arrives in a town where nobody goes out after dark. " * 18).strip
+    create_preview_catalogue(overviews: { 348 => overview, 310131 => overview })
+    visit root_path
+
+    %i[ratings recommendations].each do |feature|
+      within preview(feature) do
+        if feature == :recommendations
+          click_button I18n.t("identity.entry.demo.select", position: 2, count: 3)
+          assert_selector "h2", text: "The Witch"
+        end
+        expand = find_button I18n.t("ui.synopsis.expand")
+        toggle = expand.rect
+        assert_equal [ 32, 24 ], [ toggle.width, toggle.height ]
+        synopsis = find(".film-synopsis-text")
+        collapsed = synopsis.rect
+        assert_in_delta 2 * synopsis.style("line-height").fetch("line-height").to_f, collapsed.height, 1
+        expand.click
+        assert_button I18n.t("ui.synopsis.collapse")
+        assert_operator synopsis.rect.height, :>, collapsed.height
+        synopsis.send_keys(:escape)
+        assert_button I18n.t("ui.synopsis.expand")
+        assert_equal collapsed, synopsis.rect
+      end
+    end
+
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
+    %i[ratings recommendations].each do |feature|
+      within preview(feature) do
+        synopsis = find(".film-synopsis-text")
+        assert_no_button I18n.t("ui.synopsis.expand")
+        assert_equal "none", synopsis.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
+        assert page.evaluate_script("arguments[0].clientHeight === arguments[0].scrollHeight", synopsis)
+      end
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "complete previews stay static and fit desktop tablet and narrow screens" do
@@ -209,10 +249,17 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       choice = find(".demo-frame:not([hidden]) .rating-choice label", match: :first)
       choice.hover
       assert_equal "default", choice.style("cursor").fetch("cursor")
+      within ".demo-frame:not([hidden]) .rating-actions" do
+        assert_button I18n.t("ratings.browser.save"), disabled: true
+        assert_button I18n.t("ratings.browser.dismiss"), disabled: true
+        assert_button I18n.t("library.detail.add_to_watchlist"), disabled: true
+      end
+      find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_equal "default", find(".demo-frame:not([hidden]) textarea").style("cursor").fetch("cursor")
     end
     within preview(:recommendations) do
       assert_selector ".recommendation-trailer-still", count: 1
+      assert_no_text "Trailer preview"
       assert_selector ".recommendation-film button:disabled", count: 3
       assert_equal "default", find(".recommendation-film button", match: :first).style("cursor").fetch("cursor")
     end
@@ -224,7 +271,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     assert_no_selector ".marketing-preview a[href], .marketing-preview iframe"
     assert_selector '.library-preview-search:disabled form[method="get"]', count: 1
     assert_no_selector ".marketing-preview form input:enabled, .marketing-preview form button:enabled"
-    assert_no_selector ".demo-frame button:enabled, .account-page button:enabled"
+    assert_no_selector ".demo-frame button:enabled:not([role=tab], .film-synopsis-toggle), .account-page button:enabled"
 
     [ [ 1400, 1000 ], [ 800, 1000 ], [ 390, 844 ] ].each do |width, height|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)

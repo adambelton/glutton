@@ -9,7 +9,12 @@ module Ratings
     end
 
     def view_template
-      render Shared::FilmCard.new(layout: "rating-interface", data: ({ controller: "rating-selection", rating_selection_baseline_value: saved_baseline&.to_json } unless @readonly)) do
+      data = { controller: "rating-panels" }
+      unless @readonly
+        data[:controller] += " rating-selection"
+        data[:rating_selection_baseline_value] = saved_baseline&.to_json
+      end
+      render Shared::FilmCard.new(layout: "rating-interface", data:) do
         errors_section
         if @readonly
           div(class: "rating-workspace") { workspace }
@@ -21,28 +26,46 @@ module Ratings
             workspace
           end
         end
-        div(class: "rating-response") do
-          notes_field
-          actions unless @readonly
-        end
+        actions
       end
     end
 
     private
 
     def workspace
-      div(class: "rating-film-info") do
-        div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
-        div(class: "rating-film-details") do
-          h2 { render Registry::FilmTitle.new(film: @film) }
-          render Registry::FilmLinks.new(film: @film, readonly: @readonly)
-          div(class: "rating-description", tabindex: "0", role: "region", aria: { label: t("ratings.browser.film_details") }) do
-            overview = @film.tmdb_details.overview
-            p(class: "rating-synopsis") { overview } if overview.present?
+      div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
+      div(class: "rating-film-details") do
+        header(class: "rating-film-header") do
+          div(class: "rating-film-heading") do
+            h2 { render Registry::FilmTitle.new(film: @film) }
+            render Registry::FilmLinks.new(film: @film, readonly: @readonly)
+          end
+          panel_tabs
+        end
+        panel("rating") do
+          render Shared::FilmSynopsis.new(text: @film.tmdb_details.overview, id: "#{@prefix}rating-synopsis")
+          rating_fields
+        end
+        panel("journal") { notes_field }
+      end
+    end
+
+    def panel_tabs
+      div(class: "rating-tabs", role: "tablist", hidden: true, aria: { label: t("ratings.browser.panels.label") },
+        data: { rating_panels_target: "tabs", action: "keydown->rating-panels#navigate" }) do
+        %w[rating journal].each do |name|
+          button(type: "button", id: "#{@prefix}#{name}-tab", role: "tab",
+            aria: { controls: "#{@prefix}#{name}-panel" }, data: { rating_panels_target: "tab", action: "rating-panels#select" }) do
+            t("ratings.browser.panels.#{name}")
           end
         end
       end
-      rating_fields
+    end
+
+    def panel(name, &block)
+      div(id: "#{@prefix}#{name}-panel", class: "rating-panel", role: "tabpanel",
+        tabindex: ("0" if name == "rating"),
+        aria: { labelledby: "#{@prefix}#{name}-tab" }, data: { rating_panels_target: "panel" }, &block)
     end
 
     def errors_section
@@ -65,7 +88,7 @@ module Ratings
               data: ({ rating_selection_target: "choice" } unless @readonly))
             label(for: id) do
               render RatingValueIcon.new(value:)
-              plain t("ratings.values.#{value}")
+              span { t("ratings.values.#{value}") }
             end
           end
         end
@@ -90,16 +113,18 @@ module Ratings
 
     def actions
       div(class: "rating-actions film-actions") do
-        render Shared::PrimaryButton.new(type: :submit, form: "rating-form", class: "ui-submit",
-          disabled: !is_dirty? || !Ratings::Rating::Values::ALL.include?(@value),
-          data: { rating_selection_target: "save", tooltip: t(@saved_rating.present? && Ratings::Rating::Values::ALL.include?(@value) ? "ratings.browser.save_unchanged" : "ratings.browser.save_disabled") }) { t("ratings.browser.save") }
+        valid_rating = Ratings::Rating::Values::ALL.include?(@value)
+        tooltip = t(@saved_rating.present? && valid_rating ? "ratings.browser.save_unchanged" : "ratings.browser.save_disabled") unless @readonly
+        render Shared::PrimaryButton.new(type: :submit, form: ("rating-form" unless @readonly), class: "ui-submit",
+          disabled: @readonly || !is_dirty? || !valid_rating,
+          data: ({ rating_selection_target: "save", tooltip: } unless @readonly)) { t("ratings.browser.save") }
         if @dismissible
-          render Shared::ActionForm.new(url: dismiss_rating_path, params: { rating_film_id: @rating_film_id }) do
-            render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.browser.dismiss") }
+          render Shared::ActionForm.new(url: dismiss_rating_path, params: { rating_film_id: @rating_film_id }, readonly: @readonly) do
+            render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("ratings.browser.dismiss") }
           end
           tooltip_text = t("library.detail.add_to_watchlist")
-          render Shared::ActionForm.new(url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id }) do
-            render Shared::IconButton.new(type: :submit, variant: :secondary, size: :xl, class: "ui-action-button",
+          render Shared::ActionForm.new(url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id }, readonly: @readonly) do
+            render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
           end
         end

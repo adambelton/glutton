@@ -49,8 +49,9 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_current_path library_path
   end
 
-  test "the match percentage sits with the film sources and explains itself on hover and keyboard focus" do
-    film = Registry::Film.create!(title: "A recommendation with a match score", tmdb_id: 19_807, wikipedia_context: { page_id: 123 })
+  test "the match and source links follow the title and wrap when needed" do
+    film = Registry::Film.create!(title: "A recommendation with a match score", tmdb_id: 19_807, wikipedia_context: { page_id: 123 },
+      tmdb_metadata: { details: { backdrop_path: "/still.jpg", overview: "A visitor arrives in a town where nobody goes out after dark." } })
     visit recommendation_path
     click_button I18n.t("identity.entry.try_it_out")
     assert_current_path recommendation_path
@@ -68,6 +69,10 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
 
     visit recommendation_path
     assert_selector "h2", text: film.title
+    assert_selector ".film-synopsis[data-ready]"
+    assert_no_button I18n.t("ui.synopsis.expand")
+    backdrop = find('img.recommendation-backdrop[src="https://image.tmdb.org/t/p/w780/still.jpg"]')
+    assert_no_selector ".recommendation-trailer, .recommendation-placeholder"
     score = find(".recommendation-match", text: I18n.t("recommendations.match.percentage", percentage: 65))
     mark = score.find('.recommendation-match-mark[aria-hidden="true"]')
     assert_includes mark.style("mask-image").fetch("mask-image"), "/glutton-mark.svg"
@@ -85,10 +90,33 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     [ 1400, 390 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
       score_rect = score.rect
+      title = find(".recommendation-heading h2").rect
+      if width == 1400
+        assert_operator score_rect.x, :>, title.x + title.width
+        assert_in_delta title.y + title.height / 2.0, score_rect.y + score_rect.height / 2.0, 1
+      else
+        assert_in_delta title.x, score_rect.x, 1
+        assert_operator score_rect.y, :>, title.y + title.height
+      end
       [ "tmdb", "wikipedia" ].each do |source|
         link = find_link(I18n.t("registry.film_presentation.#{source}")).rect
         assert_in_delta score_rect.y + score_rect.height / 2.0, link.y + link.height / 2.0, 1
         assert_operator link.x, :>, score_rect.x + score_rect.width
+      end
+      synopsis = find(".film-synopsis-text").rect
+      actions = find(".recommendation-actions").rect
+      heading = find(".recommendation-heading").rect
+      assert_in_delta 16.0 / 9, backdrop.rect.width.to_f / backdrop.rect.height, 0.02
+      if width == 1400
+        synopsis_area = find(".film-synopsis").rect
+        assert_in_delta 12, actions.y - (heading.y + heading.height), 1
+        assert_in_delta synopsis_area.y + synopsis_area.height, actions.y + actions.height, 1
+        assert_in_delta synopsis_area.y, synopsis.y, 1
+        assert_operator synopsis_area.height, :>, synopsis.height
+        assert_operator actions.x, :>, synopsis_area.x + synopsis_area.width
+      else
+        assert_in_delta 12, synopsis.y - (heading.y + heading.height), 1
+        assert_operator actions.y, :>, synopsis.y + synopsis.height
       end
     end
   ensure
@@ -97,7 +125,8 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
 
   test "expanding a trailer fills the card and keeps the same player" do
     film = Registry::Film.create!(title: "A recommendation with a trailer", tmdb_metadata: { details: {
-      overview: "A visitor arrives in a town where nobody goes out after dark.",
+      backdrop_path: "/still.jpg",
+      overview: ("A visitor arrives in a town where nobody goes out after dark. " * 18).strip,
       videos: { results: [ { site: "YouTube", type: "Trailer", official: true, key: "M7lc1UVf-VE" } ] }
     } })
     password = "a long test password"
@@ -118,6 +147,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_selector ".recommendation-match", exact_text: I18n.t("recommendations.match.limited")
 
     player = find('#recommendation-trailer-player[referrerpolicy="strict-origin-when-cross-origin"]')
+    assert_no_selector ".recommendation-backdrop, .recommendation-placeholder"
     original_width = player.rect.width
     original_height = find(".recommendation-film").rect.height
     expand = find_button(I18n.t("recommendations.expand_trailer"))
@@ -152,32 +182,59 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_no_button I18n.t("recommendations.collapse_trailer")
     poster = find(".recommendation-artwork .film-poster").rect
     details = find(".recommendation-details").rect
-    synopsis = find(".recommendation-synopsis").rect
+    synopsis = find(".film-synopsis").rect
     tablet_player = player.rect
     actions = find(".recommendation-actions").rect
-    assert_in_delta poster.y, details.y, 1
+    assert_in_delta poster.y, tablet_player.y, 1
     assert_in_delta details.x, tablet_player.x, 1
-    assert_operator synopsis.y + synopsis.height, :<, tablet_player.y
-    assert_operator tablet_player.y, :>=, details.y + details.height
-    assert_in_delta poster.y + poster.height, tablet_player.y + tablet_player.height, 1
-    assert_operator actions.y, :>, poster.y + poster.height
-    assert_in_delta details.x, actions.x, 1
-    assert_in_delta poster.x + poster.width, actions.x + actions.width, 1
+    assert_operator tablet_player.x + tablet_player.width, :<, poster.x
+    assert_in_delta poster.height, tablet_player.height, 1
+    assert_operator details.y, :>, poster.y + poster.height
+    assert_in_delta details.x, synopsis.x, 1
+    assert_operator actions.x, :>, synopsis.x + synopsis.width
+
+    text = find(".film-synopsis-text")
+    heading = find(".recommendation-heading").rect
+    assert_in_delta 12, actions.y - (heading.y + heading.height), 1
+    assert_in_delta synopsis.y + synopsis.height, actions.y + actions.height, 1
+    assert_in_delta 2 * text.style("line-height").fetch("line-height").to_f, synopsis.height, 1
+    expand_synopsis = find_button I18n.t("ui.synopsis.expand")
+    assert_in_delta synopsis.y, expand_synopsis.rect.y + expand_synopsis.rect.height, 1
+    assert_in_delta synopsis.x + synopsis.width, expand_synopsis.rect.x + expand_synopsis.rect.width, 1
+    expand_synopsis.click
+    collapse_synopsis = find_button(I18n.t("ui.synopsis.collapse")).rect
+    assert_operator text.rect.y, :<, synopsis.y
+    assert_in_delta synopsis.y + synopsis.height, text.rect.y + text.rect.height, 1
+    assert_in_delta text.rect.y, collapse_synopsis.y + collapse_synopsis.height, 1
+    assert_in_delta synopsis.x + synopsis.width, collapse_synopsis.x + collapse_synopsis.width, 1
+    assert_equal actions, find(".recommendation-actions").rect
+    text.send_keys(:escape)
+    assert_equal find_button(I18n.t("ui.synopsis.expand")), page.evaluate_script("document.activeElement")
 
     page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 850, deviceScaleFactor: 1, mobile: true)
-    assert_no_button I18n.t("recommendations.collapse_trailer")
     assert_no_button I18n.t("recommendations.expand_trailer")
     assert_button I18n.t("recommendations.accept")
+    watched = find_button I18n.t("library.detail.add_to_watched")
+    assert_empty watched.text
+    watched.assert_selector "svg"
     assert_selector "#recommendation-trailer-player[allowfullscreen]"
     mobile_player = player.rect
+    poster = find(".recommendation-artwork .film-poster").rect
+    details = find(".recommendation-details").rect
     actions = find(".recommendation-actions").rect
     assert_in_delta 16.0 / 9, mobile_player.width.to_f / mobile_player.height, 0.02
-    assert_in_delta 16, actions.y - (mobile_player.y + mobile_player.height), 1
+    assert_operator poster.y, :>, mobile_player.y + mobile_player.height
+    assert_operator details.y, :>, poster.y + poster.height
+    synopsis = find(".film-synopsis").rect
+    assert_operator actions.y, :>, synopsis.y + synopsis.height
+    assert_no_button I18n.t("ui.synopsis.expand")
+    assert_equal "none", text.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
+    assert page.evaluate_script("arguments[0].clientHeight === arguments[0].scrollHeight", text)
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
-  test "rating and recommendation cards and posters use matching dimensions" do
+  test "cards keep proportional posters and right-aligned actions of the same size" do
     film = Registry::Film.create!(title: "Card sizing film")
     visit recommendation_path
     click_button I18n.t("identity.entry.try_it_out")
@@ -187,22 +244,32 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     [ 1400, 900, 390 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
       visit recommendation_path
-      recommendation = find(".recommendation-film", text: film.title).rect
-      recommendation_poster = find(".recommendation-artwork .film-poster").rect
-      visit new_rating_path
-      rating = find(".rating-interface", text: film.title).rect
-      rating_poster = find(".rating-film-artwork .film-poster").rect
-      if width >= 1100
-        assert_in_delta rating.height, recommendation.height, 1
-      elsif width <= 650
-        assert_equal "visible", find(".rating-interface").style("overflow-y").fetch("overflow-y")
+      recommendation = find(".recommendation-film", text: film.title)
+      assert_no_selector ".recommendation-trailer"
+      within(recommendation) do
+        placeholder = find(".recommendation-placeholder").rect
+        poster = find(".recommendation-artwork .film-poster").rect
+        assert_in_delta 16.0 / 9, placeholder.width.to_f / placeholder.height, 0.02
+        if width > 650
+          assert_in_delta placeholder.y, poster.y, 1
+        else
+          assert_operator poster.y, :>, placeholder.y + placeholder.height
+        end
+        assert_button I18n.t("library.detail.add_to_watched")
+        assert_proportional_poster(".recommendation-artwork .film-poster")
+        assert_actions_align_right(recommendation)
       end
-      # One page can have a vertical scrollbar and a narrower content area.
-      columns = width >= 1100 ? 3 : (width > 650 ? 2 : 1)
-      poster_width_difference = (rating.width - recommendation.width).to_f / columns
-      assert_in_delta rating_poster.width - poster_width_difference, recommendation_poster.width, 1
-      assert_in_delta recommendation_poster.width * 1.5, recommendation_poster.height, 1
-      assert_in_delta rating_poster.width * 1.5, rating_poster.height, 1
+      accept = find_button(I18n.t("recommendations.accept")).rect
+      visit new_rating_path
+      rating = find(".rating-interface", text: film.title)
+      within(rating) do
+        assert_selector '[role="tab"][aria-selected="true"]', text: I18n.t("ratings.browser.panels.rating")
+        assert_proportional_poster(".rating-film-artwork .film-poster")
+        assert_actions_align_right(rating)
+        save = find_button(I18n.t("ratings.browser.save"), disabled: true).rect
+        assert_in_delta accept.width, save.width, 1
+        assert_in_delta accept.height, save.height, 1
+      end
     end
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
@@ -249,5 +316,18 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     accepted = DomainEvents::DomainEvent.where(name: Recommendations::Events::RECOMMENDATION_ACCEPTED).sole
     assert_equal first.id, accepted.payload.fetch("film_id")
     assert_not Library::LibraryFilm.exists?(user:, film: first)
+  end
+
+  private
+
+  def assert_actions_align_right(card)
+    actions = find(".film-actions").rect
+    assert_in_delta card.rect.x + card.rect.width, actions.x + actions.width, 1
+  end
+
+  def assert_proportional_poster(selector)
+    poster = find(selector).rect
+    assert_in_delta poster.width * 1.5, poster.height, 1
+    assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   end
 end
