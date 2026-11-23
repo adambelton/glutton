@@ -4,6 +4,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   setup do
     @account = Identity::UserRegistered.create!(email_address: "delete-log@example.test",
       password: "a long test password", password_confirmation: "a long test password", email_confirmed_at: Time.current)
+    @account.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
     @session = Identity::Session.create!(user: @account)
     @client = Aws::S3::Client.new(region: "auto", stub_responses: true)
     @log = Identity::AccountAdministration::DeletionLog.new(client: @client, bucket: "fixture", namespace: "recovery")
@@ -71,6 +72,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
     password = "a long test password"
     replacement = Identity::UserRegistered.create!(email_address: "replacement@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current)
+    replacement.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
     replacement.change_community_username!(community_username: "former_member")
     assert_equal "former_member", replacement.reload.community_username
   end

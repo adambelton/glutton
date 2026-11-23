@@ -85,7 +85,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
       signup(privacy_notice_version: "2")
       assert_response :unprocessable_entity
-      assert_select "a[href=?]", privacy_notice_path(version: Identity::PrivacyNotice.current.version)
+      assert_select ".registration-policies a[href=?]", privacy_notice_path
     end
   end
 
@@ -93,7 +93,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
       signup(terms_version: "2")
       assert_response :unprocessable_entity
-      assert_select "a[href=?]", terms_of_service_path(version: "1")
+      assert_select ".registration-policies a[href=?]", terms_of_service_path
       assert_select 'input[name="registration[terms_accepted]"]:not([checked])'
     end
   end

@@ -8,8 +8,9 @@ module Identity
     setup do
       password = "a long test password"
       @accounts = %w[first second].map do |member|
-        UserRegistered.create!(email_address: "username-#{member}@example.test", password:,
+        account = UserRegistered.create!(email_address: "username-#{member}@example.test", password:,
           password_confirmation: password, email_confirmed_at: Time.current)
+        Community::AcceptCodeOfConduct.call(user_id: account.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
       end
     end
 

@@ -17,10 +17,10 @@ module Community
       @member.destroy!
     end
 
-    test "concurrent and later acceptance preserve the original receipt" do
+    test "concurrent and later acceptance preserve the original timestamp" do
       backend_pid = Queue.new
       original = Identity::UserRegistered.transaction do
-        receipt = accept_current_version
+        accepted_member = accept_current_version
         @contender = Thread.new do
           Identity::UserRegistered.with_connection do |connection|
             backend_pid << connection.select_value("SELECT pg_backend_pid()")
@@ -35,15 +35,15 @@ module Community
             end
           end
         end
-        receipt
+        accepted_member
       end
 
       repeated = Timeout.timeout(5) { @contender.value }
-      assert_equal original.id, repeated.id
+      assert_equal original.community_code_of_conduct_accepted_at, repeated.community_code_of_conduct_accepted_at
       travel 1.hour do
-        assert_equal original.accepted_at, accept_current_version.accepted_at
+        assert_equal original.community_code_of_conduct_accepted_at, accept_current_version.community_code_of_conduct_accepted_at
       end
-      assert_equal 1, CodeOfConductAcceptance.where(user: @member).count
+      assert_equal CodeOfConduct.current.version, @member.reload.community_code_of_conduct_version
     end
 
     private

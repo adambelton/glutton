@@ -7,7 +7,6 @@ module Views
 
       def view_template
         page(title: notice_text("title"), narrow: true, pending_reminder: false, account_controls: false) do
-          p { t("identity.privacy_notice.version", version: @notice.version) }
           p { notice_text("operator") }
           %i[data lawful_bases providers international_transfers retention account_deletion backups rights].each do |topic|
             section do

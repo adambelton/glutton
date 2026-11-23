@@ -32,6 +32,7 @@ Rails.application.routes.draw do
   get "account/settings", to: "account_settings#show", as: :account_settings
   get "account/community", to: "account_settings#show_community", as: :account_community
   patch "account/community/username", to: "account_settings#change_community_username", as: :account_community_username
+  patch "account/community/avatar", to: "account_settings#choose_community_avatar", as: :account_community_avatar
   get "account/taste-profile", to: "account#show", as: :account_taste_profile
   post "account/refresh_taste_profile", to: "account#refresh_taste_profile", as: :refresh_taste_profile_account
   post "account/email", to: "account_settings#request_email", as: :account_email

@@ -14,6 +14,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     @previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example"
     @user = registered_user("settings@example.test", superuser: true)
+    @user.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
   end
 
   teardown do
@@ -97,8 +98,36 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.community_username
   end
 
+  test "invalid avatar submissions preserve the saved avatar" do
+    @user.choose_community_avatar!(preset: "moth")
+    sign_in(@user)
+
+    [ nil, "unknown", [ "skull" ] ].each do |preset|
+      get account_community_path(edit: "avatar")
+      patch account_community_avatar_path, params: { authenticity_token: csrf_token(account_community_avatar_path),
+        community_avatar_preset: preset }
+
+      assert_response :unprocessable_entity
+      assert_select '[role="alert"]', text: "Public avatar must be one of the available presets."
+      assert_select 'input[name="community_avatar_preset"][value="moth"][checked]'
+      assert_equal "moth", @user.reload.community_avatar_preset
+    end
+  end
+
+  test "avatar submissions require Community preview access" do
+    member = registered_user("avatar-member@example.test")
+    sign_in(member)
+    get account_settings_path
+
+    patch account_community_avatar_path, params: { authenticity_token: page_csrf_token, community_avatar_preset: "raven" }
+
+    assert_response :forbidden
+    assert_nil member.reload.community_avatar_preset
+  end
+
   test "username conflicts return a localized form error and preserve the saved name" do
     other = registered_user("someone-else@example.test")
+    other.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
     other.change_community_username!(community_username: "Scream_Queen")
     @user.change_community_username!(community_username: "Old_Name")
     sign_in(@user)

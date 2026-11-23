@@ -2,6 +2,5 @@ en:
   identity:
     privacy_notice:
       title: Privacy Notice
-      version: "Version %{version}"
     registration:
       policies_updated: Review the current Terms of Service and Privacy Notice, then submit the form again.

@@ -24,8 +24,8 @@ module Views
             submit(t("identity.registration.submit"))
           end
           div(class: "registration-policies") do
-            text_link(t("identity.terms_of_service.title"), terms_of_service_path(version: terms_version))
-            text_link(t("identity.privacy_notice.title"), privacy_notice_path(version: privacy_notice_version))
+            text_link(t("identity.terms_of_service.title"), terms_of_service_path)
+            text_link(t("identity.privacy_notice.title"), privacy_notice_path)
           end
           div(class: "ui-secondary-links") do
             text_link(t("identity.sessions.sign_in"), new_session_path)

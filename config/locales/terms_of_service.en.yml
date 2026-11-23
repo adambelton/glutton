@@ -2,4 +2,3 @@ en:
   identity:
     terms_of_service:
       title: Terms of Service
-      version: "Version %{version}"

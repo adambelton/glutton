@@ -17,20 +17,29 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     within(".account-tabs") { click_link I18n.t("community.title") }
     assert_current_path account_community_path
 
-    click_link I18n.t("community.conduct.read")
-    assert_current_path community_code_of_conduct_path(version: "1")
-    assert_selector "h1", exact_text: I18n.t("community.conduct.title")
+    assert_selector ".community-conduct-text", text: I18n.t("community.code_of_conduct_v1.intro")
+    assert_selector ".community-conduct-text + form input[name=accepted]"
     assert_link I18n.t("community.code_of_conduct_v1.copyright.email")
-    page.go_back
+    assert_no_field I18n.t("identity.settings.community_username.label")
+    assert_no_button I18n.t("identity.settings.community_avatar.choose")
 
     check I18n.t("community.conduct.agreement")
     click_button I18n.t("community.conduct.accept")
     assert_current_path account_community_path
-    assert_text I18n.t("community.conduct.accepted_version", version: "1")
+    assert_selector "section > p", exact_text: I18n.t("community.conduct.accepted")
+    assert_no_selector ".community-conduct-text"
+    assert_field I18n.t("identity.settings.community_username.label")
+    assert_button I18n.t("identity.settings.community_avatar.choose")
     assert_nil member.reload.community_username
 
+    click_link I18n.t("community.conduct.read")
+    assert_current_path community_code_of_conduct_path
+    assert_selector "h1", exact_text: I18n.t("community.conduct.title")
+    within("header .ui-nav") { assert_link I18n.t("account.title"), href: account_settings_path }
+    assert_no_selector "header .ui-auth-links"
+
     visit community_path
-    assert_text I18n.t("community.conduct.accepted_version", version: "1")
+    assert_selector "section > p", exact_text: I18n.t("community.conduct.accepted")
     assert_no_button I18n.t("community.conduct.accept")
   end
 

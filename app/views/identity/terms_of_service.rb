@@ -7,7 +7,6 @@ module Views
 
       def view_template
         page(title: t("#{@terms.translation_scope}.title"), narrow: true, pending_reminder: false, account_controls: false) do
-          p { t("identity.terms_of_service.version", version: @terms.version) }
           p { t("#{@terms.translation_scope}.operator") }
           %i[service account acceptable_use changes terms_changes rights].each do |topic|
             section do
