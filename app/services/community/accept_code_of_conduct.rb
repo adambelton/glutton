@@ -1,16 +1,15 @@
 module Community
   class AcceptCodeOfConduct
     def self.call(user_id:, displayed_version:, accepted:)
-      Identity::UserRegistered.transaction do
-        member = Identity::UserRegistered.lock.find_by(id: user_id)
-        raise Errors::MembershipRequired unless member&.can_view_account?
-
+      Identity::AccountAdministration::ManageRegisteredAccount.new(user_id:).record_community_code_of_conduct_acceptance do
         code = CodeOfConduct.current
         raise Errors::CodeOfConductChanged unless displayed_version == code.version
         raise Errors::ExplicitAcceptanceRequired unless accepted
 
-        CodeOfConductAcceptance.record!(member:, code:)
+        code.version
       end
+    rescue Identity::Errors::Unavailable
+      raise Errors::MembershipRequired
     end
   end
 end

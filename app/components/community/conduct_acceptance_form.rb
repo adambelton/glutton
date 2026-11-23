@@ -1,18 +1,19 @@
 module Community
   class ConductAcceptanceForm < Shared::Base
-    def initialize(user:, source:)
+    def initialize(user:, source:, code: CodeOfConduct.current)
       @user = user
       @source = source
-      @code = CodeOfConduct.current
+      @code = code
     end
 
     def view_template
       section do
         h2 { t("community.conduct.title") }
-        text_link(t("community.conduct.read"), community_code_of_conduct_path(version: @code.version))
-        if CodeOfConductAcceptance.exists?(user_id: @user.id, code_version: @code.version)
-          p { t("community.conduct.accepted_version", version: @code.version) }
+        if @code.accepted_by?(member: @user)
+          p { t("community.conduct.accepted") }
+          text_link(t("community.conduct.read"), community_code_of_conduct_path)
         else
+          render CodeOfConductText.new(code: @code, nested: true)
           acceptance_form
         end
       end

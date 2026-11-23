@@ -9,12 +9,12 @@ module Community
       @version = version
     end
 
-    def self.find(version)
-      new(version:) if VERSIONS.include?(version)
-    end
-
     def self.current
       new(version: CURRENT_VERSION)
+    end
+
+    def accepted_by?(member:)
+      member.accepted_community_code_of_conduct?(version:)
     end
 
     def translation_scope

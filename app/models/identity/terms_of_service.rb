@@ -9,10 +9,6 @@ module Identity
       @version = version
     end
 
-    def self.find(version)
-      new(version:) if VERSIONS.include?(version)
-    end
-
     def self.current
       new(version: CURRENT_VERSION)
     end

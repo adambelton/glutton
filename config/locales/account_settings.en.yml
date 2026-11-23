@@ -33,10 +33,42 @@ en:
         change: Change username
         save: Save username
         saved: Your Community username was saved.
+      community_avatar:
+        label: Public avatar
+        choose: Choose avatar
+        change: Change avatar
+        save: Save avatar
+        saved: Your Community avatar was saved.
+        presets:
+          bloody_reel: Film Reel
+          cleaver: Bloody Cleaver
+          cabin: Snow Globe
+          static_tv: Haunted Television
+          skull: Skull
+          tentacle: Tentacle
+          heart: Anatomical Heart
+          vhs: VHS Tape
+          moth: Death-Head Moth
+          eye: Eyeball
+          candles: Ritual Candles
+          raven: Raven
+          gravestone: Gravestone
+          haunted_house: Haunted House
+          planchette: Ouija Planchette
+          key: Skeleton Key
+          lantern: Lantern
+          antlered_skull: Antlered Skull
+          tree: Dead Tree
+          werewolf: Werewolf
+          abduction: Abduction
+          gas_mask: Gas Mask
+          spellbook: Book of the Dead
+          spaceman_mask: Spaceman Mask
   activerecord:
     attributes:
       identity/user_registered:
         community_username: Public username
+        community_avatar_preset: Public avatar
     errors:
       models:
         identity/user_registered:
@@ -45,3 +77,6 @@ en:
               invalid: must use 3–24 letters (A–Z), numbers or underscores.
               reserved: is reserved.
               taken: is already taken.
+            community_avatar_preset:
+              inclusion: must be one of the available presets.
+              not_saved: could not be saved. Try again.

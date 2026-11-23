@@ -14,6 +14,14 @@ module Identity
         with_account { |account| account.change_community_username!(community_username:) }
       end
 
+      def choose_community_avatar(preset:)
+        with_account { |account| account.choose_community_avatar!(preset:) }
+      end
+
+      def record_community_code_of_conduct_acceptance
+        with_account { |account| account.record_community_code_of_conduct_acceptance!(version: yield) }
+      end
+
       def change_password(current_password:, password:, password_confirmation:)
         with_account do |account|
           account.authorize_credential_change!(current_password:)

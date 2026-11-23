@@ -3,10 +3,7 @@ module Community
     allow_unauthenticated_access only: :show
 
     def show
-      code = params.key?(:version) ? CodeOfConduct.find(params[:version]) : CodeOfConduct.current
-      return head :not_found unless code.present?
-
-      render Views::Community::CodeOfConduct.new(code:)
+      render Views::Community::CodeOfConduct.new(code: CodeOfConduct.current)
     end
   end
 end

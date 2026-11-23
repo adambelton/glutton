@@ -1,26 +1,28 @@
-# Community Endorsements architecture
+# Community Discovery architecture
 
 Status: Proposed for review  
-Updated: 21 November 2026
+Updated: 22 November 2026
 
 ## Launch scope
 
-Endorsement requests are the first post type on the Community board. A member describes the horror experience they want. Other members nominate films, endorse existing nominations, and discuss films in endorsement threads. The requester sees both community support and their own Glutton Match.
+The Community launch targets six Discovery types and a management UI for adding and editing type definitions. Seed Niche Request for development. The owner will create the other five through the UI, starting with More Like X. See the [launch type matrix](#launch-discovery-types).
 
-The current launch scope covers asking, nominating, endorsing and discussing, with private Library shortcuts, reporting and moderation. Structured film selection and post-watch outcomes, requester-side Watchlist sharing or filtering, exclusion of films the requester has seen, notifications, member blocking, and Film Debrief are deferred. Community contributions are separate from private ratings, notes, and Glutton Profiles. The [social and community direction](glutton-social-community-direction.md) covers the vocabulary and later product ideas.
+In a Niche Request, a member writes a prompt for a specific horror quality, theme or experience and can select optional canonical reference films. Other members nominate films, endorse existing nominations, and discuss films in endorsement threads. Nominated Films is the living discovery artefact, ordered by endorsement count. Each endorsement signals fit with the prompt. Personal enjoyment, ratings and the requester’s Glutton Match are distinct signals.
+
+The launch includes private Library shortcuts, reporting and moderation. Requester selection of films to watch, post-watch outcomes, requester-side Watchlist sharing or filtering, suggestion exclusions based on reference films or the requester’s Watched list, notifications, member blocking, and Film Debrief are deferred. Community contributions are separate from private ratings, notes, and Glutton Profiles. The [Community product brief](glutton-community-discovery.md) covers the vocabulary and later product ideas.
 
 ## Community onboarding
 
 During development, the Community page, Community tab in Account and their forms are a superuser preview. Other signed-in users see a Coming soon lock in navigation and Account. The public Code of Conduct remains readable.
 
-- Publish the **Community Code of Conduct** at release. Make it easy to find in Community and readable before acceptance. It should explain expected conduct, spoiler etiquette in Endorsements, how to report problems, and how moderation works.
+- Publish the **Community Code of Conduct** at release. Make it easy to find in Community and readable before acceptance. It should explain expected conduct, how to respect each discussion’s spoiler rules, how to report problems, and how moderation works.
 - Confirmed members can browse and use private Library shortcuts before completing onboarding. Before creating a request, nominating, endorsing, or posting a reply, a member explicitly accepts the code and chooses a public username and avatar. Members can pick a Glutton avatar or upload a custom image when eligible. Apply the same gate to Community posting through direct requests and Turbo submissions. Email, credentials, and private activity stay private.
 - Identity owns the Community profile. Members choose one editable public username from the Community tab in Account and continue to sign in with email. Usernames use 3–24 ASCII letters, digits or underscores. Keep the member's capitalization, enforce case-insensitive uniqueness in the database, and reserve `admin`, `administrator`, `moderator`, `glutton`, and `support` regardless of case. Use stable account references for authorship so a rename updates existing attribution. A moderator-hidden name displays a generic member label on existing contributions while the member chooses a replacement through Account.
-- Community owns the code, acceptance and posting access. Account and Community use the same acceptance form, and any reader can open the code at its versioned URL. A confirmed member explicitly accepts the current version before they can post. Keep earlier acceptances as history, record the first timestamp for each version, and remove the history when the account is deleted.
+- Community owns the code and acceptance policy. Account and Community show the full current text followed by the acceptance checkbox. The public Code of Conduct shows the current text without a version label and uses the normal header for the viewer’s sign-in state. Identity records the latest accepted version and timestamp on the account, preserving the timestamp for repeated acceptance of the same version. Accepting a new version replaces that pair. In Account, accepting the current version unlocks the username and avatar settings and replaces the full text with a brief acceptance reminder and a link to the current text. A confirmed member must also accept the current version before posting.
 
 ## Requests
 
-- A request has a short title and a free-text description. The requester can edit both while it is open and unprotected. Once protected, requester edits are append-only. Keep the title and existing content intact and show additions as labelled updates, including feedback after watching. The requester cannot nominate or endorse on their own request.
+- A Niche Request has a short title and a required written discovery prompt. The requester can select one or more reference films from Glutton’s canonical film library, or leave the references empty. The prompt specifies which qualities matter and the films give concrete examples. The requester can edit the title and description while the request is open and unprotected. Once protected, requester edits are append-only. Keep the title and existing content intact and show additions as labelled updates, including feedback after watching. The requester cannot nominate or endorse on their own request.
 - At launch the Community board shows open requests by most recent activity. Creating a request, nominating a film, endorsing it, or posting a comment or reply updates that order. Edits, removals and withdrawals leave the activity timestamp unchanged. Use a stable tie-break when paginating.
 - A requester can withdraw their request. It remains available in a separate archive for eligible members, including its visible threads. Withdrawing stops request edits, new nominations and endorsements, comment edits and new replies. Authors can still remove their own comment text and attribution. Reporting, Community moderation and account deletion still apply. A moderator-hidden request is absent from member lists, archives and direct views.
 
@@ -31,6 +33,10 @@ The contributor searches Glutton’s catalogue or TMDB from the request. Only fi
 The contributor must have a Library Watched entry when nominating or endorsing. Offer the explicit **Mark Watched** action in the flow when it is missing. This uses the Library-owned action and requires no rating or notes. The contributor returns to their draft and submits the nomination or endorsement. The Community command rechecks eligibility for the open request and the canonical film. If the request closes after import or Mark Watched, report that the contribution could not be added. The member’s explicit Library action and the canonical import have their own lifecycles.
 
 An endorsement links the request post, canonical film and endorsing member. **Nominate a Film** is the member-facing action for introducing a film through an endorsement. All endorsements use the same action and rules. Nominated Films groups active endorsements by film within the request and orders the films by count. Each member has at most one active endorsement for that film on that request. Opening comments and replies leave the count unchanged. If a film loses its final endorsement, keep any archived discussion reachable from the request below the active list.
+
+### Nominated Films artefact
+
+`Community::PostDiscovery` owns the post lifecycle. Film Endorsements owns the participation rules and supplies the eligible active endorsements on visible films. After checking access, the Community read workflow passes those contributions to the injected film-count aggregation. The ordered film list presents the result as Nominated Films. The workflow adds any authorised personal match information for the page.
 
 ## Library actions on nominated films
 
@@ -46,18 +52,55 @@ Any member who can see a nominated film, including the requester and members who
 
 ## Community board and post types
 
-The preferred direction is one Community board that can show endorsement requests and Film Debrief posts together. Launch with endorsement requests on that board. When scoping Film Debrief, decide how to order and filter the mixed list and whether to show spoiler-safe entries to members who have yet to mark the film Watched. Each post type supplies its own access and participation rules to both board reads and direct routes.
+The board has two post categories, Discovery and Debrief. Eligible members can create Discovery posts. Glutton creates the long-lived Film Debrief post for each film on demand. Every Discovery format needs a discovery question, a participation mechanism and a discovery artefact. Classic status will keep a Discovery post permanently open to participation and its artefact evolving. Scope Classic promotion and its lifecycle rules separately from the Niche Requests launch. See the [community discovery brief](glutton-community-discovery.md).
+
+The preferred direction is one board that can show Discovery and Debrief posts together. The launch board shows Discovery posts. When scoping Film Debrief, decide how to order and filter the mixed list and whether to show spoiler-safe entries to members who have yet to mark the film Watched. Apply each post’s access and participation rules to board reads and direct routes.
 
 A request post stores its author, title and description. A comment can retain its structure after the body and author are cleared. Each reply references its post, immediate parent and root comment. The root comment anchors one conversation within the post. The shared discussion capability handles ancestry, bounded reads, comment removal and moderation.
 
 Use single-table inheritance from launch. `Community::Post` is the shared base for the `posts` table and owns the comment relationship. Comments reference that shared table. Follow Identity’s naming convention with the base name first and the concrete role after it.
 
-- **Endorsements** launches with `Community::PostEndorsementRequest`. The subtype owns request access and lifecycle rules. Each root comment is linked to the endorsement that permits it. The endorsement supplies its film and whether the conversation is open for edits and replies. Post replies create root comments under this rule. Replies to comments inherit the root and need no endorsement of their own.
+- `Community::PostDiscovery` is the concrete STI subtype for Discovery posts. Each post references a `DiscoveryPostType` and stores the member’s own title, prompt and any canonical reference films. A post applies its lifecycle and access rules when the configured mechanism handles participation.
 - **Film Debrief** adds `Community::PostFilmDebrief` later, with at most one system-created post per canonical film. Create it on demand with the first root comment. Render the introductory copy from the canonical film title and Rails locale strings. Deleting a member’s comment preserves the film post and replies. Members with a Watched entry for the film can read its contents and create multiple root comments and branching replies. The Watched rule applies to both post replies and comment replies.
 
 On each read or write, resolve the owning post and apply its access and lifecycle rules before rendering or changing comments. Shared operations enforce thread ancestry, authorship and comment deletion. The owning workflow supplies eligibility and coordinates writes against current state. This applies to direct requests and Turbo updates as well as navigation from a post.
 
 Build the shared mechanics needed by endorsement threads in the first release. Add Film Debrief routes, storage for the unique film association, and its Watched policy when that feature is scoped.
+
+### Discovery post type configuration
+
+Glutton defines the types that eligible members can choose when creating a Discovery post. Each version of a Community-owned `DiscoveryPostType` sets reference-film rules and stores one stable identifier for a supported combination of interaction, aggregation and presentation. Names and creation guidance are editable type settings. Define the supported combinations in Ruby and keep the three collaborators separate so combinations can reuse them. The create workflow resolves the selected type on the server and validates the submission against its settings. Community workflows resolve the combination identifier and inject its collaborators. Each interaction owns its submission rules and supplies the eligible contributions for aggregation. The result view labels and renders the aggregate using the combination’s layout.
+
+Seed **Niche Request** for development with guidance for describing specific qualities or experiences, optional reference films, and Film Endorsements paired with Nominated Films. The mechanism retains the agreed Watched eligibility, endorsement and discussion rules, including the link between an endorsement and its root comments. Identify the seeded definition by a stable key so a rerun can preserve edits made through the UI.
+
+#### Manage Discovery post types
+
+Provide a Community-owned UI where authorised users can add a type and edit existing definitions, including seeded ones. The form covers the type’s name, creation guidance, reference-film rules and one selector for supported combinations. Show the interaction, aggregation and layout included in the selected combination. Validate permissions and the submitted combination identifier on the server. Scope UI placement and any delegated permissions before implementation.
+
+Use **More Like X** to try the UI in development. The owner creates a type with guidance centred on finding films similar to a reference film and selects the same Film Endorsements combination as Niche Request. Check that the settings are easy to understand and that a new version can introduce different reference-film requirements for future posts. Verify that both types’ posts receive suggestions and endorsements and each shows its own result through the same workflow. Settle More Like X’s exact reference-film rules before launch. The owner creates **Hidden Gems**, **Top 5s**, **Rankings** and **Showdowns** through the same UI once their combinations and rules are ready.
+
+Once a type has published posts, lock its combination identifier and settings that affect post or contribution validity, permitted actions, or the interpretation of results. This includes reference-film requirements. To make a breaking configuration change, start a new type version from the current definition and offer it to creators for future posts. Keep published posts, including Classics, on their original type version. Enforce the lock on direct submissions as well as in the editor.
+
+Give a breaking Ruby behaviour change a new combination identifier. A new type version can select that combination while existing versions continue to resolve the original one. Refactors, fixes that restore the agreed rules, and presentation improvements that preserve the meaning of results can update an existing combination. Share collaborators between combinations wherever their behaviour agrees.
+
+### Launch Discovery types
+
+Each row uses one of four supported combinations. The interaction, aggregation and result layout columns describe what each combination includes. Niche Request, More Like X and Hidden Gems share the Film Endorsements combination. Showdowns use the Head-to-Head Voting combination, which reuses Film count with the side-by-side comparison.
+
+| Discovery type | Creator’s prompt and inputs | Interaction | Aggregation | Result layout |
+| --- | --- | --- | --- | --- |
+| **Niche Request** | Ask for a specific experience or quality. Canonical reference films are optional. | Film Endorsements | Film count | Ordered film list with endorsement counts and discussions |
+| **More Like X** | Ask for films similar to a reference film. Settle the reference-film requirements during experiment scoping. | Film Endorsements | Film count | Ordered film list with endorsement counts and discussions |
+| **Hidden Gems** | Ask for overlooked films. Agree what makes a film eligible before launch. | Film Endorsements | Film count | Ordered film list with endorsement counts and discussions |
+| **Top 5s** | Ask for the films that best represent a theme. | Film Nominations, up to five films per member in an unordered selection | Film count | Ordered film list with nomination counts |
+| **Rankings** | Ask members to order a defined set of films. | Ranked Ballots | Position scoring | Ordered film list with points and an explanation of the scoring |
+| **Showdowns** | Pose a head-to-head question and select two candidate films. | Head-to-Head Voting, one choice per member | Film count | Side-by-side comparison with votes and vote shares |
+
+**Film count** is shared by Film Endorsements, Film Nominations and Head-to-Head Voting. Each interaction contributes one countable entry per eligible endorsement, nomination or vote. The query groups the supplied entries by canonical film within the current post and returns each film’s count and the total. The Showdown comparison uses that total to display vote shares and displays both configured candidates even when one has zero votes. Position scoring consumes ordered ballots and produces film scores under the Rankings rules.
+
+The **ordered film list** shows endorsements, nominations or points according to the configured combination. Film Endorsements adds its discussions and available actions. The **side-by-side comparison** shows the two Showdown candidates. Each interaction supplies its own input controls.
+
+Before building each interaction, agree contributor eligibility, edits and withdrawals, tie and empty-result behaviour, and how contributions affect activity, protection and deletion. Also settle the Rankings ballot and scoring rules and Hidden Gems film eligibility. Film Endorsements uses the agreed endorsement rules. Settle any type-specific differences during scoping.
 
 ## Personal match and privacy
 
@@ -111,7 +154,7 @@ An appended update can contain abuse even when the original prompt is intact. Th
 | **Recommendations** | Read-only film match calculation and display eligibility. |
 | **Ratings** | Private ratings, notes, applied quality scores and Glutton Profile. Community makes no changes to these records. |
 
-Implement Community Endorsements and its comment layer in the existing Rails and PostgreSQL application. Registry import and Library actions are explicit user commands, with the request page coordinating the steps and retaining return context. Community reads shared authoritative data and writes its own records. Use the existing Library events for its transitions. This launch design requires no new Community event contract.
+Implement Niche Requests and its comment layer in the existing Rails and PostgreSQL application. Registry import and Library actions are explicit user commands, with the request page coordinating the steps and retaining return context. Community reads shared authoritative data and writes its own records. Use the existing Library events for its transitions. This launch design requires no new Community event contract.
 
 ## Persistence and verification
 
@@ -121,20 +164,22 @@ Implement Community Endorsements and its comment layer in the existing Rails and
 - Record request protection as a one-way transition in the same transaction as the contribution that crosses the threshold. Evaluate author edits, deletion and disassociation against fresh state at the same request boundary. Reject replacement of existing text from a stale edit form after protection. Use cascades for children of a hard-deleted request. Hiding a comment for moderation keeps its content available for authorized review and restoration.
 - Verify ordinary account deletion and backup replay. Check that unprotected requests are gone, protected requests keep their prompt without attribution, and deleted comment text is gone while replies remain. Check that reports, revisions, search data and logs carry no copies of removed text or attribution.
 - Keep comment removal and moderation separate from the conversation’s read-only state. Cap indentation in the UI and page large posts and comment trees. Index open request activity, endorsements by request and film, and comments by post and root. Verify that hidden text and private match data stay out of unauthorized HTML, Turbo payloads and shared caches.
-- Implementation records should settle exact title and description limits, normalization and reserved-name rules, rate limits, and handling of resolved reports and stale targets. Before rollout, update the versioned Privacy Notice for Community content and its deletion behaviour.
+- Implementation records should settle exact title and description limits, reference film storage and edit rules, normalization and reserved-name rules, rate limits, and handling of resolved reports and stale targets. Before rollout, update the versioned Privacy Notice for Community content and its deletion behaviour.
 
 ## Suggested implementation order
 
 1. **Identity — Community profile.** Start with username claims and changes in Account, including concurrent claim handling. Add Glutton presets and custom uploads as separate profile work. Verify the generic label and replacement flow for a hidden name when profile moderation is implemented.
-2. **Community — request and archive lifecycle.** Introduce `Post` and `PostEndorsementRequest` on the shared posts table. Verify the entry gate, author editing before protection, append-only updates after protection, withdrawal, access, and list and archive navigation. Verify each threshold path, disassociation and concurrent submissions at the protection boundary.
+2. **Community — Discovery post creation and archive lifecycle.** Introduce `Post` and `PostDiscovery` on the shared posts table. Introduce `DiscoveryPostType` and seed Niche Request. Verify type selection, creation with zero, one and several canonical reference films, the entry gate, author editing before protection, append-only updates after protection, withdrawal, access, and list and archive navigation. Verify each threshold path, disassociation and concurrent submissions at the protection boundary.
 3. **Community — film endorsements.** Integrate the existing Registry and Library entry points. Verify horror and Watched eligibility on submission, one grouped film entry under concurrent endorsements, and withdrawal. Any necessary change to an existing Registry or Library command gets its own narrowly scoped owning task.
 4. **Recommendations — read-only match for specified films.** Verify the shared calculation and evidence gate without selecting, enqueueing, or suppressing a recommendation. **Community** separately integrates the requester-only presentation.
 5. **Community — discussions and endorsement integration.** Verify reply ancestry and preservation after comment removal. Verify that a member can add their one root comment with an endorsement, later, or after deleting the previous comment while preserving its replies. Verify that other contributors can reply without endorsing and that an archive blocks edits and new replies while allowing comment removal. Verify that new contributions move a request up the list and edits and removals leave the order unchanged.
 6. **Community — moderator access.** Scope owner grant and revoke, including how the first owner is identified, and guard the Community moderation entry point. Verify a moderator without superuser access can enter the workspace, a superuser without the Community role has no moderation access, and a revoked moderator loses access even in an existing session. Verify owner-only role management.
 7. **Community and Identity — safety and deletion.** Scope Community reporting, content moderation and suspension separately from the Identity-owned actions on public names and avatars. Invoke those profile actions from the Community moderation UI. Verify that reports target the specific upload and disabling it serves a Glutton avatar and revokes direct access to the image. Verify that a member-level upload restriction blocks custom images while allowing preset selection and otherwise eligible posting. Verify cascade and restore replay against Community data before launch. Verify the full journey with a requester, two endorsers, an ineligible reader and a Community moderator.
 
-The Code of Conduct and acceptance are a Community slice. When implementing posting, use the current-version acceptance record and the Identity-owned profile. Verify that each missing prerequisite blocks posting through ordinary controls and direct submissions, and that members can post when all prerequisites are met.
+When implementing posting, use Community’s current-version acceptance check and the Identity-owned profile. Verify that each missing prerequisite blocks posting through ordinary controls and direct submissions, and that members can post when all prerequisites are met.
+
+Once Niche Request creation, participation and Nominated Films work together, build the type management UI as a separate Community task and run the owner’s More Like X experiment. Agree Hidden Gems film eligibility and scope Film Nominations, Ranked Ballots and Head-to-Head Voting as separate Community implementation tasks. Film Nominations and Head-to-Head Voting reuse film count. Ranked Ballots adds position scoring. Head-to-Head Voting adds the comparison layout as part of its results workflow.
 
 Scope the nominated-film Library shortcuts as a separate Community integration using Library’s existing commands. Verify both actions through a request, including for its requester and a member who has yet to complete onboarding. Verify that a Library action leaves endorsement counts and request activity intact. Any required change to a Library action belongs in a Library task.
 
-Publish the Code of Conduct and complete the onboarding, moderation and deletion checks before enabling Community for members.
+Before enabling Community for members, verify that the seed installs Niche Request and can be rerun without duplicates or lost edits. Check that the owner can add the five other definitions and edit the seeded type through the UI. Reject unknown combination identifiers, unauthorised submissions and attempts to change a published type’s locked settings. Verify that publishing a new type version leaves existing posts on their original combination. For all six types, verify that members can select the type, create a post, contribute and read the results. Verify shared film count with each of its three contributing interactions, including count updates after an eligible contribution changes and zero-vote Showdown candidates. Publish the Code of Conduct and complete the onboarding, moderation and deletion checks.

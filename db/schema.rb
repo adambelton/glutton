@@ -10,16 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_21_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
-
-  create_table "community_code_of_conduct_acceptances", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.string "code_version", null: false
-    t.datetime "accepted_at", null: false
-    t.index ["user_id", "code_version"], name: "community_conduct_acceptances_by_user_and_version", unique: true
-  end
 
   create_table "domain_event_streams", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -421,9 +414,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_190000) do
     t.string "privacy_notice_version"
     t.uuid "deletion_replay_id", default: -> { "gen_random_uuid()" }, null: false
     t.string "community_username"
+    t.string "community_avatar_preset"
+    t.string "community_code_of_conduct_version"
+    t.datetime "community_code_of_conduct_accepted_at"
     t.index "lower(((community_username)::text COLLATE \"C\"))", name: "users_community_username_unique", unique: true
     t.index ["deletion_replay_id"], name: "index_users_on_deletion_replay_id", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.check_constraint "(community_code_of_conduct_version IS NULL) = (community_code_of_conduct_accepted_at IS NULL)", name: "users_complete_community_code_of_conduct_acceptance"
     t.check_constraint "(terms_version IS NULL) = (terms_accepted_at IS NULL)", name: "users_complete_terms_acceptance"
     t.check_constraint "NOT superuser OR type::text = 'UserRegistered'::text", name: "only_registered_users_can_be_superusers"
     t.check_constraint "type::text <> 'UserRegistered'::text OR email_address IS NOT NULL AND email_address::text <> ''::text AND email_address::text = lower(email_address::text) AND email_address::text !~ '[[:space:]]'::text AND password_digest IS NOT NULL AND password_digest::text ~ '[^[:space:]]'::text AND email_confirmed_at IS NOT NULL", name: "registered_users_require_credentials"
@@ -431,7 +428,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_21_190000) do
     t.check_constraint "type::text = ANY (ARRAY['UserGuest'::character varying, 'UserRegistered'::character varying]::text[])", name: "users_supported_type"
   end
 
-  add_foreign_key "community_code_of_conduct_acceptances", "users", on_delete: :cascade
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade

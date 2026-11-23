@@ -5,6 +5,7 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "username-browser@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
+    Community::AcceptCodeOfConduct.call(user_id: user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
@@ -17,8 +18,10 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     submit = I18n.t("identity.settings.community_username.save")
     change = I18n.t("identity.settings.community_username.change")
     cancel = I18n.t("identity.settings.cancel")
+    assert_button submit, disabled: true
     assert_username_actions_align(label, submit)
     fill_in label, with: "Glutton"
+    assert_button submit, disabled: false
     click_button submit
 
     assert_selector '[role="alert"]', text: "Public username is reserved."
@@ -36,6 +39,11 @@ class CommunityUsernameTest < ApplicationSystemTestCase
 
     click_button change
     assert_field label, with: "Ghoul_13"
+    assert_button submit, disabled: true
+    fill_in label, with: "Different_Name"
+    assert_button submit, disabled: false
+    fill_in label, with: "Ghoul_13"
+    assert_button submit, disabled: true
     assert_selector "#community_username:focus"
     field = find_field(label)
     assert_operator field.evaluate_script("this.getBoundingClientRect().width"), :<=, 320
@@ -92,7 +100,7 @@ class CommunityUsernameTest < ApplicationSystemTestCase
 
   def assert_username_actions_align(label, *actions)
     field = find_field(label).rect
-    buttons = actions.map { |action| find_button(action).rect }
+    buttons = actions.map { |action| find_button(action, disabled: :all).rect }
 
     assert_in_delta field.x, buttons.first.x, 1
     assert_in_delta field.x + field.width, buttons.last.x + buttons.last.width, 1
