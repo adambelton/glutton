@@ -9,5 +9,10 @@ module Community
 
     validates :body, presence: true
     validates :body, length: { maximum: REPLY_LIMIT }, if: -> { comment&.parent_id.present? }
+
+    def edit_body(body:)
+      update(body:)
+      self
+    end
   end
 end

@@ -15,5 +15,33 @@ module Community
       post.touch
       reply_content
     end
+
+    def discussion_film_id
+      (root || self).film_endorsement.film_id
+    end
+
+    def can_edit?(member:)
+      content&.author_id == member.id && PostingAccess.allowed?(user: member)
+    end
+
+    def can_delete?(member:)
+      content&.author_id == member.id && member.active? && PreviewAccess.allowed?(user: member)
+    end
+
+    def edit_body(member:, body:)
+      raise Errors::CommentChangeUnavailable unless can_edit?(member:)
+
+      content.edit_body(body:)
+    end
+
+    def delete_comment!(member:)
+      raise Errors::CommentChangeUnavailable unless can_delete?(member:)
+
+      if post.comments.exists?(parent_id: id)
+        content.destroy!
+      else
+        destroy!
+      end
+    end
   end
 end

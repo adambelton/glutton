@@ -7,10 +7,12 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     visit root_path
     assert_selector "html:not([data-theme])"
     assert_equal "dark", find("html").style("color-scheme").fetch("color-scheme")
+    assert_equal "rgba(195, 38, 48, 1)", find(".hero-horror").style("color").fetch("color")
     assert_selector 'button.theme-toggle[aria-pressed="true"]'
     click_button I18n.t("ui.dark_mode")
     assert_selector 'html[data-theme="light"]'
     assert_equal "light", find("html").style("color-scheme").fetch("color-scheme")
+    assert_equal "rgba(143, 16, 27, 1)", find(".hero-horror").style("color").fetch("color")
     visit new_session_path
     assert_selector 'html[data-theme="light"]'
     refresh

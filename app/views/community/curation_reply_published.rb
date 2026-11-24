@@ -7,9 +7,9 @@ module Views
       end
 
       def view_template
-        film_id = @discussion.film_id_for(@parent)
+        film_id = @parent.discussion_film_id
 
-        stream("update", ::Community::CurationReplyComposer.frame_id(@parent))
+        stream("update", ::Community::CurationCommentComposer.frame_id(@parent))
         stream("update", "film-comment-count-#{film_id}") do
           plain t("community.curations.comments", count: @discussion.count_for_film(film_id))
         end

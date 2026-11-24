@@ -73,6 +73,18 @@ en:
       replies:
         one: "%{count} reply"
         other: "%{count} replies"
+    comment_editing:
+      title: Edit comment
+      edit: Edit
+      body: Your comment
+      guidance: Please avoid spoilers.
+      save: Save changes
+      saved: Comment saved.
+    comment_deletion:
+      delete: Delete
+      confirm_title: Delete this comment?
+      confirm_description: Your comment will be removed. Any replies will stay in the discussion.
+      deleted: Comment deleted.
     curation_editing:
       edit_post: Edit post
       title: Edit Community Curation
