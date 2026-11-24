@@ -6,7 +6,7 @@ module Shared
 
     def view_template
       title = @candidate.fetch(:title)
-      li do
+      li(data: { tmdb_film_id: @candidate.fetch(:tmdb_id) }) do
         render ::Registry::FilmPoster.new(title:, path: @candidate.fetch(:poster_path), placeholder: :wordmark)
         div(class: "film-search-result-body") do
           div(class: "film-search-result-details") do
