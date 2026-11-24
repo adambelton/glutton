@@ -30,8 +30,13 @@ module Community
     private
 
     def render_composer(composer, status: :ok)
-      component = turbo_frame_request? ? CurationReplyComposer : Views::Community::NewCurationReply
-      render component.new(**composer), status:, content_type: Mime[:html]
+      component = if turbo_frame_request?
+        curation, comment, content = composer.values_at(:curation, :parent, :reply)
+        CurationCommentComposer.new(curation:, comment:, content:)
+      else
+        Views::Community::NewCurationReply.new(**composer)
+      end
+      render component, status:, content_type: Mime[:html]
     end
   end
 end

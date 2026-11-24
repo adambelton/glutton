@@ -1,6 +1,6 @@
 module Community
   class CurationDiscussion
-    def initialize(curation:, selected_reply_id: nil)
+    def initialize(curation:, selected_reply_id: nil, expand_selected_branch: false)
       @curation = curation
       comments = curation.comments.preload(content: :author).order(:id).to_a
       comments_by_id = comments.index_by(&:id)
@@ -18,9 +18,13 @@ module Community
       @counts_by_root = authored_comments.group_by { |comment| comment.root_id || comment.id }.transform_values(&:size)
 
       selected_reply = comments_by_id[Integer(selected_reply_id, exception: false)]
+      while selected_reply.present? && !visible_ids.include?(selected_reply.id)
+        selected_reply = comments_by_id[selected_reply.parent_id]
+      end
       @expanded_parent_ids = Set.new
-      if selected_reply&.content.present?
+      if selected_reply.present?
         @selected_root_id = selected_reply.root_id || selected_reply.id
+        @expanded_parent_ids.add(selected_reply.id) if expand_selected_branch || selected_reply.content.blank?
         parent = comments_by_id[selected_reply.parent_id]
         while parent.present? && @expanded_parent_ids.add?(parent.id)
           parent = comments_by_id[parent.parent_id]
@@ -40,12 +44,12 @@ module Community
       roots.sum { |root| @counts_by_root.fetch(root.id, 0) }
     end
 
-    def film_id_for(comment)
-      (comment.root || comment).film_endorsement.film_id
+    def endorsements_for_film(film_id)
+      @curation.film_endorsements.where(film_id:)
     end
 
     def count_for_film(film_id)
-      count(roots(@curation.film_endorsements.where(film_id:)))
+      count(roots(endorsements_for_film(film_id)))
     end
 
     def expanded?(parent)

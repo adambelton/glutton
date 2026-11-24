@@ -81,7 +81,8 @@ module Views
               end
               span(class: "community-endorsement-badge") { t("community.curations.endorsements", count: endorsements.size) }
             end
-            render ::Community::CurationComments.new(curation: @curation, film:, discussion: @discussion, endorsements:, can_reply: @can_respond)
+            render ::Community::CurationComments.new(curation: @curation, film_id: film.id, discussion: @discussion,
+              endorsements:, can_reply: @can_respond)
           end
         end
       end

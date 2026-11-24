@@ -9,11 +9,13 @@ export default class extends Controller {
 
   cancel(event) {
     const frame = this.element.closest("turbo-frame")
-    const replyLink = frame.closest(".community-comment")?.querySelector(`[data-turbo-frame="${frame.id}"]`)
-    if (!replyLink) return
+    const mode = this.element.dataset.commentComposerTrigger
+    const source = frame.closest(".community-comment") || frame.previousElementSibling
+    const trigger = source?.querySelector(`[data-comment-composer-trigger="${mode}"]`)
+    if (!trigger) return
 
     event.preventDefault()
     frame.replaceChildren()
-    replyLink.focus()
+    trigger.focus()
   }
 }

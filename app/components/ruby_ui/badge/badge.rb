@@ -8,11 +8,13 @@ module RubyUI
       lg: "px-3 py-1 text-sm"
     }
 
+    DESTRUCTIVE_COLORS = "text-destructive bg-destructive/10 ring-destructive/20".freeze
+
     COLORS = {
       primary: "text-primary bg-primary/5 ring-primary/20",
       secondary: "text-secondary bg-secondary/10 ring-secondary/20",
       outline: "text-foreground bg-background ring-border",
-      destructive: "text-destructive bg-destructive/10 ring-destructive/20",
+      destructive: DESTRUCTIVE_COLORS,
       success: "text-success bg-success/10 ring-success/20",
       warning: "text-warning bg-warning/10 ring-warning/20",
       slate: "text-slate-500 bg-slate-500/10 ring-slate-500/20",
@@ -20,7 +22,7 @@ module RubyUI
       zinc: "text-zinc-500 bg-zinc-500/10 ring-zinc-500/20",
       neutral: "text-neutral-500 bg-neutral-500/10 ring-neutral-500/20",
       stone: "text-stone-500 bg-stone-500/10 ring-stone-500/20",
-      red: "text-red-500 bg-red-500/10 ring-red-500/20",
+      red: DESTRUCTIVE_COLORS,
       orange: "text-orange-500 bg-orange-500/10 ring-orange-500/20",
       amber: "text-amber-500 bg-amber-500/10 ring-amber-500/20",
       yellow: "text-yellow-500 bg-yellow-500/10 ring-yellow-500/20",
@@ -36,7 +38,7 @@ module RubyUI
       purple: "text-purple-500 bg-purple-500/10 ring-purple-500/20",
       fuchsia: "text-fuchsia-500 bg-fuchsia-500/10 ring-fuchsia-500/20",
       pink: "text-pink-500 bg-pink-500/10 ring-pink-500/20",
-      rose: "text-rose-500 bg-rose-500/10 ring-rose-500/20"
+      rose: DESTRUCTIVE_COLORS
     }
 
     def initialize(variant: :primary, size: :md, **args)

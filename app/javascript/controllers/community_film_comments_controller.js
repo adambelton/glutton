@@ -4,10 +4,15 @@ export default class extends Controller {
   static targets = ["controls", "expand", "collapse", "film", "branch", "newReply"]
 
   connect() {
-    if (this.filmTargets.length === 0) return
-
     this.updateControls()
-    this.controlsTarget.hidden = false
+  }
+
+  filmTargetConnected() {
+    this.updateControls()
+  }
+
+  filmTargetDisconnected() {
+    this.updateControls()
   }
 
   expandAll() {
@@ -35,7 +40,10 @@ export default class extends Controller {
   }
 
   updateControls() {
+    if (!this.hasControlsTarget) return
+
     const disclosures = this.disclosures
+    this.controlsTarget.hidden = disclosures.length === 0
     this.expandTarget.disabled = disclosures.every((disclosure) => disclosure.open)
     this.collapseTarget.disabled = disclosures.every((disclosure) => !disclosure.open)
   }

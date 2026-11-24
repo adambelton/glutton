@@ -405,10 +405,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       click_link I18n.t("community.curations.reply")
     end
     assert_current_path path
-    within "#comment-#{root.id}" do
+    editor_width = nil
+    within "#comment-thread-#{root.id}" do
       editor = find_field(I18n.t("community.curation_replies.body"))
       assert_selector "textarea:focus"
-      assert_in_delta find(".community-curation-prompt").rect.width, editor.rect.width, 1
+      assert_selector "#comment-#{root.id} + .community-comment-editor-branch .community-comment"
+      editor_width = editor.rect.width
       initial_height = editor.rect.height
       assert_operator initial_height, :<, 60
       editor.set("A first line.\nA second line.\nA third line.")
@@ -430,11 +432,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path path
     reply = curation.comments.find_by!(parent: root)
     assert_selector "#replies-#{root.id}[open] > .community-comment-thread > #comment-#{reply.id}", text: "The sound design also helps."
+    assert_in_delta find("#comment-#{reply.id} .community-curation-prompt").rect.width, editor_width, 1
     assert_text "Woodland folklore."
     assert_selector "#film-comment-count-#{first.id}", text: I18n.t("community.curations.comments", count: 2)
     assert_no_field I18n.t("community.curation_replies.body")
-    within "#comment-#{root.id}" do
-      click_link I18n.t("community.curations.reply")
+    within("#comment-#{root.id}") { click_link I18n.t("community.curations.reply") }
+    within "#comment-composer-#{root.id}" do
       fill_in I18n.t("community.curation_replies.body"), with: "The setting feels remote."
       click_button I18n.t("community.curation_replies.publish")
     end
@@ -510,6 +513,114 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     find("#nomination-#{first.id} details.community-film-comments > summary").click
     assert_text "The landscape shapes the story."
     assert_no_text "The sound design also helps."
+  end
+
+  test "authors edit inline and confirm deleting comments while replies survive" do
+    password = "a long test password"
+    author, reader = %w[Editor Responder].map do |username|
+      Identity::UserRegistered.create!(email_address: "#{username.downcase}@example.test", password:,
+        password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+        community_username: username, community_avatar_preset: "moth",
+        community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+        community_code_of_conduct_accepted_at: Time.current)
+    end
+    film = Registry::Film.create!(title: "The Empty Field", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
+    Library::LibraryFilm.new(user: author, film:).add_to_watched!
+    curation = Community::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+      reference_film_ids: [ film.id ], reference_comments: { film.id => "The landscape shapes the story." })
+    root = curation.comments.sole
+    leaf = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
+      body: "My follow-up.").fetch(:reply).comment
+    reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+      body: "The sound design also helps.").fetch(:reply).comment
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: author.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    path = community_curation_path(curation)
+    visit path
+    click_button I18n.t("community.curations.expand_all")
+    edit_label = I18n.t("community.comment_editing.edit")
+    editor_label = I18n.t("community.comment_editing.body")
+    save_label = I18n.t("community.comment_editing.save")
+    delete_label = I18n.t("community.comment_deletion.delete")
+    cancel_label = I18n.t("community.curations.cancel")
+
+    click_button I18n.t("ui.dark_mode")
+    assert_selector 'html[data-theme="light"]'
+    within "#comment-#{root.id}" do
+      assert_button(delete_label) { |button| button.style("color").fetch("color") == "rgba(143, 16, 27, 1)" }
+    end
+    click_button I18n.t("ui.dark_mode")
+    assert_selector "html:not([data-theme])"
+
+    source = find("#comment-#{root.id}")
+    published_bounds = source.rect
+    text_bounds = source.find("span.community-curation-prompt").rect
+    actions_bounds = source.find(".community-comment-actions").rect
+    within source do
+      assert_button(delete_label) { |button| button.style("color").fetch("color") == "rgba(195, 38, 48, 1)" }
+      delete_action = find_button(delete_label)
+      style = delete_action.style("background-color", "border-top-width", "color", "font-weight")
+      assert_equal({ "background-color" => "rgba(0, 0, 0, 0)", "border-top-width" => "0px",
+                     "color" => "rgba(195, 38, 48, 1)", "font-weight" => "700" }, style)
+      click_link edit_label
+    end
+    editor_frame = source.find(".community-comment-edit-frame")
+    editor_bounds = editor_frame.find_field(editor_label).rect
+    assert_in_delta published_bounds.height, source.rect.height, 1
+    assert_in_delta text_bounds.x, editor_bounds.x, 1
+    assert_in_delta text_bounds.y, editor_bounds.y, 1
+    assert_in_delta text_bounds.width, editor_bounds.width, 1
+    assert_in_delta actions_bounds.y, editor_frame.find(".community-comment-actions").rect.y, 1
+    assert_no_selector "#comment-#{root.id} + .community-comment-editor-branch:not(:empty)"
+    assert_no_selector "#comment-#{root.id} span.community-curation-prompt"
+    within(editor_frame) { click_link cancel_label }
+    within source do
+      assert_selector "a:focus", text: edit_label
+      assert_text "The landscape shapes the story."
+      click_link edit_label
+    end
+    within "#edit-comment-composer-#{root.id}" do
+      assert_field editor_label, with: "The landscape shapes the story."
+      fill_in editor_label, with: " "
+      click_button save_label
+      assert_selector ".ui-errors li"
+      assert_field editor_label
+      fill_in editor_label, with: "The landscape and weather shape the story."
+      click_button save_label
+    end
+    assert_selector "#comment-#{root.id} span.community-curation-prompt", text: "The landscape and weather shape the story."
+    assert_text "The sound design also helps."
+    assert_current_path path
+
+    within("#comment-#{leaf.id}") { click_link edit_label }
+    within "#edit-comment-composer-#{leaf.id}" do
+      assert_field editor_label, with: "My follow-up."
+      fill_in editor_label, with: "My edited follow-up."
+      click_button save_label
+    end
+    assert_selector "#comment-#{leaf.id} span.community-curation-prompt", text: "My edited follow-up."
+
+    within("#comment-#{root.id}") { click_button delete_label }
+    within("dialog[open]") { click_button cancel_label }
+    assert_selector "#comment-#{root.id} span.community-curation-prompt", text: "The landscape and weather shape the story."
+    within("#comment-#{root.id}") { click_button delete_label }
+    within("dialog[open]") { click_button delete_label }
+    within "#comment-#{root.id}" do
+      assert_text I18n.t("community.curation_replies.removed")
+      assert_no_link I18n.t("community.curations.reply")
+    end
+    assert_selector "#replies-#{root.id}[open] #comment-#{reply.id}", text: "The sound design also helps."
+    assert_current_path path
+
+    within("#comment-#{leaf.id}") { click_button delete_label }
+    within("dialog[open]") { click_button delete_label }
+    assert_no_selector "#comment-#{leaf.id}", visible: :all
+    assert_selector "#film-comment-count-#{film.id}", text: I18n.t("community.curations.comments", count: 1)
+    within("#comment-#{reply.id}") { assert_link I18n.t("community.curations.reply") }
   end
 
   private

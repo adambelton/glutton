@@ -1,17 +1,18 @@
 module Shared
   class ConfirmationDialog < Base
-    def initialize(id:, action_label:, title:, description:, cancel_label:, url:)
+    def initialize(id:, action_label:, title:, description:, cancel_label:, url:, trigger_variant: :destructive)
       @id = id
       @action_label = action_label
       @title = title
       @description = description
       @cancel_label = cancel_label
       @url = url
+      @trigger_variant = trigger_variant
     end
 
     def view_template
       div(data: { controller: "confirmation-dialog" }) do
-        render DestructiveButton.new(class: "ui-action-button", aria: { haspopup: "dialog" },
+        render RubyUI::Button.new(variant: @trigger_variant, class: "ui-action-button", aria: { haspopup: "dialog" },
           data: { action: "confirmation-dialog#open" }) { @action_label }
         tag(:dialog, class: "ui-card ui-confirmation-dialog",
           aria: { labelledby: "#{@id}-title", describedby: "#{@id}-description" },
