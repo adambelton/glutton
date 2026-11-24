@@ -80,17 +80,13 @@ export default class extends Controller {
     if (!selectionForm.matches("[data-library-tmdb-selection]")) return
 
     event.preventDefault()
+    const selectedRow = selectionForm.closest("[data-tmdb-film-id]")
     const selectionUrl = selectionForm.action
     const requestOptions = {
       method: selectionForm.method,
       body: new FormData(selectionForm),
       headers: { Accept: "text/html" }
     }
-
-    this.cancel()
-    this.input.value = ""
-    this.clearResults()
-    this.input.focus({ preventScroll: true })
 
     try {
       const response = await fetch(selectionUrl, requestOptions)
@@ -102,13 +98,13 @@ export default class extends Controller {
         return
       }
 
-      this.applySelectionFeedback(responseHtml)
+      this.applySelectionFeedback(responseHtml, selectedRow)
     } catch {
       if (this.element.isConnected) this.displaySelectionError(this.errorValue)
     }
   }
 
-  applySelectionFeedback(responseHtml) {
+  applySelectionFeedback(responseHtml, selectedRow) {
     // The shared form endpoint returns HTML, with Rails flash messages after a redirect.
     const responseDocument = new DOMParser().parseFromString(responseHtml, "text/html")
     const feedback = [...responseDocument.querySelectorAll(".ui-notifications > .ui-toast, .ui-notifications > .ui-alert")]
@@ -121,8 +117,22 @@ export default class extends Controller {
 
     const notificationArea = this.element.ownerDocument.querySelector(".ui-notifications")
     notificationArea?.append(...feedback)
+    this.updateSelectedRow(responseDocument, selectedRow)
     const saved = feedback.some((message) => message.classList.contains("ui-toast"))
     if (saved) this.reloadCollection()
+  }
+
+  updateSelectedRow(responseDocument, selectedRow) {
+    if (!selectedRow?.isConnected) return
+
+    const filmId = CSS.escape(selectedRow.dataset.tmdbFilmId)
+    const updatedRow = responseDocument.querySelector(`#library-film-search-results [data-tmdb-film-id="${filmId}"]`)
+    if (!updatedRow) return
+
+    if (!this.results.hidden && selectedRow.contains(selectedRow.ownerDocument.activeElement)) {
+      this.input.focus({ preventScroll: true })
+    }
+    selectedRow.replaceWith(updatedRow)
   }
 
   clearResults() {

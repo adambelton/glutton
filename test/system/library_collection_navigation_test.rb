@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class LibraryCollectionNavigationTest < ApplicationSystemTestCase
-  test "marking a paginated TMDB result watched clears the search and updates Watched" do
+  test "marking a paginated TMDB result watched keeps the same results page open and updates Watched" do
     client = Registry::Sources::TmdbClient
     original_search = client.method(:search)
     client.define_singleton_method(:search) do |query:, page:, **|
@@ -26,9 +26,12 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     end
 
     assert_selector ".ui-toast", text: I18n.t("library.detail.watched")
-    assert_no_selector ".library-film-search-dropdown"
-    assert_no_selector ".library-film-search-dropdown li", visible: :all
-    assert_field I18n.t("library.search.label"), with: ""
+    assert_field I18n.t("library.search.label"), with: "Alien"
+    within ".library-film-search-dropdown" do
+      assert_text I18n.t("library.browser.page", number: 2)
+      assert_selector "li", text: /Alien 6.*#{I18n.t("library.search.in_watched")}/m
+      assert_selector "li", text: "Alien 7"
+    end
     assert_selector ".library-film h3", text: "Alien 6"
     assert_current_path library_path(view: "watched")
     assert Library::LibraryFilm.watched.exists?(user: Identity::UserGuest.last, film:)
@@ -129,9 +132,11 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       first("li").click_button I18n.t("library.detail.add_to_watchlist")
     end
     assert_selector ".ui-toast", text: I18n.t("library.detail.watchlisted")
-    assert_no_selector ".library-film-search-dropdown"
-    assert_no_selector ".library-film-search-dropdown li", visible: :all
-    assert_field I18n.t("library.search.label"), with: ""
+    assert_field I18n.t("library.search.label"), with: "Alien"
+    within ".library-film-search-dropdown" do
+      assert_selector "li", text: /Alien \(1979\).*#{I18n.t("library.search.in_watchlist")}/m
+      assert_selector "li", count: 5
+    end
     assert_selector ".library-film h3", text: "Alien"
     assert_current_path library_path
   ensure

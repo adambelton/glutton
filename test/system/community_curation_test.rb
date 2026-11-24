@@ -313,6 +313,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_in_delta 16, posts.y - (create_action.y + create_action.height), 1
     card = find(".community-curation-card", text: curation.title)
     shorter_card = find(".community-curation-card", text: shorter.title)
+    assert_in_delta 12, card.rect.y - (shorter_card.rect.y + shorter_card.rect.height), 1
     assert_in_delta find(".community-curation-list").rect.width, card.rect.width, 1
     within card do
       assert_no_text curation.prompt
@@ -356,6 +357,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     original_size = page.current_window.size
     page.current_window.resize_to(430, 900)
+    assert_in_delta 12, card.rect.y - (shorter_card.rect.y + shorter_card.rect.height), 1
     action_row = find(".ui-page-body.ui-card .community-board-actions")
     create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary").rect
     assert_in_delta action_row.rect.x + action_row.rect.width, create_action.x + create_action.width, 1
