@@ -3,7 +3,7 @@ module Community
     def self.load_for_edit(curation_id:, comment_id:, member:)
       curation = PostCommunityCuration.find(curation_id)
       comment = authored_comment(curation:, comment_id:)
-      raise Errors::CommentChangeUnavailable unless comment.can_edit?(member:)
+      raise Errors::CommentChangeUnavailable unless comment.can_edit_inline?(member:)
 
       { curation:, comment:, content: comment.content }
     end
@@ -20,7 +20,8 @@ module Community
         film_id = comment.discussion_film_id
         comment.delete_comment!(member:)
         selected_comment_id = comment.destroyed? ? comment.parent_id : comment.id
-        { curation:, film_id:, selected_comment_id: }
+        nomination_visible = curation.visible_film_endorsements.exists?(film_id:)
+        { curation:, film_id:, selected_comment_id:, nomination_visible: }
       end
     end
 

@@ -6,14 +6,12 @@ module Views
       end
 
       def view_template
-        page(title: t("community.curation_editing.title"), narrow: true) do
+        page(title: t("community.curation_editing.title"), class: "community-curation-form",
+          back_to: community_curation_path(@curation), back_label: t("community.curations.back_to_curation")) do
           errors(@curation.errors.full_messages)
           form_with(url: community_curation_path(@curation), method: :patch) do
             render ::Community::CurationTextFields.new(curation: @curation)
-            div(class: "ui-actions community-curation-actions") do
-              submit(t("community.curation_editing.save"))
-              text_link(t("community.curations.cancel"), community_curation_path(@curation))
-            end
+            submit(t("community.curation_editing.save"))
           end
         end
       end

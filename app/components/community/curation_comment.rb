@@ -21,7 +21,7 @@ module Community
       content = @comment.content
       author = content.author
       render CommentAvatar.new(member: author)
-      can_edit = @comment.can_edit?(member: current_user)
+      can_edit = @comment.can_edit_inline?(member: current_user)
       div(class: "community-comment-content") do
         strong { author.community_username.presence || t("community.curations.member") }
         span(class: "community-curation-prompt") { content.body }

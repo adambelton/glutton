@@ -14,5 +14,9 @@ module Community
       update(body:)
       self
     end
+
+    def edit_body!(body:)
+      update!(body:)
+    end
   end
 end

@@ -112,9 +112,6 @@
 .ui-page-body { margin-block-start: var(--page-card-gap); }
 .ui-page-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
 @media (min-width: 651px) {
-  .ui-content > main.ui-card { margin-block-start: calc(var(--page-heading-row-height) + var(--page-card-gap)); }
-  .ui-content > .ui-page-back-above { min-block-size: var(--page-heading-row-height); margin-block-end: var(--page-card-gap); align-items: center; }
-  .ui-content > .ui-page-back-above + main.ui-card { margin-block-start: 0; }
   .ui-content > main:has(> .ui-page-body.ui-card) > :is(h1, .ui-page-heading) { min-block-size: var(--page-heading-row-height); }
   .ui-content > main:has(> .ui-page-body.ui-card) > h1 { align-content: center; }
 }
@@ -319,7 +316,7 @@
 .guest-banner a { display: inline; color: #271b09; font-weight: 600; text-decoration: underline; }
 .guest-banner a:focus-visible { outline-color: currentColor; }
 .ui-confirmation-dialog { width: min(440px, calc(100% - 32px)); margin: auto; white-space: normal; }
-.ui-confirmation-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.ui-confirmation-dialog::backdrop, .community-endorsement-dialog::backdrop { background: rgb(0 0 0 / 55%); }
 .ui-confirmation-dialog h2 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
 .ui-confirmation-dialog .ui-actions { justify-content: flex-end; margin-block-start: 28px; }
 .ui-confirmation-dialog .ui-action-form { margin: 0; }
@@ -664,20 +661,37 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-nomination-rank { flex: none; color: var(--glutton-muted-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
 .community-nominated-film-heading h3 { font-size: 1.125rem; font-weight: 600; overflow-wrap: anywhere; }
 .community-endorsement-badge { padding: 3px 10px; border: 1px solid var(--glutton-border); border-radius: 999px; background: var(--glutton-inset); color: var(--glutton-primary); font-size: 0.875rem; font-weight: 600; }
+.community-film-comments { --comment-gap: 16px; --comment-trailing-gap: 0px; }
 .community-film-comments summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
 .community-film-comments summary, .community-comment-count { font-size: 0.875rem; }
+.community-comment-replies > summary { padding-block-end: 4px; }
 :is(.community-comment-replies, .community-comment-editor-branch) {
   --comment-branch-gutter: 12px;
+  --comment-branch-indent: calc(var(--comment-branch-gutter) + 1px);
   --comment-connector-offset: 29px;
   --comment-connector-radius: 8px;
   margin-inline-start: 16px;
-  padding-inline-start: calc(var(--comment-branch-gutter) + 1px);
+  padding-inline-start: var(--comment-branch-indent);
 }
-.community-comment-editor-branch:not(:empty) { display: block; }
+.community-comment-editor-branch:not(:empty) { display: block; position: relative; padding-block-start: var(--comment-gap); }
 .community-comment-editor-branch:empty { display: none; }
-.community-comment-thread:has(+ .community-comment-thread) > .community-comment-replies[open] { padding-block-end: 8px; }
-.community-comment-thread:has(+ .community-comment-thread) > .community-comment-editor-branch:not(:empty):has(+ .community-comment-replies[hidden]) { padding-block-end: 8px; }
-.community-comment-replies .community-comment-replies .community-comment-replies :is(.community-comment-replies, .community-comment-editor-branch) { margin-inline-start: 0; padding-inline-start: 0; }
+/* Pass the gap to the last visible descendant when another sibling follows. */
+.community-comment-thread:has(+ .community-comment-thread) { --comment-trailing-gap: var(--comment-gap); }
+.community-comment-editor-branch:has(+ .community-comment-replies:not([hidden])) { --comment-trailing-gap: 0px; }
+.community-comment-thread:not(:has(> .community-comment-replies:not([hidden]), > .community-comment-editor-branch:not(:empty))) {
+  padding-block-end: var(--comment-trailing-gap);
+}
+.community-comment-editor-branch:not(:empty)::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(var(--comment-branch-indent) - 1px - var(--comment-branch-gutter));
+  inline-size: 1px;
+  block-size: var(--comment-gap);
+  background: var(--glutton-border);
+  pointer-events: none;
+}
+.community-comment-replies .community-comment-replies .community-comment-replies :is(.community-comment-replies, .community-comment-editor-branch) { --comment-branch-indent: 0px; margin-inline-start: 0; }
 :is(.community-comment-replies, .community-comment-editor-branch) > :is(summary, .community-comment-thread) { position: relative; }
 .community-comment-replies[open] > summary::before,
 :is(.community-comment-replies > .community-comment-thread:not(:last-child), .community-comment-editor-branch:has(+ .community-comment-replies[open]) > .community-comment-thread)::after,
@@ -734,14 +748,18 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-comment-content:has(> .community-comment-edit-frame:not(:empty)) > :is(.community-curation-prompt, .community-comment-actions) { display: none; }
 .ui-page .community-comment-composer { display: grid; gap: 8px; margin-block: 0; }
 .ui-page .community-comment-composer textarea.ui-input { field-sizing: content; min-block-size: calc(1.65em + 12px); inline-size: 100%; padding: 5px 8px; resize: vertical; }
-.community-comment-composer .ui-actions { justify-content: end; gap: var(--glutton-action-gap); }
-.ui-page .community-comment-editor { gap: 6px; }
+.community-comment-composer .ui-actions-fixed > .ui-action-button { padding-inline: 8px; }
+/* Match the reply composer's single line of guidance and the gap below it. */
+.community-comment-editor > .ui-actions-fixed { padding-block-start: 28px; }
 .ui-page .community-comment-editor textarea.ui-input { min-block-size: 1lh; padding: 0; border: 0; background: transparent; resize: none; }
 @media (max-width: 600px) {
   .community-nomination { gap: 12px; }
 }
 .community-curation-prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
 .community-reference-picker { min-width: 0; margin-block: 12px; }
+:is(.community-endorsement-dialog, .ui-content:has(> .community-curation-form)) { width: min(640px, calc(100% - 32px)); }
+.community-endorsement-dialog { max-block-size: calc(100dvh - 32px); margin: auto; overflow-y: auto; }
+.ui-page .community-endorsement-dialog > h2 { margin-block-start: 0; }
 .community-reference-picker > legend { margin-block-end: 8px; }
 .community-reference-films { max-height: 16rem; overflow-y: auto; }
 .community-reference-films li, .community-selected-film-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-block: 4px; }
@@ -749,7 +767,6 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-selected-film-editor { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; }
 .community-selected-film-editor .poster-placeholder { padding: 6px; overflow-wrap: anywhere; }
 .community-selected-film-editor textarea { width: 100%; min-height: 0; padding: 8px; resize: none; }
-.community-curation-actions { align-items: center; }
 .account-page section > p, .profile-narrative { margin-block: 12px; }
 .account-logout > .ui-action-form { display: block; margin-block: 0; }
 .account-settings-action, .account-deletion > div > .ui-action-button { min-width: 132px; }

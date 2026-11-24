@@ -6,7 +6,7 @@ module Community
         raise Errors::MembershipRequired unless viewer.present? && PreviewAccess.allowed?(user: viewer)
 
         curation = PostCommunityCuration.lock.find(curation_id)
-        raise Errors::NominationUnavailable unless curation.film_endorsements.exists?(film_id:)
+        raise Errors::NominationUnavailable unless curation.visible_film_endorsements.exists?(film_id:)
 
         yield viewer.id, film_id
       end

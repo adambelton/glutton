@@ -1,0 +1,51 @@
+module Views
+  module Community
+    class EditCurationEndorsements < ::Views::Base
+      FRAME_ID = "curation-endorsement-editor".freeze
+
+      def initialize(curation:, films:, search_films:, film_ids:, comments:, snapshot:, saved_film_ids:, stale:, dialog:)
+        @curation, @films, @search_films, @film_ids, @comments = curation, films, search_films, film_ids, comments
+        @snapshot, @saved_film_ids, @stale, @dialog = snapshot, saved_film_ids, stale, dialog
+      end
+
+      def view_template
+        title = t("community.curation_endorsements.title", title: @curation.title)
+        if @dialog
+          tag(:"turbo-frame", id: FRAME_ID) do
+            tag(:dialog, class: "ui-card community-endorsement-dialog", aria: { labelledby: "endorsement-editor-title" },
+              data: { endorsement_editor_target: "dialog" }) do
+              h2(id: "endorsement-editor-title") { title }
+              editor_form
+            end
+          end
+        else
+          page(title:, narrow: true, back_to: community_curation_path(@curation), back_label: t("community.curations.back_to_curation")) do
+            editor_form
+          end
+        end
+      end
+
+      private
+
+      def editor_form
+        errors(@curation.errors.full_messages)
+        if @stale
+          a(href: edit_community_curation_endorsements_path(@curation), class: "ui-link") do
+            t("community.curation_endorsements.reload")
+          end
+        end
+        form_with(url: community_curation_endorsements_path(@curation), method: :patch) do
+          input(type: :hidden, name: "endorsements[snapshot]", value: @snapshot)
+          render ::Community::CurationFilmPicker.new(films: @films, search_films: @search_films, selected_film_ids: @film_ids,
+            comments: @comments, saved_film_ids: @saved_film_ids, heading: t("community.curation_endorsements.films"),
+            field_prefix: "curation_endorsements", film_ids_name: "endorsements[film_ids]", comments_name: "endorsements[comments]")
+          div(class: "ui-actions ui-actions-fixed justify-end") do
+            render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button",
+              data: { action: ("endorsement-editor#close:prevent" if @dialog) }) { t("community.curations.cancel") }
+            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("community.curation_endorsements.save") }
+          end
+        end
+      end
+    end
+  end
+end

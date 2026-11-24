@@ -1,7 +1,7 @@
 module Community
   class Comment < ApplicationRecord
     belongs_to :post, class_name: "Community::Post", inverse_of: :comments
-    belongs_to :film_endorsement, inverse_of: :comment, optional: true
+    belongs_to :film_endorsement, inverse_of: :comments, optional: true
     belongs_to :parent, class_name: "Community::Comment", optional: true
     belongs_to :root, class_name: "Community::Comment", optional: true
     has_one :content, class_name: "Community::CommentContent", inverse_of: :comment
@@ -20,8 +20,8 @@ module Community
       (root || self).film_endorsement.film_id
     end
 
-    def can_edit?(member:)
-      content&.author_id == member.id && PostingAccess.allowed?(user: member)
+    def can_edit_inline?(member:)
+      parent_id.present? && content&.author_id == member.id && PostingAccess.allowed?(user: member)
     end
 
     def can_delete?(member:)
@@ -29,7 +29,7 @@ module Community
     end
 
     def edit_body(member:, body:)
-      raise Errors::CommentChangeUnavailable unless can_edit?(member:)
+      raise Errors::CommentChangeUnavailable unless can_edit_inline?(member:)
 
       content.edit_body(body:)
     end

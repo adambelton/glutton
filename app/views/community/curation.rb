@@ -1,10 +1,11 @@
 module Views
   module Community
     class Curation < ::Views::Base
-      def initialize(curation:, nominated_films:, library_films:, discussion:, can_respond:, can_edit:, can_delete:)
+      def initialize(curation:, nominated_films:, library_films:, discussion:, has_endorsements:, can_contribute:, can_edit:, can_delete:)
         @curation, @nominated_films, @library_films = curation, nominated_films, library_films
         @discussion = discussion
-        @can_respond = can_respond
+        @has_endorsements = has_endorsements
+        @can_contribute = can_contribute
         @can_edit = can_edit
         @can_delete = can_delete
       end
@@ -17,7 +18,7 @@ module Views
           p(class: "community-curation-prompt") { @curation.prompt }
           section(aria: { labelledby: "curation-nominated-films" }, data: { controller: "community-film-comments" }) do
             h2(id: "curation-nominated-films", class: "sr-only") { t("community.curations.nominated_films") }
-            endorse_films_action if @can_respond
+            endorsements_action if @can_contribute
             if @nominated_films.present?
               div(class: "community-nominations-toolbar") do
                 div(class: "community-comment-controls", hidden: true, data: { community_film_comments_target: "controls" }) do
@@ -61,10 +62,14 @@ module Views
           cancel_label: t("community.curations.cancel"), url: community_curation_path(@curation))
       end
 
-      def endorse_films_action
-        render RubyUI::Link.new(href: new_community_curation_response_path(@curation), variant: :primary, size: :xl, class: "mt-4 mb-1") do
-          t("community.curation_responses.endorse_films")
+      def endorsements_action
+        frame_id = EditCurationEndorsements::FRAME_ID
+        render RubyUI::Link.new(href: edit_community_curation_endorsements_path(@curation), variant: :primary, size: :xl,
+          class: "mt-4 mb-1", aria: { haspopup: "dialog" }, data: { turbo_frame: frame_id }) do
+          t(@has_endorsements ? "community.curation_endorsements.edit_endorsements" : "community.curation_endorsements.endorse_films")
         end
+        tag(:"turbo-frame", id: frame_id, data: { controller: "endorsement-editor",
+          action: "turbo:before-cache@document->endorsement-editor#close" })
       end
 
       def nomination(film, endorsements:, position:)
@@ -81,8 +86,7 @@ module Views
               end
               span(class: "community-endorsement-badge") { t("community.curations.endorsements", count: endorsements.size) }
             end
-            render ::Community::CurationComments.new(curation: @curation, film_id: film.id, discussion: @discussion,
-              endorsements:, can_reply: @can_respond)
+            render ::Community::CurationComments.new(curation: @curation, film_id: film.id, discussion: @discussion, can_reply: @can_contribute)
           end
         end
       end
