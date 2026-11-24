@@ -1,6 +1,6 @@
 module Identity
   module AccountAdministration
-    module InspectUsers
+    module BrowseUsers
       PAGE_SIZE = 10
 
       def self.page(number:, query:)

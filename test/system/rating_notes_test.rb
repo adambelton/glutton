@@ -118,7 +118,7 @@ class RatingNotesTest < ApplicationSystemTestCase
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
     click_button I18n.t("ratings.onboarding.surprise")
-    assert_selector "h2", text: film.title
+    assert_selector ".rating-film-header h2", text: film.title
     rating_tab = find('[role="tab"]', exact_text: I18n.t("ratings.browser.panels.rating"))
     journal_tab = find('[role="tab"]', exact_text: I18n.t("ratings.browser.panels.journal"))
 

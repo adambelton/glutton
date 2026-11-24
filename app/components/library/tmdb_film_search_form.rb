@@ -22,7 +22,7 @@ module Library
         end
         if @dropdown
           section(id: "library-film-search-results", class: "library-film-search-dropdown film-search-dropdown", aria: { live: "polite" },
-            data: { action: "click->library-tmdb-film-search#paginate" }, hidden: true)
+            data: { action: "click->library-tmdb-film-search#paginate submit->library-tmdb-film-search#selectFilm" }, hidden: true)
         end
       end
     end

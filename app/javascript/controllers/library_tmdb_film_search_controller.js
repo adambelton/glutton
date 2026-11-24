@@ -15,8 +15,7 @@ export default class extends Controller {
 
     const query = this.query()
     if (!query) {
-      this.results.replaceChildren()
-      this.results.hidden = true
+      this.clearResults()
       return
     }
 
@@ -74,6 +73,76 @@ export default class extends Controller {
     const url = new URL(link.href)
     this.input.focus()
     this.search(url.searchParams.get("query"), url.searchParams)
+  }
+
+  async selectFilm(event) {
+    const selectionForm = event.target
+    if (!selectionForm.matches("[data-library-tmdb-selection]")) return
+
+    event.preventDefault()
+    const selectionUrl = selectionForm.action
+    const requestOptions = {
+      method: selectionForm.method,
+      body: new FormData(selectionForm),
+      headers: { Accept: "text/html" }
+    }
+
+    this.cancel()
+    this.input.value = ""
+    this.clearResults()
+    this.input.focus({ preventScroll: true })
+
+    try {
+      const response = await fetch(selectionUrl, requestOptions)
+      const responseHtml = await response.text()
+      if (!this.element.isConnected) return
+
+      if (response.status === 401) {
+        window.Turbo.visit(window.location.href)
+        return
+      }
+
+      this.applySelectionFeedback(responseHtml)
+    } catch {
+      if (this.element.isConnected) this.displaySelectionError(this.errorValue)
+    }
+  }
+
+  applySelectionFeedback(responseHtml) {
+    // The shared form endpoint returns HTML, with Rails flash messages after a redirect.
+    const responseDocument = new DOMParser().parseFromString(responseHtml, "text/html")
+    const feedback = [...responseDocument.querySelectorAll(".ui-notifications > .ui-toast, .ui-notifications > .ui-alert")]
+
+    if (feedback.length === 0) {
+      const searchError = responseDocument.querySelector("#library-film-search-results [role=alert]")
+      this.displaySelectionError(searchError?.textContent ?? this.errorValue)
+      return
+    }
+
+    const notificationArea = this.element.ownerDocument.querySelector(".ui-notifications")
+    notificationArea?.append(...feedback)
+    const saved = feedback.some((message) => message.classList.contains("ui-toast"))
+    if (saved) this.reloadCollection()
+  }
+
+  clearResults() {
+    this.results.replaceChildren()
+    this.results.hidden = true
+  }
+
+  displaySelectionError(message) {
+    const document = this.element.ownerDocument
+    const alert = document.createElement("p")
+    alert.setAttribute("role", "alert")
+    alert.className = "ui-alert"
+    alert.textContent = message
+    document.querySelector(".ui-notifications")?.append(alert)
+  }
+
+  reloadCollection() {
+    const frame = this.element.ownerDocument.getElementById("library-collection-results")
+    if (frame.src) frame.reload()
+    else frame.src = window.location.href
   }
 
   query() {

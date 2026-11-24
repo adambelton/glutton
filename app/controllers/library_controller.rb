@@ -26,14 +26,14 @@ class LibraryController < ApplicationController
 
   def remove_from_watched
     Library::CollectionManagement::RemoveFromWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
-    redirect_to library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED),
+    redirect_to library_path(view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED),
       notice: I18n.t("library.detail.removed_from_library"), status: :see_other
   end
 
   def move_to_watched
     library_film = Library::CollectionManagement::MoveWatchlistToWatched.call(user_id: current_user.id, library_film_id: library_film_id_param)
     redirect_to(library_film.can_rate? ? new_rating_path(film_id: library_film.film_id) :
-      library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED), status: :see_other)
+      library_path(view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED), status: :see_other)
   end
 
   def add_to_watchlist_from_ratings
@@ -58,16 +58,16 @@ class LibraryController < ApplicationController
   end
 
   def show
-    view = params.fetch(:view, Library::CollectionManagement::InspectFilmCollection::Views::WATCHLIST)
+    view = params.fetch(:view, Library::CollectionManagement::BrowseFilmCollection::Views::WATCHLIST)
     collection_search = CollectionSearchParameters.parse(query: params.fetch(:q, ""), page: params.fetch(:page, "1"), max_digits: 9)
     ratings = params.fetch(:ratings, [])
-    unless Library::CollectionManagement::InspectFilmCollection::Views::ALL.include?(view) &&
+    unless Library::CollectionManagement::BrowseFilmCollection::Views::ALL.include?(view) &&
         collection_search.present? && valid_rating_filters?(ratings, view:)
       return render ::Views::Library::Invalid.new, status: :bad_request
     end
 
     ratings = ratings.uniq
-    page = Library::CollectionManagement::InspectFilmCollection.call(user_id: current_user.id, view:, page: collection_search.page, ratings:, title_query: collection_search.query)
+    page = Library::CollectionManagement::BrowseFilmCollection.call(user_id: current_user.id, view:, page: collection_search.page, ratings:, title_query: collection_search.query)
     render ::Views::Library::FilmCollection.new(view:, page:, page_number: collection_search.page, ratings:, query: collection_search.query)
   end
 
@@ -78,8 +78,8 @@ class LibraryController < ApplicationController
   end
 
   def valid_rating_filters?(ratings, view:)
-    ratings.is_a?(Array) && (ratings.empty? || (view == Library::CollectionManagement::InspectFilmCollection::Views::WATCHED &&
-      (ratings - Library::CollectionManagement::InspectFilmCollection::RATING_FILTERS).empty?))
+    ratings.is_a?(Array) && (ratings.empty? || (view == Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED &&
+      (ratings - Library::CollectionManagement::BrowseFilmCollection::RATING_FILTERS).empty?))
   end
 
   def shortcut_film_id

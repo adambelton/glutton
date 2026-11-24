@@ -1,23 +1,23 @@
 # Glutton Community: Collaborative Horror Discovery
 
 **Status:** Working product direction  
-**Updated:** 22 November 2026
+**Updated:** 23 November 2026
 
 ## Purpose
 
 Glutton’s Community helps people discover and explore more of the horror they love. Horror is subjective. Members can share what they experienced, compare interpretations and introduce one another to films. Community enthusiasm can help surface a film, while each viewer decides whether it fits their taste.
 
-Discovery formats draw on activities horror fans already enjoy, such as recommendation requests, nominations and rankings. Structured contributions turn those activities into browsable, collectively curated film collections.
+A curation gives horror fans a lasting way to discover films through a theme or experience. Members can build on each other’s recommendations and return to the resulting list.
 
 **Ratings, notes and personal assessments remain private.** Community participation is a deliberate act. Community results reflect what participants contributed, and Glutton Match reflects what Glutton predicts will suit the individual viewer. Community popularity stays outside private scoring and taste profiles.
 
 ## Community posts
 
-Community has two post categories. Eligible members create **Discovery** posts (`DiscoveryPost`) in supported formats, starting with Niche Requests. Glutton creates **Film Debrief** posts (`FilmDebriefPost`) on demand for watched-film conversations. The preferred direction is a shared Community board, with ordering, filtering and visibility of locked Debriefs to decide when Film Debrief is scoped.
+Eligible members create **Community Curation** posts for themed film lists. Glutton creates **Film Debrief** posts on demand for watched-film conversations. The preferred direction is a shared Community board, with ordering, filtering and visibility of locked Debriefs to decide when Film Debrief is scoped.
 
-## Discovery posts
+## What makes a curation useful
 
-Every Discovery post needs a discovery question, a structured way to participate and a useful, film-based discovery artefact. Conversation can add context to a contribution or its outcome. Keep the set of supported formats small and give each format clear participation and aggregation rules.
+A curation needs a discovery question, a structured way to participate and a film list that remains useful over time. Conversation can add context to an endorsement.
 
 ### Discovery question
 
@@ -52,48 +52,27 @@ Make clear what the result measures, such as endorsement count, nomination frequ
 
 Contributions should reference canonical films wherever possible. Canonical links support film details, consistent metadata, deduplication and private Library actions. Future artefacts can show the viewer which films they have seen, how they rated them and their own Glutton Match where appropriate. If a format offers personal sorting, keep the original community order available. Give each artefact a stable home and make collections discoverable by subject, subgenre, experience and film.
 
-### Discovery formats
+### Find a curation by film
 
-Niche Request is seeded for development. Glutton defines the types that members can choose when creating a Discovery post. Each type sets its own guidance and reference-film rules and selects one supported combination of participation and results. Multiple types can share the same combination. Changes that would affect participation or the meaning of results apply to a new version for future posts. Published posts keep their original rules.
+Someone searching Community for a film they like can find its Film Debrief and the curations that include it. A film can appear in several lists for different reasons. Each curation's prompt and member comments help readers decide which connection they want to explore. A member can start a curation with that film when the theme or experience they want is missing.
 
-The owner will create the other five launch types through a Community management UI that can also edit existing definitions. **More Like X** will be the first test of that UI. It asks for films similar to a reference film and reuses Niche Request’s film suggestion and endorsement mechanism and Nominated Films artefact. See the [launch type matrix](community_niche_requests_architecture.md#launch-discovery-types) for how the six types share implementations.
+Asking for films like a particular title and collecting overlooked films both work as curation prompts. Top 5s, Rankings and Showdowns remain ideas for engagement. Their place in Glutton is open.
 
-| Game | Discovery question | Participation | Resulting artefact |
-| --- | --- | --- | --- |
-| **Niche Requests** | “Which films share this characteristic or deliver this experience?” | A requester writes a specific prompt. Others suggest films and endorse suggestions that fit. | A living collection of films that fit the prompt, ordered by community support |
-| **More Like X** | “Which films are similar to these reference films?” | Suggest films and endorse suggestions that fit | A living collection ordered by endorsement count |
-| **Top 5s** | “Which films best represent this theme?” | Nominate up to five films | A living list of the community's most nominated films |
-| **Rankings** | “How should these films be ordered?” | Submit an ordered selection | An aggregate ranking with an explicit scoring method |
-| **Showdowns** | “Which of these films is the better fit/favourite?” | Choose between candidates | Comparative results, possibly feeding a wider collection |
-| **Hidden Gems** | “Which overlooked films deserve discovery?” | Suggest eligible films and endorse suggestions. Film eligibility remains open. | A community-curated discovery collection ordered by endorsement count |
+## Community Curation
 
-### Product test for future formats
-
-Before adding a Discovery format, ask:
-
-1. What horror-discovery question does it answer?
-2. What structured action does a participant take?
-3. What useful film-based artefact results?
-4. How does that artefact connect to the library and individual Glutton experience?
-5. Does it remain valuable to people who never participate?
-
-Use these answers to decide whether a format belongs in Community.
-
-## Niche Requests
-
-Niche Request is the first configured Discovery type. Its label can evolve as members give feedback. See the [Niche Requests architecture](community_niche_requests_architecture.md) for launch behaviour and implementation order.
+See the [Community Curation architecture](community_niche_requests_architecture.md) for launch behaviour and implementation order.
 
 ### Ask the Community
 
-A Niche Request has a short title and a required written prompt describing a specific horror quality, theme, setting, experience or combination of characteristics. Widely known films can fit a niche as readily as obscure ones. The creation flow should help casual horror fans express what they are looking for in their own words.
+A Community Curation post has a short title and a required written prompt describing a specific horror quality, theme, setting, experience or combination of characteristics. Widely known films can fit a niche as readily as obscure ones. The creation flow should help casual horror fans express what they are looking for in their own words.
 
 Examples include horror set in isolated research facilities, found footage that builds dread through atmosphere, and films where the creature is never clearly revealed.
 
-Members can select one or more reference films from Glutton’s canonical film library, or leave the references empty. The written prompt identifies what the examples illustrate. A request using *The Thing* as a reference might ask for “Films where paranoia and distrust gradually destroy a group of isolated people.” Another requester could use the same film to ask about body horror or creature design. For launch, references give contributors context. Automatic exclusions based on references or the requester’s Watched list are deferred.
+Authors can select canonical reference films marked Watched in their own Library. References are optional. Each one starts the list with one endorsement from the author and gives contributors a concrete example of the prompt. An author might start a list for slow-burn modern folk horror with two films that show what they mean. Other members can endorse those examples as the list grows.
 
 ### Nominate, endorse and discuss
 
-Each film appears once per request. **Nominate a Film** is how a member introduces a film through an endorsement. Each eligible contributor, including the person who introduces a film, can contribute one active endorsement per film in that request.
+Members choose **Respond** to add several films in one submission, with a separate optional comment for each film. They can respond again when they think of more films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film on the post across all responses. Each film appears once with its total, and its comments appear together with replies branching from each comment.
 
 An endorsement allows one optional comment explaining why the film fits. The member can add it when endorsing or later while their endorsement and the request are open. They can delete the comment and add a fresh one under the same conditions. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. The opening comment has no character limit. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
 
@@ -107,7 +86,7 @@ The **Nominated Films** artefact is a living collection ordered by endorsement c
 
 ### Use Library from a request
 
-Any member who can see a nominated film can use **Add to Watchlist** or **Mark Watched** for their own Library, including the requester. A Watched entry is required to nominate or endorse. A contributor who has seen an eligible film can mark it Watched in the request flow before contributing. Registry owns any required film import and Library owns both collection actions. A rating or private notes are optional parts of the member’s own viewing record.
+Any member who can see a nominated film can use **Add to Watchlist** or **Mark Watched** for their own Library, including the requester. A member needs a Watched entry in their own Library to nominate or endorse a film, including when the author selects a reference. A contributor who has seen an eligible film can mark it Watched in the request flow before contributing. Registry owns any required film import and Library owns both collection actions. A rating or private notes are optional parts of the member’s own viewing record.
 
 ### Watchlist and post-watch follow-up
 
@@ -119,7 +98,7 @@ At launch, requesters can share feedback by editing an open unprotected request 
 
 Members unlock a Film Debrief’s discussion content by marking the film Watched. They can reflect privately before joining the conversation or use the conversation to develop their own reaction before writing private notes.
 
-Each film has at most one long-lived Film Debrief post. Its conversation forms a lasting record of how members experienced the film. Glutton creates it on demand when the first top-level comment is posted and supplies an introduction that names the film and invites spoiler-friendly discussion. Within that film thread, members can add multiple top-level comments, each with branching replies. The feature can reuse the comment structure and moderation from Niche Requests. Whether to show that a discussion exists before a member unlocks it remains open.
+Each film has at most one long-lived Film Debrief post. Its conversation forms a lasting record of how members experienced the film. Glutton creates it on demand when the first top-level comment is posted and supplies an introduction that names the film and invites spoiler-friendly discussion. Within that film thread, members can add multiple top-level comments, each with branching replies. The feature can reuse the comment structure and moderation from Community Curation. Whether to show that a discussion exists before a member unlocks it remains open.
 
 ### Experiential context
 
@@ -129,7 +108,7 @@ Discussions may eventually provide rich context: emotional responses, recurring 
 
 ## Classics and living collections
 
-**Classic** is recognition for a Discovery post that should become a permanent community discovery resource.
+**Classic** is recognition for a curation that should become a permanent community discovery resource.
 
 A Classic:
 - Remains **open to participation indefinitely**; reaching Classic status means it cannot be closed.
@@ -160,9 +139,9 @@ Horror discussion should permit disturbing themes, interpretation and disagreeme
 
 ## Release sequence and success signals
 
-Build **Niche Requests** first and use **More Like X** to test the configuration workflow. Target those two types, Hidden Gems, Top 5s, Rankings and Showdowns for the Community launch. Look for relevant nominations, comments that explain why films fit, and repeat participation. Ask members whether they acted on nominations and found films they valued. If selection and outcomes are added later, look for requesters who watch a suggested film and return to share their experience.
+Build **Community Curation** first. Look at whether members start new lists with films they know and discover other films through existing curations. Look for relevant nominations, comments that explain why films fit, and repeat participation. Ask members whether they acted on nominations and found films they valued. If selection and outcomes are added later, look for requesters who watch a suggested film and return to share their experience.
 
-Add **Film Debrief** next. Observe what members discuss before considering other uses for their contributions.
+Add **Film Debrief** next. Scope film search to surface the debrief and the curations that include a film. Observe what members discuss before considering other uses for their contributions.
 
 Future work can explore richer personal Library context and Classic promotion and discovery. Following, likes, karma and a wider social feed are outside the launch scope.
 
@@ -199,12 +178,10 @@ These are possibilities, not a fixed roadmap. Other, better ideas may emerge fro
 | Concept | Terminology |
 | --- | --- |
 | Social area | **Community** |
-| Post categories | **Discovery** and **Debrief** |
-| First seeded Discovery type | **Niche Request** |
-| Thread for a desired horror experience | **Request** |
-| Start a request | **Ask the Community** |
+| Post types | **Community Curation** and **Film Debrief** |
+| Theme and community film list | **Community Curation post** |
+| Contribute films to a post | **Respond** |
 | Instruction to requester | **Describe the kind of horror experience you're looking for** |
-| Introduce a film and add its first endorsement | **Nominate a Film** |
 | Support an existing nomination | **Endorse** |
 | Optional opening text attached to an endorsement | **Comment** |
 | Respond to a comment or reply | **Reply** |
@@ -218,8 +195,9 @@ The action and field labels above are working UI language. An endorsement signal
 
 ## Open product questions
 
-### Niche Requests
+### Community Curation
 
+- Optional extension after the initial curation work. An author could cap the curated artefact while keeping every endorsed film and its discussion visible. For example, a Top 5 horror films of 2026 curation could show the five highest-ranked films in the artefact. Settle ties at the cutoff and whether film search matches all endorsed films or only those in the artefact when scoping the extension.
 - Would alternative sort orders help people explore nominations?
 - Which Watchlist controls would help requesters and contributors?
 - How should film selection, multiple outcomes, conclusion and reopening work if added?
@@ -240,10 +218,8 @@ The action and field labels above are working UI language. An endorsement signal
 - What is the simplest effective Ideas / Feedback mechanism?
 - How should the feedback process scale with the community?
 
-### Discovery formats and Classics
+### Film search and Classics
 
-- What contribution, eligibility, withdrawal, duplicate handling, tie and scoring rules should each launch type use?
-- What abuse prevention and moderation controls does each format need?
-- How do eligible missing films enter future formats, and how should the results stay current as participation grows?
+- How should search order results and handle archived curations and locked Film Debriefs?
 - How should Classic status be awarded, and who has authority to promote a post?
 - How should people find evergreen collections by subject, subgenre, experience or film, and which personal filters and scores should they see?

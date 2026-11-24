@@ -4,7 +4,7 @@ module Registry
       collection_search = catalogue_search_parameters
       return render_invalid_parameters unless collection_search.present?
 
-      page = CatalogueQueries::InspectCatalogue.films(page: collection_search.page, title_query: collection_search.query)
+      page = CatalogueQueries::BrowseCatalogue.films(page: collection_search.page, title_query: collection_search.query)
       render ::Views::Admin::Films::Index.new(page:, query: collection_search.query, catalogue_context: catalogue_context(collection_search))
     end
 
@@ -12,7 +12,7 @@ module Registry
       page = catalogue_page_number
       return render_invalid_parameters unless page.present?
 
-      render ::Views::Admin::Films::Show.new(detail: CatalogueQueries::InspectCatalogue.film(id: catalogue_record_id, page:))
+      render ::Views::Admin::Films::Show.new(detail: CatalogueQueries::BrowseCatalogue.film(id: catalogue_record_id, page:))
     end
   end
 end

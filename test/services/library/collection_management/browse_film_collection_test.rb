@@ -1,14 +1,14 @@
 require "test_helper"
 
-class Library::InspectFilmCollectionTest < ActiveSupport::TestCase
+class Library::BrowseFilmCollectionTest < ActiveSupport::TestCase
   test "missing and expired owners cannot browse" do
     assert_raises(Identity::Errors::Unavailable) do
-      Library::CollectionManagement::InspectFilmCollection.call(user_id: -1, view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHLIST, page: 1)
+      Library::CollectionManagement::BrowseFilmCollection.call(user_id: -1, view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHLIST, page: 1)
     end
     user = Identity::UserGuest.create!
     travel Identity::UserGuest::EXPIRY_DURATION + 1.second do
       assert_raises(Identity::Errors::Unavailable) do
-        Library::CollectionManagement::InspectFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHLIST, page: 1)
+        Library::CollectionManagement::BrowseFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHLIST, page: 1)
       end
     end
   end
@@ -21,7 +21,7 @@ class Library::InspectFilmCollectionTest < ActiveSupport::TestCase
       queries = []
       subscriber = ->(_name, _start, _finish, _id, payload) { queries << payload unless payload[:name] == "SCHEMA" || payload[:cached] }
       ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
-        page = Library::CollectionManagement::InspectFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 1)
+        page = Library::CollectionManagement::BrowseFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED, page: 1)
         page.entries.each { |row| row.film.title }
       end
       queries.size
@@ -29,7 +29,7 @@ class Library::InspectFilmCollectionTest < ActiveSupport::TestCase
     single_count = count_queries.call
     29.times { create_entry.call }
     assert_equal single_count, count_queries.call
-    page = Library::CollectionManagement::InspectFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED, page: 1)
+    page = Library::CollectionManagement::BrowseFilmCollection.call(user_id: user.id, view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED, page: 1)
     assert_equal 25, page.entries.size
     assert page.next_page
   end

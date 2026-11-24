@@ -16,7 +16,7 @@ module Views
 
       def return_to_library
         div(class: "ui-secondary-links") do
-          text_link(t("library.browser.return"), library_path(view: ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED))
+          text_link(t("library.browser.return"), library_path(view: ::Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED))
         end
       end
     end

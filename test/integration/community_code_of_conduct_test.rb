@@ -7,7 +7,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
   PASSWORD = "a long test password"
 
   setup do
-    controllers = [ Community::OnboardingController, Community::CodeOfConductController, AccountSettingsController ]
+    controllers = [ Community::CodeOfConductController, AccountSettingsController ]
     @forgery_protection = controllers.index_with(&:allow_forgery_protection)
     controllers.each { |controller| controller.allow_forgery_protection = true }
     @member = confirmed_member("conduct@example.test", superuser: true)
@@ -54,8 +54,8 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
 
     get community_path
     assert_response :success
-    assert_select "section > p", I18n.t("community.conduct.accepted")
-    assert_select "input[name=accepted]", count: 0
+    assert_select "h2", text: I18n.t("community.conduct.title"), count: 0
+    assert_select "a[href=?]", community_code_of_conduct_path, count: 0
   end
 
   test "direct profile writes require current acceptance" do
@@ -79,35 +79,38 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     assert_nil @member.community_username
   end
 
-  test "the Community form requires explicit consent and rejects a stale version" do
+  test "the Community settings form requires explicit consent and rejects a stale version" do
     sign_in(@member)
     get community_path
+    assert_select "input[name=accepted]", count: 0
+    assert_select "a[href=?]", account_community_path, text: I18n.t("community.curations.complete_setup")
+    get account_community_path
     assert_response :success
     assert_full_conduct_before_form("1")
 
     post community_code_of_conduct_acceptance_path, params: conduct_fields
-    assert_redirected_to community_path
+    assert_redirected_to account_community_path
     assert_equal I18n.t("community.conduct.acceptance_required"), flash[:alert]
     assert_nil @member.reload.community_code_of_conduct_accepted_at
 
     follow_redirect!
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1", code_version: "previous")
-    assert_redirected_to community_path
+    assert_redirected_to account_community_path
     assert_equal I18n.t("community.conduct.version_changed"), flash[:alert]
     assert_nil @member.reload.community_code_of_conduct_accepted_at
 
     follow_redirect!
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1")
-    assert_redirected_to community_path
+    assert_redirected_to account_community_path
     follow_redirect!
     assert_select "section > p", I18n.t("community.conduct.accepted")
   end
 
   test "accepting a new version replaces the old receipt and keeps the profile" do
     sign_in(@member)
-    get community_path
+    get account_community_path
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1")
-    assert_redirected_to community_path
+    assert_redirected_to account_community_path
     original = @member.reload.community_code_of_conduct_accepted_at
     @member.change_community_username!(community_username: "Scream_Queen")
     @member.choose_community_avatar!(preset: "tentacle")
@@ -164,7 +167,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
 
   test "acceptance requires CSRF protection" do
     sign_in(@member)
-    get community_path
+    get account_community_path
     assert_response :success
     fields = conduct_fields.except(:authenticity_token).merge(accepted: "1")
     post community_code_of_conduct_acceptance_path, params: fields
@@ -226,7 +229,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
 
   def conduct_fields
     form = Nokogiri::HTML(response.body).at_css("form[action='#{community_code_of_conduct_acceptance_path}']")
-    %i[authenticity_token code_version source].to_h do |name|
+    %i[authenticity_token code_version].to_h do |name|
       [ name, form.at_css("input[name='#{name}']")["value"] ]
     end
   end

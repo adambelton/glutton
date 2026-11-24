@@ -32,13 +32,15 @@ module Views
         selection = search_parameters(@result.start, @number).merge(tmdb_id:)
         render Shared::TmdbFilmSearchResultRow.new(candidate:) do
           tooltip_text = t("library.detail.add_to_watchlist")
-          render Shared::ActionForm.new(url: library_tmdb_search_watchlist_path, params: selection) do
+          render Shared::ActionForm.new(url: library_tmdb_search_watchlist_path, params: selection,
+            data: { library_tmdb_selection: true }) do
             render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
           end
 
           tooltip_text = t("library.detail.add_to_watched")
-          render Shared::ActionForm.new(url: library_tmdb_search_watched_path, params: selection) do
+          render Shared::ActionForm.new(url: library_tmdb_search_watched_path, params: selection,
+            data: { library_tmdb_selection: true }) do
             render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::EyeCheckIcon.new }
           end

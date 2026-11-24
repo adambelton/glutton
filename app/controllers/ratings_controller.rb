@@ -36,7 +36,7 @@ class RatingsController < ApplicationController
     page_number = page.presence&.to_i || 1
     return render_picker if page_number == 1
 
-    catalogue = Ratings::CandidateSelection::ChooseInitialRatingFilms.catalogue(page: page_number)
+    catalogue = Ratings::CandidateSelection::BrowseInitialRatingFilms.call(page: page_number)
     render ::Ratings::RatingFilmChoicesFrame.new(catalogue:)
   end
 
@@ -112,11 +112,11 @@ class RatingsController < ApplicationController
   private
 
   def watched_library_path
-    library_path(view: Library::CollectionManagement::InspectFilmCollection::Views::WATCHED)
+    library_path(view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED)
   end
 
   def render_picker(error: nil, status: :ok)
-    catalogue = Ratings::CandidateSelection::ChooseInitialRatingFilms.catalogue(page: 1)
+    catalogue = Ratings::CandidateSelection::BrowseInitialRatingFilms.call(page: 1)
     render ::Views::Ratings::ChooseRatingFilms.new(catalogue:, error:), status:
   end
 

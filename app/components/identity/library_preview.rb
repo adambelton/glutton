@@ -12,20 +12,20 @@ module Identity
             render ::Library::TmdbFilmSearchForm.new(dropdown: true)
           end
         end
-        ::Library::CollectionManagement::InspectFilmCollection::Views::ALL.each { |view| library_sample(view) }
+        ::Library::CollectionManagement::BrowseFilmCollection::Views::ALL.each { |view| library_sample(view) }
       end
     end
 
     private
 
     def library_sample(view)
-      watched = view == ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED
+      watched = view == ::Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED
       samples = watched ? MarketingSamples::WATCHED : MarketingSamples::RECOMMENDATION_FILM_IDS.map { |id| { tmdb_id: id, rating: nil, notes: false } }
       samples = samples.select { |sample| @films[sample.fetch(:tmdb_id)].present? }
       entries = samples.map { |sample| ::Library::LibraryFilm.new(film: @films.fetch(sample.fetch(:tmdb_id))) }
       ratings = []
       div(class: "library-preview-panel", hidden: view != "watchlist", data: { library_preview_target: "panel", view: }) do
-        render ::Library::FilmCollection.new(view:, page: ::Library::CollectionManagement::InspectFilmCollection::Page.new(entries:, next_page: false),
+        render ::Library::FilmCollection.new(view:, page: ::Library::CollectionManagement::BrowseFilmCollection::Page.new(entries:, next_page: false),
           page_number: 1, ratings:, preview: true) do |library_film, index|
           sample_library_actions(library_film.film, watched:, sample: samples.fetch(index))
         end
@@ -36,7 +36,7 @@ module Identity
     def sample_library_actions(film, watched:, sample:)
       value = sample.fetch(:rating)
       notes = sample.fetch(:notes)
-      div(class: "library-card-actions", data: { sample_rating: (value || ::Library::CollectionManagement::InspectFilmCollection::UNRATED if watched) }) do
+      div(class: "library-card-actions", data: { sample_rating: (value || ::Library::CollectionManagement::BrowseFilmCollection::UNRATED if watched) }) do
         if watched
           label = value.present? ? t("library.browser.edit_film_rating", title: film.title) : t("library.browser.rate_film", title: film.title)
           render ::Library::CardAction.new(label:, tooltip: nil, readonly: true, class: "ui-action-button library-rating-icon",

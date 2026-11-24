@@ -13,8 +13,8 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_selector ".ui-primary-navigation option[value='#{library_path}'] + option[value='#{community_path}']:enabled", visible: :all
     within(".ui-nav") { click_link I18n.t("community.title") }
     assert_current_path community_path
-    within(".ui-nav") { click_link I18n.t("account.title") }
-    within(".account-tabs") { click_link I18n.t("community.title") }
+    assert_no_selector ".community-conduct-text"
+    click_link I18n.t("community.curations.complete_setup")
     assert_current_path account_community_path
 
     assert_selector ".community-conduct-text", text: I18n.t("community.code_of_conduct_v1.intro")
@@ -39,7 +39,8 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_no_selector "header .ui-auth-links"
 
     visit community_path
-    assert_selector "section > p", exact_text: I18n.t("community.conduct.accepted")
+    assert_no_text I18n.t("community.conduct.accepted")
+    assert_no_link I18n.t("community.conduct.read")
     assert_no_button I18n.t("community.conduct.accept")
   end
 

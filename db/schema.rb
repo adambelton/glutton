@@ -10,9 +10,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "comment_contents", force: :cascade do |t|
+    t.bigint "comment_id", null: false
+    t.bigint "author_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_comment_contents_on_author_id"
+    t.index ["comment_id"], name: "index_comment_contents_on_comment_id", unique: true
+  end
+
+  create_table "comments", force: :cascade do |t|
+    t.bigint "post_id", null: false
+    t.bigint "film_endorsement_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_endorsement_id"], name: "index_comments_on_film_endorsement_id"
+    t.index ["post_id"], name: "index_comments_on_post_id"
+  end
 
   create_table "domain_event_streams", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -61,6 +80,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
     t.check_constraint "attempts >= 0", name: "event_delivery_attempts"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processed'::character varying, 'ignored'::character varying, 'skipped'::character varying, 'failed'::character varying]::text[])", name: "event_delivery_status"
     t.check_constraint "subscriber::text <> ''::text", name: "event_delivery_subscriber"
+  end
+
+  create_table "film_endorsements", force: :cascade do |t|
+    t.bigint "post_id", null: false
+    t.bigint "film_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["film_id"], name: "index_film_endorsements_on_film_id"
+    t.index ["post_id", "film_id", "user_id"], name: "index_film_endorsements_on_post_id_and_film_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_film_endorsements_on_user_id"
   end
 
   create_table "film_qualities", force: :cascade do |t|
@@ -258,6 +288,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
     t.check_constraint "password_digest::text ~ '[^[:space:]]'::text", name: "pending_registrations_require_password_digest"
   end
 
+  create_table "posts", force: :cascade do |t|
+    t.string "type", null: false
+    t.bigint "author_id"
+    t.string "title"
+    t.text "prompt"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_posts_on_author_id"
+    t.index ["type", "created_at", "id"], name: "index_posts_on_type_and_created_at_and_id"
+  end
+
   create_table "qualities", force: :cascade do |t|
     t.bigint "quality_category_id", null: false
     t.string "name", null: false
@@ -428,9 +469,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
     t.check_constraint "type::text = ANY (ARRAY['UserGuest'::character varying, 'UserRegistered'::character varying]::text[])", name: "users_supported_type"
   end
 
+  add_foreign_key "comment_contents", "comments", on_delete: :cascade
+  add_foreign_key "comment_contents", "users", column: "author_id", on_delete: :cascade
+  add_foreign_key "comments", "film_endorsements", on_delete: :cascade
+  add_foreign_key "comments", "posts", on_delete: :cascade
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
+  add_foreign_key "film_endorsements", "films"
+  add_foreign_key "film_endorsements", "posts", on_delete: :cascade
+  add_foreign_key "film_endorsements", "users", on_delete: :cascade
   add_foreign_key "film_qualities", "film_quality_evals", column: ["film_quality_eval_id", "film_id"], primary_key: ["id", "film_id"]
   add_foreign_key "film_qualities", "films"
   add_foreign_key "film_qualities", "qualities"
@@ -440,6 +488,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_100000) do
   add_foreign_key "monitoring_trace_contexts", "domain_events", on_delete: :cascade
   add_foreign_key "monitoring_trace_contexts", "ratings", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
+  add_foreign_key "posts", "users", column: "author_id", on_delete: :cascade
   add_foreign_key "qualities", "quality_categories"
   add_foreign_key "rating_films", "films"
   add_foreign_key "rating_films", "users", on_delete: :cascade

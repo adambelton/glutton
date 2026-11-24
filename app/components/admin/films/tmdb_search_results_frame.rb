@@ -36,7 +36,7 @@ module Admin
           else
             render Shared::ActionForm.new(url: admin_import_tmdb_film_path,
               params: selection_params(tmdb_id),
-              data: { turbo: false, action: "submit->admin-tmdb-search#useCatalogueContext" }) do
+              data: { turbo_frame: "_top", action: "submit->admin-tmdb-search#useCatalogueContext" }) do
               render Shared::PrimaryButton.new(type: :submit, size: :sm) { t("admin.tmdb.add") }
             end
           end
