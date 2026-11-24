@@ -92,6 +92,8 @@ class SignInTest < ActionDispatch::IntegrationTest
   test "sign in and sign out require CSRF and GET does not change sessions" do
     assert_no_difference "Identity::Session.count" do
       get new_session_path
+      assert_select ".ui-page-back-above + main.ui-card.ui-narrow"
+      assert_select ".ui-page-back-above a[href=?]", root_path, text: I18n.t("identity.entry.back")
       post session_path, params: { email_address: @user.email_address, password: "a long password phrase" }
       assert_response :unprocessable_entity
       delete session_path

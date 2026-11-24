@@ -5,7 +5,7 @@ module Views
         page(title: t("ratings.browser.title"), heading_outside_card: true) do
           h2 { t("ratings.onboarding.heading") }
           p { t("ratings.onboarding.intro") }
-          div(class: "ui-actions") do
+          div(class: "ui-actions ui-actions-fixed") do
             render Shared::ActionForm.new(url: choose_films_rating_path,
               method: :get) do
               render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.onboarding.choose") }

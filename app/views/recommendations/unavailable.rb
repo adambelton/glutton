@@ -6,9 +6,9 @@ module Views
       end
 
       def view_template
-        page(title: t("recommendations.title"), heading_outside_card: true) do
+        page(title: t("recommendations.title"), heading_outside_card: true,
+          back_to: recommendation_path, back_label: t("recommendations.return")) do
           p(role: "alert") { @message }
-          text_link(t("recommendations.return"), recommendation_path)
         end
       end
     end

@@ -1,43 +1,62 @@
 module Views
   module Community
     class Board < ::Views::Base
-      def initialize(curations_page:, can_post:)
+      RESULTS_FRAME = "community-board-results"
+
+      def initialize(curations_page:, can_post:, query:)
         @curations_page = curations_page
         @can_post = can_post
+        @query = query
       end
 
       def view_template
-        page(title: t("community.title")) do
-          if @can_post
-            text_link(t("community.curations.create"), new_community_curation_path)
+        page(title: t("community.title"), heading_outside_card: true, heading_action: search_form) do
+          div(class: "community-board-actions flex justify-end pb-2") { create_curation_action } if @can_post
+          tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
+            curation_list
+            text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post
+            pagination
           end
-          if @curations_page.entries.any?
-            ul(class: "community-curation-list") do
-              @curations_page.entries.each do |entry|
-                li { render ::Community::CurationCard.new(entry:) }
-              end
-            end
-            pagination if @curations_page.total_pages > 1
-          else
-            p(class: "ui-empty") { t("community.curations.board_empty") }
-          end
-
-          text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post
         end
       end
 
       private
+
+      def search_form
+        Shared::CollectionSearchForm.new(path: community_path, clear_path: community_path, label: t("community.search.label"),
+          query: @query, input_id: "community-board-query", frame: RESULTS_FRAME, css_class: "community-board-search")
+      end
+
+      def curation_list
+        if @curations_page.entries.any?
+          ul(class: "community-curation-list") do
+            @curations_page.entries.each do |entry|
+              li { render ::Community::CurationCard.new(entry:) }
+            end
+          end
+        else
+          p(class: "ui-empty") { t(@query.present? ? "community.search.no_matches" : "community.curations.board_empty") }
+        end
+      end
+
+      def create_curation_action
+        render RubyUI::Link.new(href: new_community_curation_path, variant: :primary, size: :xl, class: "ui-action-button h-auto max-w-full") do
+          t("community.curations.create")
+        end
+      end
 
       def pagination
         number = @curations_page.number
         total = @curations_page.total_pages
         nav(class: "community-board-pagination", aria: { label: t("community.pagination.label") }) do
           if number > 1
-            text_link(t("community.pagination.previous"), community_path(page: (number - 1 if number > 2)), rel: "prev")
+            text_link(t("community.pagination.previous"), community_path(q: @query.presence, page: (number - 1 if number > 2)),
+              rel: "prev", data: { turbo_frame: RESULTS_FRAME })
           end
-          span { t("community.pagination.page", number:, total:) }
+          span { t("community.pagination.page", number:) }
           if number < total
-            text_link(t("community.pagination.next"), community_path(page: number + 1), rel: "next")
+            text_link(t("community.pagination.next"), community_path(q: @query.presence, page: number + 1),
+              rel: "next", data: { turbo_frame: RESULTS_FRAME })
           end
         end
       end

@@ -39,7 +39,8 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
   def assert_targeted_controls
     assert_select '#rating-form input[name="film_id"][value=?]', @film.id.to_s
     assert_select "form[action=?]", dismiss_rating_path, count: 0
-    assert_select "a[href=?]", library_path(view: "watched"), text: I18n.t("library.browser.return")
+    assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", library_path(view: "watched"),
+      text: I18n.t("library.browser.return")
   end
 
   test "opening admits an unfinished candidate and repeated entry preserves it" do

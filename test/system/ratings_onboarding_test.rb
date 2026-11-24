@@ -10,14 +10,23 @@ class RatingsOnboardingTest < ApplicationSystemTestCase
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
     choose = find_button(I18n.t("ratings.onboarding.choose"))
+    surprise = find_button(I18n.t("ratings.onboarding.surprise"))
+    assert_in_delta 132, choose.rect.width, 1
+    assert_in_delta choose.rect.width, surprise.rect.width, 1
+    assert_in_delta 8, surprise.rect.x - (choose.rect.x + choose.rect.width), 1
     border = choose.style("border-top-width", "border-top-style", "border-top-color")
     assert_equal "1px", border.fetch("border-top-width")
     assert_equal "solid", border.fetch("border-top-style")
     choose.click
 
     find("input[type=checkbox][value='#{chosen.id}']").check
-    assert_equal border, find_button(I18n.t("ratings.onboarding.cancel")).style(*border.keys)
-    click_button I18n.t("ratings.onboarding.cancel")
+    start = find_button(I18n.t("ratings.onboarding.start"), disabled: true)
+    back = find_button(I18n.t("ratings.onboarding.cancel"))
+    assert_in_delta 132, start.rect.width, 1
+    assert_in_delta start.rect.width, back.rect.width, 1
+    assert_in_delta 8, back.rect.x - (start.rect.x + start.rect.width), 1
+    assert_equal border, back.style(*border.keys)
+    back.click
     assert_selector "h2", text: first.title
     assert_equal first, Ratings::RatingFilm.sole.film
     refresh

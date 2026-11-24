@@ -72,7 +72,7 @@ Authors can select canonical reference films marked Watched in their own Library
 
 ### Nominate, endorse and discuss
 
-Members choose **Respond** to add several films in one submission, with a separate optional comment for each film. They can respond again when they think of more films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film on the post across all responses. Each film appears once with its total, and its comments appear together with replies branching from each comment.
+Members choose **Endorse films** to add several films in one submission, with a separate optional comment for each film. They can respond again when they think of more films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film on the post across all responses. Each film appears once with its total, and its comments appear together with replies branching from each comment.
 
 An endorsement allows one optional comment explaining why the film fits. The member can add it when endorsing or later while their endorsement and the request are open. They can delete the comment and add a fresh one under the same conditions. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. The opening comment has no character limit. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
 
@@ -180,7 +180,7 @@ These are possibilities, not a fixed roadmap. Other, better ideas may emerge fro
 | Social area | **Community** |
 | Post types | **Community Curation** and **Film Debrief** |
 | Theme and community film list | **Community Curation post** |
-| Contribute films to a post | **Respond** |
+| Contribute films to a post | **Endorse films** |
 | Instruction to requester | **Describe the kind of horror experience you're looking for** |
 | Support an existing nomination | **Endorse** |
 | Optional opening text attached to an endorsement | **Comment** |

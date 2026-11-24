@@ -8,7 +8,8 @@ module Views
       def view_template
         terms_version = ::Identity::TermsOfService.current.version
         privacy_notice_version = ::Identity::PrivacyNotice.current.version
-        page(title: t("identity.registration.title"), narrow: true) do
+        page(title: t("identity.registration.title"), narrow: true,
+          back_to: browsing_path, back_label: t("identity.entry.back")) do
           p { t("identity.registration.explanation") }
           errors(@registration.errors.full_messages)
           form_with(url: registration_path, scope: :registration) do
@@ -29,7 +30,6 @@ module Views
           end
           div(class: "ui-secondary-links") do
             text_link(t("identity.sessions.sign_in"), new_session_path)
-            text_link(t("identity.entry.back"), browsing_path)
           end
         end
       end

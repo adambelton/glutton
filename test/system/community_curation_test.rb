@@ -19,7 +19,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     visit community_path
-    click_link I18n.t("community.curations.create")
+    action_row = find(".ui-page-body.ui-card .community-board-actions")
+    create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary")
+    assert_in_delta action_row.rect.x + action_row.rect.width, create_action.rect.x + create_action.rect.width, 1
+    create_action.click
     fill_in I18n.t("community.curations.title"), with: "Slow-burn modern folk horror"
     fill_in I18n.t("community.curations.description"), with: "Stories that take their time."
 
@@ -64,11 +67,13 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within ".community-nominations-toolbar" do
       assert_text I18n.t("community.curations.endorsement_order")
       type_properties = [ "font-size", "font-weight", "color" ]
-      ordering_style = find("p").style(*type_properties)
+      order_note = find("p")
+      ordering_style = order_note.style(*type_properties)
       expand = find_button(I18n.t("community.curations.expand_all"))
       collapse = find_button(I18n.t("community.curations.collapse_all"), disabled: true)
       assert_equal ordering_style, expand.style(*type_properties)
       assert_equal ordering_style, collapse.style(*type_properties)
+      assert_operator collapse.rect.x + collapse.rect.width, :<, order_note.rect.x
       expand.click
     end
     assert_text "A creeping sense of dread."
@@ -96,6 +101,116 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_selector ".community-nomination", text: /Folk Tales\s*1 endorsement/
     assert_no_text "Ghost Ridge"
     assert_no_text "Discard this comment."
+  end
+
+  test "the author responds with multiple films and a comment for each" do
+    password = "a long test password"
+    author = Identity::UserRegistered.create!(email_address: "curation-response-browser@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      community_username: "Respondent", community_avatar_preset: "moth",
+      community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+      community_code_of_conduct_accepted_at: Time.current)
+    reference, orchard, valley = [ "The Original Reference", "The Hidden Orchard", "The Quiet Valley" ].map do |title|
+      film = Registry::Film.create!(title:, tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
+      Library::LibraryFilm.new(user: author, film:).add_to_watched!
+      film
+    end
+    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror in isolated places",
+      prompt: "Films where the setting shapes the story.", reference_film_ids: [ reference.id ], reference_comments: {})
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: author.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    visit community_curation_path(curation)
+    within "section[aria-labelledby=curation-nominated-films]" do
+      find_link(I18n.t("community.curation_responses.endorse_films"), class: "bg-primary").click
+    end
+    assert_current_path new_community_curation_response_path(curation)
+
+    search = I18n.t("community.curations.search_watched")
+    fill_in search, with: reference.title
+    assert_text I18n.t("community.curations.no_matches")
+    assert_no_button I18n.t("community.curations.add_film", title: reference.title)
+    { orchard => "The orchard isolates the family.", valley => "The valley keeps outsiders away." }.each do |film, body|
+      fill_in search, with: film.title
+      click_button I18n.t("community.curations.add_film", title: film.title)
+      assert_field search, with: ""
+      assert_no_selector ".community-reference-films"
+      fill_in I18n.t("community.curations.comment_for_film", title: film.title), with: body
+    end
+    click_button I18n.t("community.curation_responses.publish")
+    assert_current_path community_curation_path(curation)
+    assert_text I18n.t("community.curation_responses.published")
+    within "#nomination-#{orchard.id}" do
+      find("summary", text: I18n.t("community.curations.comments", count: 1)).click
+      assert_text "The orchard isolates the family."
+      assert_no_text "The valley keeps outsiders away."
+    end
+    within "#nomination-#{valley.id}" do
+      find("summary", text: I18n.t("community.curations.comments", count: 1)).click
+      assert_text "The valley keeps outsiders away."
+    end
+  end
+
+  test "the author edits a curation and must confirm its deletion" do
+    password = "a long test password"
+    author = Identity::UserRegistered.create!(email_address: "curation-edit-browser@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      community_username: "CurationAuthor", community_avatar_preset: "moth",
+      community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+      community_code_of_conduct_accepted_at: Time.current)
+    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror",
+      prompt: "Folklore in film.", reference_film_ids: [], reference_comments: {})
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: author.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    visit community_curation_path(curation)
+    delete_label = I18n.t("community.curation_deletion.delete_post")
+    within ".community-curation-author-actions" do
+      edit = find_link(I18n.t("community.curation_editing.edit_post"))
+      delete = find_button(delete_label)
+      assert_in_delta 132, edit.rect.width, 1
+      assert_in_delta edit.rect.width, delete.rect.width, 1
+      assert_in_delta 8, delete.rect.x - (edit.rect.x + edit.rect.width), 1
+      edit.click
+    end
+    assert_current_path edit_community_curation_path(curation)
+    assert_field I18n.t("community.curations.title"), with: curation.title
+    assert_field I18n.t("community.curations.description"), with: curation.prompt
+    fill_in I18n.t("community.curations.title"), with: "Woodland folk horror"
+    fill_in I18n.t("community.curations.description"), with: "Folklore in remote woodland."
+    click_button I18n.t("community.curation_editing.save")
+    assert_current_path community_curation_path(curation)
+    assert_selector "h1", text: "Woodland folk horror"
+    assert_text "Folklore in remote woodland."
+
+    click_button delete_label
+    within "dialog[open]" do
+      description = find("p", text: I18n.t("community.curation_deletion.confirm_description")).rect
+      cancel = find_button(I18n.t("community.curations.cancel"))
+      confirm = find_button(delete_label)
+      assert_in_delta 132, cancel.rect.width, 1
+      assert_in_delta cancel.rect.width, confirm.rect.width, 1
+      assert_in_delta cancel.rect.height, confirm.rect.height, 1
+      assert_in_delta 8, confirm.rect.x - (cancel.rect.x + cancel.rect.width), 1
+      assert_in_delta 28, cancel.rect.y - (description.y + description.height), 1
+      cancel.click
+    end
+    assert_no_selector "dialog[open]"
+    assert_current_path community_curation_path(curation)
+    assert Community::Post.exists?(curation.id)
+
+    click_button delete_label
+    within("dialog[open]") { click_button delete_label }
+    assert_current_path community_path
+    assert_text I18n.t("community.curation_deletion.deleted")
+    assert_no_text "Woodland folk horror"
+    assert_not Community::Post.exists?(curation.id)
   end
 
   test "a nomination uses the shared title and updates its Library icons below the poster" do
@@ -179,6 +294,23 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     visit community_path
+    search = find_field(I18n.t("community.search.label"))
+    assert_selector "main:not(.ui-card) > .ui-page-heading form.community-board-search"
+    fill_in I18n.t("community.search.label"), with: shorter.title
+    assert_current_path community_path(q: shorter.title)
+    assert_selector ".community-curation-card", count: 1, text: shorter.title
+    assert_no_selector ".community-curation-card", text: curation.title
+    fill_in I18n.t("community.search.label"), with: films.last.title
+    assert_current_path community_path(q: films.last.title)
+    assert_selector ".community-curation-card", count: 1, text: curation.title
+    assert_no_selector ".community-curation-card", text: shorter.title
+    click_link I18n.t("ui.search.clear")
+    assert_current_path community_path
+    assert_equal "", search.value
+    assert_selector ".community-curation-card", count: 2
+    create_action = find_link(I18n.t("community.curations.create")).rect
+    posts = find(".community-curation-list").rect
+    assert_in_delta 16, posts.y - (create_action.y + create_action.height), 1
     card = find(".community-curation-card", text: curation.title)
     shorter_card = find(".community-curation-card", text: shorter.title)
     assert_in_delta find(".community-curation-list").rect.width, card.rect.width, 1
@@ -224,6 +356,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     original_size = page.current_window.size
     page.current_window.resize_to(430, 900)
+    action_row = find(".ui-page-body.ui-card .community-board-actions")
+    create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary").rect
+    assert_in_delta action_row.rect.x + action_row.rect.width, create_action.x + create_action.width, 1
     within card do
       assert_selector ".community-curation-card-posters .film-poster", count: 2
       first(".community-curation-card-posters .film-poster").click

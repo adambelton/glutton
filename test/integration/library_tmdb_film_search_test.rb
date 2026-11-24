@@ -34,6 +34,7 @@ class LibraryTmdbFilmSearchTest < ActionDispatch::IntegrationTest
 
     replace_method(Registry::Sources::TmdbClient, :search, tmdb_search) do
       get library_tmdb_film_search_path(query: "Film")
+      assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", library_path, text: I18n.t("library.browser.return")
       assert_equal (348..352).map { |id| "Film #{id}" }, css_select(".film-search-results h3").map(&:text)
       next_path = css_select(".library-pagination a").sole["href"]
       get next_path

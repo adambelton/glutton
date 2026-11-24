@@ -2,6 +2,7 @@ module Community
   class CurationsController < ApplicationController
     before_action :require_preview_access
     rescue_from Errors::MembershipRequired, Identity::Errors::Unavailable, with: -> { head :forbidden }
+    rescue_from Errors::CurationEditUnavailable, Errors::CurationDeletionUnavailable, with: -> { head :forbidden }
     rescue_from Errors::NominationUnavailable, with: -> { head :not_found }
     rescue_from Library::Errors::AddToWatchlistUnavailable, Library::Errors::AddToWatchedUnavailable,
       Library::Errors::FilmUnavailable, Library::Errors::AlreadyWatched, Library::Errors::NotOnWatchlist, with: :library_action_unavailable
@@ -28,6 +29,26 @@ module Community
       render Views::Community::Curation.new(**BrowseCurations.detail(id: params[:id], viewer: current_user))
     end
 
+    def edit
+      curation = EditCuration.load_for_edit(curation_id: params[:id], member: current_user)
+      render Views::Community::EditCuration.new(curation:)
+    end
+
+    def update
+      title, prompt = text_fields(curation_fields)
+      curation = EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, prompt:)
+      if curation.errors.any?
+        return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content
+      end
+
+      redirect_to community_curation_path(curation), notice: t("community.curation_editing.saved"), status: :see_other
+    end
+
+    def destroy
+      DeleteCuration.call(curation_id: params[:id], member_id: current_user.id)
+      redirect_to community_path, notice: t("community.curation_deletion.deleted"), status: :see_other
+    end
+
     def watchlist
       ManageCurationFilmInLibrary.add_to_watchlist(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
       redirect_to community_curation_path(params[:id]), notice: t("library.detail.watchlisted"), status: :see_other
@@ -46,7 +67,7 @@ module Community
 
     def nominated_film_id
       film_id = params[:film_id]
-      raise ActionController::BadRequest unless valid_film_id?(film_id)
+      raise ActionController::BadRequest unless CurationFilmSelectionParameters.valid_film_id?(film_id)
 
       film_id.to_i
     end
@@ -56,36 +77,30 @@ module Community
     end
 
     def publication_fields
+      fields = curation_fields
+      title, prompt = text_fields(fields)
+      film_ids, comments = CurationFilmSelectionParameters.parse(ids: fields[:reference_film_ids], comments: fields[:reference_comments])
+      [ title, prompt, film_ids, comments ]
+    end
+
+    def curation_fields
       fields = params[:curation]
       raise ActionController::BadRequest unless fields.is_a?(ActionController::Parameters)
 
-      title, prompt, ids = fields.values_at(:title, :prompt, :reference_film_ids)
-      ids = [] if ids.nil?
-      unless [ title, prompt ].all? { |value| value.nil? || value.is_a?(String) } &&
-          ids.is_a?(Array) && ids.all? { |id| valid_film_id?(id) }
+      fields
+    end
+
+    def text_fields(fields)
+      title, prompt = fields.values_at(:title, :prompt)
+      unless [ title, prompt ].all? { |value| value.nil? || value.is_a?(String) }
         raise ActionController::BadRequest
       end
 
-      [ title, prompt, ids.map(&:to_i), reference_comments(fields[:reference_comments], ids:) ]
-    end
-
-    def valid_film_id?(id)
-      id.is_a?(String) && id.match?(/\A[1-9][0-9]{0,18}\z/) && id.to_i <= 2**63 - 1
-    end
-
-    def reference_comments(comments, ids:)
-      return {} if comments.nil?
-
-      unless comments.is_a?(ActionController::Parameters) &&
-          comments.each_pair.all? { |id, body| ids.include?(id) && body.is_a?(String) }
-        raise ActionController::BadRequest
-      end
-
-      comments.each_pair.to_h.transform_keys(&:to_i)
+      [ title, prompt ]
     end
 
     def render_form(curation, reference_film_ids: [], reference_comments: {}, status: :ok)
-      films = CurationReferenceFilms.new(author: current_user).choices
+      films = EligibleCurationFilms.new(member: current_user).choices
       render Views::Community::NewCuration.new(curation:, films:, reference_film_ids:, reference_comments:), status:
     end
   end
