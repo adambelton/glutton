@@ -738,7 +738,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     page.current_window.resize_to(690, 900)
     assert_in_delta 640, card.rect.width, 1
     page.current_window.resize_to(520, 900)
-    assert_in_delta 488, card.rect.width, 1
+    available_width = page.evaluate_script("document.body.getBoundingClientRect().width")
+    assert_in_delta available_width - 32, card.rect.width, 1
     assert_in_delta 16, card.rect.x, 1
   ensure
     page.current_window.resize_to(*original_size) if original_size.present?
