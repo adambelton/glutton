@@ -6,9 +6,8 @@ module Views
       end
 
       def view_template
-        page(title: t("ratings.browser.title")) do
+        page(title: t("ratings.browser.title"), back_to: new_rating_path, back_label: t("ratings.browser.continue")) do
           p(role: "alert") { @error }
-          text_link(t("ratings.browser.continue"), new_rating_path)
         end
       end
     end

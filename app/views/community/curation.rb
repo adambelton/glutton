@@ -3,25 +3,31 @@ module Views
     class Curation < ::Views::Base
       include Phlex::Rails::Helpers::ImagePath
 
-      def initialize(curation:, nominated_films:, library_films:)
+      def initialize(curation:, nominated_films:, library_films:, can_respond:, can_edit:, can_delete:)
         @curation, @nominated_films, @library_films = curation, nominated_films, library_films
+        @can_respond = can_respond
+        @can_edit = can_edit
+        @can_delete = can_delete
       end
 
       def view_template
-        page(title: @curation.title, class: "community-curation-page") do
+        heading_action = method(:author_actions) if @can_edit || @can_delete
+        page(title: @curation.title, class: "community-curation-page", heading_action:,
+          back_to: community_path, back_label: t("community.curations.back")) do
           render ::Community::CurationTag.new
           p(class: "community-curation-prompt") { @curation.prompt }
-          section(data: { controller: "community-film-comments" }) do
-            h2 { t("community.curations.nominated_films") }
+          section(aria: { labelledby: "curation-nominated-films" }, data: { controller: "community-film-comments" }) do
+            h2(id: "curation-nominated-films", class: "sr-only") { t("community.curations.nominated_films") }
+            endorse_films_action if @can_respond
             if @nominated_films.present?
               div(class: "community-nominations-toolbar") do
-                p(class: "muted") { t("community.curations.endorsement_order") }
                 div(class: "community-comment-controls", hidden: true, data: { community_film_comments_target: "controls" }) do
                   button(type: :button, class: "muted", data: { community_film_comments_target: "expand",
                     action: "community-film-comments#expandAll" }) { t("community.curations.expand_all") }
                   button(type: :button, class: "muted", disabled: true, data: { community_film_comments_target: "collapse",
                     action: "community-film-comments#collapseAll" }) { t("community.curations.collapse_all") }
                 end
+                p(class: "muted") { t("community.curations.endorsement_order") }
               end
               ol(class: "community-nominations") do
                 @nominated_films.each.with_index(1) do |(film, endorsements), position|
@@ -32,11 +38,35 @@ module Views
               p(class: "ui-empty") { t("community.curations.no_nominations") }
             end
           end
-          text_link(t("community.curations.back"), community_path)
         end
       end
 
       private
+
+      def author_actions
+        div(class: "ui-actions ui-actions-fixed community-curation-author-actions justify-end") do
+          edit_action if @can_edit
+          delete_action if @can_delete
+        end
+      end
+
+      def edit_action
+        render RubyUI::Link.new(href: edit_community_curation_path(@curation), variant: :ghost, size: :lg, class: "ui-action-button") do
+          t("community.curation_editing.edit_post")
+        end
+      end
+
+      def delete_action
+        render Shared::ConfirmationDialog.new(id: "delete-curation", action_label: t("community.curation_deletion.delete_post"),
+          title: t("community.curation_deletion.confirm_title"), description: t("community.curation_deletion.confirm_description"),
+          cancel_label: t("community.curations.cancel"), url: community_curation_path(@curation))
+      end
+
+      def endorse_films_action
+        render RubyUI::Link.new(href: new_community_curation_response_path(@curation), variant: :primary, size: :xl, class: "mt-4 mb-1") do
+          t("community.curation_responses.endorse_films")
+        end
+      end
 
       def nomination(film, endorsements:, position:)
         li(class: "community-nomination", id: "nomination-#{film.id}") do

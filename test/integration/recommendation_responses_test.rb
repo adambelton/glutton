@@ -132,7 +132,8 @@ class RecommendationResponsesRequestTest < ActionDispatch::IntegrationTest
       post accept_recommendation_path, params: submitted
       assert_response :conflict
       assert_select '[role="alert"]', I18n.t("recommendations.response_unavailable")
-      assert_select "a[href=?]", recommendation_path, text: I18n.t("recommendations.return")
+      assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", recommendation_path,
+        text: I18n.t("recommendations.return")
       assert_nil flash[:notice]
 
       post reject_recommendation_path, params: submitted

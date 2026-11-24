@@ -14,14 +14,16 @@ module Views
         page(title: t("ratings.onboarding.choose"), heading_outside_card: true, data:) do
           errors([ @error ]) if @error.present?
           div(class: "ui-actions rating-picker-actions", data: { rating_film_selection_target: "actions" }) do
-            if @catalogue.films.any?
-              render Shared::PrimaryButton.new(type: :submit, form: "rating-film-picker", class: "ui-action-button",
-                aria: { describedby: "rating-picker-instructions" },
-                data: { rating_film_selection_target: "start" }) { t("ratings.onboarding.start") }
-            end
-            render Shared::ActionForm.new(url: surprise_rating_path,
-              data: { turbo: false }) do
-              render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.onboarding.cancel") }
+            div(class: "ui-actions ui-actions-fixed") do
+              if @catalogue.films.any?
+                render Shared::PrimaryButton.new(type: :submit, form: "rating-film-picker", class: "ui-action-button",
+                  aria: { describedby: "rating-picker-instructions" },
+                  data: { rating_film_selection_target: "start" }) { t("ratings.onboarding.start") }
+              end
+              render Shared::ActionForm.new(url: surprise_rating_path,
+                data: { turbo: false }) do
+                render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("ratings.onboarding.cancel") }
+              end
             end
             if @catalogue.films.any?
               p(id: "rating-picker-instructions") { t("ratings.onboarding.instructions", count: minimum) }

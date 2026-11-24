@@ -7,8 +7,8 @@ module Views
 
       def view_template
         page(title: t("library.browser.title"), heading_outside_card: true,
-          heading_action: ::Library::TmdbFilmSearchForm.new(query: @query)) do
-          text_link(t("library.browser.return"), library_path)
+          heading_action: ::Library::TmdbFilmSearchForm.new(query: @query),
+          back_to: library_path, back_label: t("library.browser.return")) do
           section(id: "library-film-search-results", aria: { live: "polite" }) do
             empty_message = t("library.search.empty") if @result&.candidates&.empty?
             render Shared::TmdbFilmSearchResultsPanel.new(error: @error, empty_message:) do

@@ -6,7 +6,8 @@ module Views
       end
 
       def view_template
-        page(title: t("identity.sessions.sign_in"), narrow: true, pending_reminder: false) do
+        page(title: t("identity.sessions.sign_in"), narrow: true, pending_reminder: false,
+          back_to: browsing_path, back_label: t("identity.entry.back")) do
           p(role: "status", class: "ui-reminder") { flash[:page_notice] } if flash[:page_notice].present?
           p(role: "alert", class: "ui-errors") { @error } if @error
           form_with(url: session_path) do
@@ -20,7 +21,6 @@ module Views
             end
           end
           div(class: "ui-secondary-links") do
-            text_link(t("identity.entry.back"), browsing_path)
             text_link(t("identity.registration.title"), new_registration_path)
             text_link(t("identity.recovery.forgot"), new_password_reset_path)
           end

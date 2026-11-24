@@ -70,6 +70,8 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "registration requires an explicit unchecked-by-default terms acceptance" do
     get new_registration_path
+    assert_select ".ui-page-back-above + main.ui-card.ui-narrow"
+    assert_select ".ui-page-back-above a[href=?]", root_path, text: I18n.t("identity.entry.back")
     assert_select 'input[type="checkbox"][name="registration[terms_accepted]"][required]:not([checked])'
     authenticity_token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
 

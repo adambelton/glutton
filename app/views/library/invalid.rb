@@ -2,9 +2,9 @@ module Views
   module Library
     class Invalid < ::Views::Base
       def view_template
-        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true) do
+        page(title: t("library.browser.title"), class: "library-page", heading_outside_card: true,
+          back_to: library_path, back_label: t("library.browser.return")) do
           p { t("library.browser.invalid") }
-          text_link(t("library.browser.return"), library_path)
         end
       end
     end

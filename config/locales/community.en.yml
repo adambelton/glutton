@@ -5,11 +5,14 @@ en:
   community:
     title: Community
     coming_soon: Coming soon
+    search:
+      label: Search films and posts
+      no_matches: No curations match your search.
     pagination:
       label: Community pages
       previous: Previous page
       next: Next page
-      page: Page %{number} of %{total}
+      page: Page %{number}
     curations:
       create: Create a Community Curation
       tag: Community Curation
@@ -37,6 +40,7 @@ en:
       comment_for_film: "Optional comment for %{title}"
       film_with_year: "%{title} (%{year})"
       publish: Publish
+      cancel: Cancel
       published: Community Curation published.
       back: Back to Community
       nominated_films: Nominated Films
@@ -59,6 +63,24 @@ en:
       member: Community member
       reply: Reply
       report: Report
+    curation_editing:
+      edit_post: Edit post
+      title: Edit Community Curation
+      save: Save changes
+      saved: Curation saved.
+    curation_deletion:
+      delete_post: Delete post
+      confirm_title: Delete this Community Curation?
+      confirm_description: This permanently deletes the post, all its endorsements, and all its comments.
+      deleted: Curation deleted.
+    curation_responses:
+      endorse_films: Endorse films
+      title: "Respond to %{title}"
+      films: Films to endorse
+      publish: Publish response
+      published: Response published.
+      back: Back to curation
+      film_identifier: "Film #%{id}"
     conduct:
       title: Community Code of Conduct
       read: Read the Code of Conduct
@@ -100,3 +122,9 @@ en:
               too_many_references: "Choose up to %{count} reference films."
               duplicate_references: Choose each reference film once.
               unavailable_reference: Reference films must be eligible horror films in your Watched list.
+              response_film_count:
+                one: Choose one film to endorse.
+                other: Choose between one and %{count} films to endorse.
+              already_endorsed_response_film: "You have already endorsed %{film} on this curation."
+              repeated_response_film: "%{film} appears more than once in this response."
+              unavailable_response_film: One or more selected films are no longer eligible. Choose horror films currently marked Watched in your Library.

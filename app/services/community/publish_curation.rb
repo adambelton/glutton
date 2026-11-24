@@ -6,7 +6,7 @@ module Community
         raise Errors::PostingUnavailable unless author.present? && PostingAccess.allowed?(user: author)
 
         PostCommunityCuration.new(author:, title:, prompt:).publish(reference_film_ids:, reference_comments:) do |film_ids|
-          CurationReferenceFilms.new(author:).for_publication(film_ids:)
+          EligibleCurationFilms.new(member: author).lock_for_submission(film_ids:)
         end
       end
     end

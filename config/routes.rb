@@ -11,7 +11,8 @@ Rails.application.routes.draw do
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
-    resources :curations, only: [ :new, :create, :show ] do
+    resources :curations, only: [ :new, :create, :show, :edit, :update, :destroy ] do
+      resource :response, only: [ :new, :create ], controller: :curation_responses
       post :watchlist, on: :member
       post :watched, on: :member
     end

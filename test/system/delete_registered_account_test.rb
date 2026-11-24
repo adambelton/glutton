@@ -40,7 +40,14 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
     click_button I18n.t("identity.settings.change_email")
     within "dialog[open]" do
       assert_field I18n.t("identity.settings.new_email")
-      click_button I18n.t("identity.settings.cancel")
+      cancel = find_button(I18n.t("identity.settings.cancel"))
+      send = find_button(I18n.t("identity.settings.send_email"))
+      assert_in_delta 132, cancel.rect.width, 1
+      assert_in_delta cancel.rect.width, send.rect.width, 1
+      assert_in_delta cancel.rect.height, send.rect.height, 1
+      assert_in_delta 8, send.rect.x - (cancel.rect.x + cancel.rect.width), 1
+      assert_equal "28px", find(".ui-actions-fixed").style("margin-block-start").fetch("margin-block-start")
+      cancel.click
     end
     assert_no_selector "dialog[open]"
 
