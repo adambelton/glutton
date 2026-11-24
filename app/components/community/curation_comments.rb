@@ -1,12 +1,14 @@
 module Community
   class CurationComments < Shared::Base
-    def initialize(curation:, film_id:, discussion:, endorsements:, can_reply:)
+    def initialize(curation:, film_id:, discussion:, can_reply:)
       @curation, @film_id, @discussion, @can_reply = curation, film_id, discussion, can_reply
-      @roots = discussion.roots(endorsements)
+      @roots = discussion.roots(film_id)
     end
 
     def view_template
-      div(id: "film-discussion-#{@film_id}") { discussion }
+      div(id: "film-discussion-#{@film_id}") do
+        discussion
+      end
     end
 
     private

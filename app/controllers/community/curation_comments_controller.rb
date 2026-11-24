@@ -27,11 +27,15 @@ module Community
 
     def destroy
       removal = ManageCurationComment.delete(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id)
-      curation, film_id, selected_comment_id = removal.values_at(:curation, :film_id, :selected_comment_id)
-      if request.format.turbo_stream?
+      curation, film_id, selected_comment_id, nomination_visible = removal.values_at(:curation, :film_id, :selected_comment_id, :nomination_visible)
+      if request.format.turbo_stream? && nomination_visible
         discussion = CurationDiscussion.new(curation:, selected_reply_id: selected_comment_id, expand_selected_branch: true)
-        return render Views::Community::CurationCommentDeleted.new(curation:, film_id:, discussion:,
+        return render Views::Community::CurationFilmDiscussionUpdate.new(curation:, film_id:, discussion:,
           can_reply: PostingAccess.allowed?(user: current_user)), content_type: Mime[:turbo_stream]
+      end
+
+      unless nomination_visible
+        return redirect_to community_curation_path(curation), notice: t("community.comment_deletion.deleted"), status: :see_other
       end
 
       anchor = selected_comment_id.present? ? "comment-#{selected_comment_id}" : "nomination-#{film_id}"

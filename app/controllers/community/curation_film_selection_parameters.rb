@@ -5,8 +5,9 @@ module Community
       unless ids.is_a?(Array) && ids.all? { |id| valid_film_id?(id) }
         raise ActionController::BadRequest
       end
+      submitted_ids = ids.to_set
       unless comments.nil? || (comments.is_a?(ActionController::Parameters) &&
-          comments.each_pair.all? { |id, body| ids.include?(id) && body.is_a?(String) })
+          comments.each_pair.all? { |id, body| submitted_ids.include?(id) && body.is_a?(String) })
         raise ActionController::BadRequest
       end
 

@@ -68,13 +68,13 @@ A Community Curation post has a short title and a required written prompt descri
 
 Examples include horror set in isolated research facilities, found footage that builds dread through atmosphere, and films where the creature is never clearly revealed.
 
-Authors can select canonical reference films marked Watched in their own Library. References are optional. Each one starts the list with one endorsement from the author and gives contributors a concrete example of the prompt. An author might start a list for slow-burn modern folk horror with two films that show what they mean. Other members can endorse those examples as the list grows.
+Authors can select any number of canonical reference films marked Watched in their own Library. References are optional. Each one starts the list with one endorsement from the author and gives contributors a concrete example of the prompt. An author might start a list for slow-burn modern folk horror with two films that show what they mean. Other members can endorse those examples as the list grows.
 
 ### Nominate, endorse and discuss
 
-Members choose **Endorse films** to add several films in one submission, with a separate optional comment for each film. They can respond again when they think of more films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film on the post across all responses. Each film appears once with its total, and its comments appear together with replies branching from each comment.
+Members choose **Endorse films** to make their first contribution and **Edit endorsements** to manage their existing films and opening comments. They can select any number of eligible Watched films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film. Each film appears once with its total and its discussions.
 
-An endorsement allows one optional comment explaining why the film fits. The member can add it when endorsing or later while their endorsement and the request are open. They can delete the comment and add a fresh one under the same conditions. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. The opening comment has no character limit. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
+An endorsement allows one optional comment explaining why the film fits. The member can add or edit it in the endorsement editor while their endorsement and the request are open. They can delete just the opening comment from its own Delete action and add a fresh one later. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. The opening comment has no character limit. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
 
 > The atmosphere is oppressive, and that sense of dread stayed with me for days.
 
@@ -82,7 +82,7 @@ An endorsement expresses agreement that a film fits the prompt. Members can endo
 
 ### Read community support and personal fit
 
-The **Nominated Films** artefact is a living collection ordered by endorsement count. Members can revisit it, read visible conversations and follow canonical film links as eligible suggestions and endorsements change. The requester also sees their own Glutton Match where available, alongside the community ordering.
+The **Nominated Films** section of a curation is a living collection ordered by endorsement count. It retains films with visible discussions at zero endorsements. A separate artefact includes only films with active endorsements. Members can revisit it, read visible conversations and follow canonical film links as eligible suggestions and endorsements change. The requester also sees their own Glutton Match where available, alongside the community ordering.
 
 ### Use Library from a request
 
@@ -133,7 +133,7 @@ Publish a Community Code of Conduct at launch. Confirmed members can browse befo
 
 Member participation at launch also needs reporting, moderation, spam prevention and protection of private information. The owner can grant and revoke the Community moderator role. Moderators work in Community, outside site Admin, and their role is independent of site superuser access. Prioritise reports of sensitive imagery and other conduct violations. If an uploaded image is removed, Glutton supplies a fallback avatar. Moderators can restrict a member to Glutton avatars separately from suspending Community access. See the [launch moderation design](community_niche_requests_architecture.md#moderation-and-deletion) for access, suspension and deletion rules.
 
-Authors can delete a request before other members have contributed enough to protect it. Protection begins at three distinct other members with active endorsements or five visible comments from at least two other members. Once protected, the author can append updates or remove their attribution. The original request and discussion stay available. Account deletion follows the same retention rule. A comment with no replies disappears when deleted. When a comment has replies, the text and author are removed and the replies stay visible under a removal marker. Withdrawing a request or endorsement keeps its discussion visible and read-only.
+Authors can delete a request before other members have contributed enough to protect it. Protection begins at three distinct other members with active endorsements or five visible comments from at least two other members. Once protected, the author can append updates or remove their attribution. The original request and discussion stay available. Account deletion follows the same retention rule. A comment with no replies disappears when deleted. When a comment has replies, the text and author are removed and the replies stay visible under a removal marker. Withdrawing a request keeps its discussion visible and read-only. Withdrawing an endorsement removes its opening comment. Surviving replies remain visible and replyable on an open request. An opening comment on a fresh endorsement starts a separate thread from those earlier replies. A film with comments can remain on the curation page at zero endorsements.
 
 Horror discussion should permit disturbing themes, interpretation and disagreement without permitting harassment or abuse. Moderation should protect people, not enforce a consensus on films.
 
@@ -180,7 +180,7 @@ These are possibilities, not a fixed roadmap. Other, better ideas may emerge fro
 | Social area | **Community** |
 | Post types | **Community Curation** and **Film Debrief** |
 | Theme and community film list | **Community Curation post** |
-| Contribute films to a post | **Endorse films** |
+| Contribute films to a post | **Endorse films** or **Edit endorsements** |
 | Instruction to requester | **Describe the kind of horror experience you're looking for** |
 | Support an existing nomination | **Endorse** |
 | Optional opening text attached to an endorsement | **Comment** |

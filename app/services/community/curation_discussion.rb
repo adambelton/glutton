@@ -1,8 +1,7 @@
 module Community
   class CurationDiscussion
     def initialize(curation:, selected_reply_id: nil, expand_selected_branch: false)
-      @curation = curation
-      comments = curation.comments.preload(content: :author).order(:id).to_a
+      comments = curation.comments.preload(:film_endorsement, content: :author).order(:id).to_a
       comments_by_id = comments.index_by(&:id)
       authored_comments = comments.select { |comment| comment.content.present? }
 
@@ -14,7 +13,7 @@ module Community
       end
 
       @comments_by_parent = comments.select { |comment| visible_ids.include?(comment.id) }.group_by(&:parent_id)
-      @roots_by_endorsement = @comments_by_parent.fetch(nil, []).group_by(&:film_endorsement_id)
+      @roots_by_film = @comments_by_parent.fetch(nil, []).group_by(&:discussion_film_id)
       @counts_by_root = authored_comments.group_by { |comment| comment.root_id || comment.id }.transform_values(&:size)
 
       selected_reply = comments_by_id[Integer(selected_reply_id, exception: false)]
@@ -32,8 +31,8 @@ module Community
       end
     end
 
-    def roots(endorsements)
-      endorsements.flat_map { |endorsement| @roots_by_endorsement.fetch(endorsement.id, []) }
+    def roots(film_id)
+      @roots_by_film.fetch(film_id, [])
     end
 
     def replies(parent)
@@ -44,12 +43,8 @@ module Community
       roots.sum { |root| @counts_by_root.fetch(root.id, 0) }
     end
 
-    def endorsements_for_film(film_id)
-      @curation.film_endorsements.where(film_id:)
-    end
-
     def count_for_film(film_id)
-      count(roots(endorsements_for_film(film_id)))
+      count(roots(film_id))
     end
 
     def expanded?(parent)

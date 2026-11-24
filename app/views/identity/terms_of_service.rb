@@ -6,7 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t("#{@terms.translation_scope}.title"), narrow: true, pending_reminder: false, account_controls: false) do
+        page(title: t("#{@terms.translation_scope}.title"), pending_reminder: false) do
           p { t("#{@terms.translation_scope}.operator") }
           %i[service account acceptable_use changes terms_changes rights].each do |topic|
             section do

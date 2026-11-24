@@ -1,29 +1,57 @@
 require "application_system_test_case"
 
 class SharedPageLayoutTest < ApplicationSystemTestCase
-  test "main cards align on desktop and tablet and keep a compact mobile inset" do
+  test "main cards use the content inset and leave room for headings and back links" do
     window = current_window
     original_size = window.size
     window.resize_to(1400, 1000)
 
-    standalone_gap = card_gap(new_password_reset_path)
-    assert_in_delta standalone_gap, card_gap(new_session_path), 1
-    assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
-    sign_in_member
+    standalone_paths = [ new_password_reset_path, community_code_of_conduct_path, privacy_notice_path, terms_of_service_path ]
+    standalone_paths.each do |path|
+      assert_in_delta 48, card_gap(path), 1, path
+    end
+    [ privacy_notice_path, terms_of_service_path ].each do |path|
+      visit path
+      assert_in_delta 1120, main_card.rect.width, 1, path
+      within "header.ui-header" do
+        assert_link I18n.t("ui.log_in"), href: new_session_path
+        assert_link I18n.t("ui.register"), href: new_registration_path
+      end
+    end
 
-    [ library_path, community_path, account_settings_path, new_rating_path, new_community_curation_path ].each do |path|
-      assert_in_delta standalone_gap, card_gap(path), 1, path
+    assert_back_card_gap new_session_path, inset: 48
+    assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
+    member = sign_in_member
+    curation = Community::PublishCuration.call(author_id: member.id, title: "Isolated landscapes",
+      prompt: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
+
+    [ privacy_notice_path, terms_of_service_path ].each do |path|
+      assert_in_delta 48, card_gap(path), 1, path
+      within "header.ui-header" do
+        assert_link I18n.t("library.browser.title"), href: library_path
+        assert_link I18n.t("account.title"), href: account_settings_path
+      end
+    end
+    assert_back_card_gap community_curation_path(curation), inset: 48
+    assert_back_card_gap new_community_curation_path, inset: 48
+    headed_gap = card_gap(library_path)
+    assert_operator headed_gap, :>, 48
+    [ community_path, account_settings_path, new_rating_path ].each do |path|
+      assert_in_delta headed_gap, card_gap(path), 1, path
     end
 
     window.resize_to(768, 1000)
     [ library_path, community_path, account_settings_path ].each do |path|
-      assert_in_delta standalone_gap, card_gap(path), 1, path
+      assert_in_delta headed_gap, card_gap(path), 1, path
     end
+    assert_in_delta 48, card_gap(community_code_of_conduct_path), 1
 
     window.resize_to(390, 844)
     assert_in_delta 16, card_gap(account_settings_path), 1
+    assert_in_delta 16, card_gap(privacy_notice_path), 1
+    assert_back_card_gap community_curation_path(curation), inset: 16
     [ library_path, community_path ].each do |path|
-      assert_operator card_gap(path), :<, standalone_gap
+      assert_operator card_gap(path), :<, headed_gap
       heading = find(".ui-page-heading")
       assert_selector ".ui-page-heading input[type=search]"
       row = heading.rect
@@ -62,6 +90,15 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
+    member
+  end
+
+  def assert_back_card_gap(path, inset:)
+    visit path
+    header = find("header.ui-header").rect
+    back_row = find(".ui-page-back-above").rect
+    assert_in_delta inset, back_row.y - (header.y + header.height), 1, path
+    assert_in_delta 8, main_card.rect.y - (back_row.y + back_row.height), 1, path
   end
 
   def card_gap(path)

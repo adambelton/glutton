@@ -2,11 +2,10 @@ module Community
   class PostCommunityCuration < Post
     TITLE_LIMIT = 120
     PROMPT_LIMIT = 2_000
-    REFERENCE_LIMIT = 5
-    RESPONSE_LIMIT = 5
 
     belongs_to :author, class_name: "Identity::UserRegistered"
     has_many :film_endorsements, foreign_key: :post_id, inverse_of: :post
+    has_many :visible_film_endorsements, -> { visible_nominations }, class_name: "Community::FilmEndorsement", foreign_key: :post_id
 
     normalizes :title, :prompt, with: ->(text) { text.strip }
 
@@ -15,7 +14,6 @@ module Community
 
     def publish(reference_film_ids:, reference_comments:)
       valid?
-      errors.add(:base, :too_many_references, count: REFERENCE_LIMIT) if reference_film_ids.size > REFERENCE_LIMIT
       errors.add(:base, :duplicate_references) if reference_film_ids.uniq != reference_film_ids
       return self if errors.any?
 
@@ -30,19 +28,36 @@ module Community
       self
     end
 
-    def respond(member:, film_ids:, comments:)
+    def edit_endorsements(member:, endorsements:, film_ids:, comments:)
       errors.clear
-      unless (1..RESPONSE_LIMIT).cover?(film_ids.size)
-        errors.add(:base, :response_film_count, count: RESPONSE_LIMIT)
-        return self
-      end
+      errors.add(:base, :endorsement_film_required) if endorsements.empty? && film_ids.empty?
 
-      films = yield film_ids.uniq
-      validate_response_films(member:, film_ids:, films:)
+      selected_ids = film_ids.to_set
+      additions = selected_ids.to_a - endorsements.keys
+      films = yield additions
+      validate_endorsement_selection(endorsements:, film_ids:, additions:, films:, comments:)
       return self if errors.any?
 
+      added_comment = false
+      endorsements.each do |film_id, endorsement|
+        unless selected_ids.include?(film_id)
+          endorsement.withdraw!(member:)
+          next
+        end
+
+        body = comments[film_id].to_s.strip.presence
+        next unless body.present?
+
+        opening = endorsement.opening_comment
+        if opening.present?
+          endorsement.revise_opening_comment!(member:, body:) if opening.content.body != body
+        else
+          endorsement.add_initial_comment!(body:)
+          added_comment = true
+        end
+      end
       add_endorsements(member:, films:, comments:)
-      touch
+      touch if films.any? || added_comment
       self
     end
 
@@ -70,24 +85,27 @@ module Community
     end
 
     def nominated_films
-      film_endorsements.group_by(&:film)
+      visible_film_endorsements.group_by(&:film)
+        .transform_values { |endorsements| endorsements.select(&:active?) }
         .sort_by { |film, endorsements| [ -endorsements.size, film.title.downcase, film.id ] }
     end
 
     private
 
-    def validate_response_films(member:, film_ids:, films:)
-      endorsed_films = film_endorsements.where(user: member, film_id: film_ids).preload(:film).map(&:film)
+    def validate_endorsement_selection(endorsements:, film_ids:, additions:, films:, comments:)
+      known_films = (films + endorsements.values.map(&:film)).index_by(&:id)
       repeated_ids = film_ids.tally.filter_map { |id, count| id if count > 1 }
-      endorsed_ids = endorsed_films.map(&:id)
-      known_films = (films + endorsed_films).index_by(&:id)
-      (repeated_ids | endorsed_ids).each do |id|
-        title = known_films[id]&.title || I18n.t("community.curation_responses.film_identifier", id:)
-        error = endorsed_ids.include?(id) ? :already_endorsed_response_film : :repeated_response_film
-        errors.add(:base, error, film: title)
+      repeated_ids.each do |id|
+        title = known_films[id]&.title || I18n.t("community.curation_endorsements.film_identifier", id:)
+        errors.add(:base, :repeated_endorsement_film, film: title)
       end
-      if (film_ids - films.map(&:id)).any?
-        errors.add(:base, :unavailable_response_film)
+      if (additions - films.map(&:id)).any?
+        errors.add(:base, :unavailable_endorsement_film)
+      end
+      (film_ids.uniq & endorsements.keys).each do |id|
+        if endorsements.fetch(id).opening_comment.present? && comments[id].blank?
+          errors.add(:base, :remove_opening_comment_on_post, film: known_films.fetch(id).title)
+        end
       end
     end
 

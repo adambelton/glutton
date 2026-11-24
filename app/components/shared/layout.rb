@@ -2,12 +2,12 @@ module Shared
   class Layout < Base
     register_value_helper :request
 
-    def initialize(title:, pending_reminder: true, account_controls: true)
-      @title, @pending_reminder, @account_controls = title, pending_reminder, account_controls
+    def initialize(title:, pending_reminder: true)
+      @title, @pending_reminder = title, pending_reminder
     end
 
     def view_template
-      user = current_user if @account_controls
+      user = current_user
       community_unlocked = user.present? && Community::PreviewAccess.allowed?(user:)
       wordmark_path = user.present? ? new_rating_path : root_path
       recommendations_unlocked = Recommendations::CandidateSelection::RecommendationUnlock.unlocked?(user:) if user.present?
@@ -29,7 +29,7 @@ module Shared
             render ThemeToggle.new
             if user.nil? || user.can_register?
               div(class: "ui-auth-links") do
-                render Identity::AccountEntryControls.new(guest_entry: @account_controls && user.nil?)
+                render Identity::AccountEntryControls.new(guest_entry: user.nil?)
                 render Identity::DiscardGuestConfirmationDialog.new if user&.can_register?
               end
             end

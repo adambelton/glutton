@@ -12,7 +12,7 @@ Rails.application.routes.draw do
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
     resources :curations, only: [ :new, :create, :show, :edit, :update, :destroy ] do
-      resource :response, only: [ :new, :create ], controller: :curation_responses
+      resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
       resources :comments, only: [ :edit, :update, :destroy ], controller: :curation_comments do
         resource :reply, only: [ :new, :create ], controller: :curation_replies
       end

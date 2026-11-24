@@ -27,9 +27,7 @@ en:
       description_hint: What kind of films belong on this list?
       reference_films: Reference films
       search_watched: Search your Watched films
-      reference_hint:
-        one: (Select up to %{count} Watched film)
-        other: (Select up to %{count} Watched films)
+      reference_hint: (Optional)
       no_matches: No available Watched films match your search.
       selected_films: Selected films
       add: Add
@@ -43,6 +41,7 @@ en:
       cancel: Cancel
       published: Community Curation published.
       back: Back to Community
+      back_to_curation: Back to curation
       nominated_films: Nominated Films
       no_nominations: There are no nominated films yet.
       endorsement_order: Ordered by most endorsements.
@@ -95,14 +94,16 @@ en:
       confirm_title: Delete this Community Curation?
       confirm_description: This permanently deletes the post, all its endorsements, and all its comments.
       deleted: Curation deleted.
-    curation_responses:
+    curation_endorsements:
       endorse_films: Endorse films
-      title: "Respond to %{title}"
+      edit_endorsements: Edit endorsements
+      title: "Endorsements for %{title}"
       films: Films to endorse
-      publish: Publish response
-      published: Response published.
-      back: Back to curation
+      save: Save
+      saved: Endorsements saved.
       film_identifier: "Film #%{id}"
+      reload: Reload saved endorsements
+      withdrawal: Saving removes your endorsement and its opening comment for each film you removed. Any replies stay in the discussion.
     conduct:
       title: Community Code of Conduct
       read: Read the Code of Conduct
@@ -133,7 +134,8 @@ en:
   activerecord:
     attributes:
       community/comment_content:
-        body: Reply
+        base: Comment
+        body: Comment
       community/post_community_curation:
         base: Community Curation
         title: Title
@@ -143,12 +145,10 @@ en:
         community/post_community_curation:
           attributes:
             base:
-              too_many_references: "Choose up to %{count} reference films."
               duplicate_references: Choose each reference film once.
               unavailable_reference: Reference films must be eligible horror films in your Watched list.
-              response_film_count:
-                one: Choose one film to endorse.
-                other: Choose between one and %{count} films to endorse.
-              already_endorsed_response_film: "You have already endorsed %{film} on this curation."
-              repeated_response_film: "%{film} appears more than once in this response."
-              unavailable_response_film: One or more selected films are no longer eligible. Choose horror films currently marked Watched in your Library.
+              endorsement_film_required: Choose at least one film to endorse.
+              repeated_endorsement_film: "Choose %{film} only once."
+              unavailable_endorsement_film: One or more selected films are no longer eligible. Choose horror films currently marked Watched in your Library.
+              remove_opening_comment_on_post: "Use Delete on the published comment for %{film} to remove just the comment."
+              stale_endorsements: Your saved endorsements changed after you opened this editor. Reload them before saving again.
