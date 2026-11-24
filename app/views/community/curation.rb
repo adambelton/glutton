@@ -1,10 +1,9 @@
 module Views
   module Community
     class Curation < ::Views::Base
-      include Phlex::Rails::Helpers::ImagePath
-
-      def initialize(curation:, nominated_films:, library_films:, can_respond:, can_edit:, can_delete:)
+      def initialize(curation:, nominated_films:, library_films:, discussion:, can_respond:, can_edit:, can_delete:)
         @curation, @nominated_films, @library_films = curation, nominated_films, library_films
+        @discussion = discussion
         @can_respond = can_respond
         @can_edit = can_edit
         @can_delete = can_delete
@@ -82,7 +81,7 @@ module Views
               end
               span(class: "community-endorsement-badge") { t("community.curations.endorsements", count: endorsements.size) }
             end
-            comments(endorsements.filter_map { |endorsement| endorsement.comment&.content })
+            render ::Community::CurationComments.new(curation: @curation, film:, discussion: @discussion, endorsements:, can_reply: @can_respond)
           end
         end
       end
@@ -108,37 +107,6 @@ module Views
 
       def library_button(icon, film:, label:, path:, in_collection:)
         render ::Library::CardAction.new(url: path, params: { film_id: film.id }, label:, tooltip: label, in_collection:) { render icon }
-      end
-
-      def comments(contents)
-        label = t("community.curations.comments", count: contents.size)
-        if contents.empty?
-          p(class: "muted community-comment-count") { label }
-        else
-          details(class: "community-film-comments", data: { community_film_comments_target: "film",
-            action: "toggle->community-film-comments#updateControls" }) do
-            summary { label }
-            contents.each { |content| comment(content) }
-          end
-        end
-      end
-
-      def comment(content)
-        author = content.author
-        article(class: "community-comment") do
-          if author.community_avatar_preset.present?
-            img(class: "community-comment-avatar", src: image_path("community-avatars/#{author.community_avatar_preset}.png"),
-              alt: "", width: 32, height: 32, loading: "lazy")
-          end
-          div(class: "community-comment-content") do
-            strong { author.community_username.presence || t("community.curations.member") }
-            p(class: "community-curation-prompt") { content.body }
-            div(class: "community-comment-actions") do
-              button(type: :button, disabled: true) { t("community.curations.reply") }
-              button(type: :button, disabled: true) { t("community.curations.report") }
-            end
-          end
-        end
       end
     end
   end

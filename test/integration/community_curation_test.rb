@@ -4,7 +4,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   PASSWORD = "a long test password"
 
   setup do
-    controllers = [ Community::CurationsController, Community::CurationResponsesController, Community::BoardController, LibraryController ]
+    controllers = [ Community::CurationsController, Community::CurationResponsesController, Community::CurationRepliesController,
+                    Community::BoardController, LibraryController ]
     @previous_forgery_protection = controllers.index_with(&:allow_forgery_protection)
     controllers.each { |controller| controller.allow_forgery_protection = true }
     @author = member("curation_author")
@@ -76,7 +77,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       assert_select "summary", text: I18n.t("community.curations.comments", count: 1)
       assert_select "article p", text: "The sense of dread builds slowly."
       assert_select "article strong", text: @author.community_username
-      assert_select "article button[disabled]", count: 2
+      assert_select "article a", text: I18n.t("community.curations.reply")
+      assert_select "article button[disabled]", text: I18n.t("community.curations.report")
     end
     assert_select "#nomination-#{second.id}" do
       assert_select "p.community-comment-count", text: I18n.t("community.curations.comments", count: 0)
@@ -685,13 +687,18 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     watched_entry = watch(reader, reference)
     Community::EndorseCurationFilms.call(curation_id: curation.id, member_id: reader.id, film_ids: [ reference.id ],
       comments: { reference.id => "The oak anchors the story." })
+    root = curation.comments.sole
+    reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: @author.id,
+      body: "It anchors the setting too.").fetch(:reply).comment
+    Community::PublishCurationReply.call(curation_id: curation.id, comment_id: reply.id, member_id: reader.id,
+      body: "I agree about the setting.")
     path = community_curation_path(curation)
     sign_in(@author)
 
     get path
     assert_select "dialog[aria-labelledby=delete-curation-title]", text: /permanently deletes/
     assert_difference({ "Community::Post.count" => -1, "Community::FilmEndorsement.count" => -2,
-                        "Community::Comment.count" => -1, "Community::CommentContent.count" => -1 }) do
+                        "Community::Comment.count" => -3, "Community::CommentContent.count" => -3 }) do
       delete path, params: { authenticity_token: curation_action_token(path) }
     end
     assert_redirected_to community_path
@@ -700,7 +707,111 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert Library::LibraryFilm.watched.exists?(watched_entry.id)
   end
 
+  test "publishing a reply groups it with its parent and refreshes discussion activity" do
+    curation, root = curation_with_comment
+    reference = root.film_endorsement.film
+    member = member("reply_member")
+    sign_in(member)
+    activity = curation.updated_at
+
+    get new_community_curation_comment_reply_path(curation, root)
+    assert_response :success
+    path = community_curation_comment_reply_path(curation, root)
+    body = "x" * Community::CommentContent::REPLY_LIMIT
+    travel 1.minute do
+      assert_difference({ "Community::Comment.count" => 1, "Community::CommentContent.count" => 1,
+                          "Community::FilmEndorsement.count" => 0 }) do
+        post path, params: { authenticity_token: curation_action_token(path), body: }
+      end
+    end
+
+    reply = curation.comments.find_by!(parent_id: root.id)
+    assert_equal root.id, reply.root_id
+    assert_equal member, reply.content.author
+    assert_equal body, reply.content.body
+    assert_operator curation.reload.updated_at, :>, activity
+    assert_redirected_to community_curation_path(curation, reply: reply.id, anchor: "comment-#{reply.id}")
+    follow_redirect!
+    assert_select "#nomination-#{reference.id} .community-endorsement-badge", text: I18n.t("community.curations.endorsements", count: 1)
+    assert_select "#nomination-#{reference.id} details.community-film-comments[open] > summary", text: I18n.t("community.curations.comments", count: 2)
+    assert_select "#replies-#{root.id}[open] > .community-comment-thread > #comment-#{reply.id}", text: /#{body}/
+
+    get community_path
+    assert_select ".community-curation-card-counts li", text: I18n.t("community.curations.comments", count: 2)
+  end
+
+  test "reply submissions reject oversized or blank text without saving comment structure" do
+    curation, root = curation_with_comment
+    sign_in(member("reply_validator"))
+    path = community_curation_comment_reply_path(curation, root)
+    get new_community_curation_comment_reply_path(curation, root)
+    activity = curation.updated_at
+
+    oversized_body = "x" * (Community::CommentContent::REPLY_LIMIT + 1)
+    [ oversized_body, "" ].each do |body|
+      assert_no_difference [ "Community::Comment.count", "Community::CommentContent.count" ] do
+        post path, params: { authenticity_token: curation_action_token(path), body: }
+      end
+      assert_response :unprocessable_content
+      assert_select ".ui-errors li"
+      assert_select "textarea#reply-body-#{root.id}", text: body
+    end
+    assert_equal activity, curation.reload.updated_at
+  end
+
+  test "a member without posting access cannot open or submit a reply" do
+    curation, root = curation_with_comment
+    sign_in(member("reply_reader", accepted: false))
+    get community_curation_path(curation)
+    assert_select "a[href=?]", new_community_curation_comment_reply_path(curation, root), count: 0
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+
+    get new_community_curation_comment_reply_path(curation, root)
+    assert_response :forbidden
+    assert_no_difference [ "Community::Comment.count", "Community::CommentContent.count" ] do
+      post community_curation_comment_reply_path(curation, root), params: { authenticity_token: token, body: "An unauthorized reply." }
+    end
+    assert_response :forbidden
+  end
+
+  test "a reply target from another curation cannot be used in a direct request" do
+    curation, root = curation_with_comment
+    other = publish_with
+    sign_in(member("reply_other_curation"))
+    get new_community_curation_comment_reply_path(curation, root)
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+
+    get new_community_curation_comment_reply_path(other, root)
+    assert_response :not_found
+    assert_no_difference [ "Community::Comment.count", "Community::CommentContent.count" ] do
+      post community_curation_comment_reply_path(other, root), params: { authenticity_token: token, body: "A mismatched reply." }
+    end
+    assert_response :not_found
+  end
+
+  test "a reply submitted after its curation was deleted fails without recreating anything" do
+    curation, root = curation_with_comment
+    sign_in(member("reply_stale_target"))
+    get new_community_curation_comment_reply_path(curation, root)
+    path = community_curation_comment_reply_path(curation, root)
+    token = curation_action_token(path)
+
+    Community::DeleteCuration.call(curation_id: curation.id, member_id: @author.id)
+    assert_no_difference [ "Community::Post.count", "Community::Comment.count", "Community::CommentContent.count" ] do
+      post path, params: { authenticity_token: token, body: "A stale reply." }
+    end
+    assert_response :not_found
+  end
+
   private
+
+  def curation_with_comment
+    reference = film("A film with a discussion")
+    watch(@author, reference)
+    curation = Community::PublishCuration.call(author_id: @author.id, title: "Films with a quiet setting",
+      prompt: "Set in small communities.", reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet setting." })
+    [ curation, curation.comments.sole ]
+  end
 
   def member(name, accepted: true, username: true, avatar: true, superuser: true)
     Identity::UserRegistered.create!(email_address: "#{name}@example.test", password: PASSWORD,

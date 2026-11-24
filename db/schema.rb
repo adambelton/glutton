@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,11 +26,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_120000) do
 
   create_table "comments", force: :cascade do |t|
     t.bigint "post_id", null: false
-    t.bigint "film_endorsement_id", null: false
+    t.bigint "film_endorsement_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "parent_id"
+    t.bigint "root_id"
     t.index ["film_endorsement_id"], name: "index_comments_on_film_endorsement_id"
+    t.index ["parent_id"], name: "index_comments_on_parent_id"
+    t.index ["post_id", "id"], name: "index_comments_on_post_id_and_id", unique: true
     t.index ["post_id"], name: "index_comments_on_post_id"
+    t.index ["root_id"], name: "index_comments_on_root_id"
+    t.check_constraint "film_endorsement_id IS NOT NULL AND parent_id IS NULL AND root_id IS NULL OR film_endorsement_id IS NULL AND parent_id IS NOT NULL AND root_id IS NOT NULL AND parent_id <> id AND root_id <> id", name: "comments_root_or_reply"
   end
 
   create_table "domain_event_streams", force: :cascade do |t|
@@ -471,6 +477,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_120000) do
 
   add_foreign_key "comment_contents", "comments", on_delete: :cascade
   add_foreign_key "comment_contents", "users", column: "author_id", on_delete: :cascade
+  add_foreign_key "comments", "comments", column: ["post_id", "parent_id"], primary_key: ["post_id", "id"], on_delete: :cascade
+  add_foreign_key "comments", "comments", column: ["post_id", "root_id"], primary_key: ["post_id", "id"], on_delete: :cascade
   add_foreign_key "comments", "film_endorsements", on_delete: :cascade
   add_foreign_key "comments", "posts", on_delete: :cascade
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade

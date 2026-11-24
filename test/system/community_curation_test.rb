@@ -89,7 +89,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_no_text "A creeping sense of dread."
       find("summary", text: I18n.t("community.curations.comments", count: 1)).click
       assert_text "A creeping sense of dread."
-      assert_button I18n.t("community.curations.reply"), disabled: true
+      assert_link I18n.t("community.curations.reply")
       assert_button I18n.t("community.curations.report"), disabled: true
     end
     assert_button I18n.t("community.curations.expand_all")
@@ -368,6 +368,148 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path community_curation_path(curation)
   ensure
     page.current_window.resize_to(*original_size) if original_size.present?
+  end
+
+  test "members can post and independently reveal branches without endorsing the film" do
+    password = "a long test password"
+    author = Identity::UserRegistered.create!(email_address: "discussion-author@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      community_username: "DiscussionAuthor", community_avatar_preset: "moth",
+      community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+      community_code_of_conduct_accepted_at: Time.current)
+    reader = Identity::UserRegistered.create!(email_address: "discussion-reader@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      community_username: "DiscussionReader", community_avatar_preset: "moth",
+      community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+      community_code_of_conduct_accepted_at: Time.current)
+    first, second = [ "The Empty Field", "Folk Tales" ].map do |title|
+      film = Registry::Film.create!(title:, tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
+      Library::LibraryFilm.new(user: author, film:).add_to_watched!
+      film
+    end
+    curation = Community::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+      reference_film_ids: [ first.id, second.id ], reference_comments: { first.id => "The landscape shapes the story.", second.id => "Woodland folklore." })
+    root = curation.film_endorsements.find_by!(film: first).comment
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: reader.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    path = community_curation_path(curation)
+    visit path
+    assert_no_text "The landscape shapes the story."
+    find("#nomination-#{second.id} details.community-film-comments > summary").click
+    within "#nomination-#{first.id}" do
+      find("details.community-film-comments > summary").click
+      click_link I18n.t("community.curations.reply")
+    end
+    assert_current_path path
+    within "#comment-#{root.id}" do
+      editor = find_field(I18n.t("community.curation_replies.body"))
+      assert_selector "textarea:focus"
+      assert_in_delta find(".community-curation-prompt").rect.width, editor.rect.width, 1
+      initial_height = editor.rect.height
+      assert_operator initial_height, :<, 60
+      editor.set("A first line.\nA second line.\nA third line.")
+      assert_operator editor.rect.height, :>, initial_height
+      editor.execute_script("this.removeAttribute('maxlength')")
+      oversized_reply = "a" * (Community::CommentContent::REPLY_LIMIT + 1)
+      editor.set(oversized_reply)
+      click_button I18n.t("community.curation_replies.publish")
+      assert_selector ".ui-errors li"
+      assert_field I18n.t("community.curation_replies.body"), with: oversized_reply
+      click_link I18n.t("community.curations.cancel")
+      assert_no_field I18n.t("community.curation_replies.body")
+      assert_selector "a:focus", text: I18n.t("community.curations.reply")
+      click_link I18n.t("community.curations.reply")
+      fill_in I18n.t("community.curation_replies.body"), with: "The sound design also helps."
+      click_button I18n.t("community.curation_replies.publish")
+    end
+    assert_selector ".community-comment", text: "The sound design also helps."
+    assert_current_path path
+    reply = curation.comments.find_by!(parent: root)
+    assert_selector "#replies-#{root.id}[open] > .community-comment-thread > #comment-#{reply.id}", text: "The sound design also helps."
+    assert_text "Woodland folklore."
+    assert_selector "#film-comment-count-#{first.id}", text: I18n.t("community.curations.comments", count: 2)
+    assert_no_field I18n.t("community.curation_replies.body")
+    within "#comment-#{root.id}" do
+      click_link I18n.t("community.curations.reply")
+      fill_in I18n.t("community.curation_replies.body"), with: "The setting feels remote."
+      click_button I18n.t("community.curation_replies.publish")
+    end
+    assert_selector "#replies-#{root.id}[open] > .community-comment-thread > .community-comment", text: "The setting feels remote."
+    within "#comment-#{reply.id}" do
+      click_link I18n.t("community.curations.reply")
+    end
+    fill_in I18n.t("community.curation_replies.body"), with: "Especially the quiet scenes."
+    click_button I18n.t("community.curation_replies.publish")
+    assert_selector "#replies-#{reply.id}[open] > .community-comment-thread > .community-comment", text: "Especially the quiet scenes."
+    assert_equal root.id, curation.comments.find_by!(parent: reply).root_id
+    within "#nomination-#{first.id}" do
+      border_widths = %w[border-top-width border-right-width border-bottom-width border-left-width]
+      all(".community-comment", count: 4).each do |comment|
+        assert_equal [ "1px", "1px", "1px", "1px" ], comment.style(*border_widths).values
+      end
+      [ root, reply ].each do |parent|
+        comment = find("#comment-#{parent.id}").rect
+        branch = find("#replies-#{parent.id}")
+        assert_in_delta comment.y + comment.height, branch.rect.y, 1
+        threads = branch.all(":scope > .community-comment-thread")
+        threads.each do |thread|
+          start_x, end_x, elbow_y, radius, continuing = thread.evaluate_script(<<~JS)
+            (() => {
+              const style = getComputedStyle(this, "::before")
+              const start = this.getBoundingClientRect().left + parseFloat(style.left)
+              return [start, start + parseFloat(style.width), parseFloat(style.top) + parseFloat(style.height),
+                style.borderEndStartRadius, getComputedStyle(this, "::after").content !== "none"]
+            })()
+          JS
+          assert_in_delta branch.rect.x, start_x, 1
+          assert_in_delta thread.rect.x, end_x, 1
+          assert_in_delta 30, elbow_y, 1
+          last_reply = thread == threads.last
+          assert_equal "8px", radius
+          assert_equal !last_reply, continuing
+        end
+      end
+      nested_reply = find(".community-comment", text: "Especially the quiet scenes.").rect
+      next_reply = find(".community-comment", text: "The setting feels remote.").rect
+      assert_in_delta 8, next_reply.y - (nested_reply.y + nested_reply.height), 1
+    end
+    assert_text "Woodland folklore."
+    assert_current_path path
+
+    nested = curation.comments.find_by!(parent: reply)
+    deeper = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: nested.id, member_id: reader.id,
+      body: "The last shot has that mood too.").fetch(:reply).comment
+    at_indent_limit = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: deeper.id, member_id: reader.id,
+      body: "The framing helps.").fetch(:reply).comment
+
+    visit path
+    find("#nomination-#{first.id} details.community-film-comments > summary").click
+    find("#nomination-#{second.id} details.community-film-comments > summary").click
+    assert_text "The landscape shapes the story."
+    assert_text "Woodland folklore."
+    assert_no_text "The sound design also helps."
+    click_button I18n.t("community.curations.expand_all")
+    assert_text "The sound design also helps."
+    assert_text "Especially the quiet scenes."
+    deepest_thread = find("#comment-thread-#{at_indent_limit.id}")
+    assert_in_delta find("#comment-thread-#{deeper.id}").rect.x, deepest_thread.rect.x, 1
+    assert_equal "8px", deepest_thread.evaluate_script('getComputedStyle(this, "::before").borderEndStartRadius')
+    assert_button I18n.t("community.curations.expand_all"), disabled: true
+    find("#replies-#{reply.id} > summary").click
+    assert_no_text "Especially the quiet scenes."
+    assert_button I18n.t("community.curations.expand_all"), disabled: false
+    find("#replies-#{reply.id} > summary").click
+    assert_text "Especially the quiet scenes."
+    click_button I18n.t("community.curations.collapse_all")
+    assert_no_selector "details.community-film-comments[open], details.community-comment-replies[open]", visible: :all
+    assert_button I18n.t("community.curations.collapse_all"), disabled: true
+    find("#nomination-#{first.id} details.community-film-comments > summary").click
+    assert_text "The landscape shapes the story."
+    assert_no_text "The sound design also helps."
   end
 
   private

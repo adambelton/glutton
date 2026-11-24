@@ -27,11 +27,12 @@ module Community
     end
     private_class_method :matching_curations
 
-    def self.detail(id:, viewer:)
-      curation = PostCommunityCuration.preload(film_endorsements: [ :film, { comment: { content: :author } } ]).find(id)
+    def self.detail(id:, viewer:, selected_reply_id: nil)
+      curation = PostCommunityCuration.preload(film_endorsements: :film).find(id)
       nominated_films = curation.nominated_films
       library_films = Library::LibraryFilm.where(user: viewer, film_id: nominated_films.map { |film, _| film.id }).index_by(&:film_id)
-      { curation:, nominated_films:, library_films:, can_respond: PostingAccess.allowed?(user: viewer),
+      discussion = CurationDiscussion.new(curation:, selected_reply_id:)
+      { curation:, nominated_films:, library_films:, discussion:, can_respond: PostingAccess.allowed?(user: viewer),
         can_edit: curation.can_edit?(member: viewer), can_delete: curation.can_delete?(member: viewer) }
     end
   end

@@ -1,0 +1,18 @@
+module Views
+  module Community
+    class NewCurationReply < ::Views::Base
+      def initialize(curation:, parent:, reply:)
+        @curation, @parent, @reply = curation, parent, reply
+      end
+
+      def view_template
+        page(title: t("community.curation_replies.title"), narrow: true,
+          back_to: community_curation_path(@curation, reply: @parent.id, anchor: "comment-#{@parent.id}"),
+          back_label: t("community.curation_responses.back")) do
+          blockquote(class: "community-curation-prompt") { @parent.content.body }
+          render ::Community::CurationReplyComposer.new(curation: @curation, parent: @parent, reply: @reply, inline: false)
+        end
+      end
+    end
+  end
+end
