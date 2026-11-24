@@ -42,7 +42,7 @@ An endorsement links the request post, canonical film and endorsing member. The 
 
 `Community::PostCommunityCuration` owns the post lifecycle. Film Endorsements owns the participation rules and supplies the eligible active endorsements on visible films. After checking access, the Community read workflow passes those contributions to the injected film-count aggregation. The ordered film list presents the result as Nominated Films. The workflow adds any authorised personal match information for the page.
 
-The full-width post numbers the films in endorsement order. Each row has a poster, an endorsement badge and the shared film title with a muted release year. Each row shows its comment count and starts with comments collapsed. The comment controls sit to the left of the ordering note. A film's disclosure and the Expand all control open top-level comments only. In the discussion task, give each comment a separate disclosure for its reply branch.
+The full-width post numbers the films in endorsement order. Each row has a poster, an endorsement badge and the shared film title with a muted release year. Each row shows its comment count and starts with comments collapsed. The comment controls sit to the left of the ordering note. Each film and reply branch has its own disclosure. Expand all and Collapse all act on every level of the comment trees.
 
 ## Library actions on nominated films
 

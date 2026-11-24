@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["controls", "expand", "collapse", "film"]
+  static targets = ["controls", "expand", "collapse", "film", "branch", "newReply"]
 
   connect() {
     if (this.filmTargets.length === 0) return
@@ -18,13 +18,29 @@ export default class extends Controller {
     this.setOpen(false)
   }
 
+  newReplyTargetConnected(reply) {
+    delete reply.dataset.communityFilmCommentsTarget
+    const branch = reply.closest(".community-comment-replies")
+    branch.hidden = false
+    for (let disclosure = branch; disclosure; disclosure = disclosure.parentElement.closest("details")) {
+      disclosure.open = true
+    }
+    this.updateControls()
+    reply.focus()
+  }
+
   setOpen(open) {
-    for (const film of this.filmTargets) film.open = open
+    for (const disclosure of this.disclosures) disclosure.open = open
     this.updateControls()
   }
 
   updateControls() {
-    this.expandTarget.disabled = this.filmTargets.every((film) => film.open)
-    this.collapseTarget.disabled = this.filmTargets.every((film) => !film.open)
+    const disclosures = this.disclosures
+    this.expandTarget.disabled = disclosures.every((disclosure) => disclosure.open)
+    this.collapseTarget.disabled = disclosures.every((disclosure) => !disclosure.open)
+  }
+
+  get disclosures() {
+    return [...this.filmTargets, ...this.branchTargets.filter((branch) => !branch.hidden)]
   }
 }

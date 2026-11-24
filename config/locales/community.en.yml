@@ -63,6 +63,16 @@ en:
       member: Community member
       reply: Reply
       report: Report
+    curation_replies:
+      title: Reply to comment
+      body: Your reply
+      guidance: "Please avoid spoilers. Use up to %{count} characters."
+      publish: Publish reply
+      published: Reply published.
+      removed: Comment removed.
+      replies:
+        one: "%{count} reply"
+        other: "%{count} replies"
     curation_editing:
       edit_post: Edit post
       title: Edit Community Curation
@@ -110,6 +120,8 @@ en:
         email: hello@adambelton.com
   activerecord:
     attributes:
+      community/comment_content:
+        body: Reply
       community/post_community_curation:
         base: Community Curation
         title: Title

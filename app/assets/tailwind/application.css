@@ -662,13 +662,53 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-nomination-rank { flex: none; color: var(--glutton-muted-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
 .community-nominated-film-heading h3 { font-size: 1.125rem; font-weight: 600; overflow-wrap: anywhere; }
 .community-endorsement-badge { padding: 3px 10px; border: 1px solid var(--glutton-border); border-radius: 999px; background: var(--glutton-inset); color: var(--glutton-primary); font-size: 0.875rem; font-weight: 600; }
-.community-film-comments summary { width: fit-content; cursor: pointer; color: var(--glutton-primary); }
+.community-film-comments summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
 .community-film-comments summary, .community-comment-count { font-size: 0.875rem; }
-.community-comment { display: flex; gap: 10px; padding-block: 12px; margin-block-start: 8px; border-block-start: 1px solid var(--glutton-border); }
+.community-comment-replies {
+  --comment-branch-gutter: 12px;
+  --comment-connector-offset: 29px;
+  --comment-connector-radius: 8px;
+  margin-inline-start: 16px;
+  padding-inline-start: calc(var(--comment-branch-gutter) + 1px);
+}
+.community-comment-thread:has(+ .community-comment-thread) > .community-comment-replies[open] { padding-block-end: 8px; }
+.community-comment-replies .community-comment-replies .community-comment-replies .community-comment-replies { margin-inline-start: 0; padding-inline-start: 0; }
+.community-comment-replies > :is(summary, .community-comment-thread) { position: relative; }
+.community-comment-replies[open] > summary::before,
+.community-comment-replies > .community-comment-thread:not(:last-child)::after,
+.community-comment-replies > .community-comment-thread::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(-1px - var(--comment-branch-gutter));
+  pointer-events: none;
+}
+.community-comment-replies[open] > summary::before,
+.community-comment-replies > .community-comment-thread:not(:last-child)::after {
+  inset-block: 0;
+  inline-size: 1px;
+  background: var(--glutton-border);
+}
+.community-comment-replies > .community-comment-thread::before {
+  inset-block-start: 0;
+  inline-size: calc(2px + var(--comment-branch-gutter));
+  block-size: calc(var(--comment-connector-offset) + 1px);
+  border-inline-start: 1px solid var(--glutton-border);
+  border-block-end: 1px solid var(--glutton-border);
+  border-end-start-radius: var(--comment-connector-radius);
+}
+.community-comment-replies > .community-comment-thread:not(:last-child)::before {
+  inset-block-start: calc(var(--comment-connector-offset) - var(--comment-connector-radius));
+  block-size: calc(var(--comment-connector-radius) + 1px);
+}
+.community-comment { display: flex; gap: 10px; padding: 12px; border: 1px solid var(--glutton-border); border-radius: 6px; }
 .community-comment-avatar { width: 32px; height: 32px; flex: none; border-radius: 50%; }
-.community-comment-content { display: grid; gap: 6px; min-width: 0; }
+.community-comment-content { display: grid; flex: 1; gap: 6px; min-width: 0; }
 .community-comment-content strong { overflow-wrap: anywhere; }
 .community-comment-actions { display: flex; flex-wrap: wrap; gap: 12px; color: var(--glutton-muted-foreground); font-size: 0.8125rem; }
+.community-comment-content > turbo-frame:empty { display: none; }
+.ui-page .community-reply-composer { display: grid; gap: 8px; margin-block: 0; }
+.ui-page .community-reply-composer textarea.ui-input { field-sizing: content; min-block-size: calc(1.65em + 12px); inline-size: 100%; padding: 5px 8px; resize: vertical; }
+.community-reply-composer .ui-actions { justify-content: end; gap: var(--glutton-action-gap); }
 @media (max-width: 600px) {
   .community-nomination { gap: 12px; }
 }

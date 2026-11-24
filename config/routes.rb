@@ -13,6 +13,9 @@ Rails.application.routes.draw do
   scope :community, as: :community, module: :community do
     resources :curations, only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :response, only: [ :new, :create ], controller: :curation_responses
+      resources :comments, only: [] do
+        resource :reply, only: [ :new, :create ], controller: :curation_replies
+      end
       post :watchlist, on: :member
       post :watched, on: :member
     end

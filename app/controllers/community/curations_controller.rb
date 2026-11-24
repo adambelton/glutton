@@ -26,7 +26,8 @@ module Community
     end
 
     def show
-      render Views::Community::Curation.new(**BrowseCurations.detail(id: params[:id], viewer: current_user))
+      details = BrowseCurations.detail(id: params[:id], viewer: current_user, selected_reply_id: params[:reply])
+      render Views::Community::Curation.new(**details)
     end
 
     def edit
