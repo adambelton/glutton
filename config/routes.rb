@@ -8,8 +8,14 @@ Rails.application.routes.draw do
   get "privacy", to: "privacy_notices#show", as: :privacy_notice
   get "terms", to: "terms_of_service#show", as: :terms_of_service
   get "community/code-of-conduct", to: "community/code_of_conduct#show", as: :community_code_of_conduct
-  get "community", to: "community/onboarding#show", as: :community
-  post "community/code-of-conduct/acceptance", to: "community/onboarding#accept", as: :community_code_of_conduct_acceptance
+  get "community", to: "community/board#show", as: :community
+  post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
+  scope :community, as: :community, module: :community do
+    resources :curations, only: [ :new, :create, :show ] do
+      post :watchlist, on: :member
+      post :watched, on: :member
+    end
+  end
 
   resource :registration, only: [ :new, :create, :show ]
   resource :registration_email, only: :create

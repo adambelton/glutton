@@ -42,7 +42,7 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
 
     @provider.force_flush
-    spans = @exporter.finished_spans.select { |span| span.name == "Community::OnboardingController#show" }
+    spans = @exporter.finished_spans.select { |span| span.name == "Community::BoardController#show" }
     assert_equal [ 401, 302 ], spans.map { |span| span.attributes.fetch(OpenTelemetry::SemConv::HTTP::HTTP_RESPONSE_STATUS_CODE) }
     assert spans.all? { |span| span.attributes[ActivityMonitoring::Attributes::OUTCOME] == "sign_in_required" }
     assert spans.none? { |span| span.status.code == OpenTelemetry::Trace::Status::ERROR }

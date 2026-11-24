@@ -54,13 +54,14 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
         end
       end
       assert_response :see_other
-      assert_redirected_to tmdb_search_admin_films_path(tmdb_query: "Alien", q: "Alien", tmdb_page: 1)
+      assert_redirected_to admin_films_path(q: "Alien")
       film = Registry::Film.find_by!(tmdb_id: 348)
       assert film.has_source_context?
       assert_enqueued_with(job: Registry::AssignInitialFilmQualitiesJob, queue: "registry_assignment", args: [ { film_ids: [ film.id ] } ])
       follow_redirect!
       assert_select "tbody a[href=?]", admin_film_path(film), text: "Alien"
-      assert_select "turbo-frame a[href=?]", admin_film_path(film), text: I18n.t("admin.tmdb.present")
+      assert_select "input[name=tmdb_query][value='']"
+      assert_select ".admin-tmdb-results", count: 0
     end
   end
 
@@ -93,7 +94,7 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
         end
       end
     end
-    assert_redirected_to tmdb_search_admin_films_path(tmdb_query: "Alien", tmdb_page: 1)
+    assert_redirected_to admin_films_path
     film = Registry::Film.find_by!(tmdb_id: 348)
     assert_equal "Q1", film.wikidata_id
     assert_empty film.wikipedia_context
@@ -112,9 +113,11 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
         end
       end
       assert_response :see_other
+      assert_redirected_to admin_films_path
       follow_redirect!
       assert_select '[role="alert"]', I18n.t("admin.tmdb.already_present")
-      assert_select "turbo-frame a[href=?]", admin_film_path(film), text: I18n.t("admin.tmdb.present")
+      assert_select "tbody a[href=?]", admin_film_path(film)
+      assert_select ".admin-tmdb-results", count: 0
     end
   end
 

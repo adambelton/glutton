@@ -1,8 +1,7 @@
 module Community
   class ConductAcceptanceForm < Shared::Base
-    def initialize(user:, source:, code: CodeOfConduct.current)
+    def initialize(user:, code: CodeOfConduct.current)
       @user = user
-      @source = source
       @code = code
     end
 
@@ -24,7 +23,6 @@ module Community
     def acceptance_form
       form_with(url: community_code_of_conduct_acceptance_path) do
         input(type: :hidden, name: "code_version", value: @code.version)
-        input(type: :hidden, name: "source", value: @source)
         label(class: "community-conduct-consent") do
           input(type: :checkbox, name: "accepted", value: "1", required: true)
           span { t("community.conduct.agreement") }

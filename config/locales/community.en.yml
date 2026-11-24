@@ -1,7 +1,64 @@
 en:
+  time:
+    formats:
+      community_curation_card: "%-d %b %Y, %H:%M"
   community:
     title: Community
     coming_soon: Coming soon
+    pagination:
+      label: Community pages
+      previous: Previous page
+      next: Next page
+      page: Page %{number} of %{total}
+    curations:
+      create: Create a Community Curation
+      tag: Community Curation
+      board_empty: There are no community curations yet.
+      complete_setup: Complete your Community setup to publish.
+      title: Title
+      authored_by: Authored by %{username}
+      created: Created
+      updated: Updated
+      title_hint: Describe your niche. The more specific, the better.
+      description: Description
+      description_hint: What kind of films belong on this list?
+      reference_films: Reference films
+      search_watched: Search your Watched films
+      reference_hint:
+        one: (Select up to %{count} Watched film)
+        other: (Select up to %{count} Watched films)
+      no_matches: No available Watched films match your search.
+      selected_films: Selected films
+      add: Add
+      add_film: "Add %{title}"
+      remove: Remove
+      remove_film: "Remove %{title}"
+      comment: Optional comment
+      comment_for_film: "Optional comment for %{title}"
+      film_with_year: "%{title} (%{year})"
+      publish: Publish
+      published: Community Curation published.
+      back: Back to Community
+      nominated_films: Nominated Films
+      no_nominations: There are no nominated films yet.
+      endorsement_order: Ordered by most endorsements.
+      expand_all: Expand all comments
+      collapse_all: Collapse all comments
+      position: "%{position}."
+      films:
+        one: "%{count} film"
+        other: "%{count} films"
+      watchlist_unavailable_when_watched: Watchlist unavailable for watched films
+      library_action_unavailable: This film’s Library status has changed. Check its current status and try again.
+      endorsements:
+        one: "%{count} endorsement"
+        other: "%{count} endorsements"
+      comments:
+        one: "%{count} comment"
+        other: "%{count} comments"
+      member: Community member
+      reply: Reply
+      report: Report
     conduct:
       title: Community Code of Conduct
       read: Read the Code of Conduct
@@ -29,3 +86,17 @@ en:
         title: Copyright complaints
         description: Custom avatars may be subject to copyright infringement notices. If we receive a complaint about your avatar, we may remove it. Send copyright notices to the address below.
         email: hello@adambelton.com
+  activerecord:
+    attributes:
+      community/post_community_curation:
+        base: Community Curation
+        title: Title
+        prompt: Description
+    errors:
+      models:
+        community/post_community_curation:
+          attributes:
+            base:
+              too_many_references: "Choose up to %{count} reference films."
+              duplicate_references: Choose each reference film once.
+              unavailable_reference: Reference films must be eligible horror films in your Watched list.

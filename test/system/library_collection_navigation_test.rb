@@ -1,6 +1,41 @@
 require "application_system_test_case"
 
 class LibraryCollectionNavigationTest < ApplicationSystemTestCase
+  test "marking a paginated TMDB result watched clears the search and updates Watched" do
+    client = Registry::Sources::TmdbClient
+    original_search = client.method(:search)
+    client.define_singleton_method(:search) do |query:, page:, **|
+      results = 7.times.map do |index|
+        { "id" => 600 + index, "title" => "#{query} #{index + 1}", "genre_ids" => [ 27 ] }
+      end
+      { "page" => page, "total_pages" => 1, "total_results" => results.size, "results" => results }
+    end
+    film = Registry::Film.create!(title: "Alien 6", tmdb_id: 605)
+
+    visit library_path
+    click_button I18n.t("identity.entry.try_it_out")
+    assert_current_path library_path
+    visit library_path(view: "watched")
+    click_button I18n.t("ui.search.tmdb")
+    fill_in I18n.t("library.search.label"), with: "Alien"
+
+    within ".library-film-search-dropdown" do
+      click_link I18n.t("library.browser.next")
+      assert_text I18n.t("library.browser.page", number: 2)
+      find("li", text: "Alien 6").click_button I18n.t("library.detail.add_to_watched")
+    end
+
+    assert_selector ".ui-toast", text: I18n.t("library.detail.watched")
+    assert_no_selector ".library-film-search-dropdown"
+    assert_no_selector ".library-film-search-dropdown li", visible: :all
+    assert_field I18n.t("library.search.label"), with: ""
+    assert_selector ".library-film h3", text: "Alien 6"
+    assert_current_path library_path(view: "watched")
+    assert Library::LibraryFilm.watched.exists?(user: Identity::UserGuest.last, film:)
+  ensure
+    client.define_singleton_method(:search, original_search)
+  end
+
   test "film search from the Library heading adds a result to Watchlist" do
     client = Registry::Sources::TmdbClient
     original_search = client.method(:search)
@@ -93,11 +128,12 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_selector "h3", text: "Alien (1979)", exact_text: true
       first("li").click_button I18n.t("library.detail.add_to_watchlist")
     end
-    within find(".film-search-results li", text: I18n.t("library.search.in_watchlist")) do
-      assert_no_selector "button"
-    end
-    click_link I18n.t("library.browser.return")
+    assert_selector ".ui-toast", text: I18n.t("library.detail.watchlisted")
+    assert_no_selector ".library-film-search-dropdown"
+    assert_no_selector ".library-film-search-dropdown li", visible: :all
+    assert_field I18n.t("library.search.label"), with: ""
     assert_selector ".library-film h3", text: "Alien"
+    assert_current_path library_path
   ensure
     client.define_singleton_method(:search, original_search)
   end
@@ -180,6 +216,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
 
     visit library_path
     within ".library-film" do
+      assert_poster_action_row
       assert_no_button "Rate #{film.title}"
       assert_button "Remove #{film.title} from watchlist"
       click_button "Mark #{film.title} watched"
@@ -190,14 +227,16 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     click_link I18n.t("library.browser.return")
     assert_current_path library_path(view: "watched")
     within ".library-film" do
+      assert_poster_action_row
       rating = find_button("Rate #{film.title}")
-      move = find_button(I18n.t("library.detail.move_film_to_watchlist", title: film.title))
-      assert_equal move.style("background-color"), rating.style("background-color")
+      remove = find_button(I18n.t("library.detail.remove_film_from_library", title: film.title))
+      assert_no_button I18n.t("library.detail.move_film_to_watchlist", title: film.title)
+      assert_equal remove.style("background-color"), rating.style("background-color")
       if page.evaluate_script("matchMedia('(hover: hover)').matches")
-        page.evaluate_script("arguments[0].style.transition = arguments[1].style.transition = 'none'", move, rating)
-        move.hover
+        page.evaluate_script("arguments[0].style.transition = arguments[1].style.transition = 'none'", remove, rating)
+        remove.hover
         assert_selector "button:hover"
-        hover_background = move.style("background-color")
+        hover_background = remove.style("background-color")
         rating.hover
         assert_selector "button.library-rating-icon:hover"
         assert_equal hover_background, rating.style("background-color")
@@ -255,6 +294,15 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
   end
 
   private
+
+  def assert_poster_action_row
+    poster = find(".film-poster").rect
+    first_button, second_button = all(".library-card-actions .ui-action-button", count: 2).map(&:rect)
+    assert_in_delta 4, first_button.y - (poster.y + poster.height), 1
+    assert_in_delta first_button.width, second_button.width, 1
+    assert_in_delta poster.x, first_button.x, 1
+    assert_in_delta poster.x + poster.width, second_button.x + second_button.width, 1
+  end
 
   def divider_position
     page.evaluate_script("document.querySelector('.library-collection-navigation').getBoundingClientRect().bottom")

@@ -5,5 +5,8 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ]
 
-  setup { GuestSessionsController::RATE_LIMIT_STORE.clear }
+  setup do
+    GuestSessionsController::RATE_LIMIT_STORE.clear
+    SessionsController::RATE_LIMIT_STORE.clear
+  end
 end

@@ -1,6 +1,6 @@
 module Library
   module CollectionManagement
-    class InspectFilmCollection
+    class BrowseFilmCollection
       PAGE_SIZE = 25
       UNRATED = "unrated".freeze
       RATING_FILTERS = [ *Ratings::Rating::Values::ALL, UNRATED ].freeze

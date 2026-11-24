@@ -1,6 +1,6 @@
 module Registry
   module CatalogueQueries
-    class InspectCatalogue
+    class BrowseCatalogue
       COLLECTION_PAGE_SIZE = 10
       DETAIL_PAGE_SIZE = 25
       FilmDetail = Data.define(:film, :associations)

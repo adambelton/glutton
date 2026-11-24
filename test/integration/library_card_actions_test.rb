@@ -33,6 +33,7 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     get library_path
     assert_response :success
     assert_select ".library-films h3", text: "#{@film.title} (2001)"
+    assert_select ".library-card-actions button", count: 2
     assert_select ".library-films a h3", count: 0
     assert_select "form[action=?] button[aria-label=?]", move_to_watched_library_film_path(@entry), "Mark #{@film.title} watched"
     assert_select "form[action=?] button[aria-label=?]", remove_from_watchlist_library_film_path(@entry), "Remove #{@film.title} from watchlist"
@@ -69,7 +70,8 @@ class LibraryCardActionsTest < ActionDispatch::IntegrationTest
     get library_path(view: "watched", ratings: [ "unrated" ])
     assert_select ".ui-toast", count: 0
     assert_equal [ "#{@film.title} (2001)", older_watched.film.title ], css_select(".library-films h3").map { |heading| heading.text.strip }
-    assert_select "form[action=?]", move_to_watchlist_library_film_path(@entry)
+    assert_select ".library-card-actions button", count: 4
+    assert_select "form[action=?]", move_to_watchlist_library_film_path(@entry), count: 0
     assert_select "form[action=?]", remove_from_watched_library_film_path(@entry)
     assert_select 'form[action=?] input[name="film_id"][value=?]', new_rating_path, @film.id.to_s
     assert_no_difference "DomainEvents::DomainEvent.count" do

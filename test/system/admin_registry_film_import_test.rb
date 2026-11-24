@@ -1,6 +1,15 @@
 require "application_system_test_case"
 
 class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
+  setup do
+    @forgery_protection = Registry::TmdbFilmSearchController.allow_forgery_protection
+    Registry::TmdbFilmSearchController.allow_forgery_protection = true
+  end
+
+  teardown do
+    Registry::TmdbFilmSearchController.allow_forgery_protection = @forgery_protection
+  end
+
   test "the search bar switches between Registry filtering and TMDB results" do
     password = "a long test password"
     operator = Identity::UserRegistered.create!(email_address: "registry-search@example.test", password:,
@@ -29,10 +38,12 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.email"), with: operator.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
-    within(".ui-nav") { assert_link "Admin" }
-    visit admin_quality_categories_path
+    assert_current_path library_path
+    visit account_settings_path
+    within(".ui-nav") { click_link I18n.t("admin.title") }
+    click_link I18n.t("registry.categories")
     standalone_search = find_field(I18n.t("admin.search.quality_categories")).rect
-    visit admin_films_path
+    click_link I18n.t("registry.films")
     local_search = find_field("Search films").rect
     modes = find(".search-bar-modes").rect
     assert_in_delta standalone_search.width, local_search.width, 1
@@ -111,11 +122,16 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     assert_current_path admin_films_path(q: "re-release")
     click_button I18n.t("ui.search.tmdb")
     click_button "Add to Registry"
-    assert_current_path tmdb_search_admin_films_path(q: "re-release", tmdb_query: "Alien", tmdb_page: 1, tmdb_batch: 2)
+    assert_current_path admin_films_path(q: "re-release")
     assert_selector ".admin-alert", exact_text: I18n.t("admin.tmdb.already_present")
     assert_selector "tbody tr", text: "Alien re-release", count: 1
+    assert_field "Search films", with: "re-release"
+    click_button I18n.t("ui.search.tmdb")
+    assert_field "Search TMDB", with: ""
+    assert_no_selector ".admin-tmdb-results"
+    fill_in "Search TMDB", with: "Alien"
     within("#admin-tmdb-film-results") do
-      assert_selector "li", count: 2
+      click_link "Next page"
       assert_link "Alien re-release is in the Registry. View film"
       assert_no_button "Add to Registry"
     end

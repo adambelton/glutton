@@ -22,7 +22,7 @@ module Views
             @editing_username || @community_username.blank? ? username_form : saved_username
             @editing_avatar ? avatar_form : saved_avatar
           end
-          render ::Community::ConductAcceptanceForm.new(user: current_user, source: "account", code:)
+          render ::Community::ConductAcceptanceForm.new(user: current_user, code:)
         end
       end
 

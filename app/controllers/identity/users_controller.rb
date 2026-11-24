@@ -15,13 +15,13 @@ module Identity
       search = CollectionSearchParameters.parse(query:, page: params.fetch(:page, "1"), max_digits: 6)
       return head :bad_request unless search.present?
 
-      users = AccountAdministration::InspectUsers.page(number: search.page, query: search.query)
+      users = AccountAdministration::BrowseUsers.page(number: search.page, query: search.query)
       render ::Views::Admin::Users::Index.new(page: users, query: search.query)
     end
 
     def show
       user_id = record_id(params[:id]) || raise(Errors::Unavailable)
-      detail = AccountAdministration::InspectUsers.detail(user_id:)
+      detail = AccountAdministration::BrowseUsers.detail(user_id:)
       render ::Views::Admin::Users::Show.new(**detail)
     end
 

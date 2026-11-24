@@ -30,13 +30,13 @@ module Library
     end
 
     def watched_view?
-      @view == ::Library::CollectionManagement::InspectFilmCollection::Views::WATCHED
+      @view == ::Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED
     end
 
     def collection_navigation
       div(class: "library-collection-navigation") do
         nav(class: "library-tabs", aria: { label: t("library.browser.view") }) do
-          ::Library::CollectionManagement::InspectFilmCollection::Views::ALL.each do |view|
+          ::Library::CollectionManagement::BrowseFilmCollection::Views::ALL.each do |view|
             if @preview
               button(type: "button", value: view, aria: { current: ("page" if @view == view) }, data: { action: "library-preview#changeView" }) { t("library.browser.views.#{view}") }
             else
@@ -50,10 +50,10 @@ module Library
 
     def rating_filters
       nav(class: "library-rating-filters", aria: { label: t("library.browser.rating_filters") }) do
-        ::Library::CollectionManagement::InspectFilmCollection::RATING_FILTERS.each do |rating|
+        ::Library::CollectionManagement::BrowseFilmCollection::RATING_FILTERS.each do |rating|
           selected = @ratings.include?(rating)
           next_ratings = selected ? @ratings - [ rating ] : @ratings + [ rating ]
-          unrated = rating == ::Library::CollectionManagement::InspectFilmCollection::UNRATED
+          unrated = rating == ::Library::CollectionManagement::BrowseFilmCollection::UNRATED
           label = unrated ? t("library.browser.unrated") : t("ratings.values.#{rating}")
           if @preview
             button(type: "button", value: rating, data: { selected: ("true" if selected), action: "library-preview#filter", library_preview_target: "rating" },

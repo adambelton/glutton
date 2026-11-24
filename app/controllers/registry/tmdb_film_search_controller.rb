@@ -20,7 +20,7 @@ module Registry
         return render_invalid_parameters
       end
 
-      destination = import_results_path(collection_search, tmdb_search)
+      destination = admin_films_path(**catalogue_context(collection_search))
       film = CatalogueMaintenance::ImportDiscoveredFilm.call(tmdb_id: tmdb_id.to_i)
       redirect_to destination, notice: t("admin.tmdb.imported", title: film.title), status: :see_other
     rescue Errors::ImportIncomplete => error
@@ -35,21 +35,12 @@ module Registry
         batch: params.fetch(:tmdb_batch, "1"), allow_blank_query: true)
     end
 
-    def import_results_path(collection_search, tmdb_search)
-      context = catalogue_context(collection_search)
-      tmdb_query = tmdb_search.query.strip
-      return admin_films_path(**context) if tmdb_query.blank?
-
-      tmdb_search_admin_films_path(**context, tmdb_query:, tmdb_page: tmdb_search.page,
-        tmdb_batch: (tmdb_search.batch unless tmdb_search.batch == "1"))
-    end
-
     def render_tmdb_search(collection_search:, tmdb_query:, tmdb_result: nil, error: nil, status: :ok)
       context = catalogue_context(collection_search)
       if turbo_frame_request_id == ::Admin::Films::TmdbSearchResultsFrame::FRAME_ID
         render ::Admin::Films::TmdbSearchResultsFrame.new(query: tmdb_query, result: tmdb_result, error:, catalogue_context: context), status:
       else
-        page = CatalogueQueries::InspectCatalogue.films(page: collection_search.page, title_query: collection_search.query)
+        page = CatalogueQueries::BrowseCatalogue.films(page: collection_search.page, title_query: collection_search.query)
         render ::Views::Admin::Films::Index.new(page:, query: collection_search.query, tmdb_query:,
           tmdb_result:, tmdb_error: error, catalogue_context: context), status:
       end
