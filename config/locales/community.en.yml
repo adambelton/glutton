@@ -1,13 +1,11 @@
 en:
-  time:
-    formats:
-      community_curation_card: "%-d %b %Y, %H:%M"
   community:
     title: Community
     coming_soon: Coming soon
+    board_empty: There are no Community posts yet.
     search:
       label: Search films and posts
-      no_matches: No curations match your search.
+      no_matches: No films or posts match your search.
     pagination:
       label: Community pages
       previous: Previous page
@@ -17,10 +15,8 @@ en:
       create: Create a Community Curation
       tag: Community Curation
       tag_tooltip: A group of films curated by the community
-      board_empty: There are no community curations yet.
       complete_setup: Complete your Community setup to publish.
       title: Title
-      updated: Updated
       title_hint: Describe your niche. The more specific, the better.
       description: Description
       description_hint: What kind of films belong on this list?
@@ -60,6 +56,11 @@ en:
         other: "%{count} comments"
       member: Community member
       reply: Reply
+    film_debriefs:
+      badge: Film Debrief
+      badge_tooltip: A place for post-watch film discussion. There be spoilers here.
+      create: Create Film Debrief
+      introduction: Discuss what you noticed, felt, or kept thinking about after watching %{title}. Spoilers are welcome here.
     curation_protection:
       badge: Protected Post
       badge_tooltip: A post that belongs to the community and cannot be deleted

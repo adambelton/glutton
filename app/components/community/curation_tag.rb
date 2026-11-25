@@ -17,10 +17,7 @@ module Community
 
     def badge(kind, label:, tooltip:)
       tooltip_id = "post-#{@post_id}-#{kind}-tooltip" if @show_tooltips
-      span(class: "community-post-tag", tabindex: (0 if @show_tooltips), aria: { describedby: tooltip_id }) do
-        span { label }
-        span(id: tooltip_id, role: "tooltip") { tooltip } if @show_tooltips
-      end
+      render PostBadge.new(label:, tooltip:, tooltip_id:)
     end
   end
 end

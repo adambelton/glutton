@@ -3,8 +3,8 @@ module Views
     class Board < ::Views::Base
       RESULTS_FRAME = "community-board-results"
 
-      def initialize(curations_page:, can_post:, query:)
-        @curations_page = curations_page
+      def initialize(posts_page:, can_post:, query:)
+        @posts_page = posts_page
         @can_post = can_post
         @query = query
       end
@@ -13,7 +13,7 @@ module Views
         page(title: t("community.title"), heading_outside_card: true, heading_action: search_form) do
           div(class: "community-board-actions flex justify-end pb-2") { create_curation_action } if @can_post
           tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
-            curation_list
+            post_list
             text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post
             pagination
           end
@@ -27,15 +27,24 @@ module Views
           query: @query, input_id: "community-board-query", frame: RESULTS_FRAME, css_class: "community-board-search")
       end
 
-      def curation_list
-        if @curations_page.entries.any?
-          ul(class: "community-curation-list") do
-            @curations_page.entries.each do |entry|
-              li { render ::Community::CurationCard.new(entry:) }
+      def post_list
+        if @posts_page.entries.any?
+          ul(class: "community-post-grid") do
+            @posts_page.entries.each do |entry|
+              li { render card_for(entry) }
             end
           end
         else
-          p(class: "ui-empty") { t(@query.present? ? "community.search.no_matches" : "community.curations.board_empty") }
+          p(class: "ui-empty") { t(@query.present? ? "community.search.no_matches" : "community.board_empty") }
+        end
+      end
+
+      def card_for(entry)
+        case entry
+        when ::Community::BrowseCurations::BoardEntry
+          ::Community::CurationCard.new(entry:)
+        when ::Community::BrowseCommunityBoard::DebriefEntry
+          ::Community::FilmDebriefCard.new(entry:, can_post: @can_post)
         end
       end
 
@@ -46,8 +55,8 @@ module Views
       end
 
       def pagination
-        number = @curations_page.number
-        total = @curations_page.total_pages
+        number = @posts_page.number
+        total = @posts_page.total_pages
         nav(class: "community-board-pagination", aria: { label: t("community.pagination.label") }) do
           if number > 1
             text_link(t("community.pagination.previous"), community_path(q: @query.presence, page: (number - 1 if number > 2)),

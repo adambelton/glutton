@@ -11,6 +11,8 @@ Rails.application.routes.draw do
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
+    get "film-debriefs/:film_id", to: "film_debriefs#show", as: :film_debrief
+    post "film-debriefs/:film_id", to: "film_debriefs#create"
     resources :curations, only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
       resources :comments, only: [ :edit, :update, :destroy ], controller: :curation_comments do

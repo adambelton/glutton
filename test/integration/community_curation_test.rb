@@ -97,15 +97,12 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "a.community-curation-card[href=?]", community_curation_path(curation), count: 1 do |links|
       assert_select "h2[id=?]", links.first["aria-labelledby"], text: curation.title
       assert_select "p", text: curation.prompt, count: 0
-      assert_select "footer .community-curation-card-counts > li.community-curation-card-author:first-child", text: @author.community_username do
+      assert_select "footer .community-curation-card-counts + .community-curation-card-author", text: @author.community_username do
         assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_avatar_preset}", text: @author.community_username
       end
-      assert_select ".community-curation-card-heading .community-post-tag > span:first-child", text: I18n.t("community.curations.tag")
-      assert_select ".community-curation-card-heading [role=tooltip], .community-curation-card-heading .community-post-tag[aria-describedby]", count: 0
-      assert_select "time", count: 1
-      assert_select ".community-curation-card-timestamp", text: /\AUpdated / do
-        assert_select "time[datetime=?]", curation.updated_at.iso8601
-      end
+      assert_select ".community-post-card-heading h2 + .community-post-tags .community-post-tag > span:first-child", text: I18n.t("community.curations.tag")
+      assert_select ".community-post-card-heading [role=tooltip], .community-post-card-heading .community-post-tag[aria-describedby]", count: 0
+      assert_select "time", count: 0
       assert_select "footer .community-curation-card-counts li", text: I18n.t("community.curations.films", count: 2)
       assert_select "footer .community-curation-card-counts li", text: I18n.t("community.curations.endorsements", count: 2)
       assert_select "footer .community-curation-card-counts li", text: I18n.t("community.curations.comments", count: 1)
@@ -278,7 +275,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_redirected_to community_path(q: query, page: 2)
   end
 
-  test "board cards show the latest update and sort by it" do
+  test "the board sorts curations by latest update" do
     created_at = Time.zone.local(2026, 11, 20, 9, 15)
     updated_at = Time.zone.local(2026, 11, 23, 14, 30)
     earlier_post = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn horror", prompt: "Films for this theme.",
@@ -290,12 +287,6 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     get community_path
     assert_select ".community-curation-card h2" do |titles|
       assert_equal [ earlier_post.title, newer_post.title ], titles.map(&:text)
-    end
-    assert_select ".community-curation-list > li:first-child" do
-      assert_select "time", count: 1
-      assert_select ".community-curation-card-timestamp", text: /\AUpdated / do
-        assert_select "time[datetime=?]", updated_at.iso8601, text: I18n.l(updated_at, format: :community_curation_card)
-      end
     end
   end
 

@@ -95,7 +95,7 @@ module Community
     end
 
     def discussion_id(value)
-      raise ActionController::BadRequest unless CurationFilmSelectionParameters.valid_film_id?(value)
+      raise ActionController::BadRequest unless FilmId.valid?(value)
 
       value.to_i
     end

@@ -1,23 +1,20 @@
 module Community
   class BrowseCurations
-    PAGE_SIZE = 10
     POSTER_LIMIT = 5
     BoardEntry = Data.define(:curation, :poster_films, :film_count, :endorsement_count, :comment_count)
 
-    def self.page(number:, query: "")
-      curations = query.present? ? matching_curations(query) : PostCommunityCuration.all
-      curations = curations.order(updated_at: :desc, id: :desc).preload(:author, visible_film_endorsements: :film)
-      page = CountedPage.load(curations, number:, page_size: PAGE_SIZE)
-      comment_counts = Comment.joins(:content).where(post_id: page.entries.map(&:id)).group(:post_id).count
-      entries = page.entries.map do |curation|
+    def self.card_entries(post_ids:, comment_counts:)
+      curations = PostCommunityCuration.where(id: post_ids).preload(:author, visible_film_endorsements: :film)
+      curations.index_with do |curation|
         nominations = curation.nominated_films
         BoardEntry.new(curation:, poster_films: nominations.first(POSTER_LIMIT).map(&:first), film_count: nominations.size,
           endorsement_count: nominations.sum { |_, endorsements| endorsements.size }, comment_count: comment_counts.fetch(curation.id, 0))
-      end
-      page.with(entries:)
+      end.transform_keys(&:id)
     end
 
-    def self.matching_curations(query)
+    def self.matching(query:)
+      return PostCommunityCuration.all if query.blank?
+
       pattern = "%#{PostCommunityCuration.sanitize_sql_like(query)}%"
       film_ids = ::Registry::Film.matching_title(query).select(:id)
       post_ids = FilmEndorsement.visible_nominations.where(film_id: film_ids).select(:post_id)
@@ -25,7 +22,6 @@ module Community
       PostCommunityCuration.where("posts.title ILIKE :pattern OR posts.prompt ILIKE :pattern", pattern:)
         .or(PostCommunityCuration.where(id: post_ids))
     end
-    private_class_method :matching_curations
 
     def self.detail(id:, viewer:, selected_reply_id: nil, expand_selected_branch: false)
       curation = PostCommunityCuration.preload(visible_film_endorsements: :film).find(id)
