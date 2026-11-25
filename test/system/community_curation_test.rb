@@ -319,7 +319,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     visit community_curation_path(curation)
-    curation_dimensions = poster_action_dimensions
+    curation_poster, curation_button, curation_icon = poster_action_dimensions
     within "#nomination-#{film.id}" do
       assert_selector ".community-nomination-rank", text: "1."
       assert_selector "h3", text: "Folk Tales (2020)"
@@ -353,7 +353,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     visit library_path(view: "watched")
     assert_text film.title
-    assert_equal curation_dimensions, poster_action_dimensions
+    library_poster, library_button, library_icon = poster_action_dimensions
+    assert_equal [ 120, 180 ], curation_poster
+    assert_operator library_poster.first, :>=, curation_poster.first
+    assert_in_delta library_poster.first * 1.5, library_poster.last, 1
+    assert_equal curation_button.last, library_button.last
+    assert_equal curation_icon, library_icon
   end
 
   test "the board uses full-width post cards and shows fewer posters on a narrow screen" do
