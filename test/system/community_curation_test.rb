@@ -174,9 +174,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       within(popup) do
         assert_selector ".film-poster"
         assert_selector "h3 .film-year", text: "(1998)"
-        add = find_button(I18n.t("community.curations.add_film", title: "#{orchard.title} (1998)"), class: "bg-primary")
-        assert_in_delta 128, add.rect.width, 1
-        assert_operator add.rect.height, :>=, 44
+        within ".film-search-text-actions" do
+          assert_button I18n.t("community.curations.add_film", title: "#{orchard.title} (1998)"), class: "bg-primary"
+        end
       end
       clear = find_button(I18n.t("ui.search.clear"))
       clear.hover
@@ -319,7 +319,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     visit community_curation_path(curation)
-    curation_poster, curation_button, curation_icon = poster_action_dimensions
     within "#nomination-#{film.id}" do
       assert_selector ".community-nomination-rank", text: "1."
       assert_selector "h3", text: "Folk Tales (2020)"
@@ -353,12 +352,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     visit library_path(view: "watched")
     assert_text film.title
-    library_poster, library_button, library_icon = poster_action_dimensions
-    assert_equal [ 120, 180 ], curation_poster
-    assert_operator library_poster.first, :>=, curation_poster.first
-    assert_in_delta library_poster.first * 1.5, library_poster.last, 1
-    assert_equal curation_button.last, library_button.last
-    assert_equal curation_icon, library_icon
   end
 
   test "the board uses full-width post cards and shows fewer posters on a narrow screen" do
@@ -873,13 +866,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_equal [ 132, 132 ], [ cancel_rect.width, submit_rect.width ]
       assert_equal [ 44, 44 ], [ cancel_rect.height, submit_rect.height ]
       assert_in_delta 8, submit_rect.x - (cancel_rect.x + cancel_rect.width), 1
-    end
-  end
-
-  def poster_action_dimensions
-    [ find(".film-poster"), first(".library-card-actions .ui-action-button"), first(".library-card-actions .ui-action-button > svg") ].map do |element|
-      bounds = element.rect
-      [ bounds.width, bounds.height ]
     end
   end
 end

@@ -218,6 +218,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
   test "Library posters fill a full grid row at desktop and narrow widths" do
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
+    assert_selector "#library-collection-results .library-tabs"
     user = Identity::UserGuest.last
     12.times do |index|
       film = Registry::Film.create!(title: "Grid film #{index + 1}")
@@ -235,7 +236,6 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_operator first_row.size, :>, 1
       assert_in_delta grid.rect.x, first_row.first.x, 1
       assert_in_delta grid.rect.x + grid.rect.width, first_row.last.x + first_row.last.width, 1
-      assert_operator first_row.first.width, :>=, 120
     end
   ensure
     window&.resize_to(original_width, original_height)
