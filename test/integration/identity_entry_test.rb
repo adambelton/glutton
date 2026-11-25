@@ -17,8 +17,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
 
   teardown { @forgery.each { |controller, enabled| controller.allow_forgery_protection = enabled } }
 
-  def csrf(path = new_session_path)
-    get path
+  def csrf
     Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
@@ -36,16 +35,20 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "discarding guest activity requires a guest session and CSRF token" do
+    get new_session_path
     delete guest_session_path, params: { authenticity_token: csrf }
     assert_response :unauthorized
 
     user = registered_user
+    get new_session_path
     login(user)
+    get new_session_path
     delete guest_session_path, params: { authenticity_token: csrf }
     assert_response :forbidden
     assert Identity::UserRegistered.exists?(user.id)
 
     reset!
+    get new_session_path
     enter_guest
     guest = Identity::UserGuest.sole
     delete guest_session_path
@@ -248,6 +251,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       get target
       assert_redirected_to new_session_path
     end
+    follow_redirect!
     assert_difference [ "Identity::UserGuest.count", "Identity::Session.count" ], 1 do
       enter_guest
       assert_redirected_to target
@@ -267,6 +271,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_select "button", "Discard"
     end
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
+      get new_session_path
       enter_guest
       assert_redirected_to new_rating_path
     end
@@ -276,6 +281,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     user = registered_user
     get new_rating_path
     assert_redirected_to new_session_path
+    follow_redirect!
     login(user)
     assert_redirected_to new_rating_path
     get root_path
@@ -297,6 +303,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
 
   test "failed login retains guest alternative and the resource target" do
     get library_path
+    follow_redirect!
     post session_path, params: { email_address: "wrong@example.test", password: "wrong", authenticity_token: csrf }
     assert_response :unprocessable_entity
     assert_select "form[action=?]", guest_session_path
@@ -310,6 +317,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     get new_session_path
     assert_select "a[href=?]", root_path, text: I18n.t("identity.entry.back")
     get root_path
+    get new_session_path
     login(registered_user)
     assert_redirected_to library_path
   end
@@ -321,6 +329,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
     end
     travel 61.minutes do
+      get new_session_path
       enter_guest
       assert_redirected_to new_rating_path
     end
@@ -330,11 +339,13 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example.test"
     get library_path(view: "watched")
-    post registration_path, params: { authenticity_token: csrf(new_registration_path), registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version,
+    get new_registration_path
+    post registration_path, params: { authenticity_token: csrf, registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version,
       email_address: "new-entry@example.test", password: @password, password_confirmation: @password } }
     registration = Identity::PendingRegistration.order(:id).last
-    post registration_confirmation_path, params: { token: registration.generate_token_for(:email_confirmation),
-      authenticity_token: csrf(new_session_path) }
+    token = registration.generate_token_for(:email_confirmation)
+    get registration_confirmation_path(token:)
+    post registration_confirmation_path, params: { token:, authenticity_token: csrf }
     assert_redirected_to library_path(view: "watched")
     assert_nil Identity::PendingRegistration.find_by(id: registration.id)
     follow_redirect!
@@ -345,12 +356,15 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
 
   test "returned resources retain their owning domain missing and forbidden outcomes" do
     get edit_rating_path(film_id: 999999999)
+    follow_redirect!
     enter_guest
     assert_redirected_to edit_rating_path(film_id: 999999999)
     follow_redirect!
     assert_response :not_found
+    get new_session_path
     delete session_path, params: { authenticity_token: csrf }
     get admin_film_path(@film)
+    follow_redirect!
     enter_guest
     assert_redirected_to admin_film_path(@film)
     follow_redirect!
@@ -375,10 +389,12 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
   end
 
   test "unauthenticated writes are not replayed and cannot create an identity" do
+    get new_session_path
     assert_no_difference [ "Identity::User.count", "Ratings::Rating.count", "Ratings::RatingFilm.count" ] do
       post rating_path, params: { authenticity_token: csrf, rating_film_id: -1, value: "brilliant" }
       assert_response :unauthorized
     end
+    get new_session_path
     enter_guest
     assert_redirected_to new_rating_path
   end

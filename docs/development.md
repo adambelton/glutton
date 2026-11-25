@@ -13,6 +13,12 @@ Open [localhost:3000](http://localhost:3000). `bin/dev` builds styles and starts
 
 Use `bin/ci` for style, security, autoloading, Rails tests and the headless Chrome suite. GitHub Actions runs the same checks on pull requests and pushes to main. Dependency audits use network access. The `/up` endpoint checks whether Rails boots.
 
+## Git workflow in Zed
+
+Open the main Glutton checkout in Zed and keep the active task branch checked out there while working. Zed shows the files and Git status of that checkout. Use another worktree only at the owner’s explicit request.
+
+Once the PR merges, check local changes and preserve any unrelated edits or untracked files before switching branches. Fetch `origin`, switch the main checkout to `main`, and run `git merge --ff-only origin/main`. Verify that `HEAD` matches `origin/main` and that `git status --short` shows only unrelated local work. The [repository instructions](../AGENTS.md#git-worktree-and-zed) apply this workflow to every task.
+
 ## Accounts and mail
 
 Set `APP_ORIGIN` to the actual application origin for registration and recovery links. Development supports localhost and the `glutton.local` alias. For the alias, map `glutton.local` to `127.0.0.1` in the local hosts file. Production uses an HTTPS origin.
@@ -27,7 +33,7 @@ Run `bin/rails identity:cleanup_expired` for one bounded pass over expired guest
 
 See [domain event operations](domain_event_operations.md) for worker configuration and delivery diagnostics. GoodJob schedules taste-profile refresh every 15 minutes in production. Superusers can inspect and queue a refresh of their own profile from Account. Operators can process pending requests from the console with `Ratings::TasteProfiling::ProcessProfileRefreshes.call`. See [AI configuration](ai_configuration.md) for provider setup.
 
-Public film imports enqueue initial quality assignment on `registry_assignment`. The `bin/dev` worker includes that queue. Workers configured with an explicit queue list need to include it to process public imports.
+Public film imports with ready Wikipedia source context enqueue initial quality assignment on `registry_assignment`. The `bin/dev` worker includes that queue. Workers configured with an explicit queue list need to include it to process public imports.
 
 ## Quality vocabulary seed
 
@@ -38,7 +44,7 @@ bin/rails db:migrate
 bin/rails db:seed
 ```
 
-The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import with Wikipedia context is available separately; initial quality assignment and bulk catalogue execution remain to build.
+The seed uses `config/quality_vocabulary.yml`, packaged from the retained baseline with original names, definitions and exclusions. Run it once against an empty catalogue: it inserts nine categories and 235 qualities in one transaction. It does not match, update or reuse existing records. An error rolls back the whole load; investigate the cause before trying again. It creates no films or film-quality associations and makes no provider calls. Film import and initial quality assignment are available separately. Bulk catalogue execution remains to build.
 
 Qualities use immutable names and database IDs; there is no separate quality key. Categories also use names and database IDs; their names remain editable. Both seed files are plain YAML lists, with vocabulary entries referring to category names during the one-time initial load. Existing name-only qualities remain valid; when a definition or exclusion is supplied, both must be nonblank. Definitions and exclusions remain editable within the same concept. 
 
@@ -60,9 +66,9 @@ film = Registry::CatalogueMaintenance::ImportFilm.call(tmdb_id: 348)
 
 Use the real import for development data as well.
 
-Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. It returns only when `film.has_source_context?` is true. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
+Use a positive Integer, not a title, string ID or URL. This single operation retrieves TMDB details/external IDs, follows the Wikidata English Wikipedia sitelink, verifies the article's Wikidata identity, and fetches its exact revision. Verified TMDB metadata is sufficient to create the film. When the Wikipedia source is unavailable or fails verification, the import stores an empty Wikipedia context and retains any verified Wikidata ID. Callers supply no Wikipedia page ID. Search remains a separate read-only selection step.
 
-`ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Registry::Film#import!(tmdb_data:, wikipedia_context:)` for one complete save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
+`ImportFilm` coordinates `FetchTmdbFilm` and `FetchWikipediaContext`. Both return validated data using the selected TMDB ID, without requiring or writing a Film. The orchestrator gathers both results before constructing a Film, then calls `Registry::Film#import_with_available_sources!(tmdb_data:, wikidata_id:, wikipedia_context:)` for one atomic save. Film owns validation and field assignment through explicit arguments; there are no retrieval blocks or external storage checks. The independent fetchers can later supply fresh data to explicit on-demand update operations.
 
 Physical column order is `id`, `title`, `release_date`, `tmdb_id`, `tmdb_metadata`, `wikidata_id`, `wikipedia_context`, `created_at`, `updated_at`.
 
@@ -70,7 +76,7 @@ The film retains title, nullable source release date, TMDB metadata/provenance i
 
 Import creates a new film only. An existing TMDB identity raises `Registry::Errors::ImportIncomplete` with stage `persistence` and reason `existing_film` before provider calls. Concurrent imports of that identity produce one success and an explicit conflict for the other caller. Existing records are never resumed, merged, refreshed or silently returned. Different film identities can fetch in parallel. Invoke import outside caller-owned write transactions.
 
-Invalid selected IDs raise `Registry::Errors::InvalidTmdbId`. Known provider/coverage failures raise `Registry::Errors::ImportIncomplete`, exposing `stage` (`tmdb`, `wikidata`, `wikipedia`, `persistence`), `reason` and `tmdb_id`. Reasons distinguish duplicate film, missing identity/article, conflicting identity, insufficient narrative, configuration/authentication, rate limits, malformed/oversized responses, timeout and transport failure. Both source fetches must succeed before the initial insert; a failure creates no partial film. Fix the cause and retry explicitly. Unrelated validation/database failures propagate and roll back the insert. Source updates will be a separate workflow using the same fetchers; import never overwrites existing data. `tmdb_metadata` and `wikipedia_context` may be empty objects so later explicit model operations can purge either source while retaining its identifier. Purging does not permit re-import of that existing identity; readiness remains derived from the available inputs.
+Invalid selected IDs raise `Registry::Errors::InvalidTmdbId`. Import failures use `Registry::Errors::ImportIncomplete` with a stage, reason and TMDB ID. A failed TMDB details fetch prevents creation. A handled Wikipedia lookup or verification failure uses the empty-context fallback. Once a film exists, re-importing the same TMDB ID returns an existing-film conflict. Wikipedia context refresh needs a separate source update workflow. Unrelated validation or database failures propagate and roll back the insert. The model can purge either source packet while retaining its identifier. Readiness is derived from the stored inputs.
 
 Each client configures its fixed HTTPS host and response-size limit on the provider-agnostic `ProviderRequest`. The transport accepts host/path/parameters/headers, parses JSON and raises sanitized transport errors; clients own response shape, API error interpretation and import-stage translation. Adding a provider requires no transport registry or provider-specific branch. Requests use a descriptive User-Agent, 5-second connect and 10-second read/write timeouts, a 30-second total request limit, streamed body caps (TMDB 2 MiB, Wikimedia 8 MiB), and no automatic retries or HTTP redirects. API-level article redirects are accepted only with matching Wikidata identity and revision/page checks. Errors omit credentials and provider bodies.
 
@@ -122,7 +128,7 @@ result.fetch(:film_qualities)
 result.fetch(:warnings)
 ```
 
-Request and cost limits apply to TypeSafe. They are required positive integer/finite decimal bounds; decimal amounts can be Integer, Float or BigDecimal values. Loading must start outside a database transaction. Both sources are acquired before Film creation, and import commits before quality evaluation. A source failure creates no Film. An assessment/application failure propagates while retaining the imported Film and any recorded evaluation. Zero supported qualities return a localized warning with the completed evaluation and empty quality list. Existing identities are explicit conflicts, including concurrent loads. Assess an already imported film through the separate assignment operation below.
+Request and cost limits apply to TypeSafe. They are required positive integer/finite decimal bounds; decimal amounts can be Integer, Float or BigDecimal values. Loading must start outside a database transaction. The source lookups finish before Film creation, and import commits before quality evaluation. With verified TMDB metadata and no ready Wikipedia context, the loader retains the film and returns a readiness warning without running assignment. An assessment/application failure propagates while retaining the imported Film and any recorded evaluation. Zero supported qualities return a localized warning with the completed evaluation and empty quality list. Existing identities are explicit conflicts, including concurrent loads. Assess an already imported film through the separate assignment operation below.
 
 For an explicit batch, supply the complete TMDB ID list and its limits:
 

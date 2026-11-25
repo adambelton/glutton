@@ -5,7 +5,7 @@ module Identity
     end
 
     def view_template
-      nav(class: "account-tabs", aria: { label: t("account.sections") }) do
+      render Shared::NavigationTabs.new(label: t("account.sections"), css_class: "account-tabs") do
         a(href: account_settings_path, aria: { current: ("page" if @section == :settings) }) { t("identity.settings.title") }
         a(href: account_taste_profile_path, aria: { current: ("page" if @section == :profile) }) { t("account.profile") }
         if Community::PreviewAccess.allowed?(user: current_user)

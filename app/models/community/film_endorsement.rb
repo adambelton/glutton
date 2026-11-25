@@ -2,20 +2,25 @@ module Community
   class FilmEndorsement < ApplicationRecord
     belongs_to :post, class_name: "Community::PostCommunityCuration", inverse_of: :film_endorsements
     belongs_to :film, class_name: "Registry::Film"
-    belongs_to :user, class_name: "Identity::UserRegistered"
+    belongs_to :user, class_name: "Identity::UserRegistered", optional: true
     has_many :comments, inverse_of: :film_endorsement
 
-    scope :active, -> { where(withdrawn_at: nil) }
+    validates :user, presence: true, on: :create
+
+    scope :active, -> { where(withdrawn_at: nil).where.not(user_id: nil) }
     scope :visible_nominations, -> {
       roots_with_replies = Comment.where(id: Comment.joins(:content).where.not(root_id: nil).select(:root_id))
       active.or(where(id: roots_with_replies.select(:film_endorsement_id)))
     }
 
     def active?
-      withdrawn_at.nil?
+      withdrawn_at.nil? && user_id.present?
     end
 
-    def add_initial_comment!(body:)
+    def add_opening_comment!(member:, body:)
+      authorize_changes!(member:)
+      raise Errors::CommentChangeUnavailable if opening_comment.present?
+
       content = build_opening_comment(body:)
       content.comment.save!
       content
@@ -23,11 +28,6 @@ module Community
 
     def opening_comment
       comments.find { |comment| comment.content.present? }
-    end
-
-    def revise_opening_comment!(member:, body:)
-      authorize_changes!(member:)
-      opening_comment.content.edit_body!(body:)
     end
 
     def withdraw!(member:)

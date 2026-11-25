@@ -8,7 +8,7 @@ module Community
     setup do
       password = "a long test password"
       @member = Identity::UserRegistered.create!(email_address: "conduct-concurrency@example.test", password:,
-        password_confirmation: password, email_confirmed_at: Time.current)
+        password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     end
 
     teardown do

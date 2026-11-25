@@ -26,8 +26,16 @@ module Community
     end
 
     def show
-      details = BrowseCurations.detail(id: params[:id], viewer: current_user, selected_reply_id: params[:reply])
+      details = BrowseCurations.detail(id: params[:id], viewer: current_user, selected_reply_id: params[:reply],
+        expand_selected_branch: params[:replies] == "1")
       render Views::Community::Curation.new(**details)
+    end
+
+    def discussion
+      page = BrowseCurationDiscussion.call(curation_id: params[:id], film_id: discussion_id(params[:film_id]),
+        parent_id: (discussion_id(params[:parent_id]) if params.key?(:parent_id)),
+        after: (discussion_id(params[:after]) if params.key?(:after)), viewer: current_user)
+      render CurationCommentPage.new(**page), content_type: Mime[:html]
     end
 
     def edit
@@ -67,10 +75,13 @@ module Community
     end
 
     def nominated_film_id
-      film_id = params[:film_id]
-      raise ActionController::BadRequest unless CurationFilmSelectionParameters.valid_film_id?(film_id)
+      discussion_id(params[:film_id])
+    end
 
-      film_id.to_i
+    def discussion_id(value)
+      raise ActionController::BadRequest unless CurationFilmSelectionParameters.valid_film_id?(value)
+
+      value.to_i
     end
 
     def library_action_unavailable

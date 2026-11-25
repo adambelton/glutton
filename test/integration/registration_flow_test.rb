@@ -53,14 +53,12 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     Rails.application.reload_routes!
   end
 
-  def csrf(client = self, path: new_session_path)
-    client.get path
-    assert_equal 200, client.response.status
+  def csrf(client = self)
     Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
   def signup(client = self, **attributes)
-    authenticity_token = csrf(client, path: new_registration_path)
+    authenticity_token = csrf(client)
     form = Nokogiri::HTML(client.response.body)
     terms_version = form.at_css('input[name="registration[terms_version]"]')["value"]
     notice_version = form.at_css('input[name="registration[privacy_notice_version]"]')["value"]
@@ -85,6 +83,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "registration asks visitors to review the current privacy notice when the submitted version differs" do
     assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
+      get new_registration_path
       signup(privacy_notice_version: "2")
       assert_response :unprocessable_entity
       assert_select ".registration-policies a[href=?]", privacy_notice_path
@@ -93,6 +92,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "registration requires renewed acceptance if the submitted Terms version differs" do
     assert_no_difference [ "Identity::PendingRegistration.count", "ActionMailer::Base.deliveries.count" ] do
+      get new_registration_path
       signup(terms_version: "2")
       assert_response :unprocessable_entity
       assert_select ".registration-policies a[href=?]", terms_of_service_path
@@ -101,14 +101,17 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "confirmation preserves the terms version and original acceptance time for a guest upgrade" do
+    get new_session_path
     guest_user = guest
     freeze_time
+    get new_registration_path
     signup
     pending = Identity::PendingRegistration.last
     assert_equal "1", pending.terms_version
     assert_equal Identity::PrivacyNotice.current.version, pending.privacy_notice_version
     assert_equal Time.current, pending.terms_accepted_at
     travel 1.minute
+    get new_session_path
     confirm
     assert_response :see_other
     account = Identity::UserRegistered.find(guest_user.id)
@@ -123,6 +126,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     ENV["APP_ORIGIN"] = "http://glutton.local:3847"
     host! "glutton.local:3847"
     assert_emails 1 do
+      get new_registration_path
       signup
       assert_response :see_other
       assert_redirected_to registration_path
@@ -156,15 +160,19 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   test "existing signed-in browser observes grants and revocations on the next request" do
     actor = Identity::UserRegistered.create!(email_address: "operator@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current, superuser: true)
+    get new_registration_path
     signup
+    get new_session_path
     confirm
     user = Identity::Session.last.user
     authentication_id = Identity::Session.last.id
     Identity::AccountAdministration::GrantSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    get new_session_path
     post "/registration-activity-probe", params: { authenticity_token: csrf }
     assert_response :success
     assert_equal true, JSON.parse(response.body).fetch("superuser")
     Identity::AccountAdministration::RevokeSuperuser.call(user_id: user.id, actor_user_id: actor.id)
+    get new_session_path
     post "/registration-activity-probe", params: { authenticity_token: csrf }
     assert_response :success
     assert_equal false, JSON.parse(response.body).fetch("superuser")
@@ -174,11 +182,15 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "public registration cannot grant superuser permission for direct or guest signup" do
     [ false, true ].each_with_index do |with_guest, index|
+      get new_session_path if with_guest
       guest if with_guest
+      get new_registration_path
       signup(email_address: "ordinary-#{index}@example.test", superuser: true)
+      get new_session_path
       confirm
       assert_response :see_other
       assert_not Identity::Session.last.user.superuser?
+      get new_session_path
       delete session_path, params: { authenticity_token: csrf }
     end
   end
@@ -186,6 +198,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   test "direct signup sends an exact trusted link without creating user until explicit confirmation" do
     assert_no_difference [ "Identity::User.count", "Identity::Session.count" ] do
       assert_difference "Identity::PendingRegistration.count", 1 do
+        get new_registration_path
         signup(email_address: " Reader@Example.TEST ", guest_user_id: 999, id: 999)
       end
     end
@@ -204,6 +217,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     head registration_confirmation_path, params: { token: }
     assert_response :success
     assert_equal 0, Identity::UserRegistered.count
+    get new_session_path
     confirm(token:)
     assert_response :see_other
     assert (Identity::Session.last.user).can_reset_password?
@@ -217,7 +231,9 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "cleaned guest cookies and pending links cannot restore identities" do
     freeze_time
+    get new_session_path
     created = guest
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     confirmation_token = email_token
@@ -229,6 +245,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     get registration_path
     assert_response :unprocessable_entity
+    get new_session_path
     replacement = guest
     assert_not_equal created.id, replacement.id
     assert_nil Identity::User.find_by(id: created.id)
@@ -236,9 +253,11 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "first activity after signup retains pending reference and issued link claims the same guest" do
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     token = email_token
+    get new_session_path
     created = guest
     assert_equal created.id, registration.reload.guest_user_id
     get new_rating_path
@@ -251,6 +270,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_select ".guest-banner", count: 1
     assert_select "p", text: I18n.t("identity.registration.verify_required"), count: 1
     old_session = Identity::Session.last
+    get new_session_path
     confirm(token:)
     assert_response :see_other
     assert_equal created.id, Identity::Session.last.user_id
@@ -259,12 +279,15 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "existing guest signup and cross browser confirmation preserve that guest only" do
+    get new_session_path
     created = guest
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     assert_equal created.id, registration.guest_user_id
     token = email_token
     other = open_session
+    other.get new_session_path
     confirm(other, token:)
     assert_equal 303, other.response.status
     assert_equal created.id, Identity::Session.last.user_id
@@ -272,10 +295,12 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "signup in another browser confirms with the current guest only on POST" do
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     token = email_token
     other = open_session
+    other.get new_session_path
     created = guest(other)
     previous_session = Identity::Session.find_by!(user_id: created.id)
 
@@ -286,6 +311,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_nil registration.reload.guest_user_id
     assert_not Identity::User.find(created.id).can_reset_password?
 
+    other.get new_session_path
     confirm(other, token:)
     assert_equal 303, other.response.status
     assert_not previous_session.active?
@@ -295,9 +321,11 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid submission keeps previous credentials and never echoes password fields" do
+    get new_registration_path
     signup
     previous = Identity::PendingRegistration.last
     attributes = previous.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
+    get new_registration_path
     signup(password: "tiny", password_confirmation: "tiny")
     assert_response :unprocessable_entity
     assert_equal attributes, previous.reload.slice(:id, :guest_user_id, :email_address, :password_digest, :created_at)
@@ -309,13 +337,16 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "valid replacement invalidates the previous direct request and old link" do
+    get new_registration_path
     signup
     old = Identity::PendingRegistration.last
     token = email_token
+    get new_registration_path
     signup(email_address: "new@example.test")
     assert_response :see_other
     assert_not Identity::PendingRegistration.exists?(old.id)
     assert_equal 1, Identity::PendingRegistration.count
+    get new_session_path
     confirm(token:)
     assert_response :unprocessable_entity
     assert_equal 0, Identity::UserRegistered.count
@@ -323,18 +354,22 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "resend enforces a minute interval five attempts and preserves expiry" do
     freeze_time
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     created_at = registration.created_at
+    get registration_path
     post registration_email_path, params: { authenticity_token: csrf }
     assert_response :too_many_requests
     assert_equal 1, ActionMailer::Base.deliveries.count
     4.times do
       travel 60.seconds
+      get registration_path
       post registration_email_path, params: { authenticity_token: csrf }
       assert_response :see_other
     end
     travel 60.seconds
+    get registration_path
     post registration_email_path, params: { authenticity_token: csrf }
     assert_response :too_many_requests
     assert_equal 5, registration.reload.confirmation_delivery_attempts
@@ -348,6 +383,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
       post registration_path, params: { registration: { email_address: "reader@example.test" } }
       assert_response :unprocessable_entity
     end
+    get new_registration_path
     signup
     token = email_token
     assert_no_difference [ "Identity::User.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
@@ -359,15 +395,19 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "a different linked guest and registered identity cannot switch by confirmation" do
+    get new_session_path
     linked_guest = guest
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     assert_equal linked_guest.id, registration.guest_user_id
     token = email_token
     other = open_session
+    other.get new_session_path
     unrelated = guest(other)
     other.get registration_confirmation_path, params: { token: }
     assert_equal 409, other.response.status
+    other.get new_session_path
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_not (Identity::User.find(unrelated.id)).can_reset_password?
@@ -375,9 +415,11 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     assert_equal 1, Identity::PendingRegistration.count
     user = Identity::UserRegistered.create!(email_address: "existing@example.test", password: "a long password phrase",
       password_confirmation: "a long password phrase", email_confirmed_at: Time.current)
+    other.get new_session_path
     other.post session_path, params: { email_address: user.email_address, password: "a long password phrase", authenticity_token: csrf(other) }
     other.get registration_confirmation_path, params: { token: }
     assert_equal 409, other.response.status
+    other.get new_session_path
     confirm(other, token:)
     assert_equal 409, other.response.status
     assert_equal user.id, Identity::Session.last.user_id
@@ -388,6 +430,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "expired pending reminder becomes explicit unavailable notice without reviving request" do
     freeze_time
+    get new_registration_path
     signup
     registration = Identity::PendingRegistration.last
     token = email_token
@@ -395,6 +438,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     get root_path
     assert_select '[role="alert"]', text: I18n.t("identity.registration.unavailable")
     assert_select "aside", count: 0
+    get new_session_path
     confirm(token:)
     assert_response :unprocessable_entity
     assert Identity::PendingRegistration.exists?(registration.id)
@@ -407,6 +451,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     existing = Identity::UserRegistered.create!(email_address: "reader@example.test", password: "existing password phrase",
       password_confirmation: "existing password phrase", email_confirmed_at: Time.current)
     assert_no_difference [ "Identity::PendingRegistration.count", "Identity::Session.count", "ActionMailer::Base.deliveries.count" ] do
+      get new_registration_path
       signup(email_address: " READER@Example.TEST ")
       assert_response :unprocessable_entity
     end
@@ -416,12 +461,15 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "signup and resend share the IP request budget before database mutation" do
+    get new_registration_path
     signup
     9.times do
+      get registration_path
       post registration_email_path, params: { authenticity_token: csrf }
       assert_response :too_many_requests
     end
     assert_no_difference "Identity::PendingRegistration.count" do
+      get new_registration_path
       signup(email_address: "another@example.test")
       assert_response :too_many_requests
     end
@@ -430,6 +478,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
 
   test "known delivery failure is honest and keeps a retryable pending request" do
     Identity::AccountMailer.define_singleton_method(:confirmation) { |**| raise Net::SMTPFatalError, "private SMTP detail" }
+    get new_registration_path
     signup
     assert_response :see_other
     record = Identity::PendingRegistration.last
@@ -447,20 +496,24 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "confirmation IP budget rejects before account or session mutation" do
+    get new_session_path
     authenticity_token = csrf
     10.times do
       post registration_confirmation_path, params: { token: "invalid", authenticity_token: }
       assert_response :unprocessable_entity
     end
+    get new_registration_path
     signup
     token = email_token
     assert_no_difference [ "Identity::User.count", "Identity::Session.count", "Identity::PendingRegistration.count" ] do
+      get new_session_path
       confirm(token:)
       assert_response :too_many_requests
     end
   end
 
   test "trusted origin ignores hostile Host and redirect parameters" do
+    get new_registration_path
     authenticity_token = csrf
     post registration_path, params: { authenticity_token:, return_to: "https://evil.example", registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version,
       email_address: "reader@example.test", password: "a long password phrase", password_confirmation: "a long password phrase"
@@ -471,10 +524,12 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "another browser cannot resend or select someone else's pending request" do
+    get new_registration_path
     signup
     record = Identity::PendingRegistration.last
     other = open_session
     assert_no_difference "ActionMailer::Base.deliveries.count" do
+      other.get new_session_path
       other.post registration_email_path, params: { pending_registration_id: record.id, authenticity_token: csrf(other) }
       assert_equal 422, other.response.status
     end
@@ -482,8 +537,10 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "confirmation rotates CSRF state and produces secure cookies under SSL middleware" do
+    get new_registration_path
     signup
     token = email_token
+    get new_session_path
     old_csrf = csrf
     confirm(token:)
     assert_response :see_other
@@ -495,6 +552,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     token = Identity::Registration::RegistrationConfirmation.token_for(pending_registration_id: registration.id)
     secure = ActionDispatch::Integration::Session.new(ActionDispatch::SSL.new(Rails.application))
     secure.https!
+    secure.get new_session_path
     confirm(secure, token:)
     assert_equal 303, secure.response.status
     assert_match(/; secure(?:;|$)/i, Array(secure.response.headers["set-cookie"]).join("\n"))
@@ -509,6 +567,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     Rails.logger = logger
     ActionController::Base.logger = logger
     Rails.application.env_config["action_dispatch.logger"] = logger
+    get new_registration_path
     signup(email_address: "private-reader@example.test", password: "private-password-marker", password_confirmation: "private-password-marker")
     token = email_token
     get registration_confirmation_path, params: { token: }
@@ -522,8 +581,10 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "signout clears pending browser state but leaves the request untouched" do
+    get new_registration_path
     signup
     record = Identity::PendingRegistration.last
+    get new_session_path
     delete session_path, params: { authenticity_token: csrf }
     assert_response :see_other
     get registration_path

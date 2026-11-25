@@ -11,7 +11,7 @@ module Views
           back_to: library_path, back_label: t("library.browser.return")) do
           section(id: "library-film-search-results", aria: { live: "polite" }) do
             empty_message = t("library.search.empty") if @result&.candidates&.empty?
-            render Shared::TmdbFilmSearchResultsPanel.new(error: @error, empty_message:) do
+            render Shared::FilmSearchResultsPanel.new(error: @error, empty_message:) do
               @result.candidates.each { |candidate| search_result(candidate) }
             end
             pagination if @result.present?
@@ -30,7 +30,7 @@ module Views
         end
 
         selection = search_parameters(@result.start, @number).merge(tmdb_id:)
-        render Shared::TmdbFilmSearchResultRow.new(candidate:) do
+        render Shared::TmdbFilmSearchResultRow.new(candidate:, icon_actions: true) do
           tooltip_text = t("library.detail.add_to_watchlist")
           render Shared::ActionForm.new(url: library_tmdb_search_watchlist_path, params: selection,
             data: { library_tmdb_selection: true }) do
@@ -48,15 +48,14 @@ module Views
       end
 
       def pagination
-        nav(class: "library-pagination", aria: { label: t("library.browser.pagination") }) do
-          if @number > 1
-            text_link(t("library.browser.previous"), library_tmdb_film_search_path(**search_parameters(@result.start, @number - 1), backwards: 1))
-          end
-          span { t("library.browser.page", number: @number) }
-          if @result.next_cursor.present?
-            text_link(t("library.browser.next"), library_tmdb_film_search_path(**search_parameters(@result.next_cursor, @number + 1)))
-          end
+        previous = if @number > 1
+          library_tmdb_film_search_path(**search_parameters(@result.start, @number - 1), backwards: 1)
         end
+        following = if @result.next_cursor.present?
+          library_tmdb_film_search_path(**search_parameters(@result.next_cursor, @number + 1))
+        end
+        render Shared::FilmSearchPagination.new(page: @number,
+          previous: ({ href: previous } if previous.present?), next_page: ({ href: following } if following.present?))
       end
 
       def search_parameters(cursor, number)

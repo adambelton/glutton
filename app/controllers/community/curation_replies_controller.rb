@@ -19,8 +19,9 @@ module Community
       end
 
       if turbo_frame_request?
-        discussion = CurationDiscussion.new(curation: composer.fetch(:curation))
-        return render Views::Community::CurationReplyPublished.new(**composer, discussion:), content_type: Mime[:turbo_stream]
+        film_id = composer.fetch(:parent).discussion_film_id
+        discussion = CurationDiscussion.new(curation: composer.fetch(:curation), film_id:)
+        return render Views::Community::CurationReplyPublished.new(**composer, film_id:, discussion:), content_type: Mime[:turbo_stream]
       end
 
       redirect_to community_curation_path(composer.fetch(:curation), reply: reply.comment_id, anchor: "comment-#{reply.comment_id}"),

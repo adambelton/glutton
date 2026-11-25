@@ -21,7 +21,7 @@ module Community
     end
 
     def can_edit_inline?(member:)
-      parent_id.present? && content&.author_id == member.id && PostingAccess.allowed?(user: member)
+      content&.author_id == member.id && PostingAccess.allowed?(user: member)
     end
 
     def can_delete?(member:)

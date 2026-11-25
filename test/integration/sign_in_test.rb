@@ -15,8 +15,6 @@ class SignInTest < ActionDispatch::IntegrationTest
   end
 
   def token(client = self)
-    client.get new_session_path
-    assert_equal 200, client.response.status
     Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
@@ -25,6 +23,7 @@ class SignInTest < ActionDispatch::IntegrationTest
   end
 
   test "sign in issues a persistent cookie and sign out revokes only that browser" do
+    get new_session_path
     sign_in
     assert_response :see_other
     first = Identity::Session.last
@@ -38,8 +37,10 @@ class SignInTest < ActionDispatch::IntegrationTest
     get account_settings_path
     assert_select "main button", text: I18n.t("ui.log_out"), count: 1
     other = open_session
+    other.get new_session_path
     sign_in(other)
     second = Identity::Session.last
+    get new_session_path
     delete session_path, params: { authenticity_token: token }
     assert_response :see_other
     assert_nil Identity::Session.find_by(id: first.id)
@@ -47,6 +48,7 @@ class SignInTest < ActionDispatch::IntegrationTest
     cookies[:session_id] = old_cookie
     get root_path
     assert_select "header button", text: I18n.t("ui.log_out"), count: 0
+    get new_session_path
     delete session_path, params: { authenticity_token: token }
     assert_response :see_other
     assert_equal 1, Identity::Session.count
@@ -55,16 +57,19 @@ class SignInTest < ActionDispatch::IntegrationTest
   test "registered cookie is secure through production SSL middleware" do
     client = ActionDispatch::Integration::Session.new(ActionDispatch::SSL.new(Rails.application))
     client.https!
+    client.get new_session_path
     sign_in(client)
     assert_equal 303, client.response.status
     assert_match(/; secure(?:;|$)/i, Array(client.response.headers["set-cookie"]).join("\n"))
   end
 
   test "invalid credentials have a generic error and preserve current identity" do
+    get new_session_path
     sign_in
     existing = Identity::Session.last
     cookie = cookies[:session_id]
     assert_no_difference [ "Identity::Session.count", "Identity::User.count" ] do
+      get new_session_path
       sign_in(password: "wrong password")
     end
     assert_response :unprocessable_entity
@@ -76,11 +81,14 @@ class SignInTest < ActionDispatch::IntegrationTest
   end
 
   test "sign in switches this browser and does not revoke another browser" do
+    get new_session_path
     sign_in
     previous = Identity::Session.last
     other = open_session
+    other.get new_session_path
     sign_in(other)
     independent = Identity::Session.last
+    get new_session_path
     sign_in
     assert_response :see_other
     assert_not previous.active?
@@ -104,22 +112,27 @@ class SignInTest < ActionDispatch::IntegrationTest
   test "rate limit rejects the eleventh attempt and expires after three minutes" do
     freeze_time do
       10.times do
+        get new_session_path
         sign_in(password: "wrong")
         assert_response :unprocessable_entity
       end
+      get new_session_path
       sign_in(password: "wrong")
       assert_response :too_many_requests
     end
     travel 181.seconds do
+      get new_session_path
       sign_in
       assert_response :see_other
     end
   end
 
   test "failed prior-session revocation rolls back the issued replacement" do
+    get new_session_path
     sign_in
     previous = Identity::Session.last
     cookie = cookies[:session_id]
+    get new_session_path
     authenticity_token = token
     original = Identity::Session.method(:revoke)
     Identity::Session.define_singleton_method(:revoke) do |id:|

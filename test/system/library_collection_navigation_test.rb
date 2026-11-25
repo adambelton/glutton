@@ -35,6 +35,9 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_selector ".library-film h3", text: "Alien 6"
     assert_current_path library_path(view: "watched")
     assert Library::LibraryFilm.watched.exists?(user: Identity::UserGuest.last, film:)
+    click_button I18n.t("ui.search.clear")
+    assert_field I18n.t("library.search.label"), with: ""
+    assert_no_selector ".library-film-search-dropdown"
   ensure
     client.define_singleton_method(:search, original_search)
   end
@@ -66,17 +69,17 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_in_delta heading.y, search_field.y, 1
     within ".ui-page-heading" do
       fill_in I18n.t("library.search.label"), with: "Alien"
-      assert_no_selector "form[role=search] button"
+      assert_no_selector "form[role=search] button[type=submit]"
     end
 
-    assert_selector ".library-film-search-spinner"
-    spinner = find(".library-film-search-spinner").rect
+    assert_selector ".collection-search-spinner"
+    spinner = find(".collection-search-spinner").rect
     field = find("#library-film-query").rect
     assert_operator spinner.x + spinner.width, :<=, field.x
     assert_selector ".library-film-search-dropdown h2", text: "Search results"
     assert_selector '.library-film-search-dropdown h3 a[href="https://www.themoviedb.org/movie/348"][target="_blank"][rel~="noopener"]',
       text: "Alien (1979)"
-    assert_no_selector ".library-film-search-spinner"
+    assert_no_selector ".collection-search-spinner"
     assert_selector ".library-film-search-dropdown img[src$='/alien.jpg']"
     assert_selector ".library-film-search-dropdown .film-search-overview", count: 5,
       text: "A crew answers a distress signal"
@@ -91,7 +94,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_text "Page 1"
       assert_selector "h3 .film-year", text: "(1979)", count: 5
       last_result = all("li", count: 5).last.rect
-      pagination = find(".library-pagination").rect
+      pagination = find(".film-search-pagination").rect
       assert_operator last_result.y + last_result.height, :<=, pagination.y
       watchlist_button = first("li").find_button(I18n.t("library.detail.add_to_watchlist"))
       watchlist_button.hover
@@ -180,7 +183,8 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
 
-    assert_selector ".library-tabs [aria-current='page']", text: I18n.t("library.browser.views.watchlist")
+    active_tab = find(".library-tabs [aria-current='page']", text: I18n.t("library.browser.views.watchlist"))
+    assert_equal "8px", active_tab.style("border-top-left-radius").fetch("border-top-left-radius")
     watchlist_divider = divider_position
 
     within ".library-tabs" do
@@ -209,6 +213,32 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_no_selector "[data-selected]"
       assert_button I18n.t("library.browser.clear_rating_filters"), disabled: true
     end
+  end
+
+  test "Library posters fill a full grid row at desktop and narrow widths" do
+    visit library_path
+    click_button I18n.t("identity.entry.try_it_out")
+    user = Identity::UserGuest.last
+    12.times do |index|
+      film = Registry::Film.create!(title: "Grid film #{index + 1}")
+      Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
+    end
+    visit library_path
+    grid = find(".library-films")
+    window = current_window
+    original_width, original_height = window.size
+
+    [ 1240, 580 ].each do |width|
+      window.resize_to(width, original_height)
+      posters = grid.all(".film-poster", count: 12).map(&:rect)
+      first_row = posters.take_while { |poster| poster.y == posters.first.y }
+      assert_operator first_row.size, :>, 1
+      assert_in_delta grid.rect.x, first_row.first.x, 1
+      assert_in_delta grid.rect.x + grid.rect.width, first_row.last.x + first_row.last.width, 1
+      assert_operator first_row.first.width, :>=, 120
+    end
+  ensure
+    window&.resize_to(original_width, original_height)
   end
 
   test "Library ratings return to Watched with save feedback" do

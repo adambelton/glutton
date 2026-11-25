@@ -23,7 +23,10 @@ module Community
       render CommentAvatar.new(member: author)
       can_edit = @comment.can_edit_inline?(member: current_user)
       div(class: "community-comment-content") do
-        strong { author.community_username.presence || t("community.curations.member") }
+        div(class: "flex flex-wrap items-baseline gap-x-2") do
+          strong { author.community_username.presence || t("community.curations.member") }
+          span(class: "muted community-comment-edited") { t("community.comment_editing.edited") } if content.edited_at.present?
+        end
         span(class: "community-curation-prompt") { content.body }
         div(class: "community-comment-actions") do
           if @can_reply

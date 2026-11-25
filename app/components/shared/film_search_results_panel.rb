@@ -1,7 +1,7 @@
 module Shared
-  class TmdbFilmSearchResultsPanel < Base
-    def initialize(error: nil, empty_message: nil)
-      @error, @empty_message = error, empty_message
+  class FilmSearchResultsPanel < Base
+    def initialize(error: nil, empty_message: nil, empty_attributes: nil)
+      @error, @empty_message, @empty_attributes = error, empty_message, empty_attributes
     end
 
     def view_template
@@ -12,10 +12,9 @@ module Shared
           "resize@window->tmdb-film-search-tooltip#hide" }) do
         if @error.present?
           p(role: "alert") { @error }
-        elsif @empty_message.present?
-          p(role: "status") { @empty_message }
         else
-          ul(class: "film-search-results") { yield }
+          ul(class: "film-search-results ui-divided-list") { yield } if @empty_message.blank? || @empty_attributes.present?
+          p(role: "status", **(@empty_attributes || {})) { @empty_message } if @empty_message.present?
         end
       end
     end

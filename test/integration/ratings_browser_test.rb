@@ -125,21 +125,21 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "validation preserves choice and exact escaped expressions with associated errors" do
+    escaped_candidate = candidate("<script>alert('title')</script>")
     get new_rating_path
     token = csrf_token
-    @candidate.film.update!(title: "<script>alert('title')</script>")
     text = "  <script>alert('expression')</script>  "
-    rate(token:, notes: (text += "a" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)))
+    rate(escaped_candidate, token:, notes: (text += "a" * (Ratings::Rating::MAX_NOTES_LENGTH + 1)))
     assert_response :unprocessable_entity
     assert_select "script", text: /alert\(/, count: 0
-    assert_select "h2", "#{@candidate.film.title} (1982)"
+    assert_select "h2", "#{escaped_candidate.film.title} (1982)"
     assert_select "textarea#notes", text
     assert_select "input[checked][value=?]", Ratings::Rating::Values::BRILLIANT
     assert_select '#rating-errors[role="alert"]'
     assert_select '[aria-describedby*="rating-errors"]', count: 2
     assert_select 'label[for="notes"]'
     assert_select "textarea[maxlength=?]", Ratings::Rating::MAX_NOTES_LENGTH.to_s, count: 1
-    assert_empty @candidate.ratings
+    assert_empty escaped_candidate.ratings
   end
 
   test "malformed missing and oversized input never writes" do

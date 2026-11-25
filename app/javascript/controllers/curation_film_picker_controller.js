@@ -1,11 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
+import { fitFilmSearchDropdown } from "controllers/fit_film_search_dropdown"
+
+const PAGE_SIZE = 5
 
 export default class extends Controller {
-  static targets = ["search", "results", "option", "empty", "selected", "selectedSection", "withdrawal"]
-  static values = { savedIds: Array }
+  static targets = ["search", "clear", "results", "option", "empty", "previous", "page", "next", "selected", "selectedSection", "withdrawal"]
+  static values = { savedIds: Array, pageLabel: String }
 
   initialize() {
     this.removedRows = new Map()
+    this.page = 1
   }
 
   connect() {
@@ -15,22 +19,66 @@ export default class extends Controller {
   filter() {
     const query = this.searchTarget.value.trim().toLocaleLowerCase()
     const selectedIds = new Set(Array.from(this.selectedTarget.children, (film) => film.dataset.filmId))
-    let matching = false
+    const options = this.optionTargets
+    const matches = query === "" ? [] : options.filter((option) =>
+      option.dataset.filmTitle.toLocaleLowerCase().includes(query) && !selectedIds.has(option.dataset.filmId))
+    const totalPages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE))
+    this.page = Math.min(Math.max(1, this.page), totalPages)
+    const start = (this.page - 1) * PAGE_SIZE
+    const visibleOptions = new Set(matches.slice(start, start + PAGE_SIZE))
+    for (const option of options) option.hidden = !visibleOptions.has(option)
 
-    for (const option of this.optionTargets) {
-      const matches = query !== "" &&
-        option.dataset.filmTitle.toLocaleLowerCase().includes(query) &&
-        !selectedIds.has(option.dataset.filmId)
-      option.hidden = !matches
-      matching ||= matches
-    }
-
-    this.resultsTarget.hidden = !matching
-    this.emptyTarget.hidden = query === "" || matching
+    this.clearTarget.hidden = this.searchTarget.value === ""
+    this.resultsTarget.hidden = query === ""
+    this.emptyTarget.hidden = query === "" || matches.length > 0
+    this.previousTarget.hidden = this.page === 1
+    this.nextTarget.hidden = this.page === totalPages
+    this.pageTarget.textContent = this.pageLabelValue.replace("{number}", this.page).replace("{total}", totalPages)
+    fitFilmSearchDropdown(this.resultsTarget)
     this.selectedSectionTarget.hidden = selectedIds.size === 0
     if (this.hasWithdrawalTarget) {
       this.withdrawalTarget.hidden = this.savedIdsValue.every((id) => selectedIds.has(id))
     }
+  }
+
+  searchChanged() {
+    this.showPage(1)
+  }
+
+  previousPage() {
+    const hadFocus = this.previousTarget === document.activeElement
+    this.showPage(this.page - 1)
+    if (hadFocus && this.previousTarget.hidden) this.nextTarget.focus()
+  }
+
+  nextPage() {
+    const hadFocus = this.nextTarget === document.activeElement
+    this.showPage(this.page + 1)
+    if (hadFocus && this.nextTarget.hidden) this.previousTarget.focus()
+  }
+
+  showPage(page) {
+    this.page = page
+    this.filter()
+    this.resultsTarget.querySelector(".film-search-content").scrollTop = 0
+  }
+
+  dismiss(event) {
+    if (this.resultsTarget.hidden) return
+
+    event.preventDefault()
+    this.searchTarget.focus()
+    this.resultsTarget.hidden = true
+  }
+
+  dismissOutside(event) {
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) this.resultsTarget.hidden = true
+  }
+
+  clear() {
+    this.searchTarget.value = ""
+    this.searchChanged()
+    this.searchTarget.focus()
   }
 
   add(event) {
@@ -40,8 +88,8 @@ export default class extends Controller {
     this.removedRows.delete(id)
     this.selectedTarget.append(row)
     this.searchTarget.value = ""
-    this.filter()
-    row.querySelector("textarea").focus()
+    this.searchChanged()
+    row.querySelector("textarea, a")?.focus()
   }
 
   remove(event) {

@@ -19,4 +19,10 @@ en:
       mode: Film search source
       tmdb: TMDB
       clear: Clear search
+      pagination:
+        label: Search results pages
+        page: "Page %{number} of %{total}"
+        current_page: "Page %{number}"
+        previous: Previous page
+        next: Next page
     locked_navigation_option: "%{label} (%{reason})"

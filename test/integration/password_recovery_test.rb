@@ -35,8 +35,6 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   def csrf(client = self)
-    client.get new_session_path
-    assert_equal 200, client.response.status
     Nokogiri::HTML(client.response.body).at_css('meta[name="csrf-token"]')["content"]
   end
 
@@ -45,7 +43,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_equal 303, client.response.status
   end
 
-  def update_password(token: @reset_token, password: "replacement password phrase", authenticity_token: csrf)
+  def update_password(token: @reset_token, password: "replacement password phrase", authenticity_token:)
     patch password_reset_path, params: { token:, password:, password_confirmation: password, authenticity_token: }
   end
 
@@ -56,6 +54,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'input[type="email"][required]'
     [ @user.email_address, "unknown@example.test" ].each do |email|
+      get new_password_reset_path
       post password_reset_path, params: { email_address: email, authenticity_token: csrf, return_to: "https://evil.test" }
       assert_redirected_to new_session_path
       follow_redirect!
@@ -85,20 +84,25 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid input rerenders empty fields and success requires fresh sign in" do
-    update_password(password: "leakpw")
+    get edit_password_reset_path(token: @reset_token)
+    update_password(password: "leakpw", authenticity_token: csrf)
     assert_response :unprocessable_entity
     assert_select '[role="alert"]'
     assert_select 'input[type="password"][value]', count: 0
     assert_not_includes response.body, "leakpw"
-    update_password
+    get edit_password_reset_path(token: @reset_token)
+    update_password(authenticity_token: csrf)
     assert_redirected_to new_session_path
     assert_equal 0, Identity::Session.count
     follow_redirect!
     assert_select 'main .ui-reminder[role="status"]', text: I18n.t("identity.recovery.completed"), count: 1
-    update_password
+    get edit_password_reset_path(token: @reset_token)
+    update_password(authenticity_token: csrf)
     assert_response :unprocessable_entity
+    get new_session_path
     post session_path, params: { email_address: @user.email_address, password: "original password phrase", authenticity_token: csrf }
     assert_response :unprocessable_entity
+    get new_session_path
     sign_in(password: "replacement password phrase")
   end
 
@@ -115,10 +119,13 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "same account reset clears browser binding and every other session cookie" do
+    get new_session_path
     sign_in
     other = open_session
+    other.get new_session_path
     sign_in(other)
     old_cookie = other.cookies[:session_id]
+    get edit_password_reset_path(token: @reset_token)
     old_csrf = csrf
     update_password(authenticity_token: old_csrf)
     assert_response :see_other
@@ -136,11 +143,12 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   test "another registered browser conflicts without changing either account" do
     other = Identity::UserRegistered.create!(email_address: "different@example.test", password: "original password phrase",
       password_confirmation: "original password phrase", email_confirmed_at: Time.current)
+    get new_session_path
     sign_in(user: other)
     cookie = cookies[:session_id]
     get edit_password_reset_path(token: @reset_token)
     assert_response :conflict
-    update_password
+    update_password(authenticity_token: csrf)
     assert_response :conflict
     assert_equal cookie, cookies[:session_id]
     assert @user.reload.authenticate("original password phrase")
@@ -163,9 +171,11 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
       resource :session, only: [ :new, :create, :destroy ]
       post "/password-recovery-activity", to: "password_recovery_activity_probe#create"
     end
+    get new_session_path
     post registration_path, params: { registration: { terms_accepted: "1", terms_version: Identity::TermsOfService.current.version, privacy_notice_version: Identity::PrivacyNotice.current.version, email_address: "guest-pending@example.test", password: "original password phrase",
       password_confirmation: "original password phrase" }, authenticity_token: csrf }
     assert_response :see_other
+    get new_session_path
     post "/password-recovery-activity", params: { authenticity_token: csrf }
     assert_response :no_content
     guest_session = Identity::Session.last
@@ -173,7 +183,8 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     pending = Identity::PendingRegistration.last
     assert_equal guest.id, pending.guest_user_id
     cookie = cookies[:session_id]
-    update_password
+    get edit_password_reset_path(token: @reset_token)
+    update_password(authenticity_token: csrf)
     assert_response :see_other
     assert_equal cookie, cookies[:session_id]
     assert guest_session.active?
@@ -198,9 +209,10 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     Rails.application.env_config["action_dispatch.logger"] = logger
     get edit_password_reset_path(token: @reset_token)
     assert_response :success
-    update_password(password: "private-password-marker")
-    post password_reset_path, params: { email_address: @user.email_address, authenticity_token: csrf }
-    post password_reset_path, params: { email_address: @user.email_address, authenticity_token: csrf }
+    update_password(password: "private-password-marker", authenticity_token: csrf)
+    get new_password_reset_path
+    authenticity_token = csrf
+    2.times { post password_reset_path, params: { email_address: @user.email_address, authenticity_token: } }
     assert_response :too_many_requests
     [ @reset_token, @user.email_address, "private-password-marker" ].each { |marker| refute_includes output.string, marker }
     assert_includes output.string, "[FILTERED]"
@@ -213,6 +225,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "trusted origin ignores request host and transport failure is retryable" do
+    get new_password_reset_path
     post password_reset_path, params: { email_address: @user.email_address, authenticity_token: csrf,
       return_to: "https://evil.test", origin: "https://evil.test" }, headers: { "HOST" => "evil.test" }
     assert_response :see_other
@@ -221,6 +234,7 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
     PasswordResetsController::RATE_LIMIT_STORE.clear
     original = Identity::AccountMailer.method(:password_reset)
     Identity::AccountMailer.define_singleton_method(:password_reset) { |**| raise Net::SMTPFatalError, "private-provider-marker" }
+    get new_password_reset_path
     post password_reset_path, params: { email_address: @user.email_address, authenticity_token: csrf }
     assert_response :service_unavailable
     assert_select '[role="alert"]', I18n.t("identity.recovery.delivery_failed")
@@ -231,11 +245,14 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
 
   test "email fingerprint cooldown includes unknown and normalized addresses" do
     freeze_time do
-      post password_reset_path, params: { email_address: "UNKNOWN@example.test", authenticity_token: csrf }
+      get new_password_reset_path
+      authenticity_token = csrf
+      post password_reset_path, params: { email_address: "UNKNOWN@example.test", authenticity_token: }
       assert_response :see_other
-      post password_reset_path, params: { email_address: " unknown@example.test ", authenticity_token: csrf }
+      post password_reset_path, params: { email_address: " unknown@example.test ", authenticity_token: }
       assert_response :too_many_requests
       travel 60.seconds
+      get new_password_reset_path
       post password_reset_path, params: { email_address: "unknown@example.test", authenticity_token: csrf }
       assert_response :see_other
     end
@@ -245,19 +262,24 @@ class PasswordRecoveryTest < ActionDispatch::IntegrationTest
   test "request IP budget and update IP budget block before mutation and expire" do
     freeze_time do
       10.times do |index|
+        get new_password_reset_path
         post password_reset_path, params: { email_address: "unknown#{index}@example.test", authenticity_token: csrf }
         assert_response :see_other
-        update_password(token: "invalid")
+        get edit_password_reset_path(token: "invalid")
+        update_password(token: "invalid", authenticity_token: csrf)
         assert_response :unprocessable_entity
       end
+      get new_password_reset_path
       post password_reset_path, params: { email_address: @user.email_address, authenticity_token: csrf }
       assert_response :too_many_requests
-      update_password
+      get edit_password_reset_path(token: @reset_token)
+      update_password(authenticity_token: csrf)
       assert_response :too_many_requests
       assert @user.reload.authenticate("original password phrase")
       assert_equal 0, ActionMailer::Base.deliveries.count
       travel 180.seconds
-      update_password
+      get edit_password_reset_path(token: @reset_token)
+      update_password(authenticity_token: csrf)
       assert_response :see_other
     end
   end

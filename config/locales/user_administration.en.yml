@@ -45,4 +45,4 @@ en:
       revision: "Profile revision %{id} · Published %{time}"
       claims: Claims and evidence
       no_claims: No saved claims and evidence for this profile.
-      citation: "%{title} · Rating revision %{id}"
+      citation_revision: "Rating revision %{id}"

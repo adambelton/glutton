@@ -2,10 +2,10 @@ module DomainEvents
   module Delivery
     class Deliver
       def self.call(delivery_id:, subscription:)
-        delivery = EventDelivery.find_by(id: delivery_id, subscriber: subscription.name)
-        return :missing unless delivery
+        user_id = EventDelivery.joins(domain_event: :domain_event_stream)
+          .where(id: delivery_id, subscriber: subscription.name).pick("domain_event_streams.user_id")
+        return :missing unless user_id.present?
 
-        user_id = delivery.domain_event.domain_event_stream.user_id
         Identity::User.transaction do
           user = Identity::User.lock.find_by(id: user_id)
           delivery = EventDelivery.lock.find_by(id: delivery_id, subscriber: subscription.name)

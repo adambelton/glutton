@@ -1,9 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
-import { fitTmdbFilmSearchDropdown } from "controllers/fit_tmdb_film_search_dropdown"
+import { fitFilmSearchDropdown } from "controllers/fit_film_search_dropdown"
 
 export default class extends Controller {
   static values = { error: String }
-  static targets = ["spinner"]
+  static targets = ["spinner", "clearButton"]
 
   disconnect() {
     this.cancel()
@@ -14,6 +14,7 @@ export default class extends Controller {
     if (event.isComposing) return
 
     const query = this.query()
+    this.clearButtonTarget.hidden = this.input.value === ""
     if (!query) {
       this.clearResults()
       return
@@ -61,11 +62,11 @@ export default class extends Controller {
   }
 
   fitDropdown() {
-    if (this.element.contains(this.results)) fitTmdbFilmSearchDropdown(this.results)
+    if (this.element.contains(this.results)) fitFilmSearchDropdown(this.results)
   }
 
   paginate(event) {
-    const link = event.target.closest(".library-pagination a")
+    const link = event.target.closest(".film-search-pagination a")
     if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
 
     event.preventDefault()
@@ -138,6 +139,14 @@ export default class extends Controller {
   clearResults() {
     this.results.replaceChildren()
     this.results.hidden = true
+  }
+
+  clear() {
+    this.cancel()
+    this.input.value = ""
+    this.clearButtonTarget.hidden = true
+    this.clearResults()
+    this.input.focus()
   }
 
   displaySelectionError(message) {

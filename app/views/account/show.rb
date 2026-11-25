@@ -32,7 +32,13 @@ module Views
         end
 
         @profile[:changes].each do |change|
-          h3 { change[:title] || t("account.unknown_film") }
+          h3 do
+            if change[:title].present?
+              render ::Registry::FilmTitle.new(title: change[:title], release_date: change[:release_date])
+            else
+              plain t("account.unknown_film")
+            end
+          end
           notes_list("account.added", change.fetch(:added))
           notes_list("account.removed", change.fetch(:removed))
         end

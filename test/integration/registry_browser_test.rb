@@ -98,7 +98,9 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     get library_path
     assert_select "header a[href=?]", admin_path
     get admin_film_path(@film)
-    assert_select "main > a.admin-back[href=?] + h1", admin_films_path, text: @film.title
+    assert_select "main > a.admin-back[href=?] + h1", admin_films_path, text: "#{@film.title} (1979)" do
+      assert_select ".film-year", "(1979)"
+    end
     assert_select "a.admin-back[href=?]", admin_films_path do
       assert_select "span[aria-hidden=true]", "←"
       assert_select "span", "Back to films"
@@ -117,7 +119,9 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "main > a.admin-back[href=?] + h1", admin_qualities_path, text: @quality.name
     assert_select "p", @quality.match_rule
     assert_select "p", @quality.not_sufficient
-    assert_select "a[href=?]", admin_film_path(@film), text: @film.title
+    assert_select "a[href=?]", admin_film_path(@film), text: "#{@film.title} (1979)" do
+      assert_select ".film-year", "(1979)"
+    end
     get admin_quality_category_path(@category)
     assert_select "dd", @category.maximum_qualities.to_s
     assert_select "dd", @category.weight.to_s("F")
@@ -271,7 +275,7 @@ class RegistryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", admin_films_path(page: 2)
     get admin_films_path(page: 3)
     assert_select "tbody tr", count: 6
-    assert_select "tbody tr a", @film.title
+    assert_select "tbody tr a", "#{@film.title} (1979)"
     assert_select "a[href=?]", admin_films_path(page: 2)
     assert_select "a", text: "Next page", count: 0
 

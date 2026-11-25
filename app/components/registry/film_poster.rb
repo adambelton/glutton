@@ -3,6 +3,7 @@ module Registry
     def initialize(film: nil, title: film.title, path: film.tmdb_details.poster_path, placeholder: :title)
       @title, @path = title, path
       @placeholder = placeholder
+      @release_date = film&.release_date
     end
 
     def view_template
@@ -13,7 +14,13 @@ module Registry
         branded = @placeholder == :wordmark
         div(class: [ "film-poster", "poster-placeholder", ("poster-wordmark" if branded) ],
           role: "img", aria: { label: t("registry.film_presentation.no_poster", title: @title) }) do
-          span { branded ? t("ui.short_wordmark") : @title }
+          span do
+            if branded
+              plain t("ui.short_wordmark")
+            else
+              render FilmTitle.new(title: @title, release_date: @release_date)
+            end
+          end
         end
       end
     end

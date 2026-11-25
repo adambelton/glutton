@@ -44,10 +44,17 @@ module Ratings
             rating_id = citation.fetch("rating_id")
             note = evidence.fetch(rating_id)
             first, last = citation.values_at("start_offset", "end_offset")
-            { rating_id:, title: note.fetch("film_title"), quote: note.fetch("text")[first...last] }
+            { rating_id:, title: note.fetch("film_title"), release_date: saved_release_date(note), quote: note.fetch("text")[first...last] }
           end
           { claim: annotation.fetch("claim"), explanation: annotation.fetch("explanation"), citations: }
         end
+      end
+
+      def saved_release_date(note)
+        value = note["film_release_date"]
+        Date.iso8601(value) if value.present?
+      rescue ArgumentError, TypeError
+        nil
       end
 
       def quality_rankings
@@ -73,16 +80,19 @@ module Ratings
 
       def changes(revision, current)
         saved = (revision&.notes || []).to_h { |row| row.values_at("film_id", "text") }
-        titles = Registry::Film.where(id: current.keys | saved.keys).pluck(:id, :title).to_h
-        historical_titles = revision&.taste_profile_revision_eval&.output&.fetch("evidence", [])&.to_h do |row|
-          [ row.fetch("film_id"), row.fetch("film_title") ]
+        films = Registry::Film.where(id: current.keys | saved.keys).pluck(:id, :title, :release_date).to_h do |id, title, release_date|
+          [ id, [ title, release_date ] ]
+        end
+        historical_films = revision&.taste_profile_revision_eval&.output&.fetch("evidence", [])&.to_h do |row|
+          [ row.fetch("film_id"), [ row.fetch("film_title"), saved_release_date(row) ] ]
         end || {}
 
         (current.keys | saved.keys).filter_map do |film_id|
           before, after = saved[film_id], current[film_id]
           next if before == after
 
-          { title: titles[film_id] || historical_titles[film_id], added: Array(after), removed: Array(before) }
+          title, release_date = films[film_id] || historical_films[film_id]
+          { title:, release_date:, added: Array(after), removed: Array(before) }
         end
       end
     end

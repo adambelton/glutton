@@ -175,6 +175,36 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     assert_nil @member.reload.community_code_of_conduct_accepted_at
   end
 
+  test "preview revocation after the initial check prevents a conduct write" do
+    sign_in(@member)
+    get account_community_path
+    submission = conduct_fields.merge(accepted: "1")
+
+    revoke_after_preview_check do
+      post community_code_of_conduct_acceptance_path, params: submission
+      assert_response :forbidden
+    end
+    assert_nil @member.reload.community_code_of_conduct_accepted_at
+  end
+
+  { username: :community_username, avatar: :community_avatar_preset }.each do |role, attribute|
+    test "preview revocation after the initial check prevents a #{role} write" do
+      @member.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
+      sign_in(@member)
+      get account_community_path(edit: role)
+      path = public_send("account_community_#{role}_path")
+      form = Nokogiri::HTML(response.body).at_css("form[action='#{path}']")
+      token = form.at_css("input[name=authenticity_token]")["value"]
+      value = role == :username ? "New_Name" : "tentacle"
+
+      revoke_after_preview_check do
+        patch path, params: { authenticity_token: token, attribute => value }
+        assert_response :forbidden
+      end
+      assert_nil @member.reload.public_send(attribute)
+    end
+  end
+
   test "a registered non-superuser sees locked navigation and cannot read or write preview pages" do
     member = confirmed_member("preview-locked@example.test")
     sign_in(member)
@@ -203,6 +233,24 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def revoke_after_preview_check
+    original = Community::PreviewAccess.method(:allowed?)
+    member_id = @member.id
+    checks = []
+    Community::PreviewAccess.define_singleton_method(:allowed?) do |user:|
+      allowed = original.call(user:)
+      if user.id == member_id
+        Identity::AccountAdministration::RevokeSuperuser.call(user_id: member_id, actor_user_id: member_id) if checks.empty?
+        checks << allowed
+      end
+      allowed
+    end
+    yield
+    assert_equal [ true, false ], checks
+  ensure
+    Community::PreviewAccess.define_singleton_method(:allowed?, original)
+  end
 
   def confirmed_member(email_address, superuser: false)
     Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current, superuser:)

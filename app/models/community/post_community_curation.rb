@@ -48,13 +48,8 @@ module Community
         body = comments[film_id].to_s.strip.presence
         next unless body.present?
 
-        opening = endorsement.opening_comment
-        if opening.present?
-          endorsement.revise_opening_comment!(member:, body:) if opening.content.body != body
-        else
-          endorsement.add_initial_comment!(body:)
-          added_comment = true
-        end
+        endorsement.add_opening_comment!(member:, body:)
+        added_comment = true
       end
       add_endorsements(member:, films:, comments:)
       touch if films.any? || added_comment
@@ -103,8 +98,8 @@ module Community
         errors.add(:base, :unavailable_endorsement_film)
       end
       (film_ids.uniq & endorsements.keys).each do |id|
-        if endorsements.fetch(id).opening_comment.present? && comments[id].blank?
-          errors.add(:base, :remove_opening_comment_on_post, film: known_films.fetch(id).title)
+        if comments.key?(id) && endorsements.fetch(id).opening_comment.present?
+          errors.add(:base, :edit_opening_comment_on_post, film: known_films.fetch(id).title)
         end
       end
     end
@@ -112,8 +107,8 @@ module Community
     def add_endorsements(member:, films:, comments:)
       films.each do |film|
         endorsement = film_endorsements.create!(film:, user: member)
-        body = comments[film.id].presence
-        endorsement.add_initial_comment!(body:) if body.present?
+        body = comments[film.id].to_s.strip.presence
+        endorsement.add_opening_comment!(member:, body:) if body.present?
       end
     end
   end
