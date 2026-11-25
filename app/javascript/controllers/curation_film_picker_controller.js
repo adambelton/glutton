@@ -90,6 +90,7 @@ export default class extends Controller {
     this.searchTarget.value = ""
     this.searchChanged()
     row.querySelector("textarea, a")?.focus()
+    this.element.dispatchEvent(new Event("change", { bubbles: true }))
   }
 
   remove(event) {
@@ -98,5 +99,6 @@ export default class extends Controller {
     row.remove()
     this.filter()
     this.searchTarget.focus()
+    this.element.dispatchEvent(new Event("change", { bubbles: true }))
   }
 }

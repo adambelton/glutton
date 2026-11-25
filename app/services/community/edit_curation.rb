@@ -2,7 +2,7 @@ module Community
   class EditCuration
     def self.load_for_edit(curation_id:, member:)
       curation = PostCommunityCuration.find(curation_id)
-      raise Errors::CurationEditUnavailable unless curation.can_edit?(member:)
+      raise Errors::CurationEditUnavailable unless curation.can_edit?(member:) || curation.can_edit_additional_description?(member:)
 
       curation
     end

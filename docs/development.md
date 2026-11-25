@@ -29,6 +29,12 @@ Bootstrap the first superuser directly in the database after verifying the regis
 
 Run `bin/rails identity:cleanup_expired` for one bounded pass over expired guests and pending registrations. Guest deletion cascades through viewer-owned activity and preserves shared films. Expiry blocks access independently of cleanup. Production scheduling for this command remains open.
 
+## Protected curation preview
+
+Run `bin/rails community:seed_protected_curation` against the local development database. It prints the seeded post path. The task uses the Community-enabled account `hello@adambelton.com` and two horror films already marked Watched by that account.
+
+The two local preview accounts are `curation-reader-one@example.test` and `curation-reader-two@example.test`. New fixture accounts use the development-only password `local-curation-preview`. The seed reuses the accounts and curation on later runs and preserves changes made to the curation.
+
 ## Background processing
 
 See [domain event operations](domain_event_operations.md) for worker configuration and delivery diagnostics. GoodJob schedules taste-profile refresh every 15 minutes in production. Superusers can inspect and queue a refresh of their own profile from Account. Operators can process pending requests from the console with `Ratings::TasteProfiling::ProcessProfileRefreshes.call`. See [AI configuration](ai_configuration.md) for provider setup.

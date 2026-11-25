@@ -1,6 +1,6 @@
 module Shared
   class ConfirmationDialog < Base
-    def initialize(id:, action_label:, title:, description:, cancel_label:, url:, trigger_variant: :destructive)
+    def initialize(id:, action_label:, title:, description:, cancel_label:, url:, trigger_variant: :destructive, method: :delete)
       @id = id
       @action_label = action_label
       @title = title
@@ -8,6 +8,7 @@ module Shared
       @cancel_label = cancel_label
       @url = url
       @trigger_variant = trigger_variant
+      @method = method
     end
 
     def view_template
@@ -22,7 +23,7 @@ module Shared
           div(class: "ui-actions ui-actions-fixed") do
             render GhostButton.new(class: "ui-action-button", autofocus: true,
               data: { action: "confirmation-dialog#close" }) { @cancel_label }
-            render ActionForm.new(url: @url, method: :delete) do
+            render ActionForm.new(url: @url, method: @method) do
               render DestructiveButton.new(type: :submit, class: "ui-action-button") { @action_label }
             end
           end

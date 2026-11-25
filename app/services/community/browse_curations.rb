@@ -34,7 +34,8 @@ module Community
       discussion = CurationDiscussion.new(curation:, selected_reply_id:, expand_selected_branch:)
       has_endorsements = nominated_films.any? { |_, endorsements| endorsements.any? { |endorsement| endorsement.user_id == viewer.id } }
       { curation:, nominated_films:, library_films:, discussion:, has_endorsements:, can_contribute: PostingAccess.allowed?(user: viewer),
-        can_edit: curation.can_edit?(member: viewer), can_delete: curation.can_delete?(member: viewer) }
+        can_edit: curation.can_edit?(member: viewer) || curation.can_edit_additional_description?(member: viewer),
+        can_delete: curation.can_delete?(member: viewer), can_disassociate: curation.can_disassociate?(member: viewer) }
     end
   end
 end

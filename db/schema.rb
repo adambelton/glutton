@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -303,8 +303,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
     t.text "prompt"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "protected_at"
+    t.text "additional_description"
+    t.bigint "deletable_author_id"
     t.index ["author_id"], name: "index_posts_on_author_id"
+    t.index ["deletable_author_id"], name: "index_posts_on_deletable_author_id"
     t.index ["type", "created_at", "id"], name: "index_posts_on_type_and_created_at_and_id"
+    t.check_constraint "type::text <> 'Community::PostCommunityCuration'::text OR (protected_at IS NULL) = (deletable_author_id IS NOT NULL) AND (author_id IS NULL OR deletable_author_id IS NULL OR author_id = deletable_author_id)", name: "curations_require_deletion_owner_until_protected"
   end
 
   create_table "qualities", force: :cascade do |t|
@@ -498,7 +503,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   add_foreign_key "monitoring_trace_contexts", "domain_events", on_delete: :cascade
   add_foreign_key "monitoring_trace_contexts", "ratings", on_delete: :cascade
   add_foreign_key "pending_registrations", "users", column: "guest_user_id", on_delete: :cascade
-  add_foreign_key "posts", "users", column: "author_id", on_delete: :cascade
+  add_foreign_key "posts", "users", column: "author_id", on_delete: :nullify
+  add_foreign_key "posts", "users", column: "deletable_author_id", on_delete: :cascade
   add_foreign_key "qualities", "quality_categories"
   add_foreign_key "rating_films", "films"
   add_foreign_key "rating_films", "users", on_delete: :cascade

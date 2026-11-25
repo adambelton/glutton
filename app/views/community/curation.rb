@@ -1,21 +1,26 @@
 module Views
   module Community
     class Curation < ::Views::Base
-      def initialize(curation:, nominated_films:, library_films:, discussion:, has_endorsements:, can_contribute:, can_edit:, can_delete:)
+      def initialize(curation:, nominated_films:, library_films:, discussion:, has_endorsements:, can_contribute:, can_edit:, can_delete:, can_disassociate:)
         @curation, @nominated_films, @library_films = curation, nominated_films, library_films
         @discussion = discussion
         @has_endorsements = has_endorsements
         @can_contribute = can_contribute
         @can_edit = can_edit
         @can_delete = can_delete
+        @can_disassociate = can_disassociate
       end
 
       def view_template
-        heading_action = method(:author_actions) if @can_edit || @can_delete
+        heading_action = method(:author_actions) if @can_edit || @can_delete || @can_disassociate
         page(title: @curation.title, class: "community-curation-page", heading_action:,
           back_to: community_path, back_label: t("community.curations.back")) do
-          render ::Community::CurationTag.new
-          p(class: "community-curation-prompt") { @curation.prompt }
+          render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
+          author_identity(@curation.author) if @curation.author.present?
+          div(class: "community-curation-descriptions") do
+            p(class: "community-curation-prompt") { @curation.prompt }
+            display_additional_description if @curation.additional_description.present?
+          end
           section(aria: { labelledby: "curation-nominated-films" }, data: { controller: "community-film-comments" }) do
             h2(id: "curation-nominated-films", class: "sr-only") { t("community.curations.nominated_films") }
             endorsements_action if @can_contribute
@@ -43,10 +48,31 @@ module Views
 
       private
 
+      def author_identity(author)
+        div(class: "community-curation-author") do
+          render ::Community::MemberAvatar.new(member: author)
+          strong { author.community_username.presence || t("community.curations.member") }
+        end
+      end
+
       def author_actions
         div(class: "ui-actions ui-actions-fixed community-curation-author-actions justify-end") do
           edit_action if @can_edit
           delete_action if @can_delete
+          disassociate_action if @can_disassociate
+        end
+      end
+
+      def disassociate_action
+        render Shared::ConfirmationDialog.new(id: "disassociate-curation", action_label: t("community.curation_protection.disassociate"),
+          title: t("community.curation_protection.confirm_title"), description: t("community.curation_protection.confirm_description"),
+          cancel_label: t("community.curations.cancel"), url: disassociate_community_curation_path(@curation), method: :patch)
+      end
+
+      def display_additional_description
+        section(class: "community-curation-additional-description", aria: { labelledby: "curation-additional-description" }) do
+          h2(id: "curation-additional-description") { t("community.curation_protection.additional_description_label") }
+          p(class: "community-curation-prompt") { @curation.additional_description }
         end
       end
 
@@ -68,8 +94,7 @@ module Views
           class: "mt-4 mb-1", aria: { haspopup: "dialog" }, data: { turbo_frame: frame_id }) do
           t(@has_endorsements ? "community.curation_endorsements.edit_endorsements" : "community.curation_endorsements.endorse_films")
         end
-        tag(:"turbo-frame", id: frame_id, data: { controller: "endorsement-editor",
-          action: "turbo:before-cache@document->endorsement-editor#close" })
+        render Shared::EditorDialog.new(frame_id:)
       end
 
       def nomination(film, endorsements:, position:)

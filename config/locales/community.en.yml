@@ -16,11 +16,10 @@ en:
     curations:
       create: Create a Community Curation
       tag: Community Curation
+      tag_tooltip: A group of films curated by the community
       board_empty: There are no community curations yet.
       complete_setup: Complete your Community setup to publish.
       title: Title
-      authored_by: Authored by %{username}
-      created: Created
       updated: Updated
       title_hint: Describe your niche. The more specific, the better.
       description: Description
@@ -61,7 +60,20 @@ en:
         other: "%{count} comments"
       member: Community member
       reply: Reply
-      report: Report
+    curation_protection:
+      badge: Protected Post
+      badge_tooltip: A post that belongs to the community and cannot be deleted
+      editor_explanation: Other members have contributed to this protected post. The original title and description stay as published. You can edit the additional description below.
+      protected_title: Protected title
+      protected_description: Protected description
+      additional_description: Additional description
+      additional_description_label: "EDIT:"
+      description_saved: Additional description saved.
+      disassociate: Remove attribution
+      confirm_title: Remove your attribution from this curation?
+      confirm_description: The post and its additional description will stay visible without your name. Your endorsements and discussion comments will stay under your control. You won’t be able to edit the additional description after removing attribution.
+      disassociated: Your attribution was removed from the curation.
+      unattributed: No author attribution
     curation_replies:
       title: Reply to comment
       body: Your reply
@@ -146,6 +158,7 @@ en:
         base: Community Curation
         title: Title
         prompt: Description
+        additional_description: Additional description
     errors:
       models:
         community/post_community_curation:

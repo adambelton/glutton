@@ -58,6 +58,22 @@ module Community
       redirect_to community_path, notice: t("community.curation_deletion.deleted"), status: :see_other
     end
 
+    def additional_description
+      description = curation_fields[:additional_description]
+      raise ActionController::BadRequest unless description.is_a?(String)
+
+      curation = ManageCurationAuthorship.update_description(curation_id: params[:id], member_id: current_user.id,
+        additional_description: description)
+      return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content if curation.errors.any?
+
+      redirect_to community_curation_path(curation), notice: t("community.curation_protection.description_saved"), status: :see_other
+    end
+
+    def disassociate
+      ManageCurationAuthorship.disassociate(curation_id: params[:id], member_id: current_user.id)
+      redirect_to community_curation_path(params[:id]), notice: t("community.curation_protection.disassociated"), status: :see_other
+    end
+
     def watchlist
       ManageCurationFilmInLibrary.add_to_watchlist(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
       redirect_to community_curation_path(params[:id]), notice: t("library.detail.watchlisted"), status: :see_other

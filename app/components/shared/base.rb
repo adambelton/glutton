@@ -23,6 +23,12 @@ module Shared
       render Shared::PrimaryButton.new(type: :submit, class: "ui-submit") { text }
     end
 
+    def track_form_changes(baseline:, ignored: [], controller: nil, action: nil, **data)
+      data.merge(controller: [ controller, "unchanged-form" ].compact.join(" "),
+        action: [ action, "input->unchanged-form#update change->unchanged-form#update" ].compact.join(" "),
+        unchanged_form_baseline_value: baseline.to_json, unchanged_form_ignored_value: ignored.to_json)
+    end
+
     def field(name:, label:, id:, type: :text, **attrs)
       div(class: "ui-field") do
         label(for: id) { label }
