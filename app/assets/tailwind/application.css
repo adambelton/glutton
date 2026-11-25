@@ -704,7 +704,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-comment-controls button { min-height: 44px; }
 .community-comment-controls button:disabled { opacity: 0.55; }
 .community-nomination { display: grid; grid-template-columns: var(--library-poster-width) minmax(0, 1fr); align-items: start; gap: 20px; padding-block: 16px; border-block-start: 1px solid var(--glutton-border); }
-.community-nomination-media > .poster-placeholder { padding: 8px; overflow-wrap: anywhere; }
+:is(.community-nomination-media, .community-debrief-poster) > .poster-placeholder { padding: 8px; overflow-wrap: anywhere; }
 .community-nomination-content { display: grid; gap: 10px; min-width: 0; }
 .community-nominated-film-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .community-nominated-film-heading { justify-content: space-between; }
@@ -712,9 +712,18 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-nomination-rank { flex: none; color: var(--glutton-muted-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
 .community-nominated-film-heading h3 { font-size: 1.125rem; font-weight: 600; overflow-wrap: anywhere; }
 .community-endorsement-badge { padding: 3px 10px; border: 1px solid var(--glutton-border); border-radius: 999px; background: var(--glutton-inset); color: var(--glutton-primary); font-size: 0.875rem; font-weight: 600; }
-.community-film-comments { --comment-gap: 16px; --comment-trailing-gap: 0px; }
-.community-film-comments summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
-.community-film-comments summary, .community-comment-count { font-size: 0.875rem; }
+:is(.community-film-comments, .community-debrief-discussion) { --comment-gap: 16px; --comment-trailing-gap: 0px; }
+.community-debrief-discussion { display: grid; gap: var(--comment-gap); }
+.ui-page .community-debrief-discussion > h2 { margin-block: 0; }
+.community-debrief-threads:empty { display: none; }
+.community-film-debrief-page { display: grid; grid-template-columns: min(150px, 32%) minmax(0, 1fr); grid-template-rows: auto 1fr auto; align-items: start; column-gap: 20px; }
+.community-film-debrief-page > h1 { grid-area: 1 / 2; overflow-wrap: anywhere; }
+.community-film-debrief-page > .ui-page-body { display: contents; }
+.community-debrief-intro { grid-area: 2 / 2; margin-block-start: var(--page-card-gap); }
+.community-debrief-poster { grid-area: 1 / 1 / 3; }
+.community-film-debrief-page .community-debrief-discussion { grid-area: 3 / 1 / auto / -1; margin-block-start: var(--comment-gap); }
+:is(.community-film-comments, .community-debrief-discussion) summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
+:is(.community-film-comments, .community-debrief-discussion) summary, .community-comment-count { font-size: 0.875rem; }
 .community-comment-replies > summary { padding-block-end: 4px; }
 :is(.community-comment-replies, .community-comment-editor-branch) {
   --comment-branch-gutter: 12px;
@@ -801,14 +810,14 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .ui-page .community-comment-composer { display: grid; gap: 8px; margin-block: 0; }
 .ui-page .community-comment-composer textarea.ui-input { field-sizing: content; min-block-size: calc(1.65em + 12px); inline-size: 100%; padding: 5px 8px; resize: vertical; }
 .community-comment-composer .ui-actions-fixed > .ui-action-button { padding-inline: 8px; }
-/* Match the reply composer's single line of guidance and the gap below it. */
-.community-comment-editor > .ui-actions-fixed { padding-block-start: 28px; }
+.community-comment-publish-actions > .ui-action-button { white-space: nowrap; }
 .ui-page .community-comment-editor textarea.ui-input { min-block-size: 1lh; padding: 0; border: 0; background: transparent; resize: none; }
 @media (max-width: 600px) {
   .community-nomination { gap: 12px; }
+  .community-film-debrief-page { column-gap: 12px; }
 }
 .community-curation-prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
-.community-curation-author { display: flex; align-items: center; gap: 10px; margin-block-start: 14px; overflow-wrap: anywhere; }
+:is(.community-curation-author, .community-film-debrief-author) { display: flex; align-items: center; gap: 10px; margin-block-start: 14px; overflow-wrap: anywhere; }
 .community-curation-descriptions { margin-block: 14px; color: var(--glutton-muted-foreground); }
 .community-curation-additional-description { display: grid; gap: 4px; margin-block-start: 12px; }
 .community-curation-additional-description::before {

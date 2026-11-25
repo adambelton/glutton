@@ -8,7 +8,7 @@ module Views
       end
 
       def view_template
-        stream("update", ::Community::CurationCommentComposer.frame_id(@parent))
+        stream("update", ::Community::DiscussionComposer.frame_id(@parent))
         stream("update", "film-comment-count-#{@film_id}") do
           plain t("community.curations.comments", count: @discussion.count_for_film(@film_id))
         end
@@ -16,7 +16,7 @@ module Views
           plain t("community.curation_replies.replies", count: @discussion.reply_counts([ @parent.id ]).fetch(@parent.id, 0))
         end
         stream("append", "replies-#{@parent.id}") do
-          render ::Community::CurationCommentThread.new(curation: @curation, film_id: @film_id, comment: @reply.comment, discussion: @discussion,
+          render ::Community::DiscussionCommentThread.new(routes: ::Community::CurationDiscussionRoutes.new(curation: @curation, film_id: @film_id), film_id: @film_id, comment: @reply.comment, discussion: @discussion,
             can_reply: true, reply_count: 0, newly_published: true)
         end
       end

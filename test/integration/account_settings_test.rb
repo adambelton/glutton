@@ -13,7 +13,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     SessionsController::RATE_LIMIT_STORE.clear
     @previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example"
-    @user = registered_user("settings@example.test", superuser: true)
+    @user = registered_user("settings@example.test")
     @user.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
   end
 
@@ -114,15 +114,15 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "avatar submissions require Community preview access" do
-    member = registered_user("avatar-member@example.test")
-    sign_in(member)
-    get account_settings_path
+  test "guests cannot submit a Community avatar directly" do
+    guest = Identity::UserGuest.create!
+    sign_in(guest)
+    get new_session_path
 
     patch account_community_avatar_path, params: { authenticity_token: page_csrf_token, community_avatar_preset: "raven" }
 
     assert_response :forbidden
-    assert_nil member.reload.community_avatar_preset
+    assert_nil guest.reload.community_avatar_preset
   end
 
   test "username conflicts return a localized form error and preserve the saved name" do
@@ -272,8 +272,8 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
   private
 
-  def registered_user(email_address, superuser: false)
-    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current, superuser:)
+  def registered_user(email_address)
+    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current)
   end
 
   def sign_in(user)

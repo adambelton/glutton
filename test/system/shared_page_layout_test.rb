@@ -22,7 +22,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     assert_back_card_gap new_session_path, inset: 48
     assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
     member = sign_in_member
-    curation = Community::PublishCuration.call(author_id: member.id, title: "Isolated landscapes",
+    curation = Community::Curations::PublishCuration.call(author_id: member.id, title: "Isolated landscapes",
       prompt: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
 
     [ privacy_notice_path, terms_of_service_path ].each do |path|

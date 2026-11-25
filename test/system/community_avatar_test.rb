@@ -4,8 +4,8 @@ class CommunityAvatarTest < ApplicationSystemTestCase
   test "a member chooses and changes a Community avatar" do
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "avatar-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
-    Community::AcceptCodeOfConduct.call(user_id: user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
+      password_confirmation: password, email_confirmed_at: Time.current)
+    Community::Membership::AcceptCodeOfConduct.call(user_id: user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password

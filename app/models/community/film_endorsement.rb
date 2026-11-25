@@ -43,7 +43,7 @@ module Community
     private
 
     def authorize_changes!(member:)
-      raise Errors::PostingUnavailable unless active? && user_id == member.id && PostingAccess.allowed?(user: member)
+      raise Errors::PostingUnavailable unless active? && user_id == member.id && Membership::PostingAccess.allowed?(user: member)
     end
 
     def build_opening_comment(body:)

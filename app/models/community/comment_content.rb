@@ -1,6 +1,6 @@
 module Community
   class CommentContent < ApplicationRecord
-    REPLY_LIMIT = 1_000
+    BODY_LIMIT = 4_000
 
     belongs_to :comment, inverse_of: :content
     belongs_to :author, class_name: "Identity::UserRegistered"
@@ -8,7 +8,11 @@ module Community
     normalizes :body, with: ->(text) { text.strip }
 
     validates :body, presence: true
-    validates :body, length: { maximum: REPLY_LIMIT }, if: -> { comment&.parent_id.present? }
+    validates :body, length: { maximum: BODY_LIMIT }, if: :will_save_change_to_body?
+
+    def self.body_too_long?(body)
+      normalize_value_for(:body, body).to_s.length > BODY_LIMIT
+    end
 
     def edit_body(body:)
       self.body = body

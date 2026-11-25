@@ -112,7 +112,7 @@ export default class extends Controller {
   newReplyTargetConnected(reply) {
     delete reply.dataset.communityFilmCommentsTarget
     const branch = reply.closest(".community-comment-replies")
-    branch.hidden = false
+    if (branch) branch.hidden = false
     for (let disclosure = branch; disclosure; disclosure = disclosure.parentElement.closest("details")) {
       disclosure.open = true
     }

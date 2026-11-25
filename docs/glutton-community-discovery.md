@@ -74,7 +74,7 @@ Authors can select any number of canonical reference films marked Watched in the
 
 Members choose **Endorse films** to make their first contribution and **Edit endorsements** to manage their existing films and opening comments. They can select any number of eligible Watched films. The first endorsement introduces a film and later endorsements contribute to its total. Each member can have one active endorsement per film. Each film appears once with its total and its discussions.
 
-An endorsement allows one optional comment explaining why the film fits. The member adds it in the endorsement editor and edits published text inline alongside any replies. A saved text change shows an edited marker. They can delete just the opening comment from its own Delete action and add a fresh one later. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. The opening comment has no character limit. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
+An endorsement allows one optional comment explaining why the film fits. The member adds it in the endorsement editor and edits published text inline alongside any replies. A saved text change shows an edited marker. They can delete just the opening comment from its own Delete action and add a fresh one later. Any replies remain attached to the original conversation. The composer asks why the member endorses the film, how it fits the request and to avoid spoilers. New or edited comments and replies have a shared 4,000-character limit across Community. It starts a branching conversation. Other members can reply to it or to its replies. Comment and reply activity leave endorsement totals unchanged.
 
 > The atmosphere is oppressive, and that sense of dread stayed with me for days.
 
@@ -98,7 +98,7 @@ At launch, requesters can share feedback by editing an open unprotected request 
 
 Members unlock a Film Debrief’s discussion content by marking the film Watched. They can reflect privately before joining the conversation or use the conversation to develop their own reaction before writing private notes.
 
-Each film has at most one long-lived Film Debrief post. Eligible members open it with **Create Film Debrief** on the film's placeholder in Community search. Glutton supplies an introduction that names the film and invites spoiler-friendly discussion. The discussion follow-up adds top-level comments and branching replies using the comment structure from Community Curation.
+Each film has at most one long-lived Film Debrief post. Eligible members open it with **Create Film Debrief** on the film's placeholder in Community search. Glutton supplies an introduction that names the film and invites spoiler-friendly discussion. Watched members who can post may add top-level comments and branching replies. They can edit their own text or confirm its removal. The discussion preserves replies when a parent comment is removed.
 
 ### Experiential context
 

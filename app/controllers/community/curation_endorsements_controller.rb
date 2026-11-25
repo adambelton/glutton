@@ -4,7 +4,7 @@ module Community
     rescue_from Errors::PostingUnavailable, with: -> { head :forbidden }
 
     def edit
-      editor = EditCurationEndorsements.load_for_edit(curation_id: params[:curation_id], member: current_user)
+      editor = Curations::EditCurationEndorsements.load_for_edit(curation_id: params[:curation_id], member: current_user)
       render_editor(editor)
     end
 
@@ -13,7 +13,7 @@ module Community
       raise ActionController::BadRequest unless fields.is_a?(ActionController::Parameters) && fields[:snapshot].is_a?(String)
 
       film_ids, comments = CurationFilmSelectionParameters.parse(ids: fields[:film_ids], comments: fields[:comments])
-      editor = EditCurationEndorsements.call(curation_id: params[:curation_id], member_id: current_user.id,
+      editor = Curations::EditCurationEndorsements.call(curation_id: params[:curation_id], member_id: current_user.id,
         film_ids:, comments:, snapshot: fields[:snapshot])
       curation = editor.fetch(:curation)
       if curation.errors.any?
@@ -32,7 +32,7 @@ module Community
     private
 
     def require_posting_access
-      head :forbidden unless PostingAccess.allowed?(user: current_user)
+      head :forbidden unless Membership::PostingAccess.allowed?(user: current_user)
     end
 
     def render_editor(editor, status: :ok)

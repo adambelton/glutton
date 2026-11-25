@@ -26,6 +26,7 @@ module Community
         search
         section(hidden: @selected_films.empty?, data: { curation_film_picker_target: "selectedSection" }) do
           h2 { t("community.curations.selected_films") }
+          p(id: "#{@field_prefix}_comment_limit", class: "muted") { t("community.comment_limit", count: CommentContent::BODY_LIMIT) }
           ul(class: [ "community-selected-films", ("ui-divided-list" if @divide_selected_films) ],
             data: { curation_film_picker_target: "selected" }) do
             @selected_films.each { |film| selected_film(film) }
@@ -108,9 +109,9 @@ module Community
               p(class: "community-curation-prompt") { comment.content.body }
             end
           else
-            textarea(name: "#{@comments_name}[#{film.id}]", class: "ui-input", rows: 2,
+            textarea(name: "#{@comments_name}[#{film.id}]", class: "ui-input", rows: 2, maxlength: CommentContent::BODY_LIMIT,
               placeholder: t("community.curations.comment"),
-              aria: { label: t("community.curations.comment_for_film", title:) }) { @comments[film.id].to_s }
+              aria: { label: t("community.curations.comment_for_film", title:), describedby: "#{@field_prefix}_comment_limit" }) { @comments[film.id].to_s }
           end
         end
       end

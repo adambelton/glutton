@@ -10,7 +10,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     controllers = [ Community::CodeOfConductController, AccountSettingsController ]
     @forgery_protection = controllers.index_with(&:allow_forgery_protection)
     controllers.each { |controller| controller.allow_forgery_protection = true }
-    @member = confirmed_member("conduct@example.test", superuser: true)
+    @member = confirmed_member("conduct@example.test")
   end
 
   teardown do
@@ -155,6 +155,9 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
 
     guest = Identity::UserGuest.create!
     sign_in(guest)
+    get library_path
+    assert_response :success
+    assert_select "header .ui-nav a[href=?], header select option[value=?]", community_path, community_path, count: 0
     get community_path
     assert_response :forbidden
 
@@ -175,85 +178,10 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     assert_nil @member.reload.community_code_of_conduct_accepted_at
   end
 
-  test "preview revocation after the initial check prevents a conduct write" do
-    sign_in(@member)
-    get account_community_path
-    submission = conduct_fields.merge(accepted: "1")
-
-    revoke_after_preview_check do
-      post community_code_of_conduct_acceptance_path, params: submission
-      assert_response :forbidden
-    end
-    assert_nil @member.reload.community_code_of_conduct_accepted_at
-  end
-
-  { username: :community_username, avatar: :community_avatar_preset }.each do |role, attribute|
-    test "preview revocation after the initial check prevents a #{role} write" do
-      @member.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
-      sign_in(@member)
-      get account_community_path(edit: role)
-      path = public_send("account_community_#{role}_path")
-      form = Nokogiri::HTML(response.body).at_css("form[action='#{path}']")
-      token = form.at_css("input[name=authenticity_token]")["value"]
-      value = role == :username ? "New_Name" : "tentacle"
-
-      revoke_after_preview_check do
-        patch path, params: { authenticity_token: token, attribute => value }
-        assert_response :forbidden
-      end
-      assert_nil @member.reload.public_send(attribute)
-    end
-  end
-
-  test "a registered non-superuser sees locked navigation and cannot read or write preview pages" do
-    member = confirmed_member("preview-locked@example.test")
-    sign_in(member)
-    get account_settings_path
-    assert_response :success
-    assert_select "header .ui-nav a[href=?] + [aria-describedby='community-nav-tooltip'][aria-disabled=true]", library_path
-    assert_select "header select option[value=?] + option[value=?][disabled]", library_path, community_path,
-      text: I18n.t("ui.locked_navigation_option", label: I18n.t("community.title"), reason: I18n.t("community.coming_soon"))
-    assert_select ".account-tabs [aria-describedby='account-community-tooltip'][aria-disabled=true]"
-    assert_select ".account-tabs a[href=?]", account_community_path, count: 0
-
-    get community_path
-    assert_response :forbidden
-    get account_community_path
-    assert_response :forbidden
-
-    get community_code_of_conduct_path
-    assert_response :success
-    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
-    post community_code_of_conduct_acceptance_path, params: { authenticity_token: token, code_version: "1", accepted: "1" }
-    assert_response :forbidden
-    assert_nil member.reload.community_code_of_conduct_accepted_at
-    patch account_community_username_path, params: { authenticity_token: token, community_username: "Some_Name" }
-    assert_response :forbidden
-    assert_nil member.reload.community_username
-  end
-
   private
 
-  def revoke_after_preview_check
-    original = Community::PreviewAccess.method(:allowed?)
-    member_id = @member.id
-    checks = []
-    Community::PreviewAccess.define_singleton_method(:allowed?) do |user:|
-      allowed = original.call(user:)
-      if user.id == member_id
-        Identity::AccountAdministration::RevokeSuperuser.call(user_id: member_id, actor_user_id: member_id) if checks.empty?
-        checks << allowed
-      end
-      allowed
-    end
-    yield
-    assert_equal [ true, false ], checks
-  ensure
-    Community::PreviewAccess.define_singleton_method(:allowed?, original)
-  end
-
-  def confirmed_member(email_address, superuser: false)
-    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current, superuser:)
+  def confirmed_member(email_address)
+    Identity::UserRegistered.create!(email_address:, password: PASSWORD, password_confirmation: PASSWORD, email_confirmed_at: Time.current)
   end
 
   def sign_in(user)

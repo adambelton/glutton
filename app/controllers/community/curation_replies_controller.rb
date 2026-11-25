@@ -3,7 +3,7 @@ module Community
     rescue_from Errors::PostingUnavailable, with: -> { head :forbidden }
 
     def new
-      composer = PublishCurationReply.load_for_reply(curation_id: params[:curation_id], comment_id: params[:comment_id], member: current_user)
+      composer = Discussions::PublishCurationReply.load_for_reply(curation_id: params[:curation_id], comment_id: params[:comment_id], member: current_user)
       render_composer(composer)
     end
 
@@ -11,7 +11,7 @@ module Community
       body = params[:body]
       raise ActionController::BadRequest unless body.nil? || body.is_a?(String)
 
-      composer = PublishCurationReply.call(curation_id: params[:curation_id], comment_id: params[:comment_id],
+      composer = Discussions::PublishCurationReply.call(curation_id: params[:curation_id], comment_id: params[:comment_id],
         member_id: current_user.id, body:)
       reply = composer.fetch(:reply)
       if reply.errors.any?
@@ -19,8 +19,8 @@ module Community
       end
 
       if turbo_frame_request?
-        film_id = composer.fetch(:parent).discussion_film_id
-        discussion = CurationDiscussion.new(curation: composer.fetch(:curation), film_id:)
+        film_id = Discussions::CurationDiscussion.film_id_for(composer.fetch(:parent))
+        discussion = Discussions::CurationDiscussion.new(curation: composer.fetch(:curation), film_id:)
         return render Views::Community::CurationReplyPublished.new(**composer, film_id:, discussion:), content_type: Mime[:turbo_stream]
       end
 
@@ -33,7 +33,7 @@ module Community
     def render_composer(composer, status: :ok)
       component = if turbo_frame_request?
         curation, comment, content = composer.values_at(:curation, :parent, :reply)
-        CurationCommentComposer.new(curation:, comment:, content:)
+        DiscussionComposer.new(routes: CurationDiscussionRoutes.new(curation:), comment:, content:)
       else
         Views::Community::NewCurationReply.new(**composer)
       end

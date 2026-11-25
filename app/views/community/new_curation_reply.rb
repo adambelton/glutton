@@ -10,7 +10,7 @@ module Views
           back_to: community_curation_path(@curation, reply: @parent.id, anchor: "comment-#{@parent.id}"),
           back_label: t("community.curations.back_to_curation")) do
           blockquote(class: "community-curation-prompt") { @parent.content.body }
-          render ::Community::CurationCommentComposer.new(curation: @curation, comment: @parent, content: @reply, inline: false)
+          render ::Community::DiscussionComposer.new(routes: ::Community::CurationDiscussionRoutes.new(curation: @curation), comment: @parent, content: @reply, inline: false)
         end
       end
     end

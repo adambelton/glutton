@@ -41,9 +41,9 @@ module Views
 
       def card_for(entry)
         case entry
-        when ::Community::BrowseCurations::BoardEntry
+        when ::Community::Board::BrowseCurations::BoardEntry
           ::Community::CurationCard.new(entry:)
-        when ::Community::BrowseCommunityBoard::DebriefEntry
+        when ::Community::Board::BrowseCommunityBoard::DebriefEntry
           ::Community::FilmDebriefCard.new(entry:, can_post: @can_post)
         end
       end

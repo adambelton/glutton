@@ -42,10 +42,7 @@ module Community
     def post_metadata
       footer(class: "muted community-post-card-footer") do
         p { t("community.curations.comments", count: @comment_count) }
-        div(class: "community-film-debrief-card-author") do
-          span(class: "community-member-avatar community-glutton-avatar", aria: { hidden: true })
-          strong { t("ui.wordmark") }
-        end
+        render GluttonIdentity.new(class_name: "community-film-debrief-card-author")
       end
     end
 

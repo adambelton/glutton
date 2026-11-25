@@ -16,16 +16,12 @@ module Community
       reply_content
     end
 
-    def discussion_film_id
-      (root || self).film_endorsement.film_id
-    end
-
     def can_edit_inline?(member:)
-      content&.author_id == member.id && PostingAccess.allowed?(user: member)
+      content&.author_id == member.id && Membership::PostingAccess.allowed?(user: member)
     end
 
     def can_delete?(member:)
-      content&.author_id == member.id && member.active? && PreviewAccess.allowed?(user: member)
+      content&.author_id == member.id && member.active? && Membership::Access.allowed?(user: member)
     end
 
     def edit_body(member:, body:)
