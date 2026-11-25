@@ -11,9 +11,14 @@ Rails.application.routes.draw do
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
-    get "film-debriefs/:film_id", to: "film_debriefs#show", as: :film_debrief
-    post "film-debriefs/:film_id", to: "film_debriefs#create"
-    resources :curations, only: [ :new, :create, :show, :edit, :update, :destroy ] do
+    scope "film-debriefs/:film_id", as: :film_debrief do
+      get "", to: "film_debriefs#show"
+      post "", to: "film_debriefs#create"
+      get "discussion", to: "film_debriefs#discussion", as: :discussion
+      resources :comments, only: [ :new, :create, :edit, :update, :destroy ], controller: :film_debrief_comments
+    end
+    get "curations/:id", to: redirect(path: "/community/community-curations/%{id}"), constraints: { id: /\d+/ }
+    resources :curations, path: "community-curations", only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
       resources :comments, only: [ :edit, :update, :destroy ], controller: :curation_comments do
         resource :reply, only: [ :new, :create ], controller: :curation_replies

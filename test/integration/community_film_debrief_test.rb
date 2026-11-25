@@ -4,7 +4,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   PASSWORD = "a long test password"
 
   setup do
-    controllers = [ Community::FilmDebriefsController, Community::BoardController, LibraryController ]
+    controllers = [ Community::FilmDebriefsController, Community::FilmDebriefCommentsController, Community::BoardController, LibraryController ]
     @previous_forgery_protection = controllers.index_with(&:allow_forgery_protection)
     controllers.each { |controller| controller.allow_forgery_protection = true }
     @member = member("debrief_reader")
@@ -15,7 +15,8 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   end
 
   test "a Watched-film placeholder opens one system-owned thread which survives account closure" do
-    film = create_film("The Quiet House")
+    film = Registry::Film.create!(title: "The Quiet House", release_date: Date.new(1987, 4, 1),
+      tmdb_metadata: { details: { poster_path: "/quiet-house.jpg" } })
     watch(@member, film)
     sign_in(@member)
     path = community_film_debrief_path(film)
@@ -24,7 +25,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
       get community_path
       assert_select ".community-film-debrief-card", count: 0
       get community_path(q: "quiet")
-      assert_select "article.community-film-debrief-card h2", text: film.title
+      assert_select "article.community-film-debrief-card h2", text: "#{film.title} (1987)"
     end
     token = form_token(path)
     assert_difference "Community::PostFilmDebrief.count", 1 do
@@ -35,9 +36,15 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_redirected_to path
     follow_redirect!
-    assert_select "h1", text: film.title
+    assert_select "h1", text: "#{film.title} (1987)" do
+      assert_select ".film-year", text: "(1987)"
+    end
     assert_select ".community-post-tag[tabindex='0'] [role=tooltip]", text: I18n.t("community.film_debriefs.badge_tooltip")
-    assert_select "p", text: I18n.t("community.film_debriefs.introduction", title: film.title)
+    assert_select ".community-debrief-intro" do
+      assert_select ".community-post-tags + .community-film-debrief-author .community-glutton-avatar + strong", text: I18n.t("ui.wordmark")
+      assert_select "p", text: I18n.t("community.film_debriefs.introduction", title: film.title)
+    end
+    assert_select ".community-debrief-poster img.film-poster[src=?]", "https://image.tmdb.org/t/p/w500/quiet-house.jpg"
 
     debrief = Community::PostFilmDebrief.find_by!(film:)
     assert_nil debrief.author_id
@@ -79,19 +86,19 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
       post path, params: { authenticity_token: page_token }
       assert_response :forbidden
 
-      outsider = member("debrief_no_preview", superuser: false)
-      watch(outsider, film)
-      sign_in(outsider)
+      guest = Identity::UserGuest.create!
+      watch(guest, film)
+      sign_in(guest)
       get library_path
       post path, params: { authenticity_token: page_token }
       assert_response :forbidden
     end
   end
 
-  test "published debriefs require Watched and preview access even at the direct URL" do
+  test "published debriefs require a registered member who has marked the film Watched" do
     film = create_film("The Night")
     library_film = watch(@member, film)
-    debrief = Community::OpenFilmDebrief.call(member_id: @member.id, film_id: film.id)
+    debrief = Community::FilmDebriefs::OpenFilmDebrief.call(member_id: @member.id, film_id: film.id)
     path = community_film_debrief_path(film)
     sign_in(@member)
     get path
@@ -103,9 +110,9 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     get community_path
     assert_select ".community-film-debrief-card", count: 0
 
-    outsider = member("debrief_outsider", superuser: false)
-    watch(outsider, film)
-    sign_in(outsider)
+    guest = Identity::UserGuest.create!
+    watch(guest, film)
+    sign_in(guest)
     get path
     assert_response :forbidden
     assert Community::PostFilmDebrief.exists?(debrief.id)
@@ -142,11 +149,228 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     assert_select "a[rel=prev][href=?]", community_path(q: "House")
   end
 
+  test "members post multiple roots and branch replies with a shared limit and current board activity" do
+    debrief = open_discussion
+    path = community_film_debrief_comments_path(debrief.film)
+    sign_in(@member)
+    get community_film_debrief_path(debrief.film)
+    assert_select "textarea[name=body][maxlength='4000']"
+    token = form_token(path)
+
+    assert_no_difference "Community::Comment.count" do
+      post path, params: { authenticity_token: token, body: "x" * 4_001 }
+    end
+    assert_response :unprocessable_content
+    assert_select ".ui-errors li"
+    assert_select "textarea[name=body]", text: "x" * 4_001
+
+    activity = debrief.updated_at
+    travel 1.minute do
+      post path, params: { authenticity_token: token, body: "x" * 4_000 }
+    end
+    root = debrief.comments.sole
+    assert_equal 4_000, root.content.body.length
+    assert_equal debrief.film_id, root.debrief_film_id
+    assert_nil root.film_endorsement_id
+    assert_nil root.parent_id
+    assert_nil root.root_id
+    assert_equal @member, root.content.author
+    assert_operator debrief.reload.updated_at, :>, activity
+    assert_redirected_to community_film_debrief_path(debrief.film, reply: root.id, anchor: "comment-#{root.id}")
+
+    post path, params: { authenticity_token: token, body: "A separate thread." }
+    assert_response :see_other
+    assert_equal 2, debrief.comments.where(parent_id: nil).count
+
+    get new_community_film_debrief_comment_path(debrief.film, parent_id: root.id)
+    reply_path = community_film_debrief_comments_path(debrief.film, parent_id: root.id)
+    activity = debrief.updated_at
+    travel 2.minutes do
+      post reply_path, params: { authenticity_token: form_token(reply_path), body: "A thoughtful reply." }
+    end
+    reply = debrief.comments.find_by!(parent: root)
+    assert_equal root, reply.root
+    assert_nil reply.debrief_film_id
+    assert_operator debrief.reload.updated_at, :>, activity
+    follow_redirect!
+    assert_select "#replies-#{root.id}[open] #comment-#{reply.id}", text: /A thoughtful reply/
+    get community_path
+    assert_select ".community-film-debrief-card footer p", text: I18n.t("community.curations.comments", count: 3)
+  end
+
+  test "all debrief reads and mutations recheck Watched and scope the comment to the post" do
+    debrief = open_discussion
+    root = publish_comment(debrief, "Spoiler text.")
+    other = open_discussion("Other film")
+    foreign_root = publish_comment(other, "Foreign text.")
+    show_path = community_film_debrief_path(debrief.film)
+    comments_path = community_film_debrief_comments_path(debrief.film)
+    comment_path = community_film_debrief_comment_path(debrief.film, root)
+    sign_in(@member)
+    get show_path
+    root_token = form_token(comments_path)
+    delete_token = form_token(comment_path)
+
+    get new_community_film_debrief_comment_path(debrief.film, parent_id: foreign_root.id)
+    assert_response :not_found
+    get community_film_debrief_discussion_path(debrief.film, parent_id: foreign_root.id)
+    assert_response :not_found
+    get edit_community_film_debrief_comment_path(debrief.film, foreign_root)
+    assert_response :not_found
+
+    reply_path = community_film_debrief_comments_path(debrief.film, parent_id: root.id)
+    get new_community_film_debrief_comment_path(debrief.film, parent_id: root.id)
+    reply_token = form_token(reply_path)
+    get edit_community_film_debrief_comment_path(debrief.film, root)
+    edit_token = form_token(comment_path)
+    Library::LibraryFilm.watched.find_by!(user: @member, film: debrief.film).remove_from_watched!
+
+    get show_path
+    assert_response :not_found
+    get community_film_debrief_discussion_path(debrief.film, parent_id: root.id)
+    assert_response :not_found
+    assert_no_difference "Community::Comment.count" do
+      post comments_path, params: { authenticity_token: root_token, body: "A stale root." }
+      assert_response :not_found
+      post reply_path, params: { authenticity_token: reply_token, body: "A stale reply." }
+      assert_response :not_found
+      patch comment_path, params: { authenticity_token: edit_token, body: "A stale edit." }
+      assert_response :not_found
+      delete comment_path, params: { authenticity_token: delete_token }
+      assert_response :not_found
+    end
+    assert_equal "Spoiler text.", root.content.reload.body
+
+    reader = member("debrief_preview_reader", accepted: false)
+    watch(reader, debrief.film)
+    sign_in(reader)
+    get show_path
+    assert_select "article", text: /Spoiler text/
+    assert_select "form[action=?]", comments_path, count: 0
+    post comments_path, params: { authenticity_token: page_token, body: "Without consent." }
+    assert_response :forbidden
+  end
+
+  test "editing and deleting debrief comments preserve activity and surviving replies" do
+    debrief = open_discussion
+    root = publish_comment(debrief, "Original text.")
+    reader = member("debrief_reply_author")
+    watch(reader, debrief.film)
+    reply = Community::Discussions::ManageFilmDebriefDiscussion.publish(film_id: debrief.film_id, parent_id: root.id,
+      member_id: reader.id, body: "Surviving reply.").fetch(:content).comment
+    activity = debrief.reload.updated_at
+    path = community_film_debrief_comment_path(debrief.film, root)
+
+    sign_in(reader)
+    get edit_community_film_debrief_comment_path(debrief.film, root)
+    assert_response :forbidden
+    get community_film_debrief_path(debrief.film)
+    delete path, params: { authenticity_token: page_token }
+    assert_response :forbidden
+
+    sign_in(@member)
+    get edit_community_film_debrief_comment_path(debrief.film, root)
+    patch path, params: { authenticity_token: form_token(path), body: "  Original text. " }
+    assert_response :see_other
+    assert_nil root.content.reload.edited_at
+    get edit_community_film_debrief_comment_path(debrief.film, root)
+    patch path, params: { authenticity_token: form_token(path), body: "An edited observation." }
+    assert_response :see_other
+    follow_redirect!
+    assert_select "#comment-#{root.id} .community-comment-edited"
+    delete path, params: { authenticity_token: form_token(path) }
+    assert_response :see_other
+    follow_redirect!
+    assert_select "#comment-#{root.id}", text: I18n.t("community.curation_replies.removed")
+    assert_select "#comment-#{reply.id}", text: /Surviving reply/
+    assert_select "#comment-#{root.id} .community-comment-actions", count: 0
+    assert_nil root.reload.content
+    assert_equal activity, debrief.reload.updated_at
+    get new_community_film_debrief_comment_path(debrief.film, parent_id: root.id)
+    assert_response :not_found
+
+    sign_in(reader)
+    get community_film_debrief_path(debrief.film, reply: reply.id)
+    reply_path = community_film_debrief_comment_path(debrief.film, reply)
+    assert_difference "Community::Comment.count", -1 do
+      delete reply_path, params: { authenticity_token: form_token(reply_path) }
+    end
+    assert_response :see_other
+    follow_redirect!
+    assert_select "#comment-#{root.id}, #comment-#{reply.id}", count: 0
+    assert Community::PostFilmDebrief.exists?(debrief.id)
+  end
+
+  test "debrief roots and branches load in bounded pages and a deep link reveals the selected reply" do
+    debrief = open_discussion
+    limit = Community::Discussions::Discussion::PAGE_SIZE
+    roots = (limit + 1).times.map { |i| publish_comment(debrief, "Root #{i}.") }
+    parent = roots.last
+    replies = (limit + 1).times.map do |i|
+      Community::Discussions::ManageFilmDebriefDiscussion.publish(film_id: debrief.film_id, parent_id: parent.id,
+        member_id: @member.id, body: "Reply #{i}.").fetch(:content).comment
+    end
+    sign_in(@member)
+
+    get community_film_debrief_path(debrief.film)
+    assert_select "article.community-comment", count: limit
+    assert_select "#comment-#{parent.id}", count: 0
+    get community_film_debrief_discussion_path(debrief.film, after: roots[-2].id)
+    assert_select "article.community-comment", count: 1
+    assert_select "#comment-#{parent.id}"
+
+    get community_film_debrief_discussion_path(debrief.film, parent_id: parent.id)
+    assert_select "article.community-comment", count: limit
+    assert_select "#comment-#{replies.last.id}", count: 0
+    get community_film_debrief_path(debrief.film, reply: replies.last.id)
+    assert_select "#replies-#{parent.id}[open] #comment-#{replies.last.id}"
+  end
+
+  test "closing an account and replaying closure preserve the debrief and surviving reply content" do
+    debrief = open_discussion
+    root = publish_comment(debrief, "A departing member's comment.")
+    other_author = member("debrief_closing_replay")
+    viewer = member("debrief_survivor")
+    [ other_author, viewer ].each { |reader| watch(reader, debrief.film) }
+    replay_root = publish_comment(debrief, "Another departing member's comment.", member: other_author)
+    replies = [ root, replay_root ].map do |parent|
+      Community::Discussions::ManageFilmDebriefDiscussion.publish(film_id: debrief.film_id, parent_id: parent.id,
+        member_id: viewer.id, body: "Surviving content.").fetch(:content).comment
+    end
+    client = Aws::S3::Client.new(region: "auto", stub_responses: true)
+    log = Identity::AccountAdministration::DeletionLog.new(client:, bucket: "fixture", namespace: "debrief")
+    Identity::AccountAdministration::ManageRegisteredAccount.new(user_id: @member.id).close_account(deletion_log: log)
+    replay_id = other_author.deletion_replay_id
+    client.stub_responses(:list_objects_v2, contents: [ { key: "account-deletions/v1/debrief/#{replay_id}.json" } ])
+    client.stub_responses(:get_object, body: JSON.generate(account_id: replay_id, recorded_at: Time.current.iso8601))
+    assert_equal 1, Identity::AccountAdministration::ReplayAccountDeletions.new(deletion_log: log).call
+
+    assert Community::PostFilmDebrief.exists?(debrief.id)
+    assert_nil root.reload.content
+    assert_nil replay_root.reload.content
+    assert replies.all? { |reply| reply.reload.content.author == viewer }
+    sign_in(viewer)
+    get community_film_debrief_path(debrief.film, reply: replies.first.id)
+    assert_select "#comment-#{root.id}", text: I18n.t("community.curation_replies.removed")
+    assert_select "#comment-#{replies.first.id}", text: /Surviving content/
+  end
+
   private
 
-  def member(name, accepted: true, superuser: true)
+  def open_discussion(title = "A watched film")
+    film = create_film(title)
+    watch(@member, film)
+    Community::FilmDebriefs::OpenFilmDebrief.call(member_id: @member.id, film_id: film.id)
+  end
+
+  def publish_comment(debrief, body, member: @member)
+    Community::Discussions::ManageFilmDebriefDiscussion.publish(film_id: debrief.film_id, parent_id: nil, member_id: member.id, body:)
+      .fetch(:content).comment
+  end
+
+  def member(name, accepted: true)
     Identity::UserRegistered.create!(email_address: "#{name}@example.test", password: PASSWORD,
-      password_confirmation: PASSWORD, email_confirmed_at: Time.current, superuser:,
+      password_confirmation: PASSWORD, email_confirmed_at: Time.current,
       community_username: name, community_avatar_preset: "moth",
       community_code_of_conduct_version: (Community::CodeOfConduct.current.version if accepted),
       community_code_of_conduct_accepted_at: (Time.current if accepted))
@@ -170,7 +394,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   def create_curation(title, updated_at:, film: nil)
     travel_to(updated_at) do
       watch(@member, film) if film.present?
-      Community::PublishCuration.call(author_id: @member.id, title:, prompt: "A specific subgenre.",
+      Community::Curations::PublishCuration.call(author_id: @member.id, title:, prompt: "A specific subgenre.",
         reference_film_ids: (film.present? ? [ film.id ] : []), reference_comments: {})
     end
   ensure

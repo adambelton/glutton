@@ -5,17 +5,17 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     password = "a long test password"
     author, reader, second_reader = %w[protected_author protected_reader second_protected_reader].map do |name|
       Identity::UserRegistered.create!(email_address: "#{name}@example.test", password:, password_confirmation: password,
-        email_confirmed_at: Time.current, superuser: true, community_username: name, community_avatar_preset: "moth",
+        email_confirmed_at: Time.current, community_username: name, community_avatar_preset: "moth",
         community_code_of_conduct_version: Community::CodeOfConduct.current.version,
         community_code_of_conduct_accepted_at: Time.current)
     end
     reference = Registry::Film.create!(title: "The shared reference", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film: reference).add_to_watched!
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Quiet horror", prompt: "Understated films.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Quiet horror", prompt: "Understated films.",
       reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet film." })
     root = curation.comments.sole
     [ reader, reader, reader, reader, second_reader ].each_with_index do |member, index|
-      Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: member.id, body: "Reply #{index + 1}.")
+      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: member.id, body: "Reply #{index + 1}.")
     end
 
     visit new_session_path
@@ -155,7 +155,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "searching Watched films builds a list with removable references and optional comments" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "Curator", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
@@ -262,7 +262,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "the endorsement dialog preloads references and saves multiple films with comments" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-response-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "Respondent", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
@@ -273,7 +273,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       Library::LibraryFilm.new(user: author, film:).add_to_watched!
       film
     end
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror in isolated places",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Folk horror in isolated places",
       prompt: "Films where the setting shapes the story.", reference_film_ids: [ reference.id ], reference_comments: {})
 
     visit new_session_path
@@ -400,12 +400,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "the author edits a curation and must confirm its deletion" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-edit-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "CurationAuthor", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
     title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
-    curation = Community::PublishCuration.call(author_id: author.id, title:,
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title:,
       prompt: "Folklore in film.", reference_film_ids: [], reference_comments: {})
 
     visit new_session_path
@@ -494,16 +494,16 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "a nomination uses the shared title and updates its Library icons below the poster" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-library-author@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "Curator", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
     viewer = Identity::UserRegistered.create!(email_address: "curation-library-reader@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
+      password_confirmation: password, email_confirmed_at: Time.current)
     film = Registry::Film.create!(title: "Folk Tales", tmdb_id: 123, release_date: Date.new(2020, 1, 1),
       tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror", prompt: "Films for this theme.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Folk horror", prompt: "Films for this theme.",
       reference_film_ids: [ film.id ], reference_comments: {})
 
     visit new_session_path
@@ -550,7 +550,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "the board lays out curation cards in order with posters wrapped in the left artwork slot" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-board@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "Curator", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
@@ -560,9 +560,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       film
     end
     title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
-    curation = Community::PublishCuration.call(author_id: author.id, title:, prompt: "Isolated communities and older traditions.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title:, prompt: "Isolated communities and older traditions.",
       reference_film_ids: films.map(&:id), reference_comments: { films.first.id => "An isolated setting." })
-    shorter = Community::PublishCuration.call(author_id: author.id, title: "Two-film curation", prompt: "A narrower theme.",
+    shorter = Community::Curations::PublishCuration.call(author_id: author.id, title: "Two-film curation", prompt: "A narrower theme.",
       reference_film_ids: films.first(2).map(&:id), reference_comments: {})
 
     visit new_session_path
@@ -662,12 +662,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "members can post and independently reveal branches without endorsing the film" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "discussion-author@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "DiscussionAuthor", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
     reader = Identity::UserRegistered.create!(email_address: "discussion-reader@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "DiscussionReader", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
@@ -676,7 +676,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       Library::LibraryFilm.new(user: author, film:).add_to_watched!
       film
     end
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
       reference_film_ids: [ first.id, second.id ], reference_comments: { first.id => "The landscape shapes the story.", second.id => "Woodland folklore." })
     root = curation.film_endorsements.find_by!(film: first).comments.sole
 
@@ -706,7 +706,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       editor.set("A first line.\nA second line.\nA third line.")
       assert_operator editor.rect.height, :>, initial_height
       editor.execute_script("this.removeAttribute('maxlength')")
-      oversized_reply = "a" * (Community::CommentContent::REPLY_LIMIT + 1)
+      oversized_reply = "a" * (Community::CommentContent::BODY_LIMIT + 1)
       editor.set(oversized_reply)
       click_button I18n.t("community.curation_replies.publish")
       assert_selector ".ui-errors li"
@@ -779,14 +779,14 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path path
 
     nested = curation.comments.find_by!(parent: reply)
-    deeper = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: nested.id, member_id: reader.id,
+    deeper = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: nested.id, member_id: reader.id,
       body: "The last shot has that mood too.").fetch(:reply).comment
-    at_indent_limit = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: deeper.id, member_id: reader.id,
+    at_indent_limit = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: deeper.id, member_id: reader.id,
       body: "The framing helps.").fetch(:reply).comment
-    last_reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+    last_reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
       body: "The empty roads add to the atmosphere.").fetch(:reply).comment
     19.times do |index|
-      Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
         body: "Additional reply #{index + 1}.")
     end
 
@@ -831,19 +831,19 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     password = "a long test password"
     author, reader = %w[Editor Responder].map do |username|
       Identity::UserRegistered.create!(email_address: "#{username.downcase}@example.test", password:,
-        password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+        password_confirmation: password, email_confirmed_at: Time.current,
         community_username: username, community_avatar_preset: "moth",
         community_code_of_conduct_version: Community::CodeOfConduct.current.version,
         community_code_of_conduct_accepted_at: Time.current)
     end
     film = Registry::Film.create!(title: "The Empty Field", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
       reference_film_ids: [ film.id ], reference_comments: { film.id => "The landscape shapes the story." })
     root = curation.comments.sole
-    leaf = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
+    leaf = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
       body: "My follow-up.").fetch(:reply).comment
-    reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
       body: "The sound design also helps.").fetch(:reply).comment
 
     visit new_session_path
@@ -943,16 +943,16 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   test "the endorsement dialog links to inline editing and preserves replies on withdrawal" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "opening-comment-author@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
+      password_confirmation: password, email_confirmed_at: Time.current,
       community_username: "OpeningAuthor", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
     film = Registry::Film.create!(title: "The Quiet Field", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Rural horror", prompt: "Films with a strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Rural horror", prompt: "Films with a strong sense of place.",
       reference_film_ids: [ film.id ], reference_comments: { film.id => "The landscape makes the whole film feel isolated." })
     root = curation.comments.sole
-    reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
       body: "The fog helps too.").fetch(:reply).comment
 
     visit new_session_path

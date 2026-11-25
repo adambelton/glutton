@@ -24,6 +24,7 @@ module Community
     def publish(reference_film_ids:, reference_comments:)
       valid?
       errors.add(:base, :duplicate_references) if reference_film_ids.uniq != reference_film_ids
+      validate_opening_comment_lengths(reference_comments)
       return self if errors.any?
 
       reference_films = yield reference_film_ids
@@ -45,6 +46,7 @@ module Community
       additions = selected_ids.to_a - endorsements.keys
       films = yield additions
       validate_endorsement_selection(endorsements:, film_ids:, additions:, films:, comments:)
+      validate_opening_comment_lengths(comments)
       return self if errors.any?
 
       added_comment = false
@@ -69,7 +71,7 @@ module Community
     end
 
     def can_edit?(member:)
-      !protected? && author_id == member.id && PostingAccess.allowed?(user: member)
+      !protected? && author_id == member.id && Membership::PostingAccess.allowed?(user: member)
     end
 
     def edit_text(member:, title:, prompt:)
@@ -82,7 +84,7 @@ module Community
     end
 
     def can_delete?(member:)
-      !protected? && author_id == member.id && member.active? && PreviewAccess.allowed?(user: member)
+      !protected? && author_id == member.id && member.active? && Membership::Access.allowed?(user: member)
     end
 
     def delete_curation!(member:)
@@ -105,7 +107,7 @@ module Community
     end
 
     def can_edit_additional_description?(member:)
-      protected? && author_id == member.id && PostingAccess.allowed?(user: member)
+      protected? && author_id == member.id && Membership::PostingAccess.allowed?(user: member)
     end
 
     def edit_additional_description(member:, additional_description:)
@@ -117,7 +119,7 @@ module Community
     end
 
     def can_disassociate?(member:)
-      protected? && author_id == member.id && member.active? && PreviewAccess.allowed?(user: member)
+      protected? && author_id == member.id && member.active? && Membership::Access.allowed?(user: member)
     end
 
     def disassociate!(member:)
@@ -134,6 +136,12 @@ module Community
     end
 
     private
+
+    def validate_opening_comment_lengths(comments)
+      if comments.values.any? { |body| CommentContent.body_too_long?(body) }
+        errors.add(:base, :opening_comment_too_long, count: CommentContent::BODY_LIMIT)
+      end
+    end
 
     def comment_protection_threshold_met?
       other_comments = CommentContent.joins(:comment).where(comments: { post_id: id }).where.not(author_id:)

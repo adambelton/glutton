@@ -1,7 +1,7 @@
 en:
   community:
     title: Community
-    coming_soon: Coming soon
+    comment_limit: "Use up to %{count} characters."
     board_empty: There are no Community posts yet.
     search:
       label: Search films and posts
@@ -60,7 +60,11 @@ en:
       badge: Film Debrief
       badge_tooltip: A place for post-watch film discussion. There be spoilers here.
       create: Create Film Debrief
-      introduction: Discuss what you noticed, felt, or kept thinking about after watching %{title}. Spoilers are welcome here.
+      introduction: A spoiler-friendly discussion of %{title}, visible only to members who have marked the film Watched.
+      discussion: Discussion
+      publish_comment: Publish comment
+      comment_published: Comment published.
+      back_to_debrief: Back to Film Debrief
     curation_protection:
       badge: Protected Post
       badge_tooltip: A post that belongs to the community and cannot be deleted
@@ -92,7 +96,6 @@ en:
       title: Edit comment
       edit: Edit
       body: Your comment
-      guidance: Please avoid spoilers.
       save: Save changes
       saved: Comment saved.
     comment_deletion:
@@ -166,6 +169,7 @@ en:
           attributes:
             base:
               duplicate_references: Choose each reference film once.
+              opening_comment_too_long: "Each opening comment must be %{count} characters or fewer."
               unavailable_reference: Reference films must be eligible horror films in your Watched list.
               endorsement_film_required: Choose at least one film to endorse.
               repeated_endorsement_film: "Choose %{film} only once."

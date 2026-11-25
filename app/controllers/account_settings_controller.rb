@@ -1,13 +1,12 @@
 class AccountSettingsController < ApplicationController
   before_action :require_account_access
-  before_action :require_community_preview_access, only: [ :show_community, :change_community_username, :choose_community_avatar ]
 
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
   rate_limit to: 5, within: 3.minutes, by: -> { current_user.id }, store: RATE_LIMIT_STORE,
     only: [ :request_email, :change_password ],
     with: -> { redirect_to account_settings_path, alert: t("identity.settings.rate_limited"), status: :see_other }
 
-  rescue_from Identity::Errors::Unavailable, Community::Errors::MembershipRequired do
+  rescue_from Identity::Errors::Unavailable do
     head :forbidden
   end
 
@@ -69,7 +68,7 @@ class AccountSettingsController < ApplicationController
 
   def change_community_username
     community_username = params[:community_username]
-    community_profile.change_username(community_username: community_username.is_a?(String) ? community_username : nil)
+    settings.change_community_username(community_username: community_username.is_a?(String) ? community_username : nil)
     redirect_to account_community_path, notice: t("identity.settings.community_username.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     raise if error.record.errors[:community_username].empty?
@@ -80,7 +79,7 @@ class AccountSettingsController < ApplicationController
 
   def choose_community_avatar
     preset = params[:community_avatar_preset]
-    community_profile.choose_avatar(preset: preset.is_a?(String) ? preset : nil)
+    settings.choose_community_avatar(preset: preset.is_a?(String) ? preset : nil)
     redirect_to account_community_path, notice: t("identity.settings.community_avatar.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     raise if error.record.errors[:community_avatar_preset].empty?
@@ -96,10 +95,6 @@ class AccountSettingsController < ApplicationController
 
   private
 
-  def community_profile
-    Community::ManageMemberProfile.new(user_id: current_user.id)
-  end
-
   def settings
     Identity::AccountAdministration::ManageRegisteredAccount.new(user_id: current_user.id)
   end
@@ -108,10 +103,6 @@ class AccountSettingsController < ApplicationController
     response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
     head :forbidden unless current_user.can_view_account?
-  end
-
-  def require_community_preview_access
-    head :forbidden unless Community::PreviewAccess.allowed?(user: current_user)
   end
 
   def render_credential_errors(errors)

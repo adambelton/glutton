@@ -1,10 +1,10 @@
 module Community
   class CurationCommentsController < ApplicationController
-    before_action :require_preview_access
+    before_action :require_member_access
     rescue_from Errors::CommentChangeUnavailable, with: -> { head :forbidden }
 
     def edit
-      composer = ManageCurationComment.load_for_edit(curation_id: params[:curation_id], comment_id: params[:id], member: current_user)
+      composer = Discussions::ManageCurationComment.load_for_edit(curation_id: params[:curation_id], comment_id: params[:id], member: current_user)
       render_composer(composer)
     end
 
@@ -12,12 +12,12 @@ module Community
       body = params[:body]
       raise ActionController::BadRequest unless body.nil? || body.is_a?(String)
 
-      composer = ManageCurationComment.edit(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id, body:)
+      composer = Discussions::ManageCurationComment.edit(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id, body:)
       return render_composer(composer, status: :unprocessable_content) if composer.fetch(:content).errors.any?
 
       curation, comment = composer.values_at(:curation, :comment)
       if turbo_frame_request?
-        return render Views::Community::CurationCommentEdited.new(curation:, comment:, can_reply: PostingAccess.allowed?(user: current_user)),
+        return render Views::Community::DiscussionCommentEdited.new(routes: CurationDiscussionRoutes.new(curation:), comment:, can_reply: Membership::PostingAccess.allowed?(user: current_user)),
           content_type: Mime[:turbo_stream]
       end
 
@@ -26,12 +26,12 @@ module Community
     end
 
     def destroy
-      removal = ManageCurationComment.delete(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id)
+      removal = Discussions::ManageCurationComment.delete(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id)
       curation, film_id, selected_comment_id, nomination_visible = removal.values_at(:curation, :film_id, :selected_comment_id, :nomination_visible)
       if request.format.turbo_stream? && nomination_visible
-        discussion = CurationDiscussion.new(curation:, film_id:, selected_reply_id: selected_comment_id, expand_selected_branch: true)
+        discussion = Discussions::CurationDiscussion.new(curation:, film_id:, selected_reply_id: selected_comment_id, expand_selected_branch: true)
         return render Views::Community::CurationFilmDiscussionUpdate.new(curation:, film_id:, discussion:,
-          can_reply: PostingAccess.allowed?(user: current_user)), content_type: Mime[:turbo_stream]
+          can_reply: Membership::PostingAccess.allowed?(user: current_user)), content_type: Mime[:turbo_stream]
       end
 
       unless nomination_visible
@@ -45,13 +45,14 @@ module Community
 
     private
 
-    def require_preview_access
-      head :forbidden unless PreviewAccess.allowed?(user: current_user)
+    def require_member_access
+      head :forbidden unless Membership::Access.allowed?(user: current_user)
     end
 
     def render_composer(composer, status: :ok)
       component = if turbo_frame_request?
-        CurationCommentComposer.new(**composer, editing: true)
+        curation, comment, content = composer.values_at(:curation, :comment, :content)
+        DiscussionComposer.new(routes: CurationDiscussionRoutes.new(curation:), comment:, content:, editing: true)
       else
         Views::Community::EditCurationComment.new(**composer)
       end

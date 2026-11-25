@@ -1,10 +1,10 @@
 require "application_system_test_case"
 
 class CommunityConductAcceptanceTest < ApplicationSystemTestCase
-  test "a superuser can open Community after Library and accept from Account before choosing a username" do
+  test "a regular member can open Community after Library and accept from Account before choosing a username" do
     password = "a long test password"
     member = Identity::UserRegistered.create!(email_address: "conduct-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
+      password_confirmation: password, email_confirmed_at: Time.current)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: member.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
@@ -38,31 +38,15 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     within("header .ui-nav") { assert_link I18n.t("account.title"), href: account_settings_path }
     assert_no_selector "header .ui-auth-links"
 
-    visit community_path
+    original_size = page.current_window.size
+    page.current_window.resize_to(390, 950)
+    visit library_path
+    find("select.ui-primary-navigation").find("option", text: I18n.t("community.title"), exact_text: true).select_option
+    assert_current_path community_path
     assert_no_text I18n.t("community.conduct.accepted")
     assert_no_link I18n.t("community.conduct.read")
     assert_no_button I18n.t("community.conduct.accept")
-  end
-
-  test "a regular member can read the Coming soon tooltip on both locked entries" do
-    password = "a long test password"
-    member = Identity::UserRegistered.create!(email_address: "preview-locked-browser@example.test", password:,
-      password_confirmation: password, email_confirmed_at: Time.current)
-    visit new_session_path
-    fill_in I18n.t("identity.sessions.email"), with: member.email_address
-    fill_in I18n.t("identity.sessions.password"), with: password
-    click_button I18n.t("identity.sessions.sign_in")
-    locked_link = find(".ui-nav a[href='#{library_path}'] + [aria-describedby='community-nav-tooltip'][aria-disabled='true']")
-    assert_no_selector "#community-nav-tooltip"
-    locked_link.hover
-    assert_selector "#community-nav-tooltip[role=tooltip]", exact_text: I18n.t("community.coming_soon")
-    assert_no_link I18n.t("community.title")
-
-    within(".ui-nav") { click_link I18n.t("account.title") }
-    locked_tab = find(".account-tabs [aria-describedby='account-community-tooltip'][aria-disabled='true']")
-    assert_no_selector "#account-community-tooltip"
-    locked_tab.send_keys(:shift)
-    assert_selector "#account-community-tooltip[role=tooltip]", exact_text: I18n.t("community.coming_soon")
-    assert_current_path account_settings_path
+  ensure
+    page.current_window.resize_to(*original_size) if original_size.present?
   end
 end

@@ -1,6 +1,6 @@
 module Community
   class CurationsController < ApplicationController
-    before_action :require_preview_access
+    before_action :require_member_access
     rescue_from Errors::MembershipRequired, Identity::Errors::Unavailable, with: -> { head :forbidden }
     rescue_from Errors::CurationEditUnavailable, Errors::CurationDeletionUnavailable, with: -> { head :forbidden }
     rescue_from Errors::NominationUnavailable, with: -> { head :not_found }
@@ -8,14 +8,14 @@ module Community
       Library::Errors::FilmUnavailable, Library::Errors::AlreadyWatched, Library::Errors::NotOnWatchlist, with: :library_action_unavailable
 
     def new
-      return head :forbidden unless PostingAccess.allowed?(user: current_user)
+      return head :forbidden unless Membership::PostingAccess.allowed?(user: current_user)
 
       render_form(PostCommunityCuration.new)
     end
 
     def create
       title, prompt, reference_film_ids, reference_comments = publication_fields
-      curation = PublishCuration.call(author_id: current_user.id, title:, prompt:, reference_film_ids:, reference_comments:)
+      curation = Curations::PublishCuration.call(author_id: current_user.id, title:, prompt:, reference_film_ids:, reference_comments:)
       if curation.errors.any?
         return render_form(curation, reference_film_ids:, reference_comments:, status: :unprocessable_content)
       end
@@ -26,26 +26,28 @@ module Community
     end
 
     def show
-      details = BrowseCurations.detail(id: params[:id], viewer: current_user, selected_reply_id: params[:reply],
+      details = Curations::ReadCuration.call(id: params[:id], viewer: current_user, selected_reply_id: params[:reply],
         expand_selected_branch: params[:replies] == "1")
       render Views::Community::Curation.new(**details)
     end
 
     def discussion
-      page = BrowseCurationDiscussion.call(curation_id: params[:id], film_id: discussion_id(params[:film_id]),
+      page = Discussions::BrowseCurationDiscussion.call(curation_id: params[:id], film_id: discussion_id(params[:film_id]),
         parent_id: (discussion_id(params[:parent_id]) if params.key?(:parent_id)),
         after: (discussion_id(params[:after]) if params.key?(:after)), viewer: current_user)
-      render CurationCommentPage.new(**page), content_type: Mime[:html]
+      curation = page.delete(:curation)
+      routes = CurationDiscussionRoutes.new(curation:, film_id: page.fetch(:film_id))
+      render DiscussionCommentPage.new(routes:, **page), content_type: Mime[:html]
     end
 
     def edit
-      curation = EditCuration.load_for_edit(curation_id: params[:id], member: current_user)
+      curation = Curations::EditCuration.load_for_edit(curation_id: params[:id], member: current_user)
       render Views::Community::EditCuration.new(curation:)
     end
 
     def update
       title, prompt = text_fields(curation_fields)
-      curation = EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, prompt:)
+      curation = Curations::EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, prompt:)
       if curation.errors.any?
         return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content
       end
@@ -54,7 +56,7 @@ module Community
     end
 
     def destroy
-      DeleteCuration.call(curation_id: params[:id], member_id: current_user.id)
+      Curations::DeleteCuration.call(curation_id: params[:id], member_id: current_user.id)
       redirect_to community_path, notice: t("community.curation_deletion.deleted"), status: :see_other
     end
 
@@ -62,7 +64,7 @@ module Community
       description = curation_fields[:additional_description]
       raise ActionController::BadRequest unless description.is_a?(String)
 
-      curation = ManageCurationAuthorship.update_description(curation_id: params[:id], member_id: current_user.id,
+      curation = Curations::ManageCurationAuthorship.update_description(curation_id: params[:id], member_id: current_user.id,
         additional_description: description)
       return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content if curation.errors.any?
 
@@ -70,24 +72,24 @@ module Community
     end
 
     def disassociate
-      ManageCurationAuthorship.disassociate(curation_id: params[:id], member_id: current_user.id)
+      Curations::ManageCurationAuthorship.disassociate(curation_id: params[:id], member_id: current_user.id)
       redirect_to community_curation_path(params[:id]), notice: t("community.curation_protection.disassociated"), status: :see_other
     end
 
     def watchlist
-      ManageCurationFilmInLibrary.add_to_watchlist(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
+      Curations::ManageCurationFilmInLibrary.add_to_watchlist(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
       redirect_to community_curation_path(params[:id]), notice: t("library.detail.watchlisted"), status: :see_other
     end
 
     def watched
-      ManageCurationFilmInLibrary.mark_watched(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
+      Curations::ManageCurationFilmInLibrary.mark_watched(curation_id: params[:id], user_id: current_user.id, film_id: nominated_film_id)
       redirect_to community_curation_path(params[:id]), notice: t("library.detail.watched"), status: :see_other
     end
 
     private
 
-    def require_preview_access
-      head :forbidden unless PreviewAccess.allowed?(user: current_user)
+    def require_member_access
+      head :forbidden unless Membership::Access.allowed?(user: current_user)
     end
 
     def nominated_film_id
@@ -128,7 +130,7 @@ module Community
     end
 
     def render_form(curation, reference_film_ids: [], reference_comments: {}, status: :ok)
-      films = EligibleCurationFilms.new(member: current_user).choices
+      films = Curations::EligibleCurationFilms.new(member: current_user).choices
       render Views::Community::NewCuration.new(curation:, films:, reference_film_ids:, reference_comments:), status:
     end
   end

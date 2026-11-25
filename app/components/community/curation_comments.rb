@@ -1,7 +1,8 @@
 module Community
   class CurationComments < Shared::Base
     def initialize(curation:, film_id:, discussion:, can_reply:)
-      @curation, @film_id, @discussion, @can_reply = curation, film_id, discussion, can_reply
+      @film_id, @discussion, @can_reply = film_id, discussion, can_reply
+      @routes = CurationDiscussionRoutes.new(curation:, film_id:)
     end
 
     def view_template
@@ -23,9 +24,9 @@ module Community
           data: { community_film_comments_target: "film", action: "toggle->community-film-comments#toggle" }) do
           summary(id: "film-comment-count-#{@film_id}") { label }
           if open
-            render CurationCommentPage.new(curation: @curation, film_id: @film_id, parent_id: nil, discussion: @discussion, can_reply: @can_reply)
+            render DiscussionCommentPage.new(routes: @routes, film_id: @film_id, parent_id: nil, discussion: @discussion, can_reply: @can_reply)
           else
-            render CurationCommentLoader.new(curation: @curation, film_id: @film_id)
+            render DiscussionCommentLoader.new(routes: @routes)
           end
         end
       end
