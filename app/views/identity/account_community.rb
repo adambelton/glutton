@@ -43,8 +43,7 @@ module Views
       def username_form
         errors(@username_errors)
         form_with(url: account_community_username_path, method: :patch, class: "account-community-form",
-          data: { controller: "unchanged-form", action: "input->unchanged-form#update change->unchanged-form#update",
-            unchanged_form_field_value: "community_username", unchanged_form_saved_value: @community_username.to_s }) do
+          data: track_form_changes(baseline: { community_username: @community_username })) do
           field(name: "community_username", id: "community_username", label: t("identity.settings.community_username.label"),
             value: @form_username, required: true, autocomplete: "off", spellcheck: false, autofocus: @editing_username,
             data: { bwignore: "true", "1p-ignore": "true" },
@@ -80,8 +79,7 @@ module Views
       def avatar_form
         errors(@avatar_errors)
         form_with(url: account_community_avatar_path, method: :patch, class: "account-avatar-form",
-          data: { controller: "unchanged-form", action: "change->unchanged-form#update",
-            unchanged_form_field_value: "community_avatar_preset", unchanged_form_saved_value: @community_avatar_preset.to_s }) do
+          data: track_form_changes(baseline: { community_avatar_preset: @community_avatar_preset })) do
           fieldset do
             legend { t("identity.settings.community_avatar.choose") }
             div(class: "account-avatar-grid") do

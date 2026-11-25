@@ -12,13 +12,7 @@ module Views
       def view_template
         title = t("community.curation_endorsements.title", title: @curation.title)
         if @dialog
-          tag(:"turbo-frame", id: FRAME_ID) do
-            tag(:dialog, class: "ui-card community-endorsement-dialog", aria: { labelledby: "endorsement-editor-title" },
-              data: { endorsement_editor_target: "dialog" }) do
-              h2(id: "endorsement-editor-title") { title }
-              editor_form
-            end
-          end
+          render Shared::EditorDialog.new(frame_id: FRAME_ID, title:) { editor_form }
         else
           page(title:, narrow: true, back_to: community_curation_path(@curation), back_label: t("community.curations.back_to_curation")) do
             editor_form
@@ -35,7 +29,9 @@ module Views
             t("community.curation_endorsements.reload")
           end
         end
-        form_with(url: community_curation_endorsements_path(@curation), method: :patch) do
+        baseline = { "endorsements[film_ids][]" => @saved_film_ids }
+        form_with(url: community_curation_endorsements_path(@curation), method: :patch,
+          data: track_form_changes(baseline:, ignored: [ "endorsements[snapshot]" ])) do
           input(type: :hidden, name: "endorsements[snapshot]", value: @snapshot)
           render ::Community::CurationFilmPicker.new(films: @films, search_films: @search_films, selected_film_ids: @film_ids,
               comments: @comments, published_comments: @published_comments, saved_film_ids: @saved_film_ids,
@@ -43,8 +39,10 @@ module Views
             field_prefix: "curation_endorsements", film_ids_name: "endorsements[film_ids]", comments_name: "endorsements[comments]")
           div(class: "ui-actions ui-actions-fixed justify-end") do
             render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button",
-              data: { action: ("endorsement-editor#close:prevent" if @dialog) }) { t("community.curations.cancel") }
-            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("community.curation_endorsements.save") }
+              data: { action: ("editor-dialog#close:prevent" if @dialog) }) { t("community.curations.cancel") }
+            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button",
+              disabled: @film_ids.sort == @saved_film_ids.sort && @comments.values.none?(&:present?),
+              data: { unchanged_form_target: "save" }) { t("community.curation_endorsements.save") }
           end
         end
       end

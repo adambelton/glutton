@@ -7,29 +7,23 @@ module Community
 
     def view_template
       title_id = "curation-#{@curation.id}-title"
-      username = @curation.author.community_username.presence || t("community.curations.member")
       article do
         a(class: "community-curation-card", href: community_curation_path(@curation), aria: { labelledby: title_id }) do
-          div(class: "community-curation-card-content") do
-            div(class: "community-curation-card-heading") do
-              h2(id: title_id) { @curation.title }
-              render CurationTag.new
-            end
-            p(class: "muted community-curation-card-byline") { t("community.curations.authored_by", username:) }
+          div(class: "community-curation-card-heading") do
+            h2(id: title_id) { @curation.title }
+            render CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?)
           end
           div(class: "community-curation-card-posters") do
             @entry.poster_films.each { |film| render ::Registry::FilmPoster.new(film:, placeholder: :wordmark) }
           end
           footer(class: "community-curation-card-footer") do
             ul(class: "muted community-curation-card-counts") do
+              author_identity
               li { t("community.curations.films", count: @entry.film_count) }
               li { t("community.curations.endorsements", count: @entry.endorsement_count) }
               li { t("community.curations.comments", count: @entry.comment_count) }
             end
-            div(class: "muted community-curation-card-timestamps") do
-              timestamp(:updated, @curation.updated_at)
-              timestamp(:created, @curation.created_at)
-            end
+            updated_timestamp
           end
         end
       end
@@ -37,11 +31,24 @@ module Community
 
     private
 
-    def timestamp(label, value)
-      span do
-        plain t("community.curations.#{label}")
+    def author_identity
+      author = @curation.author
+      li(class: "community-curation-card-author") do
+        if author.present?
+          render MemberAvatar.new(member: author)
+          strong { author.community_username.presence || t("community.curations.member") }
+        else
+          plain t("community.curation_protection.unattributed")
+        end
+      end
+    end
+
+    def updated_timestamp
+      updated_at = @curation.updated_at
+      span(class: "muted community-curation-card-timestamp") do
+        plain t("community.curations.updated")
         plain " "
-        time(datetime: value.iso8601) { I18n.l(value, format: :community_curation_card) }
+        time(datetime: updated_at.iso8601) { I18n.l(updated_at, format: :community_curation_card) }
       end
     end
   end

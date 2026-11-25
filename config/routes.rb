@@ -19,6 +19,8 @@ Rails.application.routes.draw do
       post :watchlist, on: :member
       post :watched, on: :member
       get :discussion, on: :member
+      patch :additional_description, on: :member
+      patch :disassociate, on: :member
     end
   end
 

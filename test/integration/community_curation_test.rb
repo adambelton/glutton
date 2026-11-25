@@ -66,7 +66,12 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".ui-page-back-above + main.community-curation-page.ui-card"
     assert_select ".ui-page-back-above a[href=?]", community_path, text: I18n.t("community.curations.back")
     assert_select ".community-curation-prompt", "Stories that take their time."
-    assert_select ".community-post-tag", text: I18n.t("community.curations.tag"), count: 1
+    assert_select ".community-post-tag > span:first-child", text: I18n.t("community.curations.tag"), count: 1
+    assert_select ".community-post-tag > [role=tooltip]", text: I18n.t("community.curations.tag_tooltip")
+    assert_select ".community-post-tags + .community-curation-author", text: @author.community_username do
+      assert_select "img[src*=?][alt='']", "community-avatars/#{@author.community_avatar_preset}"
+    end
+    assert_select ".community-curation-author + .community-curation-descriptions", count: 1
     assert_select "h2.sr-only", I18n.t("community.curations.nominated_films")
     assert_select "ol.community-nominations > li" do |rows|
       assert_equal [ second.title, first.title ], rows.map { |row| row.at_css("h3").text }
@@ -85,19 +90,20 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "article span.community-curation-prompt", text: "The sense of dread builds slowly."
     assert_select "article strong", text: @author.community_username
     assert_select "article a", text: I18n.t("community.curations.reply")
-    assert_select "article button[disabled]", text: I18n.t("community.curations.report")
+    assert_select "article button[disabled]", text: "Report", count: 0
 
     sign_in(member("preview_reader", accepted: false, username: false, avatar: false))
     get community_path
     assert_select "a.community-curation-card[href=?]", community_curation_path(curation), count: 1 do |links|
       assert_select "h2[id=?]", links.first["aria-labelledby"], text: curation.title
       assert_select "p", text: curation.prompt, count: 0
-      assert_select ".community-curation-card-heading + .community-curation-card-byline", text: I18n.t("community.curations.authored_by", username: @author.community_username)
-      assert_select ".community-curation-card-heading .community-post-tag", text: I18n.t("community.curations.tag")
-      assert_select ".community-curation-card-timestamps > span", text: /\ACreated / do
-        assert_select "time[datetime=?]", curation.created_at.iso8601
+      assert_select "footer .community-curation-card-counts > li.community-curation-card-author:first-child", text: @author.community_username do
+        assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_avatar_preset}", text: @author.community_username
       end
-      assert_select ".community-curation-card-timestamps > span", text: /\AUpdated / do
+      assert_select ".community-curation-card-heading .community-post-tag > span:first-child", text: I18n.t("community.curations.tag")
+      assert_select ".community-curation-card-heading [role=tooltip], .community-curation-card-heading .community-post-tag[aria-describedby]", count: 0
+      assert_select "time", count: 1
+      assert_select ".community-curation-card-timestamp", text: /\AUpdated / do
         assert_select "time[datetime=?]", curation.updated_at.iso8601
       end
       assert_select "footer .community-curation-card-counts li", text: I18n.t("community.curations.films", count: 2)
@@ -105,7 +111,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       assert_select "footer .community-curation-card-counts li", text: I18n.t("community.curations.comments", count: 1)
       assert_select ".community-curation-card-posters .film-poster", count: 2
     end
-    assert_select ".community-post-tag", text: I18n.t("community.curations.tag"), count: 1
+    assert_select ".community-post-tag > span:first-child", text: I18n.t("community.curations.tag"), count: 1
     assert_select "a[href=?]", new_community_curation_path, count: 0
     get community_curation_path(curation)
     assert_response :success
@@ -272,7 +278,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_redirected_to community_path(q: query, page: 2)
   end
 
-  test "board cards expose timestamps and sort by the latest update" do
+  test "board cards show the latest update and sort by it" do
     created_at = Time.zone.local(2026, 11, 20, 9, 15)
     updated_at = Time.zone.local(2026, 11, 23, 14, 30)
     earlier_post = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn horror", prompt: "Films for this theme.",
@@ -285,11 +291,11 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".community-curation-card h2" do |titles|
       assert_equal [ earlier_post.title, newer_post.title ], titles.map(&:text)
     end
-    assert_select ".community-curation-list > li:first-child .community-curation-card-timestamps > span", text: /\ACreated / do
-      assert_select "time[datetime=?]", created_at.iso8601, text: I18n.l(created_at, format: :community_curation_card)
-    end
-    assert_select ".community-curation-list > li:first-child .community-curation-card-timestamps > span:first-child", text: /\AUpdated / do
-      assert_select "time[datetime=?]", updated_at.iso8601, text: I18n.l(updated_at, format: :community_curation_card)
+    assert_select ".community-curation-list > li:first-child" do
+      assert_select "time", count: 1
+      assert_select ".community-curation-card-timestamp", text: /\AUpdated / do
+        assert_select "time[datetime=?]", updated_at.iso8601, text: I18n.l(updated_at, format: :community_curation_card)
+      end
     end
   end
 
@@ -466,6 +472,43 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   end
 
   %i[closure replay].each do |path|
+    test "account #{path} preserves protected posts authored by the departing member" do
+      curation, root = curation_with_comment
+      reference = root.film_endorsement.film
+      reader = protect_with_endorsements(curation, reference).first
+      reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+        body: "A reply from another member.").fetch(:reply).comment
+      Community::ManageCurationAuthorship.update_description(curation_id: curation.id, member_id: @author.id,
+        additional_description: "An additional description that stays.")
+      unprotected = publish_with
+      client = Aws::S3::Client.new(region: "auto", stub_responses: true)
+      log = Identity::AccountAdministration::DeletionLog.new(client:, bucket: "fixture", namespace: "recovery")
+
+      if path == :closure
+        Identity::AccountAdministration::ManageRegisteredAccount.new(user_id: @author.id).close_account(deletion_log: log)
+      else
+        replay_id = @author.deletion_replay_id
+        key = "account-deletions/v1/recovery/#{replay_id}.json"
+        client.stub_responses(:list_objects_v2, contents: [ { key: } ])
+        client.stub_responses(:get_object, body: JSON.generate(account_id: replay_id, recorded_at: Time.current.iso8601))
+        replay = Identity::AccountAdministration::ReplayAccountDeletions.new(deletion_log: log)
+        assert_equal 1, replay.call
+        assert_equal 0, replay.call
+      end
+
+      assert_not Community::Post.exists?(unprotected.id)
+      assert curation.reload.protected?
+      assert_nil curation.author
+      assert_nil root.reload.content
+      assert_equal 3, curation.film_endorsements.active.count
+      assert_equal "An additional description that stays.", curation.additional_description
+      sign_in(reader)
+      get community_curation_path(curation, reply: reply.id)
+      assert_select "p.community-curation-prompt", text: "Set in small communities."
+      assert_select "#comment-#{root.id}", text: I18n.t("community.curation_replies.removed")
+      assert_select "#comment-#{reply.id}", text: /A reply from another member/
+    end
+
     test "account #{path} preserves other members' replies on a surviving curation" do
       curation = publish_with
       nominated = film("Woodland apparitions")
@@ -683,9 +726,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", edit_community_curation_path(curation), text: I18n.t("community.curation_editing.edit_post")
     get edit_community_curation_path(curation)
     assert_response :success
-    assert_select ".ui-page-back-above + main.community-curation-form"
-    assert_select ".ui-page-back-above a[href=?]", path, text: I18n.t("community.curations.back_to_curation")
-    assert_select "main form a[href=?]", path, count: 0
+    assert_select "main.community-curation-form"
+    assert_select ".ui-page-back-above", count: 0
+    assert_select "main form .ui-actions-fixed a[href=?]", path, text: I18n.t("community.curations.cancel")
     assert_select "#curation_title[value=?]", saved_title
     assert_select "#curation_prompt", text: saved_prompt
     assert_select ".community-reference-picker", count: 0
@@ -694,7 +737,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
     assert_select "ul.ui-errors li"
     assert_select "#curation_prompt", text: "Keep this draft."
-    assert_select ".ui-page-back-above a[href=?]", path, text: I18n.t("community.curations.back_to_curation")
+    assert_select "main form .ui-actions-fixed a[href=?]", path, text: I18n.t("community.curations.cancel")
     curation.reload
     assert_equal [ saved_title, saved_prompt ], [ curation.title, curation.prompt ]
 
@@ -736,6 +779,143 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       delete path, params: { authenticity_token: token }
     end
     assert_response :forbidden
+  end
+
+  test "three distinct other endorsers permanently protect a curation and invalidate open author forms" do
+    reference = film("The shared reference")
+    second_film = film("A second nomination")
+    curation = publish_with(reference)
+    path = community_curation_path(curation)
+    sign_in(@author)
+    get edit_community_curation_path(curation)
+    edit_token = curation_action_token(path)
+    get path
+    delete_token = curation_action_token(path)
+
+    first, second, third = %w[first_endorser second_endorser third_endorser].map { |name| member(name) }
+    watch(first, second_film)
+    [ first, second ].each { |reader| watch(reader, reference) }
+    save_endorsements(curation, member: first, film_ids: [ reference.id, second_film.id ])
+    save_endorsements(curation, member: second, film_ids: [ reference.id ])
+    assert_not curation.reload.protected?
+
+    watch(third, reference)
+    save_endorsements(curation, member: third, film_ids: [ reference.id ])
+    assert curation.reload.protected?
+    save_endorsements(curation, member: third, film_ids: [])
+    assert curation.reload.protected?
+
+    patch path, params: { authenticity_token: edit_token, curation: { title: "Changed title", prompt: "Changed description" } }
+    assert_response :forbidden
+    delete path, params: { authenticity_token: delete_token }
+    assert_response :forbidden
+    assert_equal "Slow-burn horror", curation.reload.title
+
+    get path
+    assert_select "a[href=?]:not([data-turbo-frame])", edit_community_curation_path(curation)
+    assert_select "dialog[aria-labelledby=delete-curation-title]", count: 0
+    assert_select ".community-post-tag + .community-post-tag" do
+      assert_select "span:first-child", text: I18n.t("community.curation_protection.badge")
+      assert_select "[role=tooltip]", text: I18n.t("community.curation_protection.badge_tooltip")
+    end
+  end
+
+  test "five visible comments from at least two other members protect a curation" do
+    curation, root = curation_with_comment
+    first = member("first_commenter")
+    second = member("second_commenter")
+    Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: @author.id, body: "An author reply.")
+    4.times do |index|
+      Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: first.id, body: "Reply #{index + 1}.")
+    end
+    assert_not curation.reload.protected?
+    removed = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: first.id,
+      body: "Fifth reply from the same reader.").fetch(:reply).comment
+    assert_not curation.reload.protected?
+    Community::ManageCurationComment.delete(curation_id: curation.id, comment_id: removed.id, member_id: first.id)
+    Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: second.id, body: "Fifth visible reply.")
+    assert curation.reload.protected?
+  end
+
+  test "the single additional description is editable only by the protected post's author and survives disassociation" do
+    curation, root = curation_with_comment
+    reference = root.film_endorsement.film
+    update_path = additional_description_community_curation_path(curation)
+    disassociate_path = disassociate_community_curation_path(curation)
+
+    sign_in(@author)
+    get community_curation_path(curation)
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+    patch update_path, params: { authenticity_token: token, curation: { additional_description: "Before protection." } }
+    assert_response :forbidden
+    protect_with_endorsements(curation, reference)
+
+    sign_in(member("other_update_reader"))
+    get community_curation_path(curation)
+    token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
+    patch update_path, params: { authenticity_token: token, curation: { additional_description: "Unauthorized update." } }
+    assert_response :forbidden
+    patch disassociate_path, params: { authenticity_token: token }
+    assert_response :forbidden
+
+    sign_in(@author)
+    get edit_community_curation_path(curation)
+    assert_select "main.community-curation-form form .ui-actions-fixed a[href=?]", community_curation_path(curation),
+      text: I18n.t("community.curations.cancel")
+    assert_select "dl dt", text: "Protected title"
+    assert_select "dl dt", text: "Protected description"
+    assert_select "dl dd span", text: curation.title
+    assert_select "dl dd span", text: curation.prompt
+    assert_select "input[name^=curation], textarea[name^=curation]:not(#curation_additional_description)", count: 0
+    update_token = curation_action_token(update_path)
+    patch update_path, params: { authenticity_token: update_token,
+      curation: { additional_description: "x" * (Community::PostCommunityCuration::PROMPT_LIMIT + 1) } }
+    assert_response :unprocessable_content
+    assert_nil curation.reload.additional_description
+    [ "First description.", "Revised description." ].each do |description|
+      get edit_community_curation_path(curation)
+      update_token = curation_action_token(update_path)
+      patch update_path, params: { authenticity_token: update_token, curation: { additional_description: description } }
+      assert_redirected_to community_curation_path(curation)
+    end
+    follow_redirect!
+    assert_select "p.community-curation-prompt", text: "Set in small communities."
+    assert_select ".community-curation-author", text: @author.community_username
+    assert_select "p.community-curation-prompt + section[aria-labelledby=curation-additional-description]", count: 1 do
+      assert_select "h2", text: "EDIT:"
+      assert_select "p", text: "Revised description."
+    end
+    assert_select "p.community-curation-prompt", text: "First description.", count: 0
+    get edit_community_curation_path(curation)
+    assert_select "#curation_additional_description", text: "Revised description."
+    update_token = curation_action_token(update_path)
+    patch update_path, params: { authenticity_token: update_token, curation: { additional_description: " " } }
+    assert_redirected_to community_curation_path(curation)
+    follow_redirect!
+    assert_select "section[aria-labelledby=curation-additional-description]", count: 0
+    assert_nil curation.reload.additional_description
+    get edit_community_curation_path(curation)
+    update_token = curation_action_token(update_path)
+    patch update_path, params: { authenticity_token: update_token, curation: { additional_description: "Description that stays." } }
+    assert_redirected_to community_curation_path(curation)
+    follow_redirect!
+    patch disassociate_path, params: { authenticity_token: curation_action_token(disassociate_path) }
+    assert_redirected_to community_curation_path(curation)
+    assert_nil curation.reload.author
+    assert curation.film_endorsements.active.exists?(user: @author, film: reference)
+    assert_equal "A quiet setting.", root.reload.content.body
+    follow_redirect!
+    assert_select "section[aria-labelledby=curation-additional-description] p", text: "Description that stays."
+    assert_select ".community-curation-author", count: 0
+    assert_select "a[href=?]", edit_community_curation_path(curation), count: 0
+    patch update_path, params: { authenticity_token: update_token, curation: { additional_description: "Stale description." } }
+    assert_response :forbidden
+    get community_path
+    assert_select "footer .community-curation-card-author", text: I18n.t("community.curation_protection.unattributed") do
+      assert_select "img", count: 0
+    end
+    assert_select ".community-post-tag + .community-post-tag", text: I18n.t("community.curation_protection.badge")
+    assert_select ".community-post-tags [role=tooltip]", count: 0
   end
 
   test "an author can delete a curation and its contributions without changing Library or Registry" do
@@ -1340,6 +1520,15 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     snapshot = Community::EditCurationEndorsements.load_for_edit(curation_id: curation.id, member:).fetch(:snapshot)
     result = Community::EditCurationEndorsements.call(curation_id: curation.id, member_id: member.id, film_ids:, comments:, snapshot:)
     assert_empty result.fetch(:curation).errors
+  end
+
+  def protect_with_endorsements(curation, reference)
+    %w[first_protecting_member second_protecting_member third_protecting_member].map do |name|
+      reader = member(name)
+      watch(reader, reference)
+      save_endorsements(curation, member: reader, film_ids: [ reference.id ])
+      reader
+    end
   end
 
   def curation_action_token(path)

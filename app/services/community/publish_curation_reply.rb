@@ -16,6 +16,7 @@ module Community
         curation = PostCommunityCuration.lock.find(curation_id)
         parent = find_parent(curation:, comment_id:)
         reply = parent.publish_reply(author: member, body:)
+        curation.protect_from_contributions! if reply.persisted?
         { curation:, parent:, reply: }
       end
     end

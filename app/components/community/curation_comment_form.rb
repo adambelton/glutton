@@ -15,7 +15,7 @@ module Community
         if @inline && @mode != :edit
           div(class: "community-comment-thread") do
             div(class: "community-comment") do
-              render CommentAvatar.new(member: current_user)
+              render MemberAvatar.new(member: current_user)
               div(class: "community-comment-content") { editor_form }
             end
           end
@@ -31,7 +31,7 @@ module Community
       label, submit_label, guidance = COPY.fetch(@mode)
       form_with(url: @path, method: (@mode == :edit ? :patch : :post),
         class: [ "community-comment-composer", ("community-comment-editor" if inline_edit?) ],
-        data: { controller: "community-comment-composer", turbo_frame: ("_top" unless @inline), comment_composer_trigger: @mode.to_s }) do
+        data: editor_form_data) do
         errors(@content.errors.full_messages)
         input_id = "#{@frame_id}-body"
         guidance_id = "#{@frame_id}-guidance" unless inline_edit?
@@ -53,13 +53,21 @@ module Community
       end
     end
 
+    def editor_form_data
+      data = { controller: "community-comment-composer", turbo_frame: ("_top" unless @inline), comment_composer_trigger: @mode.to_s }
+      return data unless @mode == :edit
+
+      track_form_changes(baseline: { body: @content.attribute_in_database(:body) }, **data)
+    end
+
     def editor_actions(submit_label)
       div(class: "ui-actions ui-actions-fixed justify-end") do
         render RubyUI::Link.new(href: @cancel_path, variant: :ghost, class: "ui-action-button",
           data: { turbo_frame: "_top", action: "community-comment-composer#cancel" }) do
           t("community.curations.cancel")
         end
-        render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { submit_label }
+        render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button", disabled: (@mode == :edit && !@content.will_save_change_to_body?),
+          data: ({ unchanged_form_target: "save" } if @mode == :edit)) { submit_label }
       end
     end
 
