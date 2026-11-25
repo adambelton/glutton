@@ -1,0 +1,60 @@
+module Community
+  class FilmDebriefCard < Shared::Base
+    def initialize(entry:, can_post:)
+      @film, @debrief, @can_post = entry.film, entry.debrief, can_post
+      @comment_count = entry.comment_count
+    end
+
+    def view_template
+      @title_id = "film-debrief-#{@film.id}-title"
+      if @debrief.present?
+        article do
+          a(class: "community-film-debrief-card", href: community_film_debrief_path(@film), aria: { labelledby: @title_id }) do
+            film_details
+          end
+        end
+      else
+        article(class: "community-film-debrief-card", aria: { labelledby: @title_id }) do
+          film_details
+        end
+      end
+    end
+
+    private
+
+    def film_details
+      div(class: "community-post-card-artwork") do
+        render ::Registry::FilmPoster.new(film: @film, placeholder: :wordmark)
+      end
+      div(class: "community-post-card-details") do
+        div(class: "community-post-card-heading") do
+          h2(id: @title_id) { render ::Registry::FilmTitle.new(film: @film) }
+          if @debrief.present?
+            render PostBadge.new(label: t("community.film_debriefs.badge"))
+          elsif @can_post
+            create_action
+          end
+        end
+        post_metadata if @debrief.present?
+      end
+    end
+
+    def post_metadata
+      footer(class: "muted community-post-card-footer") do
+        p { t("community.curations.comments", count: @comment_count) }
+        div(class: "community-film-debrief-card-author") do
+          span(class: "community-member-avatar community-glutton-avatar", aria: { hidden: true })
+          strong { t("ui.wordmark") }
+        end
+      end
+    end
+
+    def create_action
+      form_with(url: community_film_debrief_path(@film), local: true, class: "community-film-debrief-create") do
+        render RubyUI::Button.new(type: :submit, variant: :primary, size: :lg, class: "ui-action-button h-auto max-w-full whitespace-normal") do
+          t("community.film_debriefs.create")
+        end
+      end
+    end
+  end
+end

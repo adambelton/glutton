@@ -13,7 +13,7 @@ A curation gives horror fans a lasting way to discover films through a theme or 
 
 ## Community posts
 
-Eligible members create **Community Curation** posts for themed film lists. Glutton creates **Film Debrief** posts on demand for watched-film conversations. The preferred direction is a shared Community board, with ordering, filtering and visibility of locked Debriefs to decide when Film Debrief is scoped.
+Eligible members create **Community Curation** posts for themed film lists. Glutton creates **Film Debrief** posts on demand for watched-film conversations. Published posts share a Community board, ordered by latest update. Debriefs appear only for films the viewer has marked Watched.
 
 ## What makes a curation useful
 
@@ -98,7 +98,7 @@ At launch, requesters can share feedback by editing an open unprotected request 
 
 Members unlock a Film Debrief’s discussion content by marking the film Watched. They can reflect privately before joining the conversation or use the conversation to develop their own reaction before writing private notes.
 
-Each film has at most one long-lived Film Debrief post. Its conversation forms a lasting record of how members experienced the film. Glutton creates it on demand when the first top-level comment is posted and supplies an introduction that names the film and invites spoiler-friendly discussion. Within that film thread, members can add multiple top-level comments, each with branching replies. The feature can reuse the comment structure and moderation from Community Curation. Whether to show that a discussion exists before a member unlocks it remains open.
+Each film has at most one long-lived Film Debrief post. Eligible members open it with **Create Film Debrief** on the film's placeholder in Community search. Glutton supplies an introduction that names the film and invites spoiler-friendly discussion. The discussion follow-up adds top-level comments and branching replies using the comment structure from Community Curation.
 
 ### Experiential context
 
@@ -141,7 +141,7 @@ Horror discussion should permit disturbing themes, interpretation and disagreeme
 
 Build **Community Curation** first. Look at whether members start new lists with films they know and discover other films through existing curations. Look for relevant nominations, comments that explain why films fit, and repeat participation. Ask members whether they acted on nominations and found films they valued. If selection and outcomes are added later, look for requesters who watch a suggested film and return to share their experience.
 
-Add **Film Debrief** next. Scope film search to surface the debrief and the curations that include a film. Observe what members discuss before considering other uses for their contributions.
+Add **Film Debrief** creation and board search together, then add discussion. Observe what members discuss before considering other uses for their contributions.
 
 Future work can explore richer personal Library context and Classic promotion and discovery. Following, likes, karma and a wider social feed are outside the launch scope.
 

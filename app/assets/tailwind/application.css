@@ -629,42 +629,73 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-conduct-consent { display: flex; align-items: baseline; gap: 8px; margin-block: 8px 16px; }
 .community-conduct-consent input { flex: none; }
 .community-conduct-text { display: grid; gap: 12px; margin-block: 12px; }
+.community-curation-page > .ui-page-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.community-curation-page > .ui-page-heading > h1 { overflow-wrap: anywhere; }
+.community-curation-author-actions { flex-wrap: nowrap; }
+.community-curation-author-actions > :is(.ui-action-button, [data-controller~="confirmation-dialog"]) { min-inline-size: 0; }
+.community-curation-author-actions > .ui-action-button,
+.community-curation-author-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { max-inline-size: 100%; white-space: nowrap; }
+.community-curation-protected-actions > [data-controller~="confirmation-dialog"] { flex-shrink: 0; }
+.community-curation-protected-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { inline-size: max-content; min-inline-size: 132px; }
+@media (max-width: 650px) {
+  .community-curation-page > .ui-page-heading { grid-template-columns: minmax(0, 1fr); }
+  .community-curation-author-actions { justify-self: end; max-inline-size: 100%; }
+}
+@media (max-width: 380px) {
+  .community-curation-author-actions > .ui-action-button,
+  .community-curation-author-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { padding-inline: 6px; }
+}
 .community-post-tags { position: relative; }
 .community-post-tag { display: inline-block; padding: 2px 8px; border: 1px solid var(--glutton-border); border-radius: 4px; font-size: 0.875rem; }
 .community-post-tag[aria-describedby] { cursor: help; }
 .community-post-tag [role="tooltip"] { inset-inline: 0 auto; inline-size: max-content; max-inline-size: min(16rem, 100%); white-space: normal; }
 .community-post-tag:hover [role="tooltip"],
 .community-post-tags:not(:has(.community-post-tag:hover)) .community-post-tag:focus-visible [role="tooltip"] { visibility: visible; }
-.community-curation-list { display: grid; gap: 12px; margin-block: 8px; }
+.community-post-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 8px; }
+.community-post-grid > li > article { height: 100%; }
 .ui-page .community-board-search { width: min(100%, 480px); margin-block: 0; margin-inline-start: auto; }
 @media (max-width: 650px) {
   .ui-page .community-board-search { width: 100%; }
+  .community-board-actions > .ui-action-button { width: 100%; }
 }
-.community-curation-card { display: grid; grid-template-columns: minmax(0, 1fr) calc(100% / 3); align-items: start; gap: 4px 12px; padding: 8px 12px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-inset); }
-.community-curation-card:hover { border-color: var(--glutton-primary); }
-.ui-page .community-curation-card-heading h2 { margin-block: 0; font-size: 1.125rem; font-weight: 600; }
-.community-curation-card-heading, .community-curation-card-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-.community-curation-card-heading { align-items: end; }
-.community-curation-card-counts { align-items: center; }
-.community-curation-card-author { display: flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
-.community-curation-card-author .community-member-avatar { width: 20px; height: 20px; }
-.community-curation-card-posters { --poster-width: 48px; --poster-gap: 8px; --poster-slots: 5; display: flex; justify-content: flex-end; gap: var(--poster-gap); }
-.community-curation-card-posters .film-poster { flex: none; width: min(var(--poster-width), calc((100% - var(--poster-gap) * (var(--poster-slots) - 1)) / var(--poster-slots))); box-shadow: none; }
-.community-curation-card-posters .poster-placeholder { min-width: 0; padding: 0; font-size: 1.125rem; }
-.community-curation-card-footer { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
-.community-curation-card-timestamp { margin-inline-start: auto; text-align: end; font-variant-numeric: tabular-nums; }
+:is(.community-curation-card, .community-film-debrief-card) { display: grid; grid-template-columns: clamp(60px, 22%, 88px) minmax(0, 1fr); align-items: center; min-block-size: 100%; gap: 12px; padding: 8px 12px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-inset); }
+.community-post-card-artwork { aspect-ratio: 2 / 3; }
+.community-post-card-artwork > .film-poster { box-shadow: none; }
+.community-post-card-details { container-type: inline-size; display: grid; align-content: space-between; align-self: stretch; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+:is(.community-curation-card, a.community-film-debrief-card):hover { border-color: var(--glutton-primary); }
+.community-post-card-heading { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 4px; }
+.ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.125rem; font-weight: 600; }
+.community-post-card-heading .community-post-tags { max-inline-size: 100%; flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
+.community-post-card-heading .community-post-tag { min-inline-size: 0; padding-inline: clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.625rem, 4cqi, 0.875rem); white-space: nowrap; }
+.community-curation-card-counts { display: flex; align-items: center; gap: clamp(3px, 2cqi, 8px); font-size: clamp(0.625rem, 4cqi, 0.75rem); white-space: nowrap; }
+.community-curation-card-counts > li { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
+.ui-page .community-film-debrief-create { max-width: 100%; margin: 0; }
+:is(.community-curation-card-author, .community-film-debrief-card-author) { display: flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.community-post-card-footer .community-member-avatar { width: 20px; height: 20px; }
+.community-glutton-avatar { background: currentColor; mask: url("/glutton-mark.svg") center / cover no-repeat; }
+.community-curation-card-posters { display: grid; grid-template: repeat(9, minmax(0, 1fr)) / repeat(9, minmax(0, 1fr)); gap: 1px; }
+.community-curation-card-posters > .film-poster { grid-area: span 3 / span 3; width: 100%; height: 100%; aspect-ratio: auto; }
+.community-curation-card-posters > .poster-placeholder { min-width: 0; padding: 0; font-size: 1rem; }
+.community-curation-card-posters[data-poster-count="1"] > .film-poster { grid-area: 2 / 2 / span 7 / span 7; }
+.community-curation-card-posters:is([data-poster-count="2"], [data-poster-count="3"]) > :first-child { grid-area: 1 / 2 / span 6 / span 6; }
+.community-curation-card-posters:is([data-poster-count="2"], [data-poster-count="3"]) > :nth-child(2) { grid-area: 7 / 2 / span 3 / span 3; }
+.community-curation-card-posters[data-poster-count="3"] > :nth-child(3) { grid-area: 7 / 5 / span 3 / span 3; }
+.community-curation-card-posters[data-poster-count="4"] > .film-poster { grid-area: span 4 / span 4; }
+.community-curation-card-posters[data-poster-count="5"] > :first-child { grid-area: 1 / 1 / span 6 / span 6; }
+.community-post-card-footer { display: grid; gap: 4px; }
 @media (max-width: 800px) {
-  .community-curation-card-posters { --poster-width: 44px; --poster-slots: 3; }
-  .community-curation-card-posters > :nth-child(n+4) { display: none; }
+  .community-post-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
-  .community-curation-card { padding-inline: 10px; }
-  .community-curation-card-posters { --poster-width: 36px; --poster-gap: 4px; --poster-slots: 2; }
-  .community-curation-card-posters > :nth-child(n+3) { display: none; }
+  :is(.community-curation-card, .community-film-debrief-card) { padding-inline: 10px; }
 }
-@media (max-width: 360px) {
-  .community-curation-card-posters { --poster-slots: 1; }
-  .community-curation-card-posters > :nth-child(n+2) { display: none; }
+@media (max-width: 380px) {
+  .community-board-page > .ui-page-body.ui-card { padding-inline: 0; border-inline-width: 0; }
+  .community-post-grid :is(.community-curation-card, .community-film-debrief-card) {
+    grid-template-columns: clamp(48px, calc(20vw - 16px), 60px) minmax(0, 1fr);
+    column-gap: 8px;
+    padding-inline: 8px;
+  }
 }
 .community-nominations { margin-block: 12px 24px; }
 .community-nominations-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }

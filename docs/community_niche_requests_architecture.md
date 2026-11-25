@@ -62,20 +62,20 @@ Show both icons beneath each poster. Use the primary colour for the viewer’s c
 
 The board supports Community Curation and Film Debrief. Eligible members create curations. Glutton creates a long-lived Film Debrief post for each film on demand. A future Classic designation would keep a curation permanently open to participation. Scope Classic promotion and its lifecycle rules separately from the Community Curation launch. See the [community discovery brief](glutton-community-discovery.md).
 
-The initial board shows curations. The preferred direction is one board that shows curations and film debriefs together. When scoping Film Debrief, decide how to order and filter the mixed list and whether to show spoiler-safe entries to members who have yet to mark the film Watched. Apply each post’s access and participation rules to board reads and direct routes.
+The unfiltered board shows published curations and Film Debriefs together, ordered by latest update. Film Debriefs are visible on the board and at their direct URLs only for films marked Watched in the viewer’s Library. Apply each post’s access and participation rules to board reads and direct routes.
 
-The curation board lists compact full-width cards by most recent update. Each card links to its post and shows its badges as plain labels. The author's avatar and username lead the film, endorsement and comment counts at the bottom left, opposite the Updated timestamp. The leading films align to the right of a strip that reserves one third of the card's inner width, with five poster slots on desktop and fewer on narrow screens.
+The Community board uses a paginated two-column grid of cards that stack on narrow screens. Published cards link to their posts. Both card types have a poster-shaped artwork slot on the left. The right column starts with a single-line title that truncates with an ellipsis. Published cards show badges on the next line. Eligible viewers see a creation button on that line in a debrief placeholder. Debriefs and their placeholders show a single poster. Curations arrange up to five film posters on a 9×9 grid within the same slot. Curation cards show film, endorsement and comment counts above the author. Published Film Debriefs show a comment count above a Glutton identity marker. Glutton has no member account for that marker.
 
 A request post stores its author, title and description. Store comment structure in `comments` and the body and author in `comment_contents`. Removing content can preserve a comment’s structure and replies. Each reply references its post, immediate parent and root comment. The root comment anchors one conversation within the post. The shared discussion capability handles ancestry, bounded reads, comment removal and moderation.
 
 Use single-table inheritance from launch. `Community::Post` is the shared base for the `posts` table and owns the comment relationship. Comments reference that shared table. Follow Identity’s naming convention with the base name first and the concrete role after it.
 
 - `Community::PostCommunityCuration` stores the member’s title and prompt and links any canonical reference films. It owns curation lifecycle and access rules.
-- **Film Debrief** adds `Community::PostFilmDebrief` later, with at most one system-created post per canonical film. Create it on demand with the first root comment. Render the introductory copy from the canonical film title and Rails locale strings. Deleting a member’s comment preserves the film post and replies. Members with a Watched entry for the film can read its contents and create multiple root comments and branching replies. The Watched rule applies to both post replies and comment replies.
+- `Community::PostFilmDebrief` is a system-owned post, with at most one per canonical film. An eligible member opens it from a search placeholder. The thread opens directly and renders its introduction from the canonical film title and locale copy. The discussion follow-up will let eligible members add top-level comments and branching replies. The Watched rule applies to both. Deleting a member’s comment will preserve the film post and surviving replies.
 
 On each read or write, resolve the owning post and apply its access and lifecycle rules before rendering or changing comments. Shared operations enforce thread ancestry, authorship and comment deletion. The owning workflow supplies eligibility and coordinates writes against current state. This applies to direct requests and Turbo updates as well as navigation from a post.
 
-Build the shared mechanics needed by endorsement threads in the first release. Add Film Debrief routes, storage for the unique film association, and its Watched policy when that feature is scoped.
+Film Debrief creation uses a unique film association and checks the existing Community posting rules and Watched status. The shared comment storage and reply ancestry rules also apply when Film Debrief discussion is added.
 
 ### Community Curation behaviour
 
@@ -85,7 +85,7 @@ Community Curation uses Film Endorsements to enforce participation rules and sup
 
 The board filter matches a visible curation's title, description or any canonical film title in its Nominated Films list. Curation matches include films outside the viewer's Library. One curation appears once even if several of its films match.
 
-When Film Debriefs are available, show the debrief cards before the curation results. The debrief group includes only matching films in the viewer's Watched collection. A film without a thread gets a placeholder with **Create film debrief**, which opens the first-comment composer. The thread is created only when the first comment is published. Settle ordering within the debrief group, mixed-result pagination and archive visibility with that search slice.
+During active search, show matching Watched films without a thread first, ordered by film title. Each placeholder offers eligible members a **Create Film Debrief** action. Matching published debriefs follow, then matching curations. Each group of published posts sorts by latest update. Paginate the combined list at ten results per page.
 
 ## Personal match and privacy
 
@@ -163,7 +163,7 @@ Implement Community Curation and its comment layer in the existing Rails and Pos
 
 When implementing posting, use Community’s current-version acceptance check and the Identity-owned profile. Verify that each missing prerequisite blocks posting through ordinary controls and direct submissions, and that members can post when all prerequisites are met.
 
-Scope Film Debrief and film-based Community search as separate Community tasks. Verify that searching by film finds the accessible debrief and every visible curation where that film appears, including curations that list it as a reference.
+Create and browse Film Debriefs through the Community board and film search. Verify that searching by film finds the accessible debrief and every visible curation where that film appears, including curations that list it as a reference. Scope Film Debrief comments separately.
 
 Scope the nominated-film Library shortcuts as a separate Community integration using Library’s existing commands. Verify both actions through a request, including for its requester and a member who has yet to complete onboarding. Verify that a Library action leaves endorsement counts and request activity intact. Any required change to a Library action belongs in a Library task.
 

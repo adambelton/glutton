@@ -56,7 +56,8 @@ module Views
       end
 
       def author_actions
-        div(class: "ui-actions ui-actions-fixed community-curation-author-actions justify-end") do
+        div(class: [ "ui-actions ui-actions-fixed community-curation-author-actions justify-end",
+          ("community-curation-protected-actions" if @can_disassociate) ]) do
           edit_action if @can_edit
           delete_action if @can_delete
           disassociate_action if @can_disassociate

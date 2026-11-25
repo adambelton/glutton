@@ -96,6 +96,23 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
 
     disassociate = I18n.t("community.curation_protection.disassociate")
+    within ".community-curation-author-actions" do
+      edit = find_link(edit_post)
+      remove_attribution = find_button(disassociate)
+      desktop_font_size = remove_attribution.style("font-size").fetch("font-size")
+      original_size = page.current_window.size
+      begin
+        page.current_window.resize_to(320, 900)
+        assert_equal desktop_font_size, remove_attribution.style("font-size").fetch("font-size")
+        assert_equal edit.rect.y, remove_attribution.rect.y
+        assert_operator edit.rect.x + edit.rect.width, :<=, remove_attribution.rect.x
+        [ edit, remove_attribution ].each do |action|
+          assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
+        end
+      ensure
+        page.current_window.resize_to(*original_size)
+      end
+    end
     click_button disassociate
     within "dialog[open]" do
       click_button I18n.t("community.curations.cancel")
@@ -117,6 +134,21 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       protected_badge.hover
       assert_no_selector "[role=tooltip]", visible: :all
       assert_equal "pointer", protected_badge.style("cursor").fetch("cursor")
+      desktop_badge_size = protected_badge.style("font-size").fetch("font-size").to_f
+      browser = page.driver.browser
+      begin
+        browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+        curation_badge = find(".community-post-tag", text: I18n.t("community.curations.tag"))
+        assert_operator protected_badge.style("font-size").fetch("font-size").to_f, :<, desktop_badge_size
+        assert_equal curation_badge.rect.y, protected_badge.rect.y
+        details = find(".community-post-card-details").rect
+        assert_operator protected_badge.rect.x + protected_badge.rect.width, :<=, details.x + details.width + 1
+        [ curation_badge, protected_badge ].each do |badge|
+          assert badge.evaluate_script("this.scrollWidth <= this.clientWidth")
+        end
+      ensure
+        browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+      end
     end
   end
 
@@ -372,7 +404,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       community_username: "CurationAuthor", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror",
+    title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
+    curation = Community::PublishCuration.call(author_id: author.id, title:,
       prompt: "Folklore in film.", reference_film_ids: [], reference_comments: {})
 
     visit new_session_path
@@ -382,12 +415,34 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path library_path
     visit community_curation_path(curation)
     delete_label = I18n.t("community.curation_deletion.delete_post")
-    within ".community-curation-author-actions" do
+    heading = find("h1", text: title)
+    action_group = find(".community-curation-author-actions")
+    within action_group do
       edit = find_link(I18n.t("community.curation_editing.edit_post"))
       delete = find_button(delete_label)
       assert_in_delta 132, edit.rect.width, 1
       assert_in_delta edit.rect.width, delete.rect.width, 1
       assert_in_delta 8, delete.rect.x - (edit.rect.x + edit.rect.width), 1
+      original_size = page.current_window.size
+      begin
+        page.current_window.resize_to(840, 900)
+        line_height = heading.style("line-height").fetch("line-height").to_f
+        assert_operator heading.rect.height, :>, line_height
+        assert_operator heading.rect.x + heading.rect.width, :<=, edit.rect.x
+        assert_in_delta heading.rect.y, edit.rect.y, 1
+        assert_equal edit.rect.y, delete.rect.y
+
+        page.current_window.resize_to(320, 900)
+        assert_equal edit.rect.y, delete.rect.y
+        group = action_group.rect
+        assert_operator delete.rect.x + delete.rect.width, :<=, group.x + group.width + 1
+        [ edit, delete ].each do |action|
+          assert_equal "nowrap", action.style("white-space").fetch("white-space")
+          assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
+        end
+      ensure
+        page.current_window.resize_to(*original_size)
+      end
       edit.click
     end
     assert_current_path edit_community_curation_path(curation)
@@ -492,7 +547,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_text film.title
   end
 
-  test "the board uses full-width post cards and shows fewer posters on a narrow screen" do
+  test "the board lays out curation cards in order with posters wrapped in the left artwork slot" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "curation-board@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
@@ -504,7 +559,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       Library::LibraryFilm.new(user: author, film:).add_to_watched!
       film
     end
-    curation = Community::PublishCuration.call(author_id: author.id, title: "Folk horror", prompt: "Isolated communities and older traditions.",
+    title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
+    curation = Community::PublishCuration.call(author_id: author.id, title:, prompt: "Isolated communities and older traditions.",
       reference_film_ids: films.map(&:id), reference_comments: { films.first.id => "An isolated setting." })
     shorter = Community::PublishCuration.call(author_id: author.id, title: "Two-film curation", prompt: "A narrower theme.",
       reference_film_ids: films.first(2).map(&:id), reference_comments: {})
@@ -530,60 +586,72 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_equal "", search.value
     assert_selector ".community-curation-card", count: 2
     create_action = find_link(I18n.t("community.curations.create")).rect
-    posts = find(".community-curation-list").rect
+    posts = find(".community-post-grid").rect
     assert_in_delta 16, posts.y - (create_action.y + create_action.height), 1
     card = find(".community-curation-card", text: curation.title)
     shorter_card = find(".community-curation-card", text: shorter.title)
-    assert_in_delta 12, card.rect.y - (shorter_card.rect.y + shorter_card.rect.height), 1
-    assert_in_delta find(".community-curation-list").rect.width, card.rect.width, 1
+    assert_operator shorter_card.rect.x + shorter_card.rect.width, :<=, card.rect.x
+    assert_equal shorter_card.rect.y, card.rect.y
     within card do
       assert_no_text curation.prompt
-      assert_text I18n.t("community.curations.updated")
-      assert_selector "time", count: 1
+      assert_no_selector "time"
       assert_selector ".community-curation-card-posters .film-poster", count: 5
+      within ".community-curation-card-author" do
+        assert_avatar_beside_name(author)
+      end
       within ".community-curation-card-counts" do
-        within "li.community-curation-card-author:first-child" do
-          assert_avatar_beside_name(author)
-        end
         assert_text I18n.t("community.curations.films", count: 5)
         assert_text I18n.t("community.curations.endorsements", count: 5)
         assert_text I18n.t("community.curations.comments", count: 1)
       end
     end
-    full_strip = card.find(".community-curation-card-posters").rect
-    inner_width = card.evaluate_script(<<~JS)
-      (() => {
-        const style = getComputedStyle(this)
-        return this.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
-      })()
-    JS
-    assert_in_delta inner_width / 3.0, full_strip.width, 1
+    artwork = card.find(".community-curation-card-posters")
+    posters = artwork.all(".film-poster", count: 5).map(&:rect)
+    assert_operator posters.map(&:y).uniq.size, :>, 1
+    assert_operator artwork.rect.x + artwork.rect.width, :<=, card.find("h2").rect.x
+    posters.each do |poster|
+      assert_operator poster.x + poster.width, :<=, artwork.rect.x + artwork.rect.width + 1
+      assert_operator poster.y + poster.height, :<=, artwork.rect.y + artwork.rect.height + 1
+    end
     title_margins = card.find("h2").evaluate_script("[getComputedStyle(this).marginBlockStart, getComputedStyle(this).marginBlockEnd]")
     assert_equal [ "0px", "0px" ], title_margins
-    assert_in_delta full_strip.y, card.find(".community-curation-card-heading").rect.y, 1
-    timestamp = card.find(".community-curation-card-timestamp").rect
-    assert_operator timestamp.y, :>=, full_strip.y + full_strip.height
-    assert_in_delta full_strip.x + full_strip.width, timestamp.x + timestamp.width, 1
-    title = card.find("h2").rect
+    title_heading = card.find("h2")
+    assert_equal "ellipsis", title_heading.style("text-overflow").fetch("text-overflow")
+    assert title_heading.evaluate_script("this.scrollWidth > this.clientWidth")
+    assert_equal title, title_heading.text
+    title_bounds = title_heading.rect
+    tags = card.find(".community-post-tags").rect
+    assert_operator title_bounds.y, :<=, artwork.rect.y
+    assert_operator title_bounds.y + title_bounds.height, :<=, tags.y
     counts = card.find("footer .community-curation-card-counts").rect
     identity = card.find(".community-curation-card-author").rect
-    film_count = card.find(".community-curation-card-author + li").rect
-    assert_in_delta title.x, counts.x, 1
-    assert_operator identity.x + identity.width, :<=, film_count.x
-    assert_operator identity.y + identity.height, :>, film_count.y
-    shorter_strip = shorter_card.find(".community-curation-card-posters")
-    last_poster = shorter_strip.all(".film-poster", count: 2).last.rect
-    assert_in_delta full_strip.width, shorter_strip.rect.width, 1
-    assert_in_delta shorter_strip.rect.x + shorter_strip.rect.width, last_poster.x + last_poster.width, 1
+    assert_operator artwork.rect.x + artwork.rect.width, :<=, counts.x
+    assert_operator counts.y + counts.height, :<=, identity.y
+    details = card.find(".community-post-card-details").rect
+    footer = card.find("footer").rect
+    assert_in_delta details.y + details.height, footer.y + footer.height, 1
+    shorter_artwork = shorter_card.find(".community-curation-card-posters")
+    assert_equal artwork.rect.width, shorter_artwork.rect.width
+    first_poster, second_poster = shorter_artwork.all(".film-poster", count: 2).map(&:rect)
+    assert_operator first_poster.width, :>, second_poster.width
+    assert_equal first_poster.x, second_poster.x
+    assert_operator first_poster.y + first_poster.height, :<=, second_poster.y
 
     original_size = page.current_window.size
     page.current_window.resize_to(430, 900)
-    assert_in_delta 12, card.rect.y - (shorter_card.rect.y + shorter_card.rect.height), 1
+    assert_operator shorter_card.rect.y + shorter_card.rect.height, :<=, card.rect.y
+    assert_equal shorter_card.rect.x, card.rect.x
     action_row = find(".ui-page-body.ui-card .community-board-actions")
     create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary").rect
+    assert_in_delta action_row.rect.x, create_action.x, 1
     assert_in_delta action_row.rect.x + action_row.rect.width, create_action.x + create_action.width, 1
+    page.current_window.resize_to(320, 900)
     within card do
-      assert_selector ".community-curation-card-posters .film-poster", count: 2
+      assert_selector ".community-curation-card-posters .film-poster", count: 5
+      assert_operator artwork.rect.x + artwork.rect.width, :<=, find("footer").rect.x
+      counts = find(".community-curation-card-counts")
+      assert_equal 1, counts.all("li", count: 3).map { |item| item.rect.y }.uniq.size
+      assert counts.evaluate_script("Array.from(this.children).every(item => item.scrollWidth <= item.clientWidth)")
       first(".community-curation-card-posters .film-poster").click
     end
     assert_current_path community_curation_path(curation)
