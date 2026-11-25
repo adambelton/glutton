@@ -135,16 +135,19 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_no_selector "[role=tooltip]", visible: :all
       assert_equal "pointer", protected_badge.style("cursor").fetch("cursor")
       desktop_badge_size = protected_badge.style("font-size").fetch("font-size").to_f
-      original_size = page.current_window.size
+      browser = page.driver.browser
       begin
-        page.current_window.resize_to(320, 900)
+        browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
         curation_badge = find(".community-post-tag", text: I18n.t("community.curations.tag"))
         assert_operator protected_badge.style("font-size").fetch("font-size").to_f, :<, desktop_badge_size
         assert_equal curation_badge.rect.y, protected_badge.rect.y
         details = find(".community-post-card-details").rect
         assert_operator protected_badge.rect.x + protected_badge.rect.width, :<=, details.x + details.width + 1
+        [ curation_badge, protected_badge ].each do |badge|
+          assert badge.evaluate_script("this.scrollWidth <= this.clientWidth")
+        end
       ensure
-        page.current_window.resize_to(*original_size)
+        browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
       end
     end
   end

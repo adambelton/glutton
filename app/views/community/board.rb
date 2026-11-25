@@ -10,7 +10,7 @@ module Views
       end
 
       def view_template
-        page(title: t("community.title"), heading_outside_card: true, heading_action: search_form) do
+        page(title: t("community.title"), class: "community-board-page", heading_outside_card: true, heading_action: search_form) do
           div(class: "community-board-actions flex justify-end pb-2") { create_curation_action } if @can_post
           tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
             post_list

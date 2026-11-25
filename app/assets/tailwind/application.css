@@ -665,8 +665,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 :is(.community-curation-card, a.community-film-debrief-card):hover { border-color: var(--glutton-primary); }
 .community-post-card-heading { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 4px; }
 .ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.125rem; font-weight: 600; }
-.community-post-card-heading .community-post-tags { flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
-.community-post-card-heading .community-post-tag { padding-inline: clamp(3px, 1.5cqi, 8px); font-size: clamp(0.625rem, 4cqi, 0.875rem); white-space: nowrap; }
+.community-post-card-heading .community-post-tags { max-inline-size: 100%; flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
+.community-post-card-heading .community-post-tag { min-inline-size: 0; padding-inline: clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.625rem, 4cqi, 0.875rem); white-space: nowrap; }
 .community-curation-card-counts { display: flex; align-items: center; gap: clamp(3px, 2cqi, 8px); font-size: clamp(0.625rem, 4cqi, 0.75rem); white-space: nowrap; }
 .community-curation-card-counts > li { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-page .community-film-debrief-create { max-width: 100%; margin: 0; }
@@ -688,6 +688,14 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 }
 @media (max-width: 560px) {
   :is(.community-curation-card, .community-film-debrief-card) { padding-inline: 10px; }
+}
+@media (max-width: 380px) {
+  .community-board-page > .ui-page-body.ui-card { padding-inline: 0; border-inline-width: 0; }
+  .community-post-grid :is(.community-curation-card, .community-film-debrief-card) {
+    grid-template-columns: clamp(48px, calc(20vw - 16px), 60px) minmax(0, 1fr);
+    column-gap: 8px;
+    padding-inline: 8px;
+  }
 }
 .community-nominations { margin-block: 12px 24px; }
 .community-nominations-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
