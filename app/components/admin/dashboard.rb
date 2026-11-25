@@ -1,7 +1,8 @@
 module Admin
   class Dashboard < Shared::Base
-    def initialize(title:, resource: nil, heading: true, back_to: nil, back_label: nil)
+    def initialize(title:, resource: nil, heading: true, heading_content: nil, back_to: nil, back_label: nil)
       @title, @resource, @heading = title, resource, heading
+      @heading_content = heading_content
       @back_to, @back_label = back_to, back_label
     end
 
@@ -22,7 +23,13 @@ module Admin
               span { @back_label }
             end
           end
-          h1(class: ("sr-only" unless @heading)) { @title }
+          h1(class: ("sr-only" unless @heading)) do
+            if @heading_content.present?
+              render @heading_content
+            else
+              plain @title
+            end
+          end
           yield
         end
       end

@@ -3,8 +3,9 @@ module Views
     class EditCurationEndorsements < ::Views::Base
       FRAME_ID = "curation-endorsement-editor".freeze
 
-      def initialize(curation:, films:, search_films:, film_ids:, comments:, snapshot:, saved_film_ids:, stale:, dialog:)
+      def initialize(curation:, films:, search_films:, film_ids:, comments:, published_comments:, snapshot:, saved_film_ids:, stale:, dialog:)
         @curation, @films, @search_films, @film_ids, @comments = curation, films, search_films, film_ids, comments
+        @published_comments = published_comments
         @snapshot, @saved_film_ids, @stale, @dialog = snapshot, saved_film_ids, stale, dialog
       end
 
@@ -37,7 +38,8 @@ module Views
         form_with(url: community_curation_endorsements_path(@curation), method: :patch) do
           input(type: :hidden, name: "endorsements[snapshot]", value: @snapshot)
           render ::Community::CurationFilmPicker.new(films: @films, search_films: @search_films, selected_film_ids: @film_ids,
-            comments: @comments, saved_film_ids: @saved_film_ids, heading: t("community.curation_endorsements.films"),
+              comments: @comments, published_comments: @published_comments, saved_film_ids: @saved_film_ids,
+              heading: t("community.curation_endorsements.films"), divide_selected_films: true,
             field_prefix: "curation_endorsements", film_ids_name: "endorsements[film_ids]", comments_name: "endorsements[comments]")
           div(class: "ui-actions ui-actions-fixed justify-end") do
             render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button",

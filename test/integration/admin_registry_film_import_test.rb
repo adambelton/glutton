@@ -40,6 +40,22 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the TMDB footer shows a page number for one matching film and for an empty search result" do
+    search = ->(query:, **_options) do
+      results = query == "Alien" ? [ { "id" => 348, "title" => "Alien" } ] : []
+      { "page" => 1, "total_pages" => results.size, "total_results" => results.size, "results" => results }
+    end
+    replace_method(Registry::Sources::TmdbClient, :search, search) do
+      [ "Alien", "Missing film" ].each do |query|
+        get tmdb_search_admin_films_path, params: { tmdb_query: query }, headers: { "Turbo-Frame" => "admin-tmdb-film-results" }
+        assert_response :success
+        assert_select ".film-search-pagination", text: I18n.t("ui.search.pagination.page", number: 1, total: 1) do
+          assert_select "a", count: 0
+        end
+      end
+    end
+  end
+
   test "selecting a missing film imports both sources and queues one Registry assignment" do
     with_search do
       get tmdb_search_admin_films_path(tmdb_query: "Alien", q: "Alien")
@@ -59,7 +75,9 @@ class AdminRegistryFilmImportTest < ActionDispatch::IntegrationTest
       assert film.has_source_context?
       assert_enqueued_with(job: Registry::AssignInitialFilmQualitiesJob, queue: "registry_assignment", args: [ { film_ids: [ film.id ] } ])
       follow_redirect!
-      assert_select "tbody a[href=?]", admin_film_path(film), text: "Alien"
+      assert_select "tbody a[href=?]", admin_film_path(film), text: "Alien" do
+        assert_select ".film-year", count: 0
+      end
       assert_select "input[name=tmdb_query][value='']"
       assert_select ".admin-tmdb-results", count: 0
     end

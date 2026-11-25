@@ -41,7 +41,11 @@ module Admin
           ul do
             claim.fetch(:citations).each do |citation|
               li do
-                p { t("ratings.profile_inspection.citation", title: citation.fetch(:title), id: citation.fetch(:rating_id)) }
+                p do
+                  render ::Registry::FilmTitle.new(title: citation.fetch(:title), release_date: citation.fetch(:release_date))
+                  plain " · "
+                  plain t("ratings.profile_inspection.citation_revision", id: citation.fetch(:rating_id))
+                end
                 blockquote { citation.fetch(:quote) }
               end
             end

@@ -45,7 +45,7 @@ en:
       nominated_films: Nominated Films
       no_nominations: There are no nominated films yet.
       endorsement_order: Ordered by most endorsements.
-      expand_all: Expand all comments
+      expand_all: Expand comment threads
       collapse_all: Collapse all comments
       position: "%{position}."
       films:
@@ -69,10 +69,13 @@ en:
       publish: Publish reply
       published: Reply published.
       removed: Comment removed.
+      load_more: Load more comments
+      load_failed: Comments couldn’t be loaded. Try again.
       replies:
         one: "%{count} reply"
         other: "%{count} replies"
     comment_editing:
+      edited: edited
       title: Edit comment
       edit: Edit
       body: Your comment
@@ -104,6 +107,9 @@ en:
       film_identifier: "Film #%{id}"
       reload: Reload saved endorsements
       withdrawal: Saving removes your endorsement and its opening comment for each film you removed. Any replies stay in the discussion.
+      view_comment: View comment
+      published_comment: Published comment
+      view_comment_for_film: "View comment for %{title}"
     conduct:
       title: Community Code of Conduct
       read: Read the Code of Conduct
@@ -150,5 +156,5 @@ en:
               endorsement_film_required: Choose at least one film to endorse.
               repeated_endorsement_film: "Choose %{film} only once."
               unavailable_endorsement_film: One or more selected films are no longer eligible. Choose horror films currently marked Watched in your Library.
-              remove_opening_comment_on_post: "Use Delete on the published comment for %{film} to remove just the comment."
+              edit_opening_comment_on_post: "Edit the published comment for %{film} on the curation."
               stale_endorsements: Your saved endorsements changed after you opened this editor. Reload them before saving again.

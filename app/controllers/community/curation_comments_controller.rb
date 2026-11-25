@@ -29,7 +29,7 @@ module Community
       removal = ManageCurationComment.delete(curation_id: params[:curation_id], comment_id: params[:id], member_id: current_user.id)
       curation, film_id, selected_comment_id, nomination_visible = removal.values_at(:curation, :film_id, :selected_comment_id, :nomination_visible)
       if request.format.turbo_stream? && nomination_visible
-        discussion = CurationDiscussion.new(curation:, selected_reply_id: selected_comment_id, expand_selected_branch: true)
+        discussion = CurationDiscussion.new(curation:, film_id:, selected_reply_id: selected_comment_id, expand_selected_branch: true)
         return render Views::Community::CurationFilmDiscussionUpdate.new(curation:, film_id:, discussion:,
           can_reply: PostingAccess.allowed?(user: current_user)), content_type: Mime[:turbo_stream]
       end

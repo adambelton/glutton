@@ -7,7 +7,7 @@ class AccountSettingsController < ApplicationController
     only: [ :request_email, :change_password ],
     with: -> { redirect_to account_settings_path, alert: t("identity.settings.rate_limited"), status: :see_other }
 
-  rescue_from Identity::Errors::Unavailable do
+  rescue_from Identity::Errors::Unavailable, Community::Errors::MembershipRequired do
     head :forbidden
   end
 
@@ -69,7 +69,7 @@ class AccountSettingsController < ApplicationController
 
   def change_community_username
     community_username = params[:community_username]
-    settings.change_community_username(community_username: community_username.is_a?(String) ? community_username : nil)
+    community_profile.change_username(community_username: community_username.is_a?(String) ? community_username : nil)
     redirect_to account_community_path, notice: t("identity.settings.community_username.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     raise if error.record.errors[:community_username].empty?
@@ -80,7 +80,7 @@ class AccountSettingsController < ApplicationController
 
   def choose_community_avatar
     preset = params[:community_avatar_preset]
-    settings.choose_community_avatar(preset: preset.is_a?(String) ? preset : nil)
+    community_profile.choose_avatar(preset: preset.is_a?(String) ? preset : nil)
     redirect_to account_community_path, notice: t("identity.settings.community_avatar.saved"), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     raise if error.record.errors[:community_avatar_preset].empty?
@@ -95,6 +95,10 @@ class AccountSettingsController < ApplicationController
   end
 
   private
+
+  def community_profile
+    Community::ManageMemberProfile.new(user_id: current_user.id)
+  end
 
   def settings
     Identity::AccountAdministration::ManageRegisteredAccount.new(user_id: current_user.id)

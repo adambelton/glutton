@@ -35,7 +35,7 @@ module Library
 
     def collection_navigation
       div(class: "library-collection-navigation") do
-        nav(class: "library-tabs", aria: { label: t("library.browser.view") }) do
+        render Shared::NavigationTabs.new(label: t("library.browser.view"), css_class: "library-tabs") do
           ::Library::CollectionManagement::BrowseFilmCollection::Views::ALL.each do |view|
             if @preview
               button(type: "button", value: view, aria: { current: ("page" if @view == view) }, data: { action: "library-preview#changeView" }) { t("library.browser.views.#{view}") }

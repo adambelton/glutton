@@ -1,7 +1,8 @@
 module Community
   class CurationCommentThread < Shared::Base
-    def initialize(curation:, comment:, discussion:, can_reply:, newly_published: false)
-      @curation, @comment, @discussion, @can_reply = curation, comment, discussion, can_reply
+    def initialize(curation:, film_id:, comment:, discussion:, can_reply:, reply_count:, newly_published: false)
+      @curation, @film_id, @comment, @discussion, @can_reply = curation, film_id, comment, discussion, can_reply
+      @reply_count = reply_count
       @newly_published = newly_published
     end
 
@@ -18,13 +19,14 @@ module Community
     private
 
     def reply_branch
-      replies = @discussion.replies(@comment)
-      details(id: "replies-#{@comment.id}", class: "community-comment-replies", hidden: replies.empty?,
-        open: @discussion.expanded?(@comment),
-        data: { community_film_comments_target: "branch", action: "toggle->community-film-comments#updateControls" }) do
-        summary(id: "reply-count-#{@comment.id}") { t("community.curation_replies.replies", count: replies.size) }
-        replies.each do |reply|
-          render self.class.new(curation: @curation, comment: reply, discussion: @discussion, can_reply: @can_reply)
+      open = @reply_count.positive? && @discussion.expanded?(@comment)
+      details(id: "replies-#{@comment.id}", class: "community-comment-replies", hidden: @reply_count.zero?, open:,
+        data: { community_film_comments_target: "branch", action: "toggle->community-film-comments#toggle" }) do
+        summary(id: "reply-count-#{@comment.id}") { t("community.curation_replies.replies", count: @reply_count) }
+        if open
+          render CurationCommentPage.new(curation: @curation, film_id: @film_id, parent_id: @comment.id, discussion: @discussion, can_reply: @can_reply)
+        elsif @reply_count.positive?
+          render CurationCommentLoader.new(curation: @curation, film_id: @film_id, parent_id: @comment.id)
         end
       end
     end

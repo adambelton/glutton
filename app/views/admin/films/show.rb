@@ -7,7 +7,8 @@ module Views
         end
 
         def view_template
-          dashboard(title: @detail.film.title, resource: :films,
+          film = @detail.film
+          dashboard(title: film.title, resource: :films, heading_content: ::Registry::FilmTitle.new(film:),
             back_to: admin_films_path, back_label: t("registry.back_to_films")) do
             render ::Admin::Films::Item.new(detail: @detail)
           end

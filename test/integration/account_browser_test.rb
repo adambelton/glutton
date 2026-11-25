@@ -34,7 +34,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
 
   test "the account shows the narrative without claims and only the signed-in user's pending evidence" do
     user = registered_user(superuser: true)
-    rating = submit(user, "Old <script>expression</script>")
+    rating = submit(user, "Old <script>expression</script>", release_date: Date.new(2024, 6, 12))
     revision = publish(user)
     rating.rating_film.revise_rating!(previous_rating_id: rating.id, value: "brilliant", notes: "New expression")
     other = registered_user(superuser: true)
@@ -50,6 +50,7 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     assert_select ".account-tabs a[aria-current=page]", I18n.t("account.profile")
     assert_select ".profile-narrative", revision.profile
     assert_select ".profile-narrative a, .profile-annotation, .profile-evidence-list", count: 0
+    assert_select "section[aria-labelledby=pending-evidence-heading] h3 .film-year", "(2024)"
     assert_select "section[aria-labelledby=pending-evidence-heading] li", text: "New expression"
     assert_select "section[aria-labelledby=pending-evidence-heading] li", text: "Old <script>expression</script>"
     refute_includes response.body, "Private foreign expression"
@@ -158,8 +159,8 @@ class AccountBrowserTest < ActionDispatch::IntegrationTest
     cookies[:session_id] = jar[:session_id]
   end
 
-  def submit(user, expression)
-    film = Registry::Film.create!(title: "Quiet dread")
+  def submit(user, expression, release_date: nil)
+    film = Registry::Film.create!(title: "Quiet dread", release_date:)
     Ratings::RatingFilm.create!(user:, film:).submit_rating!(value: "brilliant", notes: expression)
   end
 

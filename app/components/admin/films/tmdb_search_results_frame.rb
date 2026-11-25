@@ -10,10 +10,10 @@ module Admin
       def view_template
         tag(:turbo_frame, id: FRAME_ID, aria: { live: "polite" }, data: { admin_tmdb_search_target: "results" }) do
           if @result.present? || @error.present?
-            section(class: "admin-tmdb-results film-search-dropdown", aria: { label: t("admin.tmdb.results") },
+            render Shared::FilmSearchDropdown.new(css_class: "admin-tmdb-results", aria: { label: t("admin.tmdb.results") },
               data: { tmdb_query: @query }) do
               empty_message = t("admin.tmdb.empty") if @result.present? && @result.fetch(:candidates).empty?
-              render Shared::TmdbFilmSearchResultsPanel.new(error: @error, empty_message:) do
+              render Shared::FilmSearchResultsPanel.new(error: @error, empty_message:) do
                 @result.fetch(:candidates).each { |candidate| film_result(candidate) }
               end
               pagination if @result.present?
@@ -54,32 +54,23 @@ module Admin
         total_pages = [ @result.fetch(:total_pages), 500 ].min
         batch = @result.fetch(:batch)
         batch_count = @result.fetch(:batch_count)
-        return if page == 1 && total_pages <= 1 && batch_count == 1
-
-        nav(class: "admin-pagination", aria: { label: t("admin.tmdb.results") }) do
-          if batch > 1
-            page_link(:previous, page, batch - 1)
-          elsif page > 1
-            page_link(:previous, page - 1, "last")
-          end
-          span do
-            if batch_count > 1
-              t("admin.pagination.page", number: batch, total: batch_count)
-            else
-              t("admin.pagination.page", number: page, total: [ page, total_pages ].max)
-            end
-          end
-          if batch < batch_count
-            page_link(:next, page, batch + 1)
-          elsif page < total_pages
-            page_link(:next, page + 1)
-          end
+        previous = if batch > 1
+          page_path(page, batch - 1)
+        elsif page > 1
+          page_path(page - 1, "last")
         end
+        following = if batch < batch_count
+          page_path(page, batch + 1)
+        elsif page < total_pages
+          page_path(page + 1)
+        end
+        current, total = batch_count > 1 ? [ batch, batch_count ] : [ page, [ page, total_pages ].max ]
+        render Shared::FilmSearchPagination.new(page: current, total:,
+          previous: ({ href: previous } if previous.present?), next_page: ({ href: following } if following.present?))
       end
 
-      def page_link(direction, page, batch = 1)
-        text_link(t("admin.pagination.#{direction}"), tmdb_search_admin_films_path(**@catalogue_context, tmdb_query: @query,
-          tmdb_page: page, tmdb_batch: (batch unless batch == 1)))
+      def page_path(page, batch = 1)
+        tmdb_search_admin_films_path(**@catalogue_context, tmdb_query: @query, tmdb_page: page, tmdb_batch: (batch unless batch == 1))
       end
     end
   end

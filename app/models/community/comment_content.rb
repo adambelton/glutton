@@ -11,12 +11,10 @@ module Community
     validates :body, length: { maximum: REPLY_LIMIT }, if: -> { comment&.parent_id.present? }
 
     def edit_body(body:)
-      update(body:)
+      self.body = body
+      self.edited_at = Time.current if will_save_change_to_body?
+      save
       self
-    end
-
-    def edit_body!(body:)
-      update!(body:)
     end
   end
 end

@@ -22,10 +22,10 @@ module Views
             if @nominated_films.present?
               div(class: "community-nominations-toolbar") do
                 div(class: "community-comment-controls", hidden: true, data: { community_film_comments_target: "controls" }) do
-                  button(type: :button, class: "muted", data: { community_film_comments_target: "expand",
-                    action: "community-film-comments#expandAll" }) { t("community.curations.expand_all") }
                   button(type: :button, class: "muted", disabled: true, data: { community_film_comments_target: "collapse",
                     action: "community-film-comments#collapseAll" }) { t("community.curations.collapse_all") }
+                  button(type: :button, class: "muted", data: { community_film_comments_target: "expand",
+                    action: "community-film-comments#expandAll" }) { t("community.curations.expand_all") }
                 end
                 p(class: "muted") { t("community.curations.endorsement_order") }
               end

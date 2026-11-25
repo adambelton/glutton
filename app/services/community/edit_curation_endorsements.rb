@@ -8,8 +8,7 @@ module Community
         endorsements = active_endorsements(curation:, member:)
         state = endorsement_state(endorsements)
         snapshot = verifier.generate([ curation.id, member.id, state ])
-        comments = endorsements.transform_values { |endorsement| endorsement.opening_comment&.content&.body }.compact
-        editor(curation:, member:, endorsements:, film_ids: endorsements.keys, comments:, snapshot:, saved_film_ids: endorsements.keys)
+        editor(curation:, member:, endorsements:, film_ids: endorsements.keys, comments: {}, snapshot:, saved_film_ids: endorsements.keys)
       end
     end
 
@@ -58,7 +57,9 @@ module Community
       if stale
         saved_films += ::Registry::Film.where(id: (film_ids & saved_film_ids) - endorsements.keys)
       end
-      { curation:, search_films:, films: (saved_films + search_films).uniq, film_ids:, comments:, snapshot:, saved_film_ids:, stale: }
+      published_comments = endorsements.transform_values(&:opening_comment).compact
+      { curation:, search_films:, films: (saved_films + search_films).uniq, film_ids:, comments:, published_comments:,
+        snapshot:, saved_film_ids:, stale: }
     end
 
     def self.verifier

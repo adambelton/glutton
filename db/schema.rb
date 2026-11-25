@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
     t.text "body", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "edited_at"
     t.index ["author_id"], name: "index_comment_contents_on_author_id"
     t.index ["comment_id"], name: "index_comment_contents_on_comment_id", unique: true
   end
@@ -91,7 +92,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
   create_table "film_endorsements", force: :cascade do |t|
     t.bigint "post_id", null: false
     t.bigint "film_id", null: false
-    t.bigint "user_id", null: false
+    t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "withdrawn_at"
@@ -486,8 +487,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_130000) do
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
   add_foreign_key "film_endorsements", "films"
-  add_foreign_key "film_endorsements", "posts", on_delete: :cascade
-  add_foreign_key "film_endorsements", "users", on_delete: :cascade
+  add_foreign_key "film_endorsements", "posts", on_delete: :cascade, deferrable: :deferred
+  add_foreign_key "film_endorsements", "users", on_delete: :nullify
   add_foreign_key "film_qualities", "film_quality_evals", column: ["film_quality_eval_id", "film_id"], primary_key: ["id", "film_id"]
   add_foreign_key "film_qualities", "films"
   add_foreign_key "film_qualities", "qualities"

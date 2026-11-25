@@ -133,4 +133,28 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 0, EventEffect.count
     assert_not DomainEvents::DomainEvent.exists?(event.id)
   end
+
+  test "cleanup during delivery discovery leaves other events deliverable" do
+    event = publish
+    receipt = DomainEvents::EventDelivery.create!(domain_event: event, subscriber: "projection", next_attempt_at: Time.current)
+    travel Identity::UserGuest::EXPIRY_DURATION
+    active_user = Identity::UserGuest.create!
+    surviving_event = publish(user_id: active_user.id)
+    cleaned = false
+    cleanup_after_discovery = lambda do |*args|
+      next if cleaned || !args.last.fetch(:sql).include?('FROM "event_deliveries"')
+
+      cleaned = true
+      assert_equal 1, Identity::AccountAdministration::CleanupExpiredAccounts.call[:guests_deleted]
+    end
+
+    ActiveSupport::Notifications.subscribed(cleanup_after_discovery, "sql.active_record") do
+      assert_equal :missing, DomainEvents::Delivery::Deliver.call(delivery_id: receipt.id, subscription: subscription)
+    end
+    assert cleaned
+    assert_equal({ processed: 1 }, dispatch(subscription))
+    assert_equal surviving_event.id, EventEffect.sole.event_id
+  ensure
+    Identity::User.where(id: active_user.id).delete_all if active_user.present?
+  end
 end

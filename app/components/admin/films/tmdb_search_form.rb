@@ -20,18 +20,12 @@ module Admin
           data: { turbo_frame: TmdbSearchResultsFrame::FRAME_ID, admin_tmdb_search_target: "form", action: "submit->admin-tmdb-search#submit" }) do
           input(type: "hidden", name: "q", value: @catalogue_context[:q].to_s)
           input(type: "hidden", name: "page", value: @catalogue_context.fetch(:page, 1))
-          div(class: "admin-search-field") do
-            label = t("admin.tmdb.search")
-            input(type: "search", name: "tmdb_query", value: @query, placeholder: label,
-              aria: { label:, controls: TmdbSearchResultsFrame::FRAME_ID }, maxlength: 200, autocomplete: "off", class: "ui-input",
-              data: { admin_tmdb_search_target: "input",
-                action: "input->admin-tmdb-search#schedule compositionend->admin-tmdb-search#schedule keydown.esc->admin-tmdb-search#clear focus->admin-tmdb-search#fitDropdown" })
-            a(href: admin_films_path(**@catalogue_context), class: "admin-clear-search", hidden: @query.blank?,
-              title: t("admin.tmdb.clear"), aria: { label: t("admin.tmdb.clear") },
-              data: { admin_tmdb_search_target: "clearButton", action: "click->admin-tmdb-search#clear" }) do
-              span(aria: { hidden: "true" }) { "×" }
-            end
-          end
+          render Shared::CollectionSearchField.new(name: "tmdb_query", query: @query, label: t("admin.tmdb.search"),
+            controls: TmdbSearchResultsFrame::FRAME_ID, maxlength: 200, clear_path: admin_films_path(**@catalogue_context),
+            clear_label: "admin.tmdb.clear",
+            input_data: { admin_tmdb_search_target: "input",
+              action: "input->admin-tmdb-search#schedule compositionend->admin-tmdb-search#schedule keydown.esc->admin-tmdb-search#clear focus->admin-tmdb-search#fitDropdown" },
+            clear_data: { admin_tmdb_search_target: "clearButton", action: "click->admin-tmdb-search#clear" })
         end
       end
     end

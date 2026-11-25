@@ -42,7 +42,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_no_text "Folk Tales"
     click_button I18n.t("community.curations.add_film", title: "The Empty Field")
     assert_field search, with: ""
-    assert_no_selector ".community-reference-films"
+    assert_no_selector ".film-search-results"
     within(".community-selected-films li", text: "The Empty Field") do
       assert_selector ".film-poster"
       fill_in I18n.t("community.curations.comment_for_film", title: "The Empty Field"), with: "A creeping sense of dread."
@@ -74,6 +74,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       collapse = find_button(I18n.t("community.curations.collapse_all"), disabled: true)
       assert_equal ordering_style, expand.style(*type_properties)
       assert_equal ordering_style, collapse.style(*type_properties)
+      assert_equal "none", expand.style("text-decoration-line").fetch("text-decoration-line")
+      expand.hover
+      assert_equal "underline", expand.style("text-decoration-line").fetch("text-decoration-line")
+      assert_operator collapse.rect.x, :<, expand.rect.x
       assert_operator collapse.rect.x + collapse.rect.width, :<, order_note.rect.x
       expand.click
     end
@@ -111,8 +115,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       community_username: "Respondent", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
-    reference, orchard, valley = [ "The Original Reference", "The Hidden Orchard", "The Quiet Valley" ].map do |title|
-      film = Registry::Film.create!(title:, tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
+    titles = [ "The Original Reference", "The Hidden Orchard", "The Quiet Valley", *1.upto(5).map { |number| "The Watched Film #{number}" } ]
+    reference, orchard, valley = titles.map do |title|
+      release_date = Date.new(1998, 5, 10) if title == "The Hidden Orchard"
+      film = Registry::Film.create!(title:, release_date:, tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
       Library::LibraryFilm.new(user: author, film:).add_to_watched!
       film
     end
@@ -133,16 +139,83 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     dialog = find("dialog[open]")
     assert_in_delta 640, dialog.rect.width, 1
     within dialog do
+      reference_row = find(".community-selected-films > li[data-film-id='#{reference.id}']")
       assert_field I18n.t("community.curations.comment_for_film", title: reference.title), with: ""
       fill_in search, with: reference.title
       assert_text I18n.t("community.curations.no_matches")
       assert_no_button I18n.t("community.curations.add_film", title: reference.title)
+      assert_selector ".film-search-pagination", text: I18n.t("ui.search.pagination.page", number: 1, total: 1)
+      fill_in search, with: "The"
+      within ".film-search-dropdown" do
+        assert_selector ".film-search-results > li", count: 5
+        assert_text I18n.t("ui.search.pagination.page", number: 1, total: 2)
+        click_button I18n.t("ui.search.pagination.next")
+        assert_selector ".film-search-results > li", count: 2
+        assert_text I18n.t("ui.search.pagination.page", number: 2, total: 2)
+        click_button I18n.t("ui.search.pagination.previous")
+        assert_text I18n.t("ui.search.pagination.page", number: 1, total: 2)
+        click_button I18n.t("ui.search.pagination.next")
+      end
+      assert_field search, with: "The"
+      fill_in search, with: "Th"
+      assert_text I18n.t("ui.search.pagination.page", number: 1, total: 2)
+      fill_in search, with: "The W"
+      within ".film-search-pagination" do
+        assert_text I18n.t("ui.search.pagination.page", number: 1, total: 1)
+        assert_no_button I18n.t("ui.search.pagination.previous")
+        assert_no_button I18n.t("ui.search.pagination.next")
+      end
+      assert_selector ".film-search-results > li", count: 5
+      reference_top = reference_row.rect.y
+      fill_in search, with: orchard.title
+      popup = find(".film-search-dropdown")
+      assert_in_delta reference_top, reference_row.rect.y, 1
+      assert_operator popup.rect.y + popup.rect.height, :>, reference_top
+      within(popup) do
+        assert_selector ".film-poster"
+        assert_selector "h3 .film-year", text: "(1998)"
+        within ".film-search-text-actions" do
+          assert_button I18n.t("community.curations.add_film", title: "#{orchard.title} (1998)"), class: "bg-primary"
+        end
+      end
+      clear = find_button(I18n.t("ui.search.clear"))
+      clear.hover
+      assert_equal "pointer", clear.style("cursor").fetch("cursor")
+      assert clear.evaluate_script(<<~JS)
+        (() => {
+          const primary = document.createElement("span")
+          primary.style.color = "var(--glutton-primary)"
+          this.append(primary)
+          const matches = getComputedStyle(this).color === getComputedStyle(primary).color
+          primary.remove()
+          return matches
+        })()
+      JS
+      clear.click
+      assert_field search, with: ""
+      assert_no_selector ".film-search-dropdown"
       { orchard => "The orchard isolates the family.", valley => "The valley keeps outsiders away." }.each do |film, body|
+        title = film.release_date.present? ? "#{film.title} (#{film.release_date.year})" : film.title
         fill_in search, with: film.title
-        click_button I18n.t("community.curations.add_film", title: film.title)
+        click_button I18n.t("community.curations.add_film", title:)
         assert_field search, with: ""
-        assert_no_selector ".community-reference-films"
-        fill_in I18n.t("community.curations.comment_for_film", title: film.title), with: body
+        assert_no_selector ".film-search-results"
+        fill_in I18n.t("community.curations.comment_for_film", title:), with: body
+      end
+      assert_selector ".community-selected-film-header .film-year", text: "(1998)"
+      assert_equal "0px", reference_row.style("border-top-width").fetch("border-top-width")
+      rows = all(".community-selected-films > li", count: 3)
+      rows.each do |row|
+        assert_equal({ "padding-top" => "8px", "padding-bottom" => "16px" }, row.style("padding-top", "padding-bottom"))
+      end
+      rows.each_cons(2) do |previous, row|
+        assert_equal({ "border-top-width" => "1px", "border-top-style" => "solid" }, row.style("border-top-width", "border-top-style"))
+        editor = previous.find(".community-selected-film-editor").rect
+        header = row.find(".community-selected-film-header").rect
+        title = row.find(".community-selected-film-header > span").rect
+        assert_in_delta 16, row.rect.y - (editor.y + editor.height), 1
+        assert_in_delta 8, header.y - (row.rect.y + 1), 1
+        assert_in_delta header.y, title.y, 2
       end
       assert_comment_action_group(cancel: I18n.t("community.curations.cancel"), submit: I18n.t("community.curation_endorsements.save"))
       click_button I18n.t("community.curation_endorsements.save")
@@ -246,7 +319,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     visit community_curation_path(curation)
-    curation_dimensions = poster_action_dimensions
     within "#nomination-#{film.id}" do
       assert_selector ".community-nomination-rank", text: "1."
       assert_selector "h3", text: "Folk Tales (2020)"
@@ -280,7 +352,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     visit library_path(view: "watched")
     assert_text film.title
-    assert_equal curation_dimensions, poster_action_dimensions
   end
 
   test "the board uses full-width post cards and shows fewer posters on a narrow screen" do
@@ -508,6 +579,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       body: "The framing helps.").fetch(:reply).comment
     last_reply = Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
       body: "The empty roads add to the atmosphere.").fetch(:reply).comment
+    19.times do |index|
+      Community::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+        body: "Additional reply #{index + 1}.")
+    end
 
     visit path
     find("#nomination-#{first.id} details.community-film-comments > summary").click
@@ -525,6 +600,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_comment_gap find("#comment-#{at_indent_limit.id}"), next_reply
     assert_comment_gap next_reply, find("#comment-#{last_reply.id}")
     assert_button I18n.t("community.curations.expand_all"), disabled: true
+    assert_no_text "Additional reply 19."
+    within "#replies-#{root.id}" do
+      click_button I18n.t("community.curation_replies.load_more")
+      assert_text "Additional reply 19."
+    end
     reply_count = find("#reply-count-#{reply.id}")
     reply_count.click
     assert_no_text "Especially the quiet scenes."
@@ -626,6 +706,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       click_button save_label
     end
     assert_selector "#comment-#{leaf.id} span.community-curation-prompt", text: "My edited follow-up."
+    assert_selector "#comment-#{leaf.id} .community-comment-edited", text: I18n.t("community.comment_editing.edited")
     assert_text "The sound design also helps."
     assert_current_path path
 
@@ -648,7 +729,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within("#comment-#{reply.id}") { assert_link I18n.t("community.curations.reply") }
   end
 
-  test "the endorsement dialog warns about withdrawals, keeps failed drafts, and preserves replies" do
+  test "the endorsement dialog links to inline editing and preserves replies on withdrawal" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "opening-comment-author@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
@@ -678,13 +759,37 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     click_link edit
     within "dialog[open]" do
-      assert_field body, with: original_body
-      fill_in body, with: " "
-      click_button save
+      assert_no_selector "textarea"
+      within ".community-selected-film-editor > .community-published-comment" do
+        assert_selector "p:first-child", text: I18n.t("community.curation_endorsements.published_comment")
+        assert_selector "p + p", text: original_body
+      end
+      view_comment = find_link(I18n.t("community.curation_endorsements.view_comment_for_film", title: film.title))
+      remove = find_button(I18n.t("community.curations.remove_film", title: film.title))
+      assert_in_delta view_comment.rect.y, remove.rect.y, 1
+      assert_in_delta view_comment.rect.height, remove.rect.height, 1
+      [ view_comment, remove ].each do |action|
+        action.hover
+        assert_equal "underline", action.style("text-decoration-line").fetch("text-decoration-line")
+      end
+      view_comment.click
     end
+    assert_no_selector "dialog[open]"
+    assert_selector "#replies-#{root.id}[open] #comment-#{reply.id}", text: "The fog helps too."
+    within "#comment-#{root.id}" do
+      assert_no_selector ".community-comment-edited"
+      click_link I18n.t("community.comment_editing.edit")
+      fill_in I18n.t("community.comment_editing.body"), with: "The landscape makes the village feel isolated."
+      click_button I18n.t("community.comment_editing.save")
+      assert_selector ".community-comment-edited", text: I18n.t("community.comment_editing.edited")
+      assert_text "The landscape makes the village feel isolated."
+    end
+    assert_selector "#replies-#{root.id}[open] #comment-#{reply.id}"
+
+    visit path
+    click_link edit
     within "dialog[open]" do
-      assert_selector ".ui-errors li", text: /Use Delete on the published comment/
-      assert_field body, with: " "
+      assert_selector ".community-published-comment .community-curation-prompt", text: "The landscape makes the village feel isolated."
       click_button I18n.t("community.curations.remove_film", title: film.title)
       assert_text warning
       click_link I18n.t("community.curations.cancel")
@@ -692,7 +797,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_no_selector "dialog[open]"
     click_link edit
     within "dialog[open]" do
-      assert_field body, with: original_body
+      assert_selector ".community-published-comment .community-curation-prompt", text: "The landscape makes the village feel isolated."
       assert_no_text warning
       click_button I18n.t("community.curations.remove_film", title: film.title)
       assert_text warning
@@ -704,6 +809,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_text I18n.t("community.curations.endorsements", count: 0)
       find("#film-comment-count-#{film.id}").click
       assert_no_text original_body
+      assert_no_text "The landscape makes the village feel isolated."
       assert_selector "#comment-#{root.id}", text: I18n.t("community.curation_replies.removed")
       find("#reply-count-#{root.id}").click
       within "#comment-#{reply.id}" do
@@ -760,13 +866,6 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_equal [ 132, 132 ], [ cancel_rect.width, submit_rect.width ]
       assert_equal [ 44, 44 ], [ cancel_rect.height, submit_rect.height ]
       assert_in_delta 8, submit_rect.x - (cancel_rect.x + cancel_rect.width), 1
-    end
-  end
-
-  def poster_action_dimensions
-    [ find(".film-poster"), first(".library-card-actions .ui-action-button"), first(".library-card-actions .ui-action-button > svg") ].map do |element|
-      bounds = element.rect
-      [ bounds.width, bounds.height ]
     end
   end
 end

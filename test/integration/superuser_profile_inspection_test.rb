@@ -7,7 +7,7 @@ class SuperuserProfileInspectionTest < ActionDispatch::IntegrationTest
   test "the selected user's saved claim points to the exact stored excerpt" do
     operator = create_user("operator", superuser: true)
     viewer = create_user("viewer")
-    film = Registry::Film.create!(title: "A quiet film")
+    film = Registry::Film.create!(title: "A quiet film", release_date: Date.new(1986, 1, 1))
     candidate = Ratings::RatingFilm.create!(user: viewer, film:)
     quote = "<script>quiet</script>"
     rating = candidate.submit_rating!(value: "brilliant", notes: "Opening. 🎥 #{quote}. Ending.")
@@ -26,7 +26,9 @@ class SuperuserProfileInspectionTest < ActionDispatch::IntegrationTest
     assert_select ".profile-narrative", "Enjoys quiet dread."
     assert_select "article h3", "Quiet scenes work for this viewer."
     assert_select "article p", "The cited scene builds dread."
-    assert_select "article p", "A quiet film · Rating revision #{rating.id}"
+    assert_select "article p", "A quiet film (1986) · Rating revision #{rating.id}" do
+      assert_select ".film-year", "(1986)"
+    end
     assert_select "blockquote", quote
     assert_select "blockquote script", count: 0
     refute_includes response.body, "Current unsynthesised note"

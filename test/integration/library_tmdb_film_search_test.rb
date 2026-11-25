@@ -36,17 +36,17 @@ class LibraryTmdbFilmSearchTest < ActionDispatch::IntegrationTest
       get library_tmdb_film_search_path(query: "Film")
       assert_select "main > .ui-page-body.ui-card + .ui-secondary-links a[href=?]", library_path, text: I18n.t("library.browser.return")
       assert_equal (348..352).map { |id| "Film #{id}" }, css_select(".film-search-results h3").map(&:text)
-      next_path = css_select(".library-pagination a").sole["href"]
+      next_path = css_select(".film-search-pagination a").sole["href"]
       get next_path
       assert_equal (353..357).map { |id| "Film #{id}" }, css_select(".film-search-results h3").map(&:text)
-      assert_select ".library-pagination a", text: I18n.t("library.browser.previous"), count: 1
-      assert_select ".library-pagination a", text: I18n.t("library.browser.next"), count: 0
+      assert_select ".film-search-pagination a", text: I18n.t("ui.search.pagination.previous"), count: 1
+      assert_select ".film-search-pagination a", text: I18n.t("ui.search.pagination.next"), count: 0
 
       post_selection(library_tmdb_search_watchlist_path)
       assert_redirected_to next_path
       follow_redirect!
       assert_select ".film-search-results li", text: /Film 353.*#{I18n.t('library.search.in_watchlist')}/
-      get css_select(".library-pagination a").sole["href"]
+      get css_select(".film-search-pagination a").sole["href"]
       assert_equal (348..352).map { |id| "Film #{id}" }, css_select(".film-search-results h3").map(&:text)
     end
   end
