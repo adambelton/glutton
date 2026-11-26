@@ -63,10 +63,10 @@ module Community
     end
 
     def editor_form_data
-      return {} if @mode == :root
+      return form_validation if @mode == :root
 
       data = { controller: "community-comment-composer", turbo_frame: ("_top" unless @inline), comment_composer_trigger: @mode.to_s }
-      return data unless @mode == :edit
+      return form_validation(**data) unless @mode == :edit
 
       track_form_changes(baseline: { body: @content.attribute_in_database(:body) }, **data)
     end
@@ -80,8 +80,7 @@ module Community
             t("community.curations.cancel")
           end
         end
-        render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button", disabled: (@mode == :edit && !@content.will_save_change_to_body?),
-          data: ({ unchanged_form_target: "save" } if @mode == :edit)) { submit_label }
+        validated_submit(submit_label, class_name: "ui-action-button")
       end
     end
 

@@ -94,7 +94,7 @@ module Community
           span { render ::Registry::FilmTitle.new(film:) }
           div(class: "community-comment-actions") do
             if comment.present?
-              a(href: community_curation_path(comment.post_id, reply: comment.id, replies: 1, anchor: "comment-#{comment.id}"),
+              a(href: community_post_path(comment.post_id, reply: comment.id, replies: 1, anchor: "comment-#{comment.id}"),
                 aria: { label: t("community.curation_endorsements.view_comment_for_film", title:) }, data: { turbo_frame: "_top" }) do
                 t("community.curation_endorsements.view_comment")
               end

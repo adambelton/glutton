@@ -29,7 +29,7 @@ module Community
           span(class: "muted community-comment-edited") { t("community.comment_editing.edited") } if content.edited_at.present?
         end
         span(class: "community-curation-prompt") { content.body }
-        comment_actions(can_edit:, can_delete:) if @can_reply || can_edit || can_delete
+        comment_actions(can_edit:, can_delete:)
         if can_edit
           tag(:"turbo-frame", id: DiscussionComposer.frame_id(@comment, editing: true), class: "community-comment-edit-frame")
         end
@@ -47,6 +47,7 @@ module Community
             data: { turbo_frame: DiscussionComposer.frame_id(@comment, editing: true), comment_composer_trigger: "edit" }) { t("community.comment_editing.edit") }
         end
         delete_action if can_delete
+        a(href: @routes.new_report_path(@comment), data: { turbo_frame: "_top" }) { t("community.reports.action") }
       end
     end
 

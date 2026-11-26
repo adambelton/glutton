@@ -16,7 +16,7 @@ module Views
             else
               render ::Community::CurationTextFields.new(curation: @curation)
             end
-            actions(changed: editable_attributes.any? { |attribute| @curation.will_save_change_to_attribute?(attribute) })
+            actions
           end
         end
       end
@@ -24,7 +24,7 @@ module Views
       private
 
       def form_path
-        @curation.protected? ? additional_description_community_curation_path(@curation) : community_curation_path(@curation)
+        @curation.protected? ? community_curation_additional_description_path(@curation) : community_post_path(@curation)
       end
 
       def protected_fields
@@ -47,11 +47,10 @@ module Views
         end
       end
 
-      def actions(changed:)
+      def actions
         div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full justify-end") do
-          render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
-          render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button", disabled: !changed,
-            data: { unchanged_form_target: "save" }) { t("community.curation_editing.save") }
+          render RubyUI::Link.new(href: community_post_path(@curation), variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
+          validated_submit(t("community.curation_editing.save"), class_name: "ui-action-button")
         end
       end
     end

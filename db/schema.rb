@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_26_131000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_142000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_131000) do
     t.index ["member_id"], name: "one_active_community_moderator_role_per_member", unique: true, where: "(revoked_at IS NULL)"
     t.index ["revoked_by_id"], name: "index_community_moderator_roles_on_revoked_by_id"
     t.check_constraint "revoked_at IS NOT NULL OR revoked_by_id IS NULL", name: "community_moderator_revocation_requires_time"
+  end
+
+  create_table "community_reports", force: :cascade do |t|
+    t.bigint "curation_source_id"
+    t.bigint "comment_content_source_id"
+    t.virtual "reportable_type", type: :string, as: "\nCASE\n    WHEN (curation_source_id IS NOT NULL) THEN 'Community::Post'::text\n    WHEN (comment_content_source_id IS NOT NULL) THEN 'Community::CommentContent'::text\n    ELSE NULL::text\nEND", stored: true
+    t.virtual "reportable_id", type: :bigint, as: "COALESCE(curation_source_id, comment_content_source_id)", stored: true
+    t.bigint "reporter_id"
+    t.bigint "reported_member_id"
+    t.string "part", null: false
+    t.string "reason", null: false
+    t.text "explanation"
+    t.text "evidence_text", null: false
+    t.jsonb "identity_snapshot", null: false
+    t.string "status", default: "pending", null: false
+    t.integer "priority", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["comment_content_source_id"], name: "index_community_reports_on_comment_content_source_id"
+    t.index ["curation_source_id"], name: "index_community_reports_on_curation_source_id"
+    t.index ["priority", "created_at", "id"], name: "index_community_reports_for_review"
+    t.index ["reportable_type", "reportable_id"], name: "index_community_reports_on_reportable_type_and_reportable_id"
+    t.index ["reported_member_id"], name: "index_community_reports_on_reported_member_id"
+    t.index ["reporter_id", "reportable_type", "reportable_id", "part"], name: "one_open_community_report_per_reporter_and_part", unique: true, where: "((status)::text = ANY ((ARRAY['pending'::character varying, 'escalated'::character varying])::text[]))"
+    t.index ["reporter_id"], name: "index_community_reports_on_reporter_id"
+    t.check_constraint "num_nonnulls(curation_source_id, comment_content_source_id) <= 1", name: "community_reports_single_source"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'escalated'::character varying]::text[])", name: "community_reports_supported_status"
   end
 
   create_table "domain_event_streams", force: :cascade do |t|
@@ -510,6 +537,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_26_131000) do
   add_foreign_key "community_moderator_roles", "users", column: "granted_by_id", on_delete: :nullify
   add_foreign_key "community_moderator_roles", "users", column: "member_id", on_delete: :cascade
   add_foreign_key "community_moderator_roles", "users", column: "revoked_by_id", on_delete: :nullify
+  add_foreign_key "community_reports", "comment_contents", column: "comment_content_source_id", on_delete: :nullify, deferrable: :deferred
+  add_foreign_key "community_reports", "posts", column: "curation_source_id", on_delete: :nullify, deferrable: :deferred
+  add_foreign_key "community_reports", "users", column: "reported_member_id", on_delete: :nullify
+  add_foreign_key "community_reports", "users", column: "reporter_id", on_delete: :nullify
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade

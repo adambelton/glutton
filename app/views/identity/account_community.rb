@@ -50,9 +50,7 @@ module Views
             aria: { describedby: "community_username_hint", invalid: @username_errors.any?.to_s })
           p(id: "community_username_hint", class: "muted account-community-hint") { t("identity.settings.community_username.hint") }
           div(class: "account-community-actions") do
-            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button",
-              disabled: @form_username.to_s.empty? || @form_username == @community_username,
-              data: { unchanged_form_target: "save" }) { t("identity.settings.community_username.save") }
+            validated_submit(t("identity.settings.community_username.save"), class_name: "ui-action-button")
             if @community_username.present?
               render Shared::GhostButton.new(type: :submit, form: "cancel-community-username", class: "ui-action-button") { t("identity.settings.cancel") }
             end
@@ -93,8 +91,7 @@ module Views
             end
           end
           div(class: "account-community-actions") do
-            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button", disabled: true,
-              data: { unchanged_form_target: "save" }) { t("identity.settings.community_avatar.save") }
+            validated_submit(t("identity.settings.community_avatar.save"), class_name: "ui-action-button")
             render Shared::GhostButton.new(type: :submit, form: "cancel-community-avatar", class: "ui-action-button") do
               t("identity.settings.cancel")
             end

@@ -8,7 +8,7 @@ module Community
     def view_template
       title_id = "curation-#{@curation.id}-title"
       article do
-        a(class: "community-curation-card", href: community_curation_path(@curation), aria: { labelledby: title_id }) do
+        a(class: "community-curation-card", href: community_post_path(@curation), aria: { labelledby: title_id }) do
           div(class: "community-post-card-artwork community-curation-card-posters", data: { poster_count: @entry.poster_films.size }) do
             @entry.poster_films.each { |film| render ::Registry::FilmPoster.new(film:, placeholder: :wordmark) }
           end

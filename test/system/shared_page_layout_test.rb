@@ -30,8 +30,8 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
         assert_link I18n.t("account.title"), href: account_settings_path
       end
     end
-    assert_back_card_gap community_curation_path(curation), inset: 48
-    assert_back_card_gap new_community_curation_path, inset: 48
+    assert_back_card_gap community_post_path(curation), inset: 48
+    assert_back_card_gap new_community_post_path, inset: 48
     headed_gap = card_gap(library_path)
     assert_operator headed_gap, :>, 48
     [ community_path, account_settings_path, new_rating_path ].each do |path|
@@ -47,7 +47,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     set_viewport(390, 844)
     assert_in_delta 16, card_gap(account_settings_path), 1
     assert_in_delta 16, card_gap(privacy_notice_path), 1
-    assert_back_card_gap community_curation_path(curation), inset: 16
+    assert_back_card_gap community_post_path(curation), inset: 16
     [ library_path, community_path ].each do |path|
       mobile_gap = card_gap(path)
       assert_operator mobile_gap, :<, headed_gap if path == community_path

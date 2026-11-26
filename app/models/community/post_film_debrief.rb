@@ -2,6 +2,13 @@ module Community
   class PostFilmDebrief < Post
     belongs_to :film, class_name: "Registry::Film"
 
+    def require_view_access!(viewer:, lock: false)
+      super
+      watched = ::Library::LibraryFilm.watched.where(user: viewer)
+      watched = watched.lock if lock
+      watched.find_by!(film_id:)
+    end
+
     def self.open_for!(film:)
       find_or_create_by!(film:)
     end

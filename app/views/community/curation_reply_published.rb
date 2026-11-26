@@ -16,7 +16,7 @@ module Views
           plain t("community.curation_replies.replies", count: @discussion.reply_counts([ @parent.id ]).fetch(@parent.id, 0))
         end
         stream("append", "replies-#{@parent.id}") do
-          render ::Community::DiscussionCommentThread.new(routes: ::Community::CurationDiscussionRoutes.new(curation: @curation, film_id: @film_id), film_id: @film_id, comment: @reply.comment, discussion: @discussion,
+          render ::Community::DiscussionCommentThread.new(routes: ::Community::DiscussionRoutes.new(post: @curation, film_id: @film_id), film_id: @film_id, comment: @reply.comment, discussion: @discussion,
             can_reply: true, reply_count: 0, newly_published: true)
         end
       end

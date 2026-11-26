@@ -23,6 +23,7 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_no_field I18n.t("identity.settings.community_username.label")
     assert_no_button I18n.t("identity.settings.community_avatar.choose")
 
+    assert_button I18n.t("community.conduct.accept"), disabled: true
     check I18n.t("community.conduct.agreement")
     click_button I18n.t("community.conduct.accept")
     assert_current_path account_community_path

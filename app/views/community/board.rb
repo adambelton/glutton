@@ -57,7 +57,7 @@ module Views
       end
 
       def create_curation_action
-        render RubyUI::Link.new(href: new_community_curation_path, variant: :primary, size: :xl, class: "ui-action-button ms-auto h-auto max-w-full") do
+        render RubyUI::Link.new(href: new_community_post_path, variant: :primary, size: :xl, class: "ui-action-button ms-auto h-auto max-w-full") do
           t("community.curations.create")
         end
       end

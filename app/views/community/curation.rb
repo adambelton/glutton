@@ -22,6 +22,9 @@ module Views
             p(class: "community-curation-prompt") { @curation.prompt }
             display_additional_description if @curation.additional_description.present?
           end
+          div(class: "community-comment-actions") do
+            a(href: new_community_post_report_path(@curation)) { t("community.reports.action") }
+          end
           section(aria: { labelledby: "curation-nominated-films" }, data: { controller: "community-film-comments" }) do
             h2(id: "curation-nominated-films", class: "sr-only") { t("community.curations.nominated_films") }
             endorsements_action if @can_contribute
@@ -68,7 +71,7 @@ module Views
       def disassociate_action
         render Shared::ConfirmationDialog.new(id: "disassociate-curation", action_label: t("community.curation_protection.disassociate"),
           title: t("community.curation_protection.confirm_title"), description: t("community.curation_protection.confirm_description"),
-          cancel_label: t("community.curations.cancel"), url: disassociate_community_curation_path(@curation), method: :patch)
+          cancel_label: t("community.curations.cancel"), url: community_curation_disassociate_path(@curation), method: :patch)
       end
 
       def display_additional_description
@@ -79,7 +82,7 @@ module Views
       end
 
       def edit_action
-        render RubyUI::Link.new(href: edit_community_curation_path(@curation), variant: :ghost, size: :lg, class: "ui-action-button") do
+        render RubyUI::Link.new(href: edit_community_post_path(@curation), variant: :ghost, size: :lg, class: "ui-action-button") do
           t("community.curation_editing.edit_post")
         end
       end
@@ -87,7 +90,7 @@ module Views
       def delete_action
         render Shared::ConfirmationDialog.new(id: "delete-curation", action_label: t("community.curation_deletion.delete_post"),
           title: t("community.curation_deletion.confirm_title"), description: t("community.curation_deletion.confirm_description"),
-          cancel_label: t("community.curations.cancel"), url: community_curation_path(@curation))
+          cancel_label: t("community.curations.cancel"), url: community_post_path(@curation))
       end
 
       def endorsements_action
@@ -131,14 +134,14 @@ module Views
 
         div(class: "library-card-actions community-nomination-actions") do
           library_button(::Library::BookmarkPlusIcon.new, film:, label: watchlist_label,
-            path: (watchlist_community_curation_path(@curation) unless library_film.present?), in_collection: library_film.present? && !watched)
+            path: (community_curation_film_watchlist_path(@curation, film) unless library_film.present?), in_collection: library_film.present? && !watched)
           library_button(::Library::EyeCheckIcon.new, film:, label: t(watched ? "library.search.in_watched" : "library.detail.add_to_watched"),
-            path: (watched_community_curation_path(@curation) unless watched), in_collection: watched)
+            path: (community_curation_film_watched_path(@curation, film) unless watched), in_collection: watched)
         end
       end
 
       def library_button(icon, film:, label:, path:, in_collection:)
-        render ::Library::CardAction.new(url: path, params: { film_id: film.id }, label:, tooltip: label, in_collection:, film_title: film.title) { render icon }
+        render ::Library::CardAction.new(url: path, label:, tooltip: label, in_collection:, film_title: film.title) { render icon }
       end
     end
   end

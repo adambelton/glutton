@@ -12,7 +12,7 @@ module Views
           back_to: browsing_path, back_label: t("identity.entry.back")) do
           p { t("identity.registration.explanation") }
           errors(@registration.errors.full_messages)
-          form_with(url: registration_path, scope: :registration) do
+          form_with(url: registration_path, scope: :registration, data: form_validation) do
             input(type: :hidden, name: "registration[terms_version]", value: terms_version)
             input(type: :hidden, name: "registration[privacy_notice_version]", value: privacy_notice_version)
             field(name: "registration[email_address]", id: "registration_email_address", label: t("identity.sessions.email"), type: :email, value: @registration.email_address, required: true, autocomplete: "email")
@@ -22,7 +22,7 @@ module Views
               input(type: :checkbox, id: "registration_terms_accepted", name: "registration[terms_accepted]", value: "1", required: true)
               span { t("identity.registration.terms_acceptance") }
             end
-            submit(t("identity.registration.submit"))
+            validated_submit(t("identity.registration.submit"))
           end
           div(class: "registration-policies") do
             text_link(t("identity.terms_of_service.title"), terms_of_service_path)

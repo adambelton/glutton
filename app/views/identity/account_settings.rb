@@ -19,7 +19,7 @@ module Views
                 p { @email_address }
               end
               credential_dialog(:email, title: t("identity.settings.change_email")) do
-                form_with(url: account_email_path) do
+                form_with(url: account_email_path, data: form_validation) do
                   field(name: "email_address", id: "new_email_address", label: t("identity.settings.new_email"),
                     type: :email, required: true, autocomplete: "email")
                   current_password_field("email_current_password")
@@ -33,7 +33,7 @@ module Views
                 p(aria: { label: t("identity.settings.password_hidden") }) { "********" }
               end
               credential_dialog(:password, title: t("identity.settings.change_password")) do
-                form_with(url: account_password_path, method: :patch) do
+                form_with(url: account_password_path, method: :patch, data: form_validation) do
                   current_password_field("change_current_password")
                   field(name: "password", id: "new_password", label: t("identity.recovery.new_password"),
                     type: :password, required: true, autocomplete: "new-password")
@@ -78,7 +78,7 @@ module Views
         div(class: "ui-actions ui-actions-fixed") do
           render Shared::GhostButton.new(class: "ui-action-button",
             data: { action: "confirmation-dialog#close" }) { t("identity.settings.cancel") }
-          render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { label }
+          validated_submit(label, class_name: "ui-action-button")
         end
       end
 
