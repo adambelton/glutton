@@ -11,11 +11,13 @@ module Views
         page(title: @film.title, class: "community-film-debrief-page", heading_content: ::Registry::FilmTitle.new(film: @film),
           back_to: community_path, back_label: t("community.curations.back")) do
           div(class: "community-debrief-intro") do
-            div(class: "community-post-tags") do
-              render ::Community::PostBadge.new(label: t("community.film_debriefs.badge"),
-                tooltip: t("community.film_debriefs.badge_tooltip"), tooltip_id: "film-debrief-#{@debrief.id}-tooltip")
+            div(class: "community-debrief-meta") do
+              div(class: "community-post-tags") do
+                render ::Community::PostBadge.new(label: t("community.film_debriefs.badge"),
+                  tooltip: t("community.film_debriefs.badge_tooltip"), tooltip_id: "film-debrief-#{@debrief.id}-tooltip")
+              end
+              render ::Community::GluttonIdentity.new(class_name: "community-film-debrief-author")
             end
-            render ::Community::GluttonIdentity.new(class_name: "community-film-debrief-author")
             div(class: "community-curation-descriptions") do
               p { t("community.film_debriefs.introduction", title: @film.title) }
             end

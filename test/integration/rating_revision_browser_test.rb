@@ -64,7 +64,7 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_redirected_to library_path(view: "watched")
     assert_response :see_other
     follow_redirect!
-    assert_select ".ui-toast", text: I18n.t("ratings.browser.saved")
+    assert_select ".ui-toast", text: I18n.t("ratings.browser.saved_with_notes")
     latest = @candidate.reload.current_rating
     assert_equal "  Updated\n👻 ", latest.notes
     assert_equal Ratings::Rating::Values::BRILLIANT, @original.reload.value
@@ -76,6 +76,8 @@ class RatingRevisionBrowserTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_nil @candidate.reload.current_rating.notes
     assert_equal 3, @candidate.ratings.count
+    follow_redirect!
+    assert_select ".ui-toast", text: I18n.t("ratings.browser.saved")
   end
 
   test "validation retains original expected id and cannot retarget an intervening revision" do

@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class LibraryCollectionNavigationTest < ApplicationSystemTestCase
-  test "marking a paginated TMDB result watched keeps the same results page open and updates Watched" do
+  test "touch confirmation keeps the paginated TMDB results open when canceled or applied" do
     client = Registry::Sources::TmdbClient
     original_search = client.method(:search)
     client.define_singleton_method(:search) do |query:, page:, **|
@@ -22,7 +22,28 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     within ".library-film-search-dropdown" do
       click_link I18n.t("library.browser.next")
       assert_text I18n.t("library.browser.page", number: 2)
-      find("li", text: "Alien 6").click_button I18n.t("library.detail.add_to_watched")
+    end
+    user = Identity::UserGuest.last
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: true, maxTouchPoints: 1)
+    result = find(".library-film-search-dropdown li", text: "Alien 6")
+    action = result.find_button(I18n.t("library.detail.add_to_watched"))
+    tap_library_action(action)
+    assert_selector "#library-action-confirmation[open]"
+    assert_no_selector ".film-search-tooltip"
+    within "#library-action-confirmation[open]" do
+      assert_selector "h2", text: I18n.t("library.detail.add_to_watched")
+      assert_selector "p", text: "Alien 6"
+      assert_selector "button:focus", text: I18n.t("library.confirmation.cancel")
+      click_button I18n.t("library.confirmation.cancel")
+    end
+    assert_no_selector "#library-action-confirmation[open]"
+    assert_selector ".library-film-search-dropdown li", text: "Alien 6"
+    assert_not Library::LibraryFilm.watched.exists?(user:, film:)
+
+    tap_library_action(action)
+    within "#library-action-confirmation[open]" do
+      click_button I18n.t("library.confirmation.confirm")
     end
 
     assert_selector ".ui-toast", text: I18n.t("library.detail.watched")
@@ -32,14 +53,52 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_selector "li", text: /Alien 6.*#{I18n.t("library.search.in_watched")}/m
       assert_selector "li", text: "Alien 7"
     end
-    assert_selector ".library-film h3", text: "Alien 6"
+    assert_selector '.library-film h3 a[href="https://www.themoviedb.org/movie/605"][target="_blank"]', text: "Alien 6"
     assert_current_path library_path(view: "watched")
-    assert Library::LibraryFilm.watched.exists?(user: Identity::UserGuest.last, film:)
+    assert Library::LibraryFilm.watched.exists?(user:, film:)
     click_button I18n.t("ui.search.clear")
     assert_field I18n.t("library.search.label"), with: ""
     assert_no_selector ".library-film-search-dropdown"
   ensure
+    browser&.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false)
     client.define_singleton_method(:search, original_search)
+  end
+
+  test "touching remove on a Library card only removes the film after confirmation" do
+    visit library_path
+    click_button I18n.t("identity.entry.try_it_out")
+    assert_current_path library_path
+    user = Identity::UserGuest.last
+    film = Registry::Film.create!(title: "The Thing")
+    Library::CollectionManagement::AddToWatchlist.call(user_id: user.id, film_id: film.id)
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: true)
+    browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: true, maxTouchPoints: 1)
+    visit library_path
+    remove = find_button(I18n.t("library.detail.remove_film", title: film.title))
+    assert_equal "none", page.evaluate_script("getComputedStyle(arguments[0], '::after').content", remove)
+    tap_library_action(remove)
+
+    within "#library-action-confirmation[open]" do
+      assert_selector "h2", text: I18n.t("library.detail.remove_from_watchlist")
+      assert_selector "p", text: film.title
+      assert Library::LibraryFilm.exists?(user:, film:)
+      cancel = find_button(I18n.t("library.confirmation.cancel"))
+      confirm = find_button(I18n.t("library.confirmation.confirm"))
+      actions = find(".ui-actions").rect
+      assert_in_delta actions.x, cancel.rect.x, 1
+      assert_in_delta actions.x + actions.width, confirm.rect.x + confirm.rect.width, 1
+      assert_in_delta cancel.rect.y, confirm.rect.y, 1
+      assert_in_delta cancel.rect.width, confirm.rect.width, 1
+      tap_library_action(confirm)
+    end
+    assert_no_selector ".library-film h3", text: film.title
+    assert_selector ".ui-toast", text: I18n.t("library.detail.removed")
+    assert_not Library::LibraryFilm.exists?(user:, film:)
+  ensure
+    browser&.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false)
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "film search from the Library heading adds a result to Watchlist" do
@@ -149,8 +208,8 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
   test "local search filters the Library and the in-field clear restores the collection" do
     visit library_path
     click_button I18n.t("identity.entry.try_it_out")
-    label = I18n.t("library.browser.search")
-    assert_field label
+    label = I18n.t("library.browser.search.watchlist")
+    assert_field label, placeholder: label
     user = Identity::UserGuest.last
     [ "Alien", "The Thing" ].each do |title|
       film = Registry::Film.create!(title:)
@@ -177,6 +236,26 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_current_path library_path(view: "watchlist")
     assert_field label, with: ""
     assert_selector ".library-film h3", text: "The Thing"
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    assert_stacked_library_search("library-collection-query")
+    watchlist_tabs = find(".library-tabs").rect
+    click_button I18n.t("ui.search.tmdb")
+    assert_selector "#library-film-query:focus"
+    assert_stacked_library_search("library-film-query")
+    click_link I18n.t("library.browser.views.watched")
+    assert_current_path library_path(view: "watched")
+    assert_selector ".library-tabs [aria-current='page']", text: I18n.t("library.browser.views.watched")
+    watched_search = I18n.t("library.browser.search.watched")
+    assert_field watched_search, placeholder: watched_search
+    assert_stacked_library_search("library-collection-query")
+    tabs = find(".library-tabs")
+    assert_equal watchlist_tabs, tabs.rect
+    assert_operator tabs.style("border-bottom-width").fetch("border-bottom-width").to_f, :>, 0
+    assert_operator tabs.rect.y + tabs.rect.height, :<=, find(".library-rating-filters").rect.y
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "Watched filters share the Watchlist divider position when they fit beside the tabs" do
@@ -254,13 +333,14 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_poster_action_row
       assert_no_button "Rate #{film.title}"
       assert_button "Remove #{film.title} from watchlist"
-      click_button "Mark #{film.title} watched"
+      find_button("Mark #{film.title} watched").send_keys(:enter)
     end
 
     assert_current_path new_rating_path(film_id: film.id)
     assert_selector "h2", text: film.title
     click_link I18n.t("library.browser.return")
     assert_current_path library_path(view: "watched")
+    browser = page.driver.browser
     within ".library-film" do
       assert_poster_action_row
       rating = find_button("Rate #{film.title}")
@@ -276,14 +356,20 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
         assert_selector "button.library-rating-icon:hover"
         assert_equal hover_background, rating.style("background-color")
       end
-      click_button "Rate #{film.title}"
+      browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: true, maxTouchPoints: 1)
+      tap_library_action(rating)
+    end
+    within "#library-action-confirmation[open]" do
+      assert_selector "h2", text: "Add rating"
+      assert_selector "p", text: film.title
+      click_button I18n.t("library.confirmation.confirm")
     end
     assert_current_path new_rating_path(film_id: film.id)
     assert_selector "h2", text: film.title
     assert_link I18n.t("library.browser.return"), href: library_path(view: "watched")
     save = I18n.t("ratings.browser.save")
     journal = I18n.t("ratings.browser.panels.journal")
-    toast = I18n.t("ratings.browser.saved")
+    toast = I18n.t("ratings.browser.saved_with_notes")
     save_button = find_button(save, disabled: true).rect
     rating_card = find(".rating-interface").rect
     assert_in_delta rating_card.x + rating_card.width, save_button.x + save_button.width, 1
@@ -294,8 +380,15 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_current_path library_path(view: "watched")
     assert_selector ".ui-toast", text: toast
 
-    click_button I18n.t("library.browser.edit_film_rating", title: film.title)
+    tap_library_action(find_button(I18n.t("library.browser.edit_film_rating", title: film.title)))
+    within "#library-action-confirmation[open]" do
+      assert_selector "h2", text: "Edit rating"
+      assert_selector "p", text: film.title
+      click_button I18n.t("library.confirmation.confirm")
+    end
     assert_current_path edit_rating_path(film_id: film.id)
+    browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false)
+    assert_selector "#journal-tab .rating-tab-notes"
     assert_link I18n.t("library.browser.return"), href: library_path(view: "watched")
     assert_button save, disabled: true
 
@@ -326,9 +419,39 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     find('[role="tab"]', text: journal).click
     assert_field "notes", with: "Revised notes"
     assert_button save, disabled: true
+  ensure
+    browser&.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false)
   end
 
   private
+
+  def tap_library_action(button)
+    x, y = page.evaluate_script(<<~JS, button)
+      ((button) => {
+        button.scrollIntoView({ block: "nearest" })
+        const rect = button.getBoundingClientRect()
+        return [Math.round(rect.x + rect.width / 2), Math.round(rect.y + rect.height / 2)]
+      })(arguments[0])
+    JS
+    browser = page.driver.browser
+    browser.execute_cdp("Input.dispatchTouchEvent", type: "touchStart", touchPoints: [ { x:, y: } ])
+    browser.execute_cdp("Input.dispatchTouchEvent", type: "touchEnd", touchPoints: [])
+  end
+
+  def assert_stacked_library_search(input_id)
+    modes = find(".search-bar-modes").rect
+    field = find("##{input_id}").rect
+    tabs = find(".library-tabs").rect
+    assert_operator modes.y + modes.height, :<=, field.y
+    assert_operator field.y + field.height, :<=, tabs.y
+    page_width = find(".library-page").rect.width
+    [ modes, field, tabs ].each { |row| assert_in_delta 1, row.width.fdiv(page_width), 0.02 }
+    [ ".search-bar-modes button", ".library-tabs a" ].each do |selector|
+      first, second = all(selector, count: 2).map(&:rect)
+      assert_equal first.y, second.y
+      assert_in_delta first.width.fdiv(page_width), second.width.fdiv(page_width), 0.03
+    end
+  end
 
   def assert_poster_action_row
     poster = find(".film-poster").rect

@@ -41,7 +41,7 @@ module Recommendations
     end
 
     def actions
-      div(class: "film-actions recommendation-actions") do
+      div(class: "film-actions recommendation-actions", data: { readonly: ("true" if @readonly) }) do
         params = { film_id: @film.id }
         render Shared::ActionForm.new(url: accept_recommendation_path, params:, readonly: @readonly) do
           render Shared::PrimaryButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.accept") }
@@ -49,8 +49,9 @@ module Recommendations
         render Shared::ActionForm.new(url: reject_recommendation_path, params:, readonly: @readonly) do
           render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("recommendations.reject") }
         end
-        render Shared::ActionForm.new(url: add_to_watched_from_recommendations_path, params:, readonly: @readonly) do
-          label = t("library.detail.add_to_watched")
+        label = t("library.detail.add_to_watched")
+        render ::Library::FilmActionForm.new(url: add_to_watched_from_recommendations_path, params:,
+          action_label: label, film_title: @film.title, readonly: @readonly) do
           render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
             aria: { label: }, data: ({ tooltip: label } unless @readonly)) do
             render ::Library::EyeCheckIcon.new

@@ -50,7 +50,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
   end
 
   test "the match and source links follow the title and wrap when needed" do
-    film = Registry::Film.create!(title: "A recommendation with a match score", tmdb_id: 19_807, wikipedia_context: { page_id: 123 },
+    film = Registry::Film.create!(title: "Last Light", tmdb_id: 19_807, wikipedia_context: { page_id: 123 },
       tmdb_metadata: { details: { backdrop_path: "/still.jpg", overview: "A visitor arrives in a town where nobody goes out after dark." } })
     visit recommendation_path
     click_button I18n.t("identity.entry.try_it_out")
@@ -87,21 +87,29 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     score.send_keys(:shift)
     assert_selector tooltip, exact_text: label
 
-    [ 1400, 390 ].each do |width|
+    [ 1400, 390, 320 ].each do |width|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
       score_rect = score.rect
       title = find(".recommendation-heading h2").rect
+      poster = find(".recommendation-artwork .film-poster").rect
       if width == 1400
         assert_operator score_rect.x, :>, title.x + title.width
         assert_in_delta title.y + title.height / 2.0, score_rect.y + score_rect.height / 2.0, 1
       else
+        assert_operator poster.x + poster.width, :<, title.x
+        assert_in_delta poster.y, title.y, 1
         assert_in_delta title.x, score_rect.x, 1
         assert_operator score_rect.y, :>, title.y + title.height
       end
       [ "tmdb", "wikipedia" ].each do |source|
         link = find_link(I18n.t("registry.film_presentation.#{source}")).rect
-        assert_in_delta score_rect.y + score_rect.height / 2.0, link.y + link.height / 2.0, 1
-        assert_operator link.x, :>, score_rect.x + score_rect.width
+        if width == 1400
+          assert_in_delta score_rect.y + score_rect.height / 2.0, link.y + link.height / 2.0, 1
+          assert_operator link.x, :>, score_rect.x + score_rect.width
+        else
+          assert_operator link.x, :>=, title.x
+          assert_operator link.y, :>=, score_rect.y
+        end
       end
       synopsis = find(".film-synopsis-text").rect
       actions = find(".recommendation-actions").rect
@@ -115,7 +123,12 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
         assert_operator synopsis_area.height, :>, synopsis.height
         assert_operator actions.x, :>, synopsis_area.x + synopsis_area.width
       else
-        assert_in_delta 12, synopsis.y - (heading.y + heading.height), 1
+        first_line = synopsis_lines(find(".film-synopsis-text")).first
+        assert_operator first_line.fetch("y"), :>=, heading.y + heading.height
+        if width == 390
+          assert_operator first_line.fetch("y"), :<, poster.y + poster.height
+          assert_operator first_line.fetch("x"), :>, poster.x + poster.width
+        end
         assert_operator actions.y, :>, synopsis.y + synopsis.height
       end
     end
@@ -220,11 +233,16 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_selector "#recommendation-trailer-player[allowfullscreen]"
     mobile_player = player.rect
     poster = find(".recommendation-artwork .film-poster").rect
-    details = find(".recommendation-details").rect
     actions = find(".recommendation-actions").rect
     assert_in_delta 16.0 / 9, mobile_player.width.to_f / mobile_player.height, 0.02
     assert_operator poster.y, :>, mobile_player.y + mobile_player.height
-    assert_operator details.y, :>, poster.y + poster.height
+    lines = synopsis_lines(text)
+    first_line = lines.first
+    last_line = lines.last
+    assert_operator first_line.fetch("x"), :>, poster.x + poster.width
+    assert_operator first_line.fetch("y"), :<, poster.y + poster.height
+    assert_in_delta poster.x, last_line.fetch("x"), 1
+    assert_operator last_line.fetch("y"), :>, poster.y + poster.height
     synopsis = find(".film-synopsis").rect
     assert_operator actions.y, :>, synopsis.y + synopsis.height
     assert_no_button I18n.t("ui.synopsis.expand")
@@ -329,5 +347,15 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     poster = find(selector).rect
     assert_in_delta poster.width * 1.5, poster.height, 1
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
+  end
+
+  def synopsis_lines(text)
+    text.evaluate_script(<<~JS)
+      (() => {
+        const range = document.createRange()
+        range.selectNodeContents(this)
+        return Array.from(range.getClientRects(), line => ({ x: line.x + window.scrollX, y: line.y + window.scrollY }))
+      })()
+    JS
   end
 end

@@ -6,11 +6,12 @@ module Views
       end
 
       def view_template
-        render Shared::Layout.new(title: t("identity.entry.title")) do
+        render Shared::Layout.new(title: t("identity.entry.title"), header_entry_on_mobile: false) do
           main(id: "main-content", tabindex: "-1", class: "landing-demo") do
             header(class: "demo-intro") do
               h1 { hero_heading }
               t("identity.entry.demo.description").each { |paragraph| p { paragraph } }
+              div(class: "hero-entry-actions") { render ::Identity::AccountEntryControls.new(prominent: true) }
             end
             feature_section(:ratings) do
               if @examples.present?
@@ -96,11 +97,13 @@ module Views
       end
 
       def entry_actions
-        div(class: "preview-actions") do
+        div(class: "ui-actions ui-actions-mobile-full preview-actions") do
           render Shared::ActionForm.new(url: guest_session_path) do
             render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("identity.entry.demo.try_as_guest") }
           end
-          text_link(t("ui.register"), new_registration_path)
+          render RubyUI::Link.new(href: new_registration_path, class: "ui-link preview-register-desktop") { t("ui.register") }
+          render RubyUI::Link.new(href: new_registration_path, variant: :ghost,
+            class: "ui-action-button preview-register-mobile") { t("ui.register") }
         end
       end
 

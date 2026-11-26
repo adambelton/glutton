@@ -86,7 +86,7 @@ class RatingsTargetedEntryTest < ActionDispatch::IntegrationTest
     assert_not rating.rating_film.dismissed?
     assert_empty foreign.ratings
     follow_redirect!
-    assert_select '[role="status"]', I18n.t("ratings.browser.saved")
+    assert_select '[role="status"]', I18n.t("ratings.browser.saved_with_notes")
   end
 
   test "validation retains selected film choice and escaped exact expressions without admitting candidate" do

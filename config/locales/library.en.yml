@@ -8,8 +8,13 @@ en:
         film: Film
         film_id: Film
   library:
+    confirmation:
+      cancel: Cancel
+      confirm: Confirm
     browser:
-      search: Search your library
+      search:
+        watchlist: Search your watchlist
+        watched: Search your watched films
       no_matches: No films match this search.
       title: Library
       view: Library view

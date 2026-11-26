@@ -41,7 +41,7 @@ class TasteProfileTest < ApplicationSystemTestCase
     assert_in_delta 0, navigation.evaluate_script("this.parentElement.clientWidth - this.getBoundingClientRect().width"), 1
     assert_equal library_path, navigation.value
     assert_in_delta 1, find("main h1").evaluate_script("this.getBoundingClientRect().width"), 0.5
-    assert_field I18n.t("library.browser.search")
+    assert_field I18n.t("library.browser.search.watchlist")
     search = find(".ui-page-heading .search-bar")
     assert_in_delta 0, search.evaluate_script("this.closest('.ui-page-heading').clientWidth - this.getBoundingClientRect().width"), 1
     navigation.find("option", text: I18n.t("admin.title")).select_option

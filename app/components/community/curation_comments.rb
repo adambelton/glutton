@@ -6,7 +6,7 @@ module Community
     end
 
     def view_template
-      div(id: "film-discussion-#{@film_id}") do
+      div(id: "film-discussion-#{@film_id}", class: "community-nomination-discussion") do
         discussion
       end
     end

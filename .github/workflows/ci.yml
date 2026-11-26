@@ -44,5 +44,34 @@ jobs:
         run: |
           bin/rails db:create
           bin/rails runner 'ActiveRecord::Base.connection_pool.migration_context.migrate'
+      - name: Set up Chrome for browser tests
+        env:
+          # Chrome 158 fails during Capybara cookie cleanup.
+          CHROME_FOR_TESTING_VERSION: '157.0.8103.78'
+        run: |
+          install_dir="$RUNNER_TEMP/chrome-for-testing"
+          mkdir -p "$install_dir"
+          for package in chrome chromedriver; do
+            archive="$package-linux64.zip"
+            curl --fail --silent --show-error --retry 3 \
+              "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_FOR_TESTING_VERSION/linux64/$archive" \
+              --output "$install_dir/$archive"
+            unzip -q "$install_dir/$archive" -d "$install_dir"
+          done
+
+          # Ubuntu's packaged Chrome profile does not cover Chrome for Testing.
+          chrome_binary="$install_dir/chrome-linux64/chrome"
+          profile="$RUNNER_TEMP/glutton-chrome.apparmor"
+          cat > "$profile" <<EOF
+          abi <abi/4.0>,
+          "$chrome_binary" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r "$profile"
+          driver_binary="$install_dir/chromedriver-linux64/chromedriver"
+          "$chrome_binary" --version
+          "$driver_binary" --version
+          printf 'GLUTTON_TEST_CHROME_BINARY=%s\nSE_CHROMEDRIVER=%s\n' "$chrome_binary" "$driver_binary" >> "$GITHUB_ENV"
       - name: Run repository checks
         run: bin/ci

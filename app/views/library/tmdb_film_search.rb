@@ -16,6 +16,7 @@ module Views
             end
             pagination if @result.present?
           end
+          render ::Library::ActionConfirmationDialog.new if @result.present?
         end
       end
 
@@ -32,14 +33,14 @@ module Views
         selection = search_parameters(@result.start, @number).merge(tmdb_id:)
         render Shared::TmdbFilmSearchResultRow.new(candidate:, icon_actions: true) do
           tooltip_text = t("library.detail.add_to_watchlist")
-          render Shared::ActionForm.new(url: library_tmdb_search_watchlist_path, params: selection,
+          render ::Library::FilmActionForm.new(url: library_tmdb_search_watchlist_path, params: selection, action_label: tooltip_text, film_title: candidate.fetch(:title),
             data: { library_tmdb_selection: true }) do
             render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
           end
 
           tooltip_text = t("library.detail.add_to_watched")
-          render Shared::ActionForm.new(url: library_tmdb_search_watched_path, params: selection,
+          render ::Library::FilmActionForm.new(url: library_tmdb_search_watched_path, params: selection, action_label: tooltip_text, film_title: candidate.fetch(:title),
             data: { library_tmdb_selection: true }) do
             render Shared::IconButton.new(type: :submit, variant: :ghost, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::EyeCheckIcon.new }

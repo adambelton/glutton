@@ -61,6 +61,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_no_selector "input[name^=curation], textarea[name^=curation]:not(#curation_additional_description)"
       assert_button save, disabled: true
       assert_comment_action_group(cancel:, submit: save)
+      assert_mobile_editor_actions
       fill_in additional_description, with: "An abandoned draft."
       click_link cancel
     end
@@ -96,7 +97,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
 
     disassociate = I18n.t("community.curation_protection.disassociate")
-    within ".community-curation-author-actions" do
+    action_group = find(".community-curation-author-actions")
+    within action_group do
       edit = find_link(edit_post)
       remove_attribution = find_button(disassociate)
       desktop_font_size = remove_attribution.style("font-size").fetch("font-size")
@@ -104,8 +106,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       begin
         page.current_window.resize_to(320, 900)
         assert_equal desktop_font_size, remove_attribution.style("font-size").fetch("font-size")
-        assert_equal edit.rect.y, remove_attribution.rect.y
-        assert_operator edit.rect.x + edit.rect.width, :<=, remove_attribution.rect.x
+        assert_full_width_author_actions(action_group, edit, remove_attribution)
         [ edit, remove_attribution ].each do |action|
           assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
         end
@@ -115,6 +116,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
     click_button disassociate
     within "dialog[open]" do
+      assert_mobile_editor_actions
       click_button I18n.t("community.curations.cancel")
     end
     assert_no_selector "dialog[open]"
@@ -381,6 +383,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
         assert_in_delta header.y, title.y, 2
       end
       assert_comment_action_group(cancel: I18n.t("community.curations.cancel"), submit: I18n.t("community.curation_endorsements.save"))
+      assert_mobile_editor_actions
       click_button I18n.t("community.curation_endorsements.save")
     end
     assert_no_selector "dialog[open]"
@@ -433,9 +436,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
         assert_equal edit.rect.y, delete.rect.y
 
         page.current_window.resize_to(320, 900)
-        assert_equal edit.rect.y, delete.rect.y
-        group = action_group.rect
-        assert_operator delete.rect.x + delete.rect.width, :<=, group.x + group.width + 1
+        assert_full_width_author_actions(action_group, edit, delete)
         [ edit, delete ].each do |action|
           assert_equal "nowrap", action.style("white-space").fetch("white-space")
           assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
@@ -451,6 +452,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_no_selector ".ui-page-back-above"
     within(card) do
       assert_comment_action_group(cancel: I18n.t("community.curations.cancel"), submit: I18n.t("community.curation_editing.save"))
+      assert_mobile_editor_actions
       assert_link I18n.t("community.curations.cancel"), href: community_curation_path(curation)
     end
     assert_field I18n.t("community.curations.title"), with: curation.title
@@ -477,6 +479,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_in_delta cancel.rect.height, confirm.rect.height, 1
       assert_in_delta 8, confirm.rect.x - (cancel.rect.x + cancel.rect.width), 1
       assert_in_delta 28, cancel.rect.y - (description.y + description.height), 1
+      assert_mobile_editor_actions
       cancel.click
     end
     assert_no_selector "dialog[open]"
@@ -825,6 +828,45 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     find("#nomination-#{first.id} details.community-film-comments > summary").click
     assert_text "The landscape shapes the story."
     assert_no_text "The sound design also helps."
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    post = find(".community-curation-page")
+    action = find_link(I18n.t("community.curation_endorsements.endorse_films"))
+    assert_operator action.rect.width, :>, post.rect.width * 0.9
+    within "#nomination-#{first.id}" do
+      controls = find(".community-nomination-actions")
+      disclosure = find("#film-comment-count-#{first.id}")
+      assert_operator disclosure.rect.y, :>=, controls.rect.y + controls.rect.height
+      assert_operator find("#comment-#{root.id}").rect.x, :<, find("h3").rect.x
+    end
+    click_button I18n.t("community.curations.expand_all")
+    assert_operator find("#comment-#{at_indent_limit.id}").rect.x, :>, find("#comment-#{root.id}").rect.x
+    within "#comment-#{at_indent_limit.id}" do
+      avatar = find(".community-member-avatar").rect
+      assert_in_delta avatar.x, find(".community-curation-prompt").rect.x, 1
+      assert_in_delta avatar.x, find(".community-comment-actions").rect.x, 1
+      assert_operator find(".community-comment-author").rect.x, :>=, avatar.x + avatar.width
+      click_link I18n.t("community.curations.reply")
+    end
+    within "#comment-composer-#{at_indent_limit.id}" do
+      input = find("textarea:focus").rect
+      card = find(".community-comment")
+      editor = card.rect
+      inset = card.style("border-left-width", "padding-left").values.sum(&:to_f)
+      assert_no_selector ".community-member-avatar"
+      assert_in_delta editor.x + inset, input.x, 1
+      assert_in_delta editor.x + editor.width - inset, input.x + input.width, 1
+      cancel = find_link(I18n.t("community.curations.cancel")).rect
+      publish = find_button(I18n.t("community.curation_replies.publish")).rect
+      assert_equal cancel.y, publish.y
+      assert_in_delta cancel.width.fdiv(input.width), publish.width.fdiv(input.width), 0.03
+      assert_in_delta input.x, cancel.x, 1
+      assert_in_delta input.x + input.width, publish.x + publish.width, 1
+    end
+    assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "authors edit inline and confirm deleting comments while replies survive" do
@@ -893,7 +935,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_in_delta text_bounds.width, editor_bounds.width, 1
     save_y = editor_frame.find_button(save_label, disabled: true).rect.y
     assert_in_delta reply_gap, save_y - (editor_bounds.y + editor_bounds.height), 1
-    within(editor_frame) { assert_comment_action_group(cancel: cancel_label, submit: save_label) }
+    within(editor_frame) do
+      assert_comment_action_group(cancel: cancel_label, submit: save_label)
+      assert_mobile_editor_actions
+    end
     assert_no_selector "#comment-#{leaf.id} + .community-comment-editor-branch:not(:empty)"
     assert_no_selector "#comment-#{leaf.id} span.community-curation-prompt"
     within(editor_frame) { click_link cancel_label }
@@ -922,7 +967,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path path
 
     within("#comment-#{root.id}") { click_button delete_label }
-    within("dialog[open]") { click_button cancel_label }
+    within "dialog[open]" do
+      assert_mobile_editor_actions
+      click_button cancel_label
+    end
     assert_selector "#comment-#{root.id} span.community-curation-prompt", text: "The landscape shapes the story."
     within("#comment-#{root.id}") { click_button delete_label }
     within("dialog[open]") { click_button delete_label }
@@ -1049,6 +1097,17 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
   private
 
+  def assert_full_width_author_actions(group, first_action, second_action)
+    first = first_action.rect
+    second = second_action.rect
+    width = group.rect.width
+    assert group.evaluate_script("this.offsetWidth >= this.parentElement.clientWidth * 0.99")
+    assert_equal first.y, second.y
+    assert_operator first.x + first.width, :<, second.x
+    assert_operator (second.x + second.width - first.x).fdiv(width), :>=, 0.99
+    assert_in_delta first.width.fdiv(width), second.width.fdiv(width), 0.03
+  end
+
   def assert_avatar_beside_name(author)
     avatar = find("img.community-member-avatar")
     name = find("strong", text: author.community_username, exact_text: true)
@@ -1087,5 +1146,18 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_equal [ 44, 44 ], [ cancel_rect.height, submit_rect.height ]
       assert_in_delta 8, submit_rect.x - (cancel_rect.x + cancel_rect.width), 1
     end
+  end
+
+  def assert_mobile_editor_actions
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    group = find(".ui-actions-fixed")
+    cancel, confirm = group.all(".ui-action-button", count: 2).map(&:rect)
+    assert_equal cancel.y, confirm.y
+    assert_in_delta cancel.width, confirm.width, 1
+    assert_in_delta group.rect.x, cancel.x, 1
+    assert_in_delta group.rect.x + group.rect.width, confirm.x + confirm.width, 1
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 end

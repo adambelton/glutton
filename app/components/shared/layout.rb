@@ -2,8 +2,8 @@ module Shared
   class Layout < Base
     register_value_helper :request
 
-    def initialize(title:, pending_reminder: true)
-      @title, @pending_reminder = title, pending_reminder
+    def initialize(title:, pending_reminder: true, header_entry_on_mobile: true)
+      @title, @pending_reminder, @header_entry_on_mobile = title, pending_reminder, header_entry_on_mobile
     end
 
     def view_template
@@ -28,7 +28,7 @@ module Shared
             end
             render ThemeToggle.new
             if user.nil? || user.can_register?
-              div(class: "ui-auth-links") do
+              div(class: [ "ui-auth-links", ("ui-auth-links-desktop" unless @header_entry_on_mobile) ]) do
                 render Identity::AccountEntryControls.new(guest_entry: user.nil?)
                 render Identity::DiscardGuestConfirmationDialog.new if user&.can_register?
               end
