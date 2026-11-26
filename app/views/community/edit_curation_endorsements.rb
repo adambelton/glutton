@@ -35,7 +35,7 @@ module Views
           input(type: :hidden, name: "endorsements[snapshot]", value: @snapshot)
           render ::Community::CurationFilmPicker.new(films: @films, search_films: @search_films, selected_film_ids: @film_ids,
               comments: @comments, published_comments: @published_comments, saved_film_ids: @saved_film_ids,
-              heading: t("community.curation_endorsements.films"), divide_selected_films: true,
+              heading: t("community.curation_endorsements.films"), divide_selected_films: true, in_dialog: @dialog,
             field_prefix: "curation_endorsements", film_ids_name: "endorsements[film_ids]", comments_name: "endorsements[comments]")
           div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full justify-end") do
             render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button",

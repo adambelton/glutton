@@ -300,8 +300,23 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_button save, disabled: true
       click_button I18n.t("community.curations.remove_film", title: reference.title)
       assert_button save
-      fill_in search, with: reference.title
-      click_button I18n.t("community.curations.add_film", title: reference.title)
+      add_reference = I18n.t("community.curations.add_film", title: reference.title)
+      begin
+        assert_empty_editor_result(dialog, search, reference.title, add_reference)
+        set_viewport(390, 844)
+        assert_empty_editor_result(dialog, search, reference.title, add_reference)
+        dialog_bottom = dialog.rect.y + dialog.rect.height
+        fill_in search, with: "The"
+        popup = find(".film-search-dropdown:popover-open")
+        assert_operator popup.rect.y + popup.rect.height, :>, dialog_bottom
+        find_field(search).send_keys(:escape)
+        assert_no_selector ".film-search-dropdown"
+        assert dialog[:open]
+        fill_in search, with: reference.title
+        click_button add_reference
+      ensure
+        reset_viewport
+      end
       assert_button save, disabled: true
       reference_row = find(".community-selected-films > li[data-film-id='#{reference.id}']")
       assert_field I18n.t("community.curations.comment_for_film", title: reference.title), with: ""
@@ -472,7 +487,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       description = find("p", text: I18n.t("community.curation_deletion.confirm_description")).rect
       cancel = find_button(I18n.t("community.curations.cancel"))
       confirm = find_button(delete_label)
-      assert_in_delta 132, cancel.rect.width, 1
+      assert_in_delta description.x, cancel.rect.x, 1
+      assert_in_delta description.x + description.width, confirm.rect.x + confirm.rect.width, 1
       assert_in_delta cancel.rect.width, confirm.rect.width, 1
       assert_in_delta cancel.rect.height, confirm.rect.height, 1
       assert_in_delta 8, confirm.rect.x - (cancel.rect.x + cancel.rect.width), 1
@@ -1164,5 +1180,22 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_in_delta group.rect.x + group.rect.width, confirm.x + confirm.width, 1
   ensure
     browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  def assert_empty_editor_result(dialog, search, title, add_label)
+    assert_no_selector ".community-selected-films"
+    find_field(search).set("")
+    assert_no_selector ".film-search-dropdown"
+    height = dialog.rect.height
+    fill_in search, with: title
+    assert_selector ".film-search-dropdown:popover-open"
+    assert_equal height, dialog.rect.height
+    button = find_button(add_label)
+    assert button.evaluate_script(<<~JS), "The empty dialog clips the film's Add button"
+      (() => {
+        const { x, y, width, height } = this.getBoundingClientRect()
+        return this.contains(document.elementFromPoint(x + width / 2, y + height / 2))
+      })()
+    JS
   end
 end

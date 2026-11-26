@@ -75,7 +75,7 @@ module Views
       end
 
       def credential_actions(label)
-        div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full") do
+        div(class: "ui-actions ui-actions-fixed") do
           render Shared::GhostButton.new(class: "ui-action-button",
             data: { action: "confirmation-dialog#close" }) { t("identity.settings.cancel") }
           render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { label }

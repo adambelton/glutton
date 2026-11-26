@@ -20,7 +20,7 @@ module Shared
           data: { confirmation_dialog_target: "dialog", action: "turbo:before-cache@document->confirmation-dialog#close" }) do
           h2(id: "#{@id}-title") { @title }
           p(id: "#{@id}-description") { @description }
-          div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full") do
+          div(class: "ui-actions ui-actions-fixed") do
             render GhostButton.new(class: "ui-action-button", autofocus: true,
               data: { action: "confirmation-dialog#close" }) { @cancel_label }
             render ActionForm.new(url: @url, method: @method) do
