@@ -11,7 +11,11 @@ bin/dev
 
 Open [localhost:3000](http://localhost:3000). `bin/dev` builds styles and starts Rails and GoodJob together. Use `bin/rails tailwindcss:watch` for live CSS builds. Manual work uses `glutton_development` and automated tests use `glutton_test`. Check any `DATABASE_URL` override before setup or test commands.
 
+Rails replays all migrations when `db:prepare` creates a database and applies pending migrations to an existing one. This installs PostgreSQL objects defined in migrations, including the Community report deletion triggers. Schema dumps are disabled. Use `RAILS_ENV=test bin/rails db:prepare` to set up or update the test database on its own. To discard that test database and rebuild it from migrations, use `RAILS_ENV=test bin/rails db:migrate:reset`.
+
 Use `bin/ci` for style, security, autoloading, Rails tests and the headless Chrome suite. GitHub Actions runs the same checks on pull requests and pushes to main. Dependency audits use network access. The `/up` endpoint checks whether Rails boots.
+
+GitHub Actions runs `bin/ci` in the test environment. Its setup step replays migrations on the empty PostgreSQL database, and both test suites run serially against that same database.
 
 In responsive system tests, use the viewport helpers to set the page width and restore it after the check. Compare alignment, overflow, and shared control sizes directly. Use fixed dimensions when a specific size is part of the design contract.
 

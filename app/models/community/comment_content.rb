@@ -1,7 +1,6 @@
 module Community
   class CommentContent < ApplicationRecord
     include Reportable
-    self.report_source_key = :comment_content_source_id
 
     BODY_LIMIT = 4_000
 
@@ -17,7 +16,7 @@ module Community
       normalize_value_for(:body, body).to_s.length > BODY_LIMIT
     end
 
-    def reportable_parts
+    def reportable_attributes
       { "body" => body }
     end
 

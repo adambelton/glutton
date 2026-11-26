@@ -9,7 +9,7 @@ module Community
           report = Report.lock.find_by(id: report_id)
           return report.escalate!(moderator:) if report.present?
 
-          Report.require_escalation_access!(moderator:)
+          Report.require_review_access!(moderator:)
           raise ActiveRecord::RecordNotFound
         end
       end

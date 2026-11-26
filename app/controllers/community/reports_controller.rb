@@ -14,10 +14,9 @@ module Community
     end
 
     def create
-      fields = params.expect(report: [ :part, :reason, :explanation, { revisions: {} } ])
-      part, reason, explanation = fields.values_at(:part, :reason, :explanation)
-      revision = fields[:revisions]&.[](part) if part.present?
-      report = submission.submit(reporter_id: current_user.id, part:, reason:, explanation:,
+      fields = params.expect(report: [ :reason, :explanation, :revision ])
+      reason, explanation, revision = fields.values_at(:reason, :explanation, :revision)
+      report = submission.submit(reporter_id: current_user.id, reason:, explanation:,
         revision: revision.is_a?(String) ? revision : nil)
       if report.persisted?
         redirect_to return_path, notice: t("community.reports.submitted"), status: :see_other
@@ -25,7 +24,7 @@ module Community
         render_form(report, status: :unprocessable_content)
       end
     rescue Errors::ReportTargetChanged
-      report = Report.new(part:, reason:, explanation:)
+      report = Report.new(reason:, explanation:)
       report.errors.add(:base, t("community.reports.target_changed"))
       render_form(report, status: :unprocessable_content)
     end
@@ -51,8 +50,8 @@ module Community
 
     def render_form(report, status: :ok)
       reportable = submission.target(viewer: current_user)
-      parts = reportable.reportable_parts
-      render Views::Community::NewReport.new(report:, parts:, revisions: submission.revisions(reportable:, parts:),
+      evidence = reportable.reportable_attributes
+      render Views::Community::NewReport.new(report:, evidence:, revision: submission.revision(reportable:, evidence:),
         reasons: submission.reasons(reportable:), form_path:, return_path:), status:
     end
 

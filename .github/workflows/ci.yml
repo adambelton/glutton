@@ -37,13 +37,6 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-      - name: Run PostgreSQL migrations from scratch
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgresql://postgres:postgres@localhost/glutton_migration_check
-        run: |
-          bin/rails db:create
-          bin/rails runner 'ActiveRecord::Base.connection_pool.migration_context.migrate'
       - name: Set up Chrome for browser tests
         env:
           # Chrome 158 fails during Capybara cookie cleanup.
@@ -74,4 +67,6 @@ jobs:
           "$driver_binary" --version
           printf 'GLUTTON_TEST_CHROME_BINARY=%s\nSE_CHROMEDRIVER=%s\n' "$chrome_binary" "$driver_binary" >> "$GITHUB_ENV"
       - name: Run repository checks
+        env:
+          RAILS_ENV: test
         run: bin/ci

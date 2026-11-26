@@ -1,4 +1,4 @@
-module Admin
+module Shared
   class TableCell < Shared::Base
     def initialize(heading: false, **attributes)
       @element = heading ? :th : :td
@@ -7,7 +7,7 @@ module Admin
 
     def view_template(&)
       tag(@element, **@attributes) do
-        div(class: "admin-table-cell", &)
+        div(class: "ui-table-cell", &)
       end
     end
   end

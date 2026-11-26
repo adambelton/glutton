@@ -8,7 +8,7 @@ module Views
       def view_template
         page(title: t("community.curation_editing.title"), class: "community-curation-form") do
           errors(@curation.errors.full_messages)
-          editable_attributes = @curation.protected? ? [ :additional_description ] : [ :title, :prompt ]
+          editable_attributes = @curation.protected? ? [ :additional_description ] : [ :title, :description ]
           baseline = editable_attributes.to_h { |attribute| [ "curation[#{attribute}]", @curation.attribute_in_database(attribute) ] }
           form_with(url: form_path, method: :patch, data: track_form_changes(baseline:)) do
             if @curation.protected?
@@ -31,12 +31,12 @@ module Views
         p(id: "protected-curation-explanation", class: "muted") { t("community.curation_protection.editor_explanation") }
         dl(class: "mt-4 space-y-4") do
           original_field(:protected_title, @curation.title)
-          original_field(:protected_description, @curation.prompt)
+          original_field(:protected_description, @curation.description)
         end
         div(class: "ui-field") do
           label(for: "curation_additional_description") { t("community.curation_protection.additional_description") }
           textarea(id: "curation_additional_description", name: "curation[additional_description]", class: "ui-input",
-            aria: { describedby: "protected-curation-explanation" }, maxlength: ::Community::PostCommunityCuration::PROMPT_LIMIT) { @curation.additional_description.to_s }
+            aria: { describedby: "protected-curation-explanation" }, maxlength: ::Community::PostCommunityCuration::DESCRIPTION_LIMIT) { @curation.additional_description.to_s }
         end
       end
 

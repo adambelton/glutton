@@ -1,10 +1,9 @@
 module Community
   class PostCommunityCuration < Post
     include Reportable
-    self.report_source_key = :curation_source_id
 
     TITLE_LIMIT = 120
-    PROMPT_LIMIT = 2_000
+    DESCRIPTION_LIMIT = 2_000
     ENDORSERS_FOR_PROTECTION = 3
     COMMENTS_FOR_PROTECTION = 5
     COMMENTERS_FOR_PROTECTION = 2
@@ -13,19 +12,19 @@ module Community
     has_many :film_endorsements, foreign_key: :post_id, inverse_of: :post
     has_many :visible_film_endorsements, -> { visible_nominations }, class_name: "Community::FilmEndorsement", foreign_key: :post_id
 
-    normalizes :title, :prompt, with: ->(text) { text.strip }
+    normalizes :title, :description, with: ->(text) { text.strip }
     normalizes :additional_description, with: ->(text) { text.strip.presence }
 
     validates :title, presence: true, length: { maximum: TITLE_LIMIT }
-    validates :prompt, presence: true, length: { maximum: PROMPT_LIMIT }
-    validates :additional_description, length: { maximum: PROMPT_LIMIT }, allow_nil: true, if: :will_save_change_to_additional_description?
+    validates :description, presence: true, length: { maximum: DESCRIPTION_LIMIT }
+    validates :additional_description, length: { maximum: DESCRIPTION_LIMIT }, allow_nil: true, if: :will_save_change_to_additional_description?
     validates :author, presence: true, on: :create
 
     # The deletion owner follows the account until the curation becomes protected.
     before_create { self.deletable_author_id = author_id }
 
-    def reportable_parts
-      { "title" => title, "description" => prompt, "additional_description" => additional_description }.compact_blank
+    def reportable_attributes
+      { "title" => title, "description" => description, "additional_description" => additional_description }.compact_blank
     end
 
     def discussion_comment(id)
@@ -97,11 +96,11 @@ module Community
       !protected? && author_id == member.id && Membership::PostingAccess.allowed?(user: member)
     end
 
-    def edit_text(member:, title:, prompt:)
+    def edit_text(member:, title:, description:)
       raise Errors::CurationEditUnavailable unless can_edit?(member:)
 
       self.title = title
-      self.prompt = prompt
+      self.description = description
       save(touch: false)
       self
     end

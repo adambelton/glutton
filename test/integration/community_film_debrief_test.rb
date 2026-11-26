@@ -406,7 +406,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   def create_curation(title, updated_at:, film: nil)
     travel_to(updated_at) do
       watch(@member, film) if film.present?
-      Community::Curations::PublishCuration.call(author_id: @member.id, title:, prompt: "A specific subgenre.",
+      Community::Curations::PublishCuration.call(author_id: @member.id, title:, description: "A specific subgenre.",
         reference_film_ids: (film.present? ? [ film.id ] : []), reference_comments: {})
     end
   ensure

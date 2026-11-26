@@ -2,10 +2,16 @@ module Community
   module Reporting
     class BrowseReports
       PAGE_SIZE = 20
+      STATES = { "open" => "pending", "escalated" => "escalated", "resolved" => "resolved" }.freeze
 
-      def self.page(viewer:, number:)
+      def self.page(viewer:, number:, state:)
         require_access!(viewer:)
-        reports = Report.order(priority: :desc, created_at: :asc, id: :asc)
+        reports = Report.where(status: STATES.fetch(state))
+        reports = if state == "resolved"
+          reports.order(resolved_at: :desc, id: :desc)
+        else
+          reports.order(priority: :desc, created_at: :asc, id: :asc)
+        end
         CountedPage.load(reports, number:, page_size: PAGE_SIZE)
       end
 

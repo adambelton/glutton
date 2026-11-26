@@ -21,7 +21,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
     member = sign_in_member
     curation = Community::Curations::PublishCuration.call(author_id: member.id, title: "Isolated landscapes",
-      prompt: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
+      description: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
 
     [ privacy_notice_path, terms_of_service_path ].each do |path|
       assert_in_delta 48, card_gap(path), 1, path

@@ -44,8 +44,8 @@ module Community
     end
 
     def update
-      title, prompt = text_fields(curation_fields)
-      curation = Curations::EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, prompt:)
+      title, description = text_fields(curation_fields)
+      curation = Curations::EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, description:)
       if curation.errors.any?
         return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content
       end
@@ -87,8 +87,8 @@ module Community
     private
 
     def publish_curation
-      title, prompt, reference_film_ids, reference_comments = publication_fields
-      curation = Curations::PublishCuration.call(author_id: current_user.id, title:, prompt:, reference_film_ids:, reference_comments:)
+      title, description, reference_film_ids, reference_comments = publication_fields
+      curation = Curations::PublishCuration.call(author_id: current_user.id, title:, description:, reference_film_ids:, reference_comments:)
       if curation.errors.any?
         return render_form(curation, reference_film_ids:, reference_comments:, status: :unprocessable_content)
       end
@@ -130,9 +130,9 @@ module Community
 
     def publication_fields
       fields = curation_fields
-      title, prompt = text_fields(fields)
+      title, description = text_fields(fields)
       film_ids, comments = CurationFilmSelectionParameters.parse(ids: fields[:reference_film_ids], comments: fields[:reference_comments])
-      [ title, prompt, film_ids, comments ]
+      [ title, description, film_ids, comments ]
     end
 
     def curation_fields
@@ -143,12 +143,12 @@ module Community
     end
 
     def text_fields(fields)
-      title, prompt = fields.values_at(:title, :prompt)
-      unless [ title, prompt ].all? { |value| value.nil? || value.is_a?(String) }
+      title, description = fields.values_at(:title, :description)
+      unless [ title, description ].all? { |value| value.nil? || value.is_a?(String) }
         raise ActionController::BadRequest
       end
 
-      [ title, prompt ]
+      [ title, description ]
     end
 
     def render_form(curation, reference_film_ids: [], reference_comments: {}, status: :ok)

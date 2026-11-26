@@ -23,10 +23,10 @@ module Community
 
     def description_field
       div(class: "ui-field") do
-        label(for: "curation_prompt") { t("community.curations.description") }
-        textarea(name: "curation[prompt]", id: "curation_prompt", class: "ui-input", rows: 5,
-          maxlength: ::Community::PostCommunityCuration::PROMPT_LIMIT, required: true,
-          aria: { describedby: "curation_description_hint" }) { @curation.prompt.to_s }
+        label(for: "curation_description") { t("community.curations.description") }
+        textarea(name: "curation[description]", id: "curation_description", class: "ui-input", rows: 5,
+          maxlength: ::Community::PostCommunityCuration::DESCRIPTION_LIMIT, required: true,
+          aria: { describedby: "curation_description_hint" }) { @curation.description.to_s }
         p(id: "curation_description_hint", class: "muted") { t("community.curations.description_hint") }
       end
     end
