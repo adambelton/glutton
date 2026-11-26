@@ -21,6 +21,8 @@ Updated: 26 November 2026. This document describes current progress, agreed orde
 
 Guests can discard their activity and sign out from the header. Identity uses the same deletion rules as guest expiry.
 
+Small credential and confirmation dialogs share full-width action rows on desktop and mobile. Community Curation endorsement search results can extend beyond the editor without resizing it, so films can be selected even when the editor is empty.
+
 ## Current work
 
 - **Application stylesheet cleanup — implemented.** Shared application and Admin styles remain in one stylesheet. Admin rules are grouped together and redundant layout and theme declarations have been removed.

@@ -10,10 +10,20 @@ export default class extends Controller {
   initialize() {
     this.removedRows = new Map()
     this.page = 1
+    this.fitDropdown = this.fitDropdown.bind(this)
   }
 
   connect() {
+    if (this.resultsTarget.hasAttribute("popover")) {
+      window.visualViewport?.addEventListener("resize", this.fitDropdown)
+      window.visualViewport?.addEventListener("scroll", this.fitDropdown)
+    }
     this.filter()
+  }
+
+  disconnect() {
+    window.visualViewport?.removeEventListener("resize", this.fitDropdown)
+    window.visualViewport?.removeEventListener("scroll", this.fitDropdown)
   }
 
   filter() {
@@ -29,16 +39,34 @@ export default class extends Controller {
     for (const option of options) option.hidden = !visibleOptions.has(option)
 
     this.clearTarget.hidden = this.searchTarget.value === ""
-    this.resultsTarget.hidden = query === ""
     this.emptyTarget.hidden = query === "" || matches.length > 0
     this.previousTarget.hidden = this.page === 1
     this.nextTarget.hidden = this.page === totalPages
     this.pageTarget.textContent = this.pageLabelValue.replace("{number}", this.page).replace("{total}", totalPages)
-    fitFilmSearchDropdown(this.resultsTarget)
     this.selectedSectionTarget.hidden = selectedIds.size === 0
     if (this.hasWithdrawalTarget) {
       this.withdrawalTarget.hidden = this.savedIdsValue.every((id) => selectedIds.has(id))
     }
+    this.setResultsVisible(query !== "")
+    this.fitDropdown()
+  }
+
+  setResultsVisible(visible) {
+    const results = this.resultsTarget
+    results.hidden = !visible
+    if (!results.hasAttribute("popover")) return
+
+    if (!results.showPopover) {
+      results.removeAttribute("popover")
+    } else if (visible && results.closest("dialog").open && !results.matches(":popover-open")) {
+      results.showPopover()
+    } else if (!visible && results.matches(":popover-open")) {
+      results.hidePopover()
+    }
+  }
+
+  fitDropdown() {
+    if (this.hasResultsTarget) fitFilmSearchDropdown(this.resultsTarget)
   }
 
   searchChanged() {
@@ -68,11 +96,11 @@ export default class extends Controller {
 
     event.preventDefault()
     this.searchTarget.focus()
-    this.resultsTarget.hidden = true
+    this.setResultsVisible(false)
   }
 
   dismissOutside(event) {
-    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) this.resultsTarget.hidden = true
+    if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) this.setResultsVisible(false)
   }
 
   clear() {

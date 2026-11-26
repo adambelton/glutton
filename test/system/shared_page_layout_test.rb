@@ -90,27 +90,28 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
-  test "Account edit buttons and credential dialog actions fill their rows on mobile" do
+  test "Small account dialog actions fill their rows at desktop and mobile widths" do
     visit new_session_path
     sign_in_member
     visit account_settings_path
 
-    browser = page.driver.browser
-    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 780, deviceScaleFactor: 1, mobile: false)
-    %w[change_email change_password].each do |editor|
-      label = I18n.t("identity.settings.#{editor}")
-      assert_account_edit_button_below_field(label)
-      click_button label
-      within "dialog[open]" do
-        form = find("form").rect
-        cancel, submit = all(".ui-actions button", count: 2).map(&:rect)
-        assert_in_delta form.x, cancel.x, 1
-        assert_in_delta form.x + form.width, submit.x + submit.width, 1
-        assert_equal cancel.y, submit.y
-        assert_in_delta cancel.width, submit.width, 1
-        click_button I18n.t("identity.settings.cancel")
+    [ 1400, 320 ].each do |width|
+      set_viewport(width, 780)
+      %w[change_email change_password delete_title].each do |action|
+        label = I18n.t("identity.settings.#{action}")
+        assert_account_edit_button_below_field(label) if width == 320 && action != "delete_title"
+        click_button label
+        within "dialog[open]" do
+          heading = find("h2").rect
+          cancel, submit = all(".ui-actions button", count: 2).map(&:rect)
+          assert_in_delta heading.x, cancel.x, 1
+          assert_in_delta heading.x + heading.width, submit.x + submit.width, 1
+          assert_equal cancel.y, submit.y
+          assert_in_delta cancel.width, submit.width, 1
+          click_button I18n.t("identity.settings.cancel")
+        end
+        assert_no_selector "dialog[open]"
       end
-      assert_no_selector "dialog[open]"
     end
 
     within(".account-tabs") { click_link I18n.t("community.title") }
@@ -119,7 +120,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
       assert_account_edit_button_below_field(I18n.t("identity.settings.#{field}.change"))
     end
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   private

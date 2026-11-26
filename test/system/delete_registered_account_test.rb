@@ -42,7 +42,9 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
       assert_field I18n.t("identity.settings.new_email")
       cancel = find_button(I18n.t("identity.settings.cancel"))
       send = find_button(I18n.t("identity.settings.send_email"))
-      assert_in_delta 132, cancel.rect.width, 1
+      form = find("form").rect
+      assert_in_delta form.x, cancel.rect.x, 1
+      assert_in_delta form.x + form.width, send.rect.x + send.rect.width, 1
       assert_in_delta cancel.rect.width, send.rect.width, 1
       assert_in_delta cancel.rect.height, send.rect.height, 1
       assert_in_delta 8, send.rect.x - (cancel.rect.x + cancel.rect.width), 1
