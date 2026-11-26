@@ -3,6 +3,16 @@ en:
     title: Community
     comment_limit: "Use up to %{count} characters."
     board_empty: There are no Community posts yet.
+    moderation:
+      title: Moderation
+      back: Back to Community
+      tools_pending: Report review tools are coming in a later update.
+      role_heading: Community moderator role
+      grant: Grant moderator role
+      revoke: Revoke moderator role
+      granted: Moderator role granted.
+      revoked: Moderator role revoked.
+      role_unavailable: The moderator role has already changed. Review its current status and try again.
     search:
       label: Search films and posts
       no_matches: No films or posts match your search.

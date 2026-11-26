@@ -12,7 +12,8 @@ module Community
       end
 
       render Views::Community::Board.new(posts_page:, query: search.query,
-        can_post: Membership::PostingAccess.allowed?(user: current_user))
+        can_post: Membership::PostingAccess.allowed?(user: current_user),
+        can_access_moderation: Moderation::Access.review?(user: current_user))
     end
 
     private

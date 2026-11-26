@@ -3,15 +3,16 @@ module Views
     class Board < ::Views::Base
       RESULTS_FRAME = "community-board-results"
 
-      def initialize(posts_page:, can_post:, query:)
+      def initialize(posts_page:, can_post:, query:, can_access_moderation:)
         @posts_page = posts_page
         @can_post = can_post
         @query = query
+        @can_access_moderation = can_access_moderation
       end
 
       def view_template
         page(title: t("community.title"), class: "community-board-page", heading_outside_card: true, heading_action: search_form) do
-          div(class: "community-board-actions flex justify-end pb-2") { create_curation_action } if @can_post
+          board_actions if @can_post || @can_access_moderation
           tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
             post_list
             text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post
@@ -21,6 +22,13 @@ module Views
       end
 
       private
+
+      def board_actions
+        div(class: "community-board-actions flex flex-wrap items-center gap-2 pb-2") do
+          text_link(t("community.moderation.title"), community_moderation_path) if @can_access_moderation
+          create_curation_action if @can_post
+        end
+      end
 
       def search_form
         Shared::CollectionSearchForm.new(path: community_path, clear_path: community_path, label: t("community.search.label"),
@@ -49,7 +57,7 @@ module Views
       end
 
       def create_curation_action
-        render RubyUI::Link.new(href: new_community_curation_path, variant: :primary, size: :xl, class: "ui-action-button h-auto max-w-full") do
+        render RubyUI::Link.new(href: new_community_curation_path, variant: :primary, size: :xl, class: "ui-action-button ms-auto h-auto max-w-full") do
           t("community.curations.create")
         end
       end

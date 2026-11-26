@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_131000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -39,6 +39,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
     t.index ["post_id"], name: "index_comments_on_post_id"
     t.index ["root_id"], name: "index_comments_on_root_id"
     t.check_constraint "num_nonnulls(film_endorsement_id, debrief_film_id) = 1 AND parent_id IS NULL AND root_id IS NULL OR film_endorsement_id IS NULL AND debrief_film_id IS NULL AND parent_id IS NOT NULL AND root_id IS NOT NULL AND parent_id <> id AND root_id <> id", name: "comments_root_or_reply"
+  end
+
+  create_table "community_moderator_roles", force: :cascade do |t|
+    t.bigint "member_id", null: false
+    t.bigint "granted_by_id"
+    t.bigint "revoked_by_id"
+    t.datetime "granted_at", null: false
+    t.datetime "revoked_at"
+    t.index ["granted_by_id"], name: "index_community_moderator_roles_on_granted_by_id"
+    t.index ["member_id"], name: "index_community_moderator_roles_on_member_id"
+    t.index ["member_id"], name: "one_active_community_moderator_role_per_member", unique: true, where: "(revoked_at IS NULL)"
+    t.index ["revoked_by_id"], name: "index_community_moderator_roles_on_revoked_by_id"
+    t.check_constraint "revoked_at IS NOT NULL OR revoked_by_id IS NULL", name: "community_moderator_revocation_requires_time"
   end
 
   create_table "domain_event_streams", force: :cascade do |t|
@@ -494,6 +507,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_150000) do
   add_foreign_key "comments", "film_endorsements", on_delete: :cascade
   add_foreign_key "comments", "posts", column: ["post_id", "debrief_film_id"], primary_key: ["id", "film_id"], on_delete: :cascade
   add_foreign_key "comments", "posts", on_delete: :cascade
+  add_foreign_key "community_moderator_roles", "users", column: "granted_by_id", on_delete: :nullify
+  add_foreign_key "community_moderator_roles", "users", column: "member_id", on_delete: :cascade
+  add_foreign_key "community_moderator_roles", "users", column: "revoked_by_id", on_delete: :nullify
   add_foreign_key "domain_event_streams", "users", on_delete: :cascade
   add_foreign_key "domain_events", "domain_event_streams", on_delete: :cascade
   add_foreign_key "event_deliveries", "domain_events", on_delete: :cascade
