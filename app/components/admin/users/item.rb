@@ -19,6 +19,7 @@ module Admin
             field(:confirmed, I18n.l(@user.email_confirmed_at, format: :long)) if @user.email_confirmed_at.present?
           end
         end
+        render ::Community::ModeratorRoleControls.new(member: @user)
         section(class: "admin-detail-section", aria: { labelledby: "user-sessions-heading" }) do
           h2(id: "user-sessions-heading") { t("identity.user_administration.sessions") }
           if @sessions.empty?

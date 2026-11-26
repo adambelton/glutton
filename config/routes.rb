@@ -11,6 +11,7 @@ Rails.application.routes.draw do
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
+    resource :moderation, only: :show, controller: :moderation
     scope "film-debriefs/:film_id", as: :film_debrief do
       get "", to: "film_debriefs#show"
       post "", to: "film_debriefs#create"
@@ -88,6 +89,8 @@ Rails.application.routes.draw do
     resources :users, only: [ :index, :show ], controller: "identity/users" do
       delete "sessions/:session_id", action: :revoke_session, as: :session, on: :member
       get "glutton-profile", to: "ratings/profile_inspections#show", as: :glutton_profile, on: :member
+      resource :community_moderator_role, path: "community-moderator-role", only: [ :create, :destroy ],
+        controller: "community/moderator_roles"
     end
     post "films", to: "registry/tmdb_film_search#create", as: :import_tmdb_film
     resources :films, only: [ :index, :show ], controller: "registry/films" do
