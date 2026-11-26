@@ -159,6 +159,10 @@ module Community
 
     private
 
+    def independently_deletable_attributes
+      %w[additional_description]
+    end
+
     def validate_opening_comment_lengths(comments)
       if comments.values.any? { |body| CommentContent.body_too_long?(body) }
         errors.add(:base, :opening_comment_too_long, count: CommentContent::BODY_LIMIT)

@@ -70,8 +70,12 @@ module Views
       def resolution_details
         section do
           h2 { t("community.reports.resolution.decision") }
-          p { t("community.reports.resolution.outcomes.#{@report.resolution_outcome}") }
           dl(class: "community-report-metadata") do
+            metadata(t("community.reports.resolution.outcome"), t("community.reports.resolution.outcomes.#{@report.resolution_outcome}"))
+            if @report.accepted?
+              dt { t("community.reports.resolution.action_taken") }
+              dd { render ::Community::ReportResolutionAction.new(report: @report) }
+            end
             dt { t("community.reports.resolution.reviewed_at") }
             dd { I18n.l(@report.resolved_at, format: :long) }
             dt { t("community.reports.resolution.reviewed_by") }

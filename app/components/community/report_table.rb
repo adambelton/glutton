@@ -25,7 +25,7 @@ module Community
 
     def columns
       if @resolved
-        %w[table.identifier reason resolution.outcome submitted_at resolution.reviewed_at]
+        %w[table.identifier reason resolution.outcome resolution.action_taken submitted_at resolution.reviewed_at]
       else
         %w[table.identifier reportable.type reason table.priority submitted_at]
       end
@@ -44,6 +44,7 @@ module Community
         render Shared::TableCell.new { t("community.reports.reasons.#{report.reason}") }
         if @resolved
           render Shared::TableCell.new { t("community.reports.resolution.outcomes.#{report.resolution_outcome}") }
+          render Shared::TableCell.new { render ReportResolutionAction.new(report:) if report.accepted? }
         else
           render Shared::TableCell.new do
             t(report.high_priority? ? "community.reports.high_priority" : "community.reports.table.normal_priority")

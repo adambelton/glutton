@@ -12,6 +12,12 @@ module Community
     rescue_from Errors::ReportReviewChanged do
       redirect_to community_moderation_report_path(params[:id]), alert: t("community.reports.resolution.review_changed"), status: :see_other
     end
+    rescue_from Errors::ReportSourceChanged do
+      redirect_to community_moderation_report_path(params[:id]), alert: t("community.reports.resolution.source_changed"), status: :see_other
+    end
+    rescue_from Errors::ReportDeletionUnavailable do
+      redirect_to community_moderation_report_path(params[:id]), alert: t("community.reports.resolution.deletion_unavailable"), status: :see_other
+    end
 
     def show
       report = Reporting::BrowseReports.detail(viewer: current_user, report_id: params[:id])
@@ -24,10 +30,14 @@ module Community
     end
 
     def resolve
-      fields = params.expect(resolution: [ :expected_status, :outcome, :summary ])
-      expected_status, outcome, summary = fields.values_at(:expected_status, :outcome, :summary)
+      fields = params.expect(resolution: [ :expected_status, :outcome, :action, :summary, :revision ])
+      expected_status, outcome, action, summary, revision = fields.values_at(:expected_status, :outcome, :action, :summary, :revision)
+      outcome = nil unless outcome.is_a?(String)
+      action = nil unless action.is_a?(String)
+      summary = nil unless summary.is_a?(String)
+      revision = nil unless revision.is_a?(String)
       resolution = Reporting::ResolveReport.call(actor_id: current_user.id, report_id: params[:id],
-        expected_status:, outcome:, summary:)
+        expected_status:, outcome:, action:, summary:, revision:)
       if resolution.errors.any?
         report = Reporting::BrowseReports.detail(viewer: current_user, report_id: resolution.id)
         return render Views::Community::ModerationReport.new(report:, resolution:), status: :unprocessable_content

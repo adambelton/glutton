@@ -15,7 +15,7 @@ module Community
       end
 
       def revision(reportable:, evidence:)
-        verifier.generate(fingerprint(reportable:, evidence:))
+        verifier.generate(reportable.reportable_revision(evidence:))
       end
 
       def submit(reporter_id:, reason:, explanation:, revision:)
@@ -29,7 +29,7 @@ module Community
           end
 
           evidence = reportable.reportable_attributes
-          unless revision.present? && verifier.verified(revision) == fingerprint(reportable:, evidence:)
+          unless revision.present? && verifier.verified(revision) == reportable.reportable_revision(evidence:)
             raise Errors::ReportTargetChanged
           end
 
@@ -45,10 +45,6 @@ module Community
 
       def verifier
         Rails.application.message_verifier(:community_report_revision)
-      end
-
-      def fingerprint(reportable:, evidence:)
-        Digest::SHA256.hexdigest([ reportable.class.polymorphic_name, reportable.id, evidence.sort ].to_json)
       end
     end
   end
