@@ -45,4 +45,9 @@ jobs:
           bin/rails db:create
           bin/rails runner 'ActiveRecord::Base.connection_pool.migration_context.migrate'
       - name: Run repository checks
+        env:
+          # Chrome 158 fails during Capybara cookie cleanup.
+          SE_CHROME_VERSION: '157.0.8103.78'
+          SE_FORCE_BROWSER_DOWNLOAD: 'true'
+          SE_SKIP_DRIVER_IN_PATH: 'true'
         run: bin/ci
