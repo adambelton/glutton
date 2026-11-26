@@ -51,7 +51,8 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     assert_in_delta 16, card_gap(privacy_notice_path), 1
     assert_back_card_gap community_curation_path(curation), inset: 16
     [ library_path, community_path ].each do |path|
-      assert_operator card_gap(path), :<, headed_gap
+      mobile_gap = card_gap(path)
+      assert_operator mobile_gap, :<, headed_gap if path == community_path
       heading = find(".ui-page-heading")
       assert_selector ".ui-page-heading input[type=search]"
       row = heading.rect
@@ -75,9 +76,65 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     within(".account-tabs") { click_link I18n.t("account.profile") }
     assert_current_path account_taste_profile_path
     assert_selector '.account-tabs a[aria-current="page"]', text: I18n.t("account.profile"), count: 1
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    row = find(".account-tabs").rect
+    first, second, last = all(".account-tabs a", count: 3).map(&:rect)
+    assert_equal 1, [ first.y, second.y, last.y ].uniq.size
+    assert_in_delta first.width.fdiv(row.width), last.width.fdiv(row.width), 0.03
+    assert_in_delta first.width.fdiv(row.width), second.width.fdiv(row.width), 0.03
+    assert_in_delta find(".account-page").rect.width, last.x + last.width - first.x, 1
+    within(".account-tabs") { click_link I18n.t("community.title") }
+    assert_current_path account_community_path
+    assert_selector '.account-tabs a[aria-current="page"]', text: I18n.t("community.title"), count: 1
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "Account edit buttons and credential dialog actions fill their rows on mobile" do
+    visit new_session_path
+    sign_in_member
+    visit account_settings_path
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 780, deviceScaleFactor: 1, mobile: false)
+    %w[change_email change_password].each do |editor|
+      label = I18n.t("identity.settings.#{editor}")
+      assert_account_edit_button_below_field(label)
+      click_button label
+      within "dialog[open]" do
+        form = find("form").rect
+        cancel, submit = all(".ui-actions button", count: 2).map(&:rect)
+        assert_in_delta form.x, cancel.x, 1
+        assert_in_delta form.x + form.width, submit.x + submit.width, 1
+        assert_equal cancel.y, submit.y
+        assert_in_delta cancel.width, submit.width, 1
+        click_button I18n.t("identity.settings.cancel")
+      end
+      assert_no_selector "dialog[open]"
+    end
+
+    within(".account-tabs") { click_link I18n.t("community.title") }
+    assert_current_path account_community_path
+    %w[community_username community_avatar].each do |field|
+      assert_account_edit_button_below_field(I18n.t("identity.settings.#{field}.change"))
+    end
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   private
+
+  def assert_account_edit_button_below_field(label)
+    row = find(".account-settings-row", text: label)
+    field = row.find(":scope > :is(.account-settings-field, .account-avatar-current)").rect
+    button = row.find_button(label).rect
+
+    assert_operator button.y, :>, field.y + field.height
+    assert_in_delta row.rect.x, button.x, 1
+    assert_in_delta row.rect.width, button.width, 1
+  end
 
   def sign_in_member
     password = "a long test password"

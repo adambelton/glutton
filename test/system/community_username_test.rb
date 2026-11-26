@@ -67,9 +67,10 @@ class CommunityUsernameTest < ApplicationSystemTestCase
 
     browser = page.driver.browser
     begin
-      browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 780, deviceScaleFactor: 1, mobile: false)
-      assert_equal 320, page.evaluate_script("window.innerWidth")
-      assert_operator field.evaluate_script("this.getBoundingClientRect().width"), :<, 320
+      browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 430, height: 780, deviceScaleFactor: 1, mobile: false)
+      content = find(".account-page > .ui-page-body").rect
+      assert_in_delta content.x, field.rect.x, 1
+      assert_in_delta content.width, field.rect.width, 1
       assert_username_actions_align(label, submit, cancel)
     ensure
       browser.execute_cdp("Emulation.clearDeviceMetricsOverride")

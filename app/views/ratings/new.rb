@@ -13,6 +13,7 @@ module Views
         page(title: t("ratings.browser.title"), heading_outside_card: true, back_to:, back_label: t("library.browser.return")) do
           if @rating_film.present?
             render ::Ratings::Form.new(film: @rating_film.film, rating_film_id: @rating_film.id, method: :post, value: @value, notes: @notes, errors: @errors, dismissible: @requested_film_id.blank?, requested_film_id: @requested_film_id)
+            render ::Library::ActionConfirmationDialog.new if @requested_film_id.blank?
           else
             p(class: "ui-empty") { t("ratings.browser.empty") }
           end

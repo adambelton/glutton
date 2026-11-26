@@ -95,7 +95,7 @@ class RatingsBrowserTest < ActionDispatch::IntegrationTest
     assert_equal Ratings::Events::RATING_SUBMITTED, DomainEvents::DomainEvent.last.name
     follow_redirect!
     assert_select "h2", "Next film (1982)"
-    assert_select '[role="status"]', I18n.t("ratings.browser.saved")
+    assert_select '[role="status"]', I18n.t("ratings.browser.saved_with_notes")
     assert_no_difference [ "DomainEvents::DomainEvent.count", "Ratings::Rating.count" ] do
       post dismiss_rating_path, params: { rating_film_id: next_candidate.id, authenticity_token: csrf_token }
     end

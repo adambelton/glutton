@@ -15,6 +15,7 @@ module Views
         heading_action = method(:author_actions) if @can_edit || @can_delete || @can_disassociate
         page(title: @curation.title, class: "community-curation-page", heading_action:,
           back_to: community_path, back_label: t("community.curations.back")) do
+          render ::Library::ActionConfirmationDialog.new if @nominated_films.present?
           render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
           author_identity(@curation.author) if @curation.author.present?
           div(class: "community-curation-descriptions") do
@@ -92,7 +93,7 @@ module Views
       def endorsements_action
         frame_id = EditCurationEndorsements::FRAME_ID
         render RubyUI::Link.new(href: edit_community_curation_endorsements_path(@curation), variant: :primary, size: :xl,
-          class: "mt-4 mb-1", aria: { haspopup: "dialog" }, data: { turbo_frame: frame_id }) do
+          class: "community-endorsements-action mt-4 mb-1", aria: { haspopup: "dialog" }, data: { turbo_frame: frame_id }) do
           t(@has_endorsements ? "community.curation_endorsements.edit_endorsements" : "community.curation_endorsements.endorse_films")
         end
         render Shared::EditorDialog.new(frame_id:)
@@ -137,7 +138,7 @@ module Views
       end
 
       def library_button(icon, film:, label:, path:, in_collection:)
-        render ::Library::CardAction.new(url: path, params: { film_id: film.id }, label:, tooltip: label, in_collection:) { render icon }
+        render ::Library::CardAction.new(url: path, params: { film_id: film.id }, label:, tooltip: label, in_collection:, film_title: film.title) { render icon }
       end
     end
   end

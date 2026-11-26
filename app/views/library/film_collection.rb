@@ -13,6 +13,7 @@ module Views
           tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
             render ::Library::FilmCollection.new(view: @view, page: @page, page_number: @page_number, ratings: @ratings, query: @query)
           end
+          render ::Library::ActionConfirmationDialog.new
         end
       end
 
@@ -30,7 +31,7 @@ module Views
         context = { view: @view, ratings: @ratings.presence }.compact
         fields = [ [ :view, @view ], *@ratings.map { |rating| [ "ratings[]", rating ] } ]
         Shared::CollectionSearchForm.new(path: library_path, clear_path: library_path(**context),
-          context: fields, label: t("library.browser.search"), query: @query,
+          context: fields, label: t("library.browser.search.#{@view}"), query: @query,
           input_id: "library-collection-query", frame: RESULTS_FRAME, css_class: "library-collection-search")
       end
     end

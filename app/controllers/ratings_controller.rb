@@ -65,9 +65,9 @@ class RatingsController < ApplicationController
   def create
     @requested_film_id = film_id_param if params.key?(:film_id)
     read_rating_input
-    Ratings::RatingRecording::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
+    rating = Ratings::RatingRecording::SubmitRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       value: @value, notes: @notes)
-    redirect_to (@requested_film_id.present? ? watched_library_path : new_rating_path), notice: I18n.t("ratings.browser.saved"), status: :see_other
+    redirect_to (@requested_film_id.present? ? watched_library_path : new_rating_path), notice: saved_rating_notice(rating), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_rating
@@ -89,9 +89,9 @@ class RatingsController < ApplicationController
   def update
     @previous_rating_id = previous_rating_id_param
     read_rating_input
-    Ratings::RatingRecording::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
+    rating = Ratings::RatingRecording::ReviseRating.call(user_id: current_user.id, rating_film_id: rating_film_id_param,
       previous_rating_id: @previous_rating_id, value: @value, notes: @notes)
-    redirect_to watched_library_path, notice: I18n.t("ratings.browser.saved"), status: :see_other
+    redirect_to watched_library_path, notice: saved_rating_notice(rating), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @errors = error.record.errors.full_messages
     render_invalid_revision
@@ -110,6 +110,10 @@ class RatingsController < ApplicationController
   end
 
   private
+
+  def saved_rating_notice(rating)
+    t(rating.notes.present? ? "ratings.browser.saved_with_notes" : "ratings.browser.saved")
+  end
 
   def watched_library_path
     library_path(view: Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED)

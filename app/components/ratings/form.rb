@@ -13,6 +13,7 @@ module Ratings
       unless @readonly
         data[:controller] += " rating-selection"
         data[:rating_selection_baseline_value] = saved_baseline&.to_json
+        data[:rating_selection_notes_description_value] = t("ratings.browser.panels.has_notes")
       end
       render Shared::FilmCard.new(layout: "rating-interface", data:) do
         errors_section
@@ -33,6 +34,7 @@ module Ratings
     private
 
     def workspace
+      overview = @film.tmdb_details.overview
       div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
       div(class: "rating-film-details") do
         header(class: "rating-film-header") do
@@ -40,13 +42,20 @@ module Ratings
             h2 { render Registry::FilmTitle.new(film: @film) }
             render Registry::FilmLinks.new(film: @film, readonly: @readonly)
           end
+          if overview.present?
+            div(class: "rating-mobile-synopsis") do
+              render Shared::FilmSynopsis.new(text: overview, id: "#{@prefix}rating-mobile-synopsis")
+            end
+          end
           panel_tabs
         end
-        panel("rating") do
-          render Shared::FilmSynopsis.new(text: @film.tmdb_details.overview, id: "#{@prefix}rating-synopsis")
-          rating_fields
+        div(class: "rating-panels") do
+          panel("rating") do
+            render Shared::FilmSynopsis.new(text: overview, id: "#{@prefix}rating-synopsis")
+            rating_fields
+          end
+          panel("journal") { notes_field }
         end
-        panel("journal") { notes_field }
       end
     end
 
@@ -54,9 +63,16 @@ module Ratings
       div(class: "rating-tabs", role: "tablist", hidden: true, aria: { label: t("ratings.browser.panels.label") },
         data: { rating_panels_target: "tabs", action: "keydown->rating-panels#navigate" }) do
         %w[rating journal].each do |name|
+          journal = name == "journal"
           button(type: "button", id: "#{@prefix}#{name}-tab", role: "tab",
-            aria: { controls: "#{@prefix}#{name}-panel" }, data: { rating_panels_target: "tab", action: "rating-panels#select" }) do
-            t("ratings.browser.panels.#{name}")
+            aria: { controls: "#{@prefix}#{name}-panel", description: (t("ratings.browser.panels.has_notes") if journal && @notes.present?) },
+            data: { rating_panels_target: "tab", rating_selection_target: ("journalTab" if journal && !@readonly), action: "rating-panels#select" }) do
+            plain t("ratings.browser.panels.#{name}")
+            if journal
+              span(class: "rating-tab-notes", hidden: @notes.blank?, data: ({ rating_selection_target: "notesIndicator" } unless @readonly)) do
+                render ::Library::NotesIcon.new
+              end
+            end
           end
         end
       end
@@ -112,7 +128,7 @@ module Ratings
     end
 
     def actions
-      div(class: "rating-actions film-actions") do
+      div(class: "rating-actions film-actions", data: { readonly: ("true" if @readonly) }) do
         valid_rating = Ratings::Rating::Values::ALL.include?(@value)
         tooltip = t(@saved_rating.present? && valid_rating ? "ratings.browser.save_unchanged" : "ratings.browser.save_disabled") unless @readonly
         render Shared::PrimaryButton.new(type: :submit, form: ("rating-form" unless @readonly), class: "ui-submit",
@@ -123,7 +139,8 @@ module Ratings
             render Shared::GhostButton.new(type: :submit, disabled: @readonly, class: "ui-action-button") { t("ratings.browser.dismiss") }
           end
           tooltip_text = t("library.detail.add_to_watchlist")
-          render Shared::ActionForm.new(url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id }, readonly: @readonly) do
+          render ::Library::FilmActionForm.new(url: add_to_watchlist_from_ratings_path, params: { film_id: @film.id },
+            action_label: tooltip_text, film_title: @film.title, readonly: @readonly) do
             render Shared::IconButton.new(type: :submit, disabled: @readonly, variant: :secondary, size: :xl, class: "ui-action-button",
               aria: { label: tooltip_text }, data: { tooltip: tooltip_text }) { render ::Library::BookmarkPlusIcon.new }
           end

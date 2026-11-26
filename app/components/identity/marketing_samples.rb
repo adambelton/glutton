@@ -9,27 +9,16 @@ module Identity
     RECOMMENDATION_MATCHES = { 2671 => 91, 310131 => 87, 1083381 => 82 }.freeze
     RECOMMENDATION_FILM_IDS = RECOMMENDATION_MATCHES.keys.freeze
 
+    WATCHLIST_FILM_IDS = [ 2671, 310131 ].freeze
     WATCHED = [
       { tmdb_id: 348, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },
       { tmdb_id: 1091, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },
       { tmdb_id: 933260, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: true },
       { tmdb_id: 1233413, rating: nil, notes: false },
-      { tmdb_id: 16307, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },
       { tmdb_id: 2291, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: false },
-      { tmdb_id: 30497, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },
-      { tmdb_id: 11906, rating: nil, notes: false },
-      { tmdb_id: 948, rating: ::Ratings::Rating::Values::BRILLIANT, notes: true },
-      { tmdb_id: 814, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: true },
-      { tmdb_id: 1933, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: false },
-      { tmdb_id: 9392, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: true },
-      { tmdb_id: 242224, rating: ::Ratings::Rating::Values::PRETTY_GOOD, notes: false },
       { tmdb_id: 2667, rating: ::Ratings::Rating::Values::NOT_FOR_ME, notes: true },
       { tmdb_id: 60935, rating: ::Ratings::Rating::Values::NOT_FOR_ME, notes: true },
-      { tmdb_id: 23437, rating: ::Ratings::Rating::Values::NOT_FOR_ME, notes: false },
-      { tmdb_id: 439079, rating: ::Ratings::Rating::Values::NOT_FOR_ME, notes: false },
-      { tmdb_id: 250546, rating: ::Ratings::Rating::Values::GARBAGE, notes: true },
-      { tmdb_id: 243688, rating: ::Ratings::Rating::Values::GARBAGE, notes: false },
-      { tmdb_id: 11618, rating: ::Ratings::Rating::Values::GARBAGE, notes: true }
+      { tmdb_id: 250546, rating: ::Ratings::Rating::Values::GARBAGE, notes: true }
     ].freeze
 
     PROFILE_QUALITY_RANKINGS = {
@@ -59,6 +48,7 @@ module Identity
       ]
     }.freeze
 
-    FILM_IDS = (RATINGS.map { |sample| sample.fetch(:tmdb_id) } + RECOMMENDATION_FILM_IDS + WATCHED.map { |sample| sample.fetch(:tmdb_id) }).uniq.freeze
+    FILM_IDS = (RATINGS.map { |sample| sample.fetch(:tmdb_id) } + RECOMMENDATION_FILM_IDS +
+      WATCHLIST_FILM_IDS + WATCHED.map { |sample| sample.fetch(:tmdb_id) }).uniq.freeze
   end
 end

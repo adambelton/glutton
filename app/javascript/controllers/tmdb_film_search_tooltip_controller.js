@@ -17,7 +17,14 @@ export default class extends Controller {
     const button = event.target.closest("button[data-tooltip]")
     if (!button) return
 
+    const libraryAction = button.form?.hasAttribute("data-library-confirmation-title")
+    if (libraryAction && event.pointerType === "touch") {
+      this.hide()
+      return
+    }
+
     this.button = button
+    this.tooltip.toggleAttribute("data-library-action", Boolean(libraryAction))
     this.tooltip.textContent = button.dataset.tooltip
     this.tooltip.hidden = false
     const anchor = button.getBoundingClientRect()

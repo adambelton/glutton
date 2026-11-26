@@ -26,13 +26,15 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     find("section.marketing-feature[aria-labelledby='#{feature}-preview-heading']")
   end
 
-  test "header entry actions remain accessible on desktop and mobile without hero duplicates" do
+  test "entry actions move from the header to full-width rows on mobile" do
     [ [ 1366, 768 ], [ 390, 844 ] ].each do |width, height|
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
       visit root_path
       assert_selector "h1", text: I18n.t("identity.entry.title"), normalize_ws: true
-      assert_no_selector ".demo-intro .preview-actions"
-      within ".ui-header" do
+      mobile = width <= 650
+      assert_no_selector(mobile ? ".ui-header .ui-auth-links" : ".hero-entry-actions")
+      row = find(mobile ? ".hero-entry-actions" : ".ui-header .ui-auth-links")
+      within row do
         assert_link I18n.t("ui.register"), href: new_registration_path
         assert_link I18n.t("ui.log_in"), href: new_session_path
         button = find("button", text: I18n.t("identity.entry.try_it_out"))
@@ -41,17 +43,51 @@ class LandingInteractionsTest < ApplicationSystemTestCase
         assert_operator bounds.fetch("left"), :>=, 0
         assert_operator bounds.fetch("right"), :<=, width
       end
+      closing = find(".demo-entry")
+      closing_actions = closing.find(".preview-actions")
+      unless mobile
+        assert_selector ".preview-actions a.ui-link", exact_text: I18n.t("ui.register")
+        assert_no_selector ".preview-actions a.ui-action-button", exact_text: I18n.t("ui.register")
+        next
+      end
+
+      hero = find(".demo-intro")
+      guest = row.find_button(I18n.t("identity.entry.try_it_out"))
+      login = row.find_link(I18n.t("ui.log_in"))
+      assert_in_delta hero.rect.x, guest.rect.x, 1
+      assert_in_delta hero.rect.width, guest.rect.width, 1
+      assert_operator login.rect.y, :>, guest.rect.y + guest.rect.height
+      assert_full_width_entry_actions(row, hero, selector: "a.ui-action-button", count: 2)
+      description = hero.all("p").last.rect
+      assert_operator row.rect.y - (description.y + description.height), :>, 28
+      guest.send_keys(:tab)
+      assert_equal login, page.evaluate_script("document.activeElement")
+
+      assert_full_width_entry_actions(closing_actions, closing, count: 2)
+      expected_gap = closing_actions.evaluate_script("parseFloat(getComputedStyle(this).getPropertyValue('--glutton-action-gap'))")
+      assert_in_delta expected_gap, closing_actions.style("column-gap").fetch("column-gap").to_f, 0.1
+      register = closing_actions.find_link(I18n.t("ui.register"), href: new_registration_path)
+      assert_selector ".preview-actions a.ui-action-button", exact_text: I18n.t("ui.register")
+      assert_equal "rgba(0, 0, 0, 0)", register.style("background-color").fetch("background-color")
     end
-    within(".ui-header") { click_link I18n.t("ui.register") }
+    within(".hero-entry-actions") { click_link I18n.t("ui.register") }
     assert_current_path new_registration_path
     visit root_path
-    within(".ui-header") { click_link I18n.t("ui.log_in") }
+    within(".hero-entry-actions") { click_link I18n.t("ui.log_in") }
     assert_current_path new_session_path
     visit root_path
-    within(".ui-header") { click_button I18n.t("identity.entry.try_it_out") }
+    within(".hero-entry-actions") { click_button I18n.t("identity.entry.try_it_out") }
     assert_current_path new_rating_path
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  def assert_full_width_entry_actions(group, container, count:, selector: ".ui-action-button")
+    actions = group.all(selector, count:).map(&:rect)
+    assert_equal 1, actions.map(&:y).uniq.size
+    actions.drop(1).each { |action| assert_in_delta actions.first.width, action.width, 1 }
+    assert_in_delta container.rect.x, actions.first.x, 1
+    assert_in_delta container.rect.x + container.rect.width, actions.last.x + actions.last.width, 1
   end
 
   test "FAQ questions disclose answers with Enter and Space using native accessible semantics" do
@@ -106,9 +142,11 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     end
     within preview(:ratings) do
       assert_selector "h2", text: "Alien"
+      assert_selector '[role="tab"] .rating-tab-notes svg', count: 1
       find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_includes find("textarea").value, "The industrial spaceship felt like a real workplace."
       click_button I18n.t("identity.entry.demo.select", position: 2, count: 3)
+      assert_selector '[role="tab"] .rating-tab-notes svg', count: 1
       find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_equal I18n.t("identity.entry.demo.examples.the_thing.notes"), find("textarea").value
     end
@@ -145,44 +183,45 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       within preview(:library) do
         assert_selector 'input[type="search"]:disabled'
         search = find('input[type="search"]')
+        assert_equal I18n.t("library.browser.search.watchlist"), search["placeholder"]
         assert_equal "none", search.style("pointer-events").fetch("pointer-events")
         page.driver.browser.action.move_to(search.native).click.perform
         assert_not page.evaluate_script("document.activeElement === arguments[0]", search)
-        assert_selector ".library-film", count: 3
+        assert_selector ".library-film", count: 2
         find("button", text: I18n.t("library.browser.views.watched"), exact_text: true).send_keys(:enter)
-        assert_selector ".library-film", count: 20
-        assert_no_text "20 example films"
+        assert_selector ".library-film", count: 8
+        assert_selector 'input[type="search"]:disabled[placeholder="Search your watched films"]'
+        assert_selector ".library-card-actions button:disabled", count: 16
         click_button I18n.t("ratings.values.brilliant")
-        assert_selector ".library-film", count: 5
+        assert_selector ".library-film", count: 2
         assert_selector ".library-film h3", text: "The Thing (1982)"
         assert_no_selector ".library-film h3", text: "The Thing (2011)"
         assert_selector 'button[value="brilliant"][aria-pressed="true"]'
         click_button I18n.t("ratings.values.pretty_good")
-        assert_selector ".library-film", count: 11
+        assert_selector ".library-film", count: 4
         click_button I18n.t("ratings.values.brilliant")
-        assert_selector ".library-film", count: 6
+        assert_selector ".library-film", count: 2
         assert_selector ".library-film h3", text: "The Substance"
         assert_selector ".library-film h3", text: "Jacob's Ladder"
         click_button I18n.t("ratings.values.pretty_good")
         click_button I18n.t("ratings.values.not_for_me")
-        assert_selector ".library-film", count: 4
+        assert_selector ".library-film", count: 2
         assert_selector ".library-film h3", text: "The Blair Witch Project"
         assert_selector ".library-film h3", text: "The Thing (2011)"
         click_button I18n.t("ratings.values.garbage")
-        assert_selector ".library-film", count: 7
-        click_button I18n.t("library.browser.clear_rating_filters")
-        assert_selector ".library-film", count: 20
-        click_button I18n.t("library.browser.unrated")
-        assert_selector ".library-film", count: 2
-        assert_selector ".library-film h3", text: "Sinners"
-        assert_selector ".library-film h3", text: "Suspiria"
-        click_button I18n.t("library.browser.views.watchlist")
         assert_selector ".library-film", count: 3
-        click_button I18n.t("library.browser.views.watched")
-        assert_selector ".library-film", count: 2
         click_button I18n.t("library.browser.clear_rating_filters")
-        assert_selector ".library-film", count: 20
-        assert_selector '.library-preview-search:disabled form[method="get"]', count: 1
+        assert_selector ".library-film", count: 8
+        click_button I18n.t("library.browser.unrated")
+        assert_selector ".library-film", count: 1
+        assert_selector ".library-film h3", text: "Sinners"
+        click_button I18n.t("library.browser.views.watchlist")
+        assert_selector ".library-film", count: 2
+        click_button I18n.t("library.browser.views.watched")
+        assert_selector ".library-film", count: 1
+        click_button I18n.t("library.browser.clear_rating_filters")
+        assert_selector ".library-film", count: 8
+        assert_selector '.library-preview-search:disabled input[type="search"]', count: 1
         assert_no_selector "form input:enabled, form button:enabled"
         assert_selector ".library-card-actions button:disabled", visible: :all
       end
@@ -191,16 +230,16 @@ class LandingInteractionsTest < ApplicationSystemTestCase
   end
 
   test "sample filters show an empty state when catalogue examples are unavailable" do
-    create_preview_catalogue(except: [ 60935, 23437, 439079, 2667 ])
+    create_preview_catalogue(except: [ 60935, 2667 ])
     visit root_path
     within preview(:library) do
       click_button I18n.t("library.browser.views.watched")
-      assert_selector ".library-film", count: 16
+      assert_selector ".library-film", count: 6
       click_button I18n.t("ratings.values.not_for_me")
       assert_no_selector ".library-film"
       assert_text I18n.t("identity.entry.library_empty")
       click_button I18n.t("library.browser.clear_rating_filters")
-      assert_selector ".library-film", count: 16
+      assert_selector ".library-film", count: 6
     end
   end
 
@@ -247,14 +286,18 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     create_preview_catalogue
     visit root_path
     assert_selector ".marketing-feature", count: 4
+    primary_properties = %w[background-color color opacity]
+    primary_style = find_button(I18n.t("identity.entry.try_it_out")).style(*primary_properties)
     within preview(:ratings) do
       choice = find(".demo-frame:not([hidden]) .rating-choice label", match: :first)
       choice.hover
       assert_equal "default", choice.style("cursor").fetch("cursor")
       within ".demo-frame:not([hidden]) .rating-actions" do
-        assert_button I18n.t("ratings.browser.save"), disabled: true
+        save = find_button(I18n.t("ratings.browser.save"), disabled: true)
+        assert_equal primary_style, save.style(*primary_properties)
         assert_button I18n.t("ratings.browser.dismiss"), disabled: true
         assert_button I18n.t("library.detail.add_to_watchlist"), disabled: true
+        assert all("button:disabled", count: 3).all? { |button| button.style("opacity").fetch("opacity") == "1" }
       end
       find('[role="tab"]', text: I18n.t("ratings.browser.panels.journal")).click
       assert_equal "default", find(".demo-frame:not([hidden]) textarea").style("cursor").fetch("cursor")
@@ -263,6 +306,9 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       assert_selector ".recommendation-trailer-still", count: 1
       assert_no_text "Trailer preview"
       assert_selector ".recommendation-film button:disabled", count: 3
+      accept = find_button(I18n.t("recommendations.accept"), disabled: true)
+      assert_equal primary_style, accept.style(*primary_properties)
+      assert all(".recommendation-film button:disabled", count: 3).all? { |button| button.style("opacity").fetch("opacity") == "1" }
       assert_equal "default", find(".recommendation-film button", match: :first).style("cursor").fetch("cursor")
     end
     within preview(:library) do
@@ -271,7 +317,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       assert_selector ".library-card-actions button:disabled"
     end
     assert_no_selector ".marketing-preview a[href], .marketing-preview iframe"
-    assert_selector '.library-preview-search:disabled form[method="get"]', count: 1
+    assert_selector '.library-preview-search:disabled input[type="search"]', count: 1
     assert_no_selector ".marketing-preview form input:enabled, .marketing-preview form button:enabled"
     assert_no_selector ".demo-frame button:enabled:not([role=tab], .film-synopsis-toggle), .account-page button:enabled"
 
@@ -279,9 +325,17 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
       assert_equal width, page.evaluate_script("window.innerWidth")
       assert_selector ".marketing-feature", count: 4
+      assert_equal preview(:recommendations).style("margin-top"), preview(:ratings).style("margin-top")
       all(".marketing-faq details:not([open]) > summary").each { |question| question.click }
       assert_selector ".marketing-faq details[open]", count: 7
       assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth"), "Overflow at #{width}px"
+      if width <= 650
+        within preview(:library) do
+          all(".library-tabs button", count: 2).each do |tab|
+            assert_equal "center", tab.style("justify-content").fetch("justify-content")
+          end
+        end
+      end
       all(".marketing-preview .demo-browser", count: 4).each do |card|
         style = card.style("padding-top", "padding-right", "padding-bottom", "padding-left", "border-top-width", "background-color")
         if width <= 650

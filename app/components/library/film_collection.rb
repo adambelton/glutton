@@ -10,7 +10,7 @@ module Library
       if @page.entries.empty?
         p(class: "ui-empty") { t(@query.present? ? "library.browser.no_matches" : "library.browser.empty.#{@view}") }
       else
-        render ::Library::FilmGrid.new(entries: @page.entries), &block
+        render ::Library::FilmGrid.new(entries: @page.entries, link_titles: !@preview), &block
       end
       nav(class: "library-pagination", aria: { label: t("library.browser.pagination") }) do
         pagination_link(:previous, @page_number - 1) if @page_number > 1

@@ -18,19 +18,26 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
   end
 
   test "two views isolate membership and owner and default to watchlist without writes" do
-    watchlist = entry(watched: false, title: "Watchlist film", tmdb_metadata: { details: { poster_path: "/watchlist.jpg" } })
-    watched = entry(title: "Watched film")
+    watchlist = entry(watched: false, title: "Watchlist film", tmdb_id: 4321, tmdb_metadata: { details: { poster_path: "/watchlist.jpg" } })
+    watched = entry(title: "Watched film", tmdb_id: 4322, release_date: Date.new(2001, 1, 1))
     entry(user: Identity::UserGuest.create!, title: "Private film")
     assert_no_difference [ "Library::LibraryFilm.count", "Ratings::RatingFilm.count", "Ratings::Rating.count", "DomainEvents::DomainEvent.count", "Identity::User.count", "Identity::Session.count" ] do
       get library_path(user_id: Identity::UserGuest.last.id)
       assert_response :success
+      assert_select "#library-collection-query[placeholder=?]", I18n.t("library.browser.search.watchlist")
       assert_select "h3", text: watchlist.film.title, count: 1
+      assert_select '.library-film h3 a[href="https://www.themoviedb.org/movie/4321"][target="_blank"][rel~="noopener"][rel~="noreferrer"]',
+        text: watchlist.film.title, count: 1
       assert_select "h3", count: 1
       assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view: "watchlist"), text: "Watchlist"
       assert_select ".library-films img[src=?]", "https://image.tmdb.org/t/p/w500/watchlist.jpg"
       { Library::CollectionManagement::BrowseFilmCollection::Views::WATCHED => watched }.each do |view, row|
         get library_path(view:)
-        assert_select "h3", text: row.film.title, count: 1
+        assert_select "#library-collection-query[placeholder=?]", I18n.t("library.browser.search.watched")
+        assert_select '.library-film h3 a[href="https://www.themoviedb.org/movie/4322"][target="_blank"][rel~="noopener"][rel~="noreferrer"]',
+          text: "#{row.film.title} (2001)", count: 1 do
+          assert_select ".film-year", text: "(2001)", count: 1
+        end
         assert_select "h3", count: 1
         assert_select 'nav.library-tabs a[aria-current="page"][href=?]', library_path(view:), text: "Watched"
         assert_select ".library-films .poster-placeholder"
@@ -215,6 +222,7 @@ class LibraryBrowserTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "<script>alert('film')</script> (2001)"
     assert_select "script", text: /alert\('film'\)/, count: 0
     assert_select "h3 .film-year", text: "(2001)", count: 1
+    assert_select ".library-film h3 a", count: 0
     assert_select 'nav[aria-label="Library pages"]'
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_select 'meta[name="turbo-cache-control"][content="no-cache"]'

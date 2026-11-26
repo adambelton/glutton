@@ -93,9 +93,12 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     end
     assert_select "header a.wordmark[href=?]", root_path
     assert_select "header a[href=?]", account_settings_path, count: 0
-    assert_select "header a[href=?]", new_session_path
-    assert_select "header a[href=?]", new_registration_path
-    assert_select "header form[action=?]", guest_session_path do
+    assert_select ".ui-header .ui-auth-links-desktop a[href=?]", new_session_path
+    assert_select ".ui-header .ui-auth-links-desktop a[href=?]", new_registration_path
+    assert_select ".ui-header .ui-auth-links-desktop form[action=?]", guest_session_path
+    assert_select ".hero-entry-actions a[href=?]", new_session_path
+    assert_select ".hero-entry-actions a[href=?]", new_registration_path
+    assert_select ".hero-entry-actions form[action=?]", guest_session_path do
       assert_select "button", I18n.t("identity.entry.try_it_out")
     end
     assert_select 'head link[rel="icon"][href="/glutton-mark.png?v=2"][type="image/png"]'
@@ -114,8 +117,8 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".demo-frame", count: 6
     assert_select ".marketing-preview a[href], .marketing-preview iframe", count: 0
-    assert_select ".marketing-preview form", count: 1
-    assert_select '.library-preview-search[disabled] form[method="get"][action=?]', library_tmdb_film_search_path, count: 1
+    assert_select ".marketing-preview form", count: 0
+    assert_select '.library-preview-search[disabled] input[type="search"]', count: 2
     assert_select '.demo-controls .demo-dot[aria-current="true"]', count: 2
     assert_select ".demo-controls .demo-rotation", count: 0
     assert_select ".demo-frame textarea[readonly]", count: 3
@@ -175,17 +178,21 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     assert_equal %w[+32 +30 +28 +25 +23 +21 +19 +17 +15 +12 -29 -26 -23 -21 -19 -16 -14 -12 -10 -8],
       document.css(".marketing-preview .profile-quality-score").map(&:text)
     assert_select ".marketing-preview .library-films", count: 2
+    assert_select ".marketing-preview .library-film h3 a", count: 0
     collections = document.css('[aria-labelledby="library-preview-heading"] .library-preview-panel').map do |frame|
       frame.css(".library-film h3").map(&:text)
     end
-    assert_equal [ "Ring (1998)", "The Witch (2016)", "Backrooms (2026)" ], collections.first
-    assert_equal 20, collections.last.size
+    assert_equal [ "Ring (1998)", "The Witch (2016)" ], collections.first
+    assert_equal 8, collections.last.size
     assert_includes collections.last, "The Thing (1982)"
     assert_includes collections.last, "The Thing (2011)"
     watched = document.at_css('.library-preview-panel[data-view="watched"]')
     assert_equal %w[brilliant garbage not_for_me pretty_good unrated], watched.css("[data-sample-rating]").map { |node| node["data-sample-rating"] }.uniq.sort
     assert_empty collections.first & collections.last
-    assert_select '.library-preview-search[disabled] input[type="search"][name="query"]', count: 1
+    %w[watchlist watched].each do |view|
+      assert_select ".library-preview-panel[data-view=?] .library-preview-search[disabled] input[placeholder=?]",
+        view, I18n.t("library.browser.search.#{view}")
+    end
     assert_select ".marketing-preview .library-tabs button", count: 4
     assert_select ".marketing-preview .library-rating-filters button[value]", count: 5
     assert_select ".marketing-preview .library-pagination", count: 2
@@ -201,7 +208,7 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     get root_path
     document = Nokogiri::HTML(response.body)
     assert_equal %w[header section section section section section section], document.css("main.landing-demo > *").map(&:name)
-    assert_select ".demo-intro .preview-actions, .demo-intro form, .demo-intro button, .demo-intro a", count: 0
+    assert_select ".demo-intro > p + .hero-entry-actions", count: 1
     %w[ratings recommendations library profile].each do |feature|
       assert_select "[aria-labelledby='#{feature}-preview-heading'] .marketing-feature-intro > p:not(.preview-eyebrow)",
         count: 1, text: I18n.t("identity.entry.features.#{feature}.description")

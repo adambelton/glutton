@@ -48,7 +48,7 @@ module Views
       end
 
       def actions(changed:)
-        div(class: "ui-actions ui-actions-fixed justify-end") do
+        div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full justify-end") do
           render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
           render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button", disabled: !changed,
             data: { unchanged_form_target: "save" }) { t("community.curation_editing.save") }

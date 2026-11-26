@@ -62,7 +62,7 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     member = Identity::UserRegistered.create!(email_address: "debrief-discussion-browser@example.test", password:, password_confirmation: password,
       email_confirmed_at: Time.current, community_username: "debrief_discussion", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version, community_code_of_conduct_accepted_at: Time.current)
-    film = Registry::Film.create!(title: "A watched film", release_date: Date.new(1987, 4, 1), tmdb_metadata: { details: {} })
+    film = Registry::Film.create!(title: "A Long Night in an Empty Hospital", release_date: Date.new(1987, 4, 1), tmdb_metadata: { details: {} })
     Library::LibraryFilm.new(user: member, film:).add_to_watched!
     debrief = Community::FilmDebriefs::OpenFilmDebrief.call(member_id: member.id, film_id: film.id)
 
@@ -89,8 +89,28 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     composer_id = "#film-debrief-#{debrief.id}-composer"
     publish_label = I18n.t("community.film_debriefs.publish_comment")
     within composer_id do
-      assert_selector "textarea[maxlength='4000']"
+      assert_selector ".community-member-avatar"
+      assert_operator find_button(publish_label).rect.width, :<, find("textarea").rect.width
+    end
+
+    browser = page.driver.browser
+    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    mobile_poster = find(".community-debrief-poster .film-poster").rect
+    introduction = find(".community-debrief-intro p").rect
+    assert_operator find(".community-film-debrief-author").rect.x, :>, mobile_poster.x
+    assert_operator introduction.y, :>=, mobile_poster.y + mobile_poster.height
+    assert_operator introduction.x, :<, find("h1").rect.x
+    assert_operator find(".community-debrief-discussion").rect.y, :>=, introduction.y + introduction.height
+    assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
+
+    within composer_id do
+      textarea = find("textarea[maxlength='4000']")
       button = find_button(publish_label)
+      editor = find(".community-comment").rect
+      assert_operator button.rect.y, :>, editor.y + editor.height
+      assert_operator button.rect.width, :>=, editor.width * 0.99
+      assert_operator button.rect.x, :<, textarea.rect.x
+      assert_no_selector ".community-member-avatar"
       assert_equal "nowrap", button.style("white-space").fetch("white-space")
       assert button.evaluate_script("this.scrollWidth <= this.clientWidth")
       fill_in I18n.t("community.comment_editing.body"), with: "How did everyone interpret the ending?"
@@ -121,12 +141,16 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_selector "#replies-#{root.id}[open] article", text: "The final shot changes the meaning."
     reply = debrief.comments.find_by!(parent: root)
     within "#comment-#{reply.id}" do
+      content_start = find(".community-member-avatar").rect.x
       click_link I18n.t("community.comment_editing.edit")
       assert_button I18n.t("community.comment_editing.save"), disabled: true
+      assert_no_selector ".community-member-avatar"
+      assert_in_delta content_start, find("textarea").rect.x, 1
       fill_in I18n.t("community.comment_editing.body"), with: "The final shot changes the meaning of the first scene."
       click_button I18n.t("community.comment_editing.save")
       assert_text "The final shot changes the meaning of the first scene."
       assert_selector ".community-comment-edited", text: I18n.t("community.comment_editing.edited")
+      assert_selector ".community-member-avatar"
     end
 
     delete_label = I18n.t("community.comment_deletion.delete")
@@ -147,5 +171,8 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
       assert_no_link I18n.t("community.curations.reply")
       assert_no_text member.community_username
     end
+    assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
+  ensure
+    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 end
