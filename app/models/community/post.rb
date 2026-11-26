@@ -6,7 +6,7 @@ module Community
       Membership::Access.require!(user: viewer)
     end
 
-    def reportable_parts
+    def reportable_attributes
       {}
     end
 

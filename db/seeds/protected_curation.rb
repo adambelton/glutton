@@ -51,7 +51,7 @@ module Seeds
       raise "Mark two horror films as Watched for #{AUTHOR_EMAIL} first." unless second_film.present?
 
       curation = Community::Curations::PublishCuration.call(author_id: author.id, title: TITLE,
-        prompt: "Which horror films build dread through atmosphere, setting, and patient pacing?",
+        description: "Which horror films build dread through atmosphere, setting, and patient pacing?",
         reference_film_ids: [ first_film.id, second_film.id ],
         reference_comments: {
           first_film.id => "The confined setting makes every small change feel important.",

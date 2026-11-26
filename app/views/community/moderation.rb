@@ -1,27 +1,24 @@
 module Views
   module Community
     class Moderation < ::Views::Base
-      def initialize(reports_page:)
-        @reports_page = reports_page
+      def initialize(reports_page:, state:)
+        @reports_page, @state = reports_page, state
       end
 
       def view_template
         page(title: t("community.moderation.title"), heading_outside_card: true,
           back_to: community_path, back_label: t("community.moderation.back")) do
-          if @reports_page.entries.empty?
-            p(class: "ui-empty") { t("community.reports.empty") }
-          else
-            ul(class: "ui-divided-list") do
-              @reports_page.entries.each do |report|
-                li(class: "py-2 flex flex-wrap items-baseline gap-x-3") do
-                  text_link(t("community.reports.identifier", id: report.id), community_moderation_report_path(report))
-                  span { t("community.reports.reasons.#{report.reason}") }
-                  span { t("community.reports.high_priority") } if report.high_priority?
-                  span { t("community.reports.states.#{report.status}") }
-                  span(class: "muted") { I18n.l(report.created_at, format: :long) }
-                end
+          render Shared::NavigationTabs.new(label: t("community.reports.queue"), css_class: "mb-4 border-b") do
+            ::Community::Reporting::BrowseReports::STATES.each_key do |state|
+              a(href: community_moderation_path(state:), aria: { current: ("page" if @state == state) }) do
+                t("community.reports.queues.#{state}")
               end
             end
+          end
+          if @reports_page.entries.empty?
+            p(class: "ui-empty") { t("community.reports.empty.#{@state}") }
+          else
+            render ::Community::ReportTable.new(reports: @reports_page.entries, resolved: @state == "resolved")
             pagination
           end
         end
@@ -36,11 +33,11 @@ module Views
 
         nav(class: "community-board-pagination", aria: { label: t("community.reports.pagination") }) do
           if number > 1
-            text_link(t("community.pagination.previous"), community_moderation_path(page: number - 1), rel: "prev")
+            text_link(t("community.pagination.previous"), community_moderation_path(state: (@state if @state != "open"), page: number - 1), rel: "prev")
           end
           span { t("ui.search.pagination.page", number:, total:) }
           if number < total
-            text_link(t("community.pagination.next"), community_moderation_path(page: number + 1), rel: "next")
+            text_link(t("community.pagination.next"), community_moderation_path(state: (@state if @state != "open"), page: number + 1), rel: "next")
           end
         end
       end

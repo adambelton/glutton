@@ -19,12 +19,12 @@ module Admin
     end
 
     def table(headers, caption:, &block)
-      render RubyUI::Table.new(scroll_label: caption, class: "admin-table registry-table") do
+      render RubyUI::Table.new(scroll_label: caption, class: "admin-table ui-collection-table registry-table") do
         render RubyUI::TableCaption.new(class: "sr-only") { caption }
         render RubyUI::TableHeader.new do
           render RubyUI::TableRow.new do
             headers.each do |key|
-              render TableCell.new(heading: true) { t(key) }
+              render Shared::TableCell.new(heading: true) { t(key) }
             end
           end
         end
@@ -33,7 +33,7 @@ module Admin
     end
 
     def cell(&block)
-      render TableCell.new(&block)
+      render Shared::TableCell.new(&block)
     end
 
     def pagination(page, path:)

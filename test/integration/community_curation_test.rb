@@ -33,8 +33,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".ui-actions a[href=?]", community_path, text: I18n.t("community.curations.cancel")
     assert_select "#curation_title[aria-describedby=curation_title_hint]"
     assert_select "#curation_title_hint", text: I18n.t("community.curations.title_hint")
-    assert_select "label[for=curation_prompt]", text: I18n.t("community.curations.description")
-    assert_select "#curation_prompt[aria-describedby=curation_description_hint] + #curation_description_hint",
+    assert_select "label[for=curation_description]", text: I18n.t("community.curations.description")
+    assert_select "#curation_description[aria-describedby=curation_description_hint] + #curation_description_hint",
       text: I18n.t("community.curations.description_hint")
     assert_select "#curation_reference_search[placeholder=?]", I18n.t("community.curations.search_watched")
     assert_select ".community-reference-picker > legend > #curation_reference_hint",
@@ -96,7 +96,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     get community_path
     assert_select "a.community-curation-card[href=?]", community_post_path(curation), count: 1 do |links|
       assert_select "h2[id=?]", links.first["aria-labelledby"], text: curation.title
-      assert_select "p", text: curation.prompt, count: 0
+      assert_select "p", text: curation.description, count: 0
       assert_select "footer .community-curation-card-counts + .community-curation-card-author", text: @author.community_username do
         assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_avatar_preset}", text: @author.community_username
       end
@@ -221,7 +221,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     freeze_time do
       12.times do |index|
         Community::Curations::PublishCuration.call(author_id: @author.id, title: "Curation #{index + 1}",
-          prompt: "Films for this theme.", reference_film_ids: [], reference_comments: {})
+          description: "Films for this theme.", reference_film_ids: [], reference_comments: {})
       end
     end
     sign_in(member("board_reader", accepted: false, username: false, avatar: false))
@@ -254,9 +254,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     matching_title = "Folk% horror in the woods"
     11.times do |index|
       Community::Curations::PublishCuration.call(author_id: @author.id, title: (index.zero? ? matching_title : "Curation #{index}"),
-        prompt: (index.zero? ? "Selected by title." : "More Folk% Horror films."), reference_film_ids: [], reference_comments: {})
+        description: (index.zero? ? "Selected by title." : "More Folk% Horror films."), reference_film_ids: [], reference_comments: {})
     end
-    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk tale horror", prompt: "Unrelated wording.",
+    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk tale horror", description: "Unrelated wording.",
       reference_film_ids: [], reference_comments: {})
     sign_in(@author)
 
@@ -280,9 +280,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   test "the board sorts curations by latest update" do
     created_at = Time.zone.local(2026, 11, 20, 9, 15)
     updated_at = Time.zone.local(2026, 11, 23, 14, 30)
-    earlier_post = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn horror", prompt: "Films for this theme.",
+    earlier_post = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn horror", description: "Films for this theme.",
       created_at:, updated_at:)
-    newer_post = Community::PostCommunityCuration.create!(author: @author, title: "Folk horror", prompt: "Films for this theme.",
+    newer_post = Community::PostCommunityCuration.create!(author: @author, title: "Folk horror", description: "Films for this theme.",
       created_at: Time.zone.local(2026, 11, 21, 9, 15), updated_at: Time.zone.local(2026, 11, 22, 14, 30))
     sign_in(@author)
 
@@ -351,7 +351,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     sign_in(@author)
     get new_community_post_path
     assert_no_difference "Community::Post.count" do
-      submit_curation(title: "a" * 121, prompt: "b" * 2001, reference_film_ids: [ 1, 1, 2, 3, 4, 5 ])
+      submit_curation(title: "a" * 121, description: "b" * 2001, reference_film_ids: [ 1, 1, 2, 3, 4, 5 ])
     end
     assert_response :unprocessable_content
     assert_select "ul.ui-errors li", count: 3
@@ -366,7 +366,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
     get new_community_post_path
     assert_no_difference "Community::Post.count" do
-      submit_curation(title: " ", prompt: " ")
+      submit_curation(title: " ", description: " ")
     end
     assert_response :unprocessable_content
     assert_select "ul.ui-errors li", count: 2
@@ -711,7 +711,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     save_endorsements(curation, member: reader, film_ids: [ reference.id ],
       comments: { reference.id => "The forest is central to the film." })
     saved_title = curation.title
-    saved_prompt = curation.prompt
+    saved_description = curation.description
     activity = curation.reload.updated_at
     path = community_post_path(curation)
     sign_in(@author)
@@ -724,21 +724,21 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".ui-page-back-above", count: 0
     assert_select "main form .ui-actions-fixed a[href=?]", path, text: I18n.t("community.curations.cancel")
     assert_select "#curation_title[value=?]", saved_title
-    assert_select "#curation_prompt", text: saved_prompt
+    assert_select "#curation_description", text: saved_description
     assert_select ".community-reference-picker", count: 0
 
-    patch path, params: { authenticity_token: curation_action_token(path), curation: { title: " ", prompt: "Keep this draft." } }
+    patch path, params: { authenticity_token: curation_action_token(path), curation: { title: " ", description: "Keep this draft." } }
     assert_response :unprocessable_content
     assert_select "ul.ui-errors li"
-    assert_select "#curation_prompt", text: "Keep this draft."
+    assert_select "#curation_description", text: "Keep this draft."
     assert_select "main form .ui-actions-fixed a[href=?]", path, text: I18n.t("community.curations.cancel")
     curation.reload
-    assert_equal [ saved_title, saved_prompt ], [ curation.title, curation.prompt ]
+    assert_equal [ saved_title, saved_description ], [ curation.title, curation.description ]
 
     travel 1.minute do
       assert_no_difference [ "Community::FilmEndorsement.count", "Community::Comment.count", "Community::CommentContent.count" ] do
         patch path, params: { authenticity_token: curation_action_token(path),
-          curation: { title: "  Forest horror  ", prompt: "Films with an uneasy woodland setting.", author_id: reader.id, reference_film_ids: [] } }
+          curation: { title: "  Forest horror  ", description: "Films with an uneasy woodland setting.", author_id: reader.id, reference_film_ids: [] } }
       end
     end
     assert_redirected_to path
@@ -765,7 +765,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
     get edit_community_post_path(curation)
     assert_response :forbidden
-    patch path, params: { authenticity_token: token, curation: { title: "Someone else's edit", prompt: "Unwanted changes." } }
+    patch path, params: { authenticity_token: token, curation: { title: "Someone else's edit", description: "Unwanted changes." } }
     assert_response :forbidden
     assert_equal "Slow-burn horror", curation.reload.title
 
@@ -799,7 +799,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     save_endorsements(curation, member: third, film_ids: [])
     assert curation.reload.protected?
 
-    patch path, params: { authenticity_token: edit_token, curation: { title: "Changed title", prompt: "Changed description" } }
+    patch path, params: { authenticity_token: edit_token, curation: { title: "Changed title", description: "Changed description" } }
     assert_response :forbidden
     delete path, params: { authenticity_token: delete_token }
     assert_response :forbidden
@@ -859,11 +859,11 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "dl dt", text: "Protected title"
     assert_select "dl dt", text: "Protected description"
     assert_select "dl dd span", text: curation.title
-    assert_select "dl dd span", text: curation.prompt
+    assert_select "dl dd span", text: curation.description
     assert_select "input[name^=curation], textarea[name^=curation]:not(#curation_additional_description)", count: 0
     update_token = curation_action_token(update_path)
     patch update_path, params: { authenticity_token: update_token,
-      curation: { additional_description: "x" * (Community::PostCommunityCuration::PROMPT_LIMIT + 1) } }
+      curation: { additional_description: "x" * (Community::PostCommunityCuration::DESCRIPTION_LIMIT + 1) } }
     assert_response :unprocessable_content
     assert_nil curation.reload.additional_description
     [ "First description.", "Revised description." ].each do |description|
@@ -975,7 +975,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   test "discussion reads keep comment records and markup bounded as branches grow" do
     films = [ film("The quiet village"), film("An unrelated forest") ]
     films.each { |candidate| watch(@author, candidate) }
-    curation = Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk horror", prompt: "Quiet settings.",
+    curation = Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk horror", description: "Quiet settings.",
       reference_film_ids: films.map(&:id), reference_comments: { films.first.id => "The village.", films.last.id => "The forest." })
     root, unrelated_root = curation.comments.order(:id).to_a
     reader = member("discussion_reader")
@@ -1517,7 +1517,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     reference = film("A film with a discussion")
     watch(@author, reference)
     curation = Community::Curations::PublishCuration.call(author_id: @author.id, title: "Films with a quiet setting",
-      prompt: "Set in small communities.", reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet setting." })
+      description: "Set in small communities.", reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet setting." })
     [ curation, curation.comments.sole ]
   end
 
@@ -1546,7 +1546,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
   def publish_with(*films)
     films.each { |film| watch(@author, film) }
-    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Slow-burn horror", prompt: "Films for this theme.",
+    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Slow-burn horror", description: "Films for this theme.",
       reference_film_ids: films.map(&:id), reference_comments: {})
   end
 
@@ -1554,7 +1554,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     page = Nokogiri::HTML(response.body)
     token = page.at_css("form[action='#{community_posts_path}'] input[name=authenticity_token]")&.[]("value")
     token ||= page.at_css('meta[name="csrf-token"]')["content"]
-    curation = { title: "Slow-burn modern folk horror", prompt: "Stories that take their time." }.merge(fields)
+    curation = { title: "Slow-burn modern folk horror", description: "Stories that take their time." }.merge(fields)
     post community_posts_path, params: { authenticity_token: token, post_type: "community_curation", curation: }
   end
 

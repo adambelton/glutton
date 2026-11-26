@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
-  test "a member reports a curation field and a moderator reviews the submitted version" do
+  test "a member reports a curation and a moderator reviews the submitted version" do
     password = "a long test password"
     author = Identity::UserRegistered.create!(email_address: "report-browser-author@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, community_username: "FilmWriter",
@@ -11,7 +11,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     Community::Moderation::ManageModeratorRoles.grant(actor_id: moderator.id, member_id: moderator.id)
     curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Isolated landscapes",
-      prompt: "Original description.", reference_film_ids: [], reference_comments: {})
+      description: "Original description.", reference_film_ids: [], reference_comments: {})
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: moderator.email_address
@@ -20,7 +20,12 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_current_path library_path
     visit community_post_path(curation)
 
+    set_viewport(390, 844)
     click_link I18n.t("community.reports.action")
+    within ".community-report-evidence" do
+      assert_text "Isolated landscapes"
+      assert_text "Original description."
+    end
     actions = find("form .ui-actions")
     assert_equal({ "display" => "grid", "grid-auto-columns" => "minmax(0px, 1fr)" },
       actions.style("display", "grid-auto-columns"))
@@ -32,18 +37,11 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
       assert_current_path community_post_path(curation)
     end
 
+    reset_viewport
     click_link I18n.t("community.reports.action")
     submit_label = I18n.t("community.reports.submit")
     reason_label = I18n.t("community.reports.reason")
     safety_label = I18n.t("community.reports.reasons.immediate_safety")
-    assert_button submit_label, disabled: true
-    select safety_label, from: reason_label
-    assert_button submit_label, disabled: true
-    select I18n.t("community.reports.choose_reason"), from: reason_label
-    radio = find("input[name='report[part]'][value='description']")
-    caption = radio.sibling("strong").rect
-    assert_operator caption.x, :>, radio.rect.x + radio.rect.width
-    radio.click
     assert_button submit_label, disabled: true
     reason = find_field(reason_label)
     assert_operator reason.style("padding-left").fetch("padding-left").to_f, :>, 0
@@ -54,13 +52,51 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_current_path community_post_path(curation)
     assert_text I18n.t("community.reports.submitted")
 
-    curation.edit_text(member: author, title: curation.title, prompt: "Current description.")
+    curation.edit_text(member: author, title: curation.title, description: "Current description.")
     visit community_moderation_path
     assert_text I18n.t("community.reports.high_priority")
     click_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
-    assert_text "Original description."
-    assert_text "Current description."
+    headings = all(".community-report-review > section > h2", count: 4).map(&:text)
+    assert_equal %w[members reportable.heading status resolution.title].map { |key| I18n.t("community.reports.#{key}") }, headings
+    members = find(".community-report-members")
+    assert_equal 2, members.style("grid-template-columns").fetch("grid-template-columns").split.length
+    within members do
+      assert_text moderator.email_address
+      assert_text author.email_address
+    end
+    assert_text "Community::Post"
+    within ".community-report-comparison > section:first-child" do
+      assert_selector "h3", text: I18n.t("community.reports.reported_content")
+      assert_text "Original description."
+    end
+    within ".community-report-comparison > section:last-child" do
+      assert_selector "h3", text: I18n.t("community.reports.current_content")
+      assert_text "Current description."
+    end
     click_button I18n.t("community.reports.escalate")
     assert_text I18n.t("community.reports.states.escalated")
+    click_link I18n.t("community.reports.back")
+    assert_current_path community_moderation_path(state: "escalated")
+    within "table.community-report-table" do
+      click_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
+    end
+
+    resolve_label = I18n.t("community.reports.resolution.title")
+    assert_button resolve_label, disabled: true
+    select I18n.t("community.reports.resolution.outcomes.violation_confirmed"), from: I18n.t("community.reports.resolution.outcome")
+    assert_button resolve_label, disabled: true
+    fill_in I18n.t("community.reports.resolution.summary"), with: "A confirmed safety violation. No restriction was needed."
+    assert_button resolve_label, disabled: false
+    click_button resolve_label
+    assert_text I18n.t("community.reports.resolution.saved")
+    assert_text "A confirmed safety violation. No restriction was needed."
+    assert_no_text "Original description."
+    assert_no_text "Current description."
+    assert_no_text "Please review this."
+    click_link I18n.t("community.reports.back")
+    assert_current_path community_moderation_path(state: "resolved")
+    assert_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
+  ensure
+    reset_viewport
   end
 end

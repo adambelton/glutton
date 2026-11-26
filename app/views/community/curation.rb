@@ -19,7 +19,7 @@ module Views
           render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
           author_identity(@curation.author) if @curation.author.present?
           div(class: "community-curation-descriptions") do
-            p(class: "community-curation-prompt") { @curation.prompt }
+            p(class: "community-curation-prompt") { @curation.description }
             display_additional_description if @curation.additional_description.present?
           end
           div(class: "community-comment-actions") do

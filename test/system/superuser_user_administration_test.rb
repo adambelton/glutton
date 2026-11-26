@@ -42,7 +42,7 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_current_path admin_films_path(q: "matched")
     assert_selector "tbody tr", count: 10
     assert_collection_dimensions
-    long_cell = find("tbody tr:first-child td:first-child .admin-table-cell", text: "Matched film 00")
+    long_cell = find("tbody tr:first-child td:first-child .ui-table-cell", text: "Matched film 00")
     assert_equal "2", long_cell.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
     assert long_cell.evaluate_script("this.scrollHeight > this.clientHeight")
     line_height = long_cell.style("line-height").fetch("line-height").to_f

@@ -20,7 +20,7 @@ module Community
         film_ids = ::Registry::Film.matching_title(query).select(:id)
         post_ids = FilmEndorsement.visible_nominations.where(film_id: film_ids).select(:post_id)
 
-        PostCommunityCuration.where("posts.title ILIKE :pattern OR posts.prompt ILIKE :pattern", pattern:)
+        PostCommunityCuration.where("posts.title ILIKE :pattern OR posts.description ILIKE :pattern", pattern:)
           .or(PostCommunityCuration.where(id: post_ids))
       end
     end

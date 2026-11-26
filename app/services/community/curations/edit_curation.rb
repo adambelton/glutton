@@ -8,12 +8,12 @@ module Community
         curation
       end
 
-      def self.call(curation_id:, member_id:, title:, prompt:)
+      def self.call(curation_id:, member_id:, title:, description:)
         PostCommunityCuration.transaction do
           member = Identity::UserRegistered.lock.find_by(id: member_id)
           raise Errors::CurationEditUnavailable unless member.present?
 
-          PostCommunityCuration.lock.find(curation_id).edit_text(member:, title:, prompt:)
+          PostCommunityCuration.lock.find(curation_id).edit_text(member:, title:, description:)
         end
       end
     end

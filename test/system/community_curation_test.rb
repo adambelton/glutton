@@ -11,7 +11,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
     reference = Registry::Film.create!(title: "The shared reference", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film: reference).add_to_watched!
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Quiet horror", prompt: "Understated films.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Quiet horror", description: "Understated films.",
       reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet film." })
     root = curation.comments.sole
     [ reader, reader, reader, reader, second_reader ].each_with_index do |member, index|
@@ -281,7 +281,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       film
     end
     curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Folk horror in isolated places",
-      prompt: "Films where the setting shapes the story.", reference_film_ids: [ reference.id ], reference_comments: {})
+      description: "Films where the setting shapes the story.", reference_film_ids: [ reference.id ], reference_comments: {})
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: author.email_address
@@ -430,7 +430,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       community_code_of_conduct_accepted_at: Time.current)
     title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
     curation = Community::Curations::PublishCuration.call(author_id: author.id, title:,
-      prompt: "Folklore in film.", reference_film_ids: [], reference_comments: {})
+      description: "Folklore in film.", reference_film_ids: [], reference_comments: {})
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: author.email_address
@@ -476,11 +476,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_link I18n.t("community.curations.cancel"), href: community_post_path(curation)
     end
     assert_field I18n.t("community.curations.title"), with: curation.title
-    assert_field I18n.t("community.curations.description"), with: curation.prompt
+    assert_field I18n.t("community.curations.description"), with: curation.description
     assert_button I18n.t("community.curation_editing.save"), disabled: true
     fill_in I18n.t("community.curations.description"), with: "A draft description."
     assert_button I18n.t("community.curation_editing.save")
-    fill_in I18n.t("community.curations.description"), with: curation.prompt
+    fill_in I18n.t("community.curations.description"), with: curation.description
     assert_button I18n.t("community.curation_editing.save"), disabled: true
     fill_in I18n.t("community.curations.title"), with: "Woodland folk horror"
     fill_in I18n.t("community.curations.description"), with: "Folklore in remote woodland."
@@ -527,7 +527,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     film = Registry::Film.create!(title: "Folk Tales", tmdb_id: 123, release_date: Date.new(2020, 1, 1),
       tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Folk horror", prompt: "Films for this theme.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Folk horror", description: "Films for this theme.",
       reference_film_ids: [ film.id ], reference_comments: {})
 
     visit new_session_path
@@ -584,9 +584,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       film
     end
     title = "Slow-burn folk horror about isolated communities, old rituals, and outsiders lost in the countryside"
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title:, prompt: "Isolated communities and older traditions.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title:, description: "Isolated communities and older traditions.",
       reference_film_ids: films.map(&:id), reference_comments: { films.first.id => "An isolated setting." })
-    shorter = Community::Curations::PublishCuration.call(author_id: author.id, title: "Two-film curation", prompt: "A narrower theme.",
+    shorter = Community::Curations::PublishCuration.call(author_id: author.id, title: "Two-film curation", description: "A narrower theme.",
       reference_film_ids: films.first(2).map(&:id), reference_comments: {})
 
     visit new_session_path
@@ -617,7 +617,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_operator shorter_card.rect.x + shorter_card.rect.width, :<=, card.rect.x
     assert_equal shorter_card.rect.y, card.rect.y
     within card do
-      assert_no_text curation.prompt
+      assert_no_text curation.description
       assert_no_selector "time"
       assert_selector ".community-curation-card-posters .film-poster", count: 5
       within ".community-curation-card-author" do
@@ -699,7 +699,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       Library::LibraryFilm.new(user: author, film:).add_to_watched!
       film
     end
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", description: "A strong sense of place.",
       reference_film_ids: [ first.id, second.id ], reference_comments: { first.id => "The landscape shapes the story.", second.id => "Woodland folklore." })
     root = curation.film_endorsements.find_by!(film: first).comments.sole
 
@@ -900,7 +900,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
     film = Registry::Film.create!(title: "The Empty Field", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", prompt: "A strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Unsettling landscapes", description: "A strong sense of place.",
       reference_film_ids: [ film.id ], reference_comments: { film.id => "The landscape shapes the story." })
     root = curation.comments.sole
     leaf = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,
@@ -1014,7 +1014,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       community_code_of_conduct_accepted_at: Time.current)
     film = Registry::Film.create!(title: "The Quiet Field", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
     Library::LibraryFilm.new(user: author, film:).add_to_watched!
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Rural horror", prompt: "Films with a strong sense of place.",
+    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Rural horror", description: "Films with a strong sense of place.",
       reference_film_ids: [ film.id ], reference_comments: { film.id => "The landscape makes the whole film feel isolated." })
     root = curation.comments.sole
     reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: author.id,

@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     resource :moderation, only: :show, controller: :moderation
     resources :moderation_reports, path: "moderation/reports", only: :show do
       patch :escalate, on: :member
+      patch :resolve, on: :member
     end
     resources :posts, only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :report, only: [ :new, :create ], controller: :reports
