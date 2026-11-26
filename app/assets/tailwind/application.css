@@ -712,6 +712,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .community-curation-author-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   .community-curation-author-actions > .ui-action-button,
   .community-curation-author-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { inline-size: 100%; min-inline-size: 0; }
+  .community-curation-protected-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { white-space: normal; }
 }
 @media (max-width: 380px) {
   .community-curation-author-actions > .ui-action-button,

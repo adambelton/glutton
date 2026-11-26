@@ -124,7 +124,7 @@ class RatingNotesTest < ApplicationSystemTestCase
 
   test "the rating and journal panels share a height and their tabs fit at narrow widths" do
     overview = ("The road led to a house that should not have been there. " * 12).strip
-    film = Registry::Film.create!(title: "The last house at the end of the old road", tmdb_id: 1620, tmdb_metadata: { details: { overview: } })
+    film = Registry::Film.create!(title: "The Old Road", tmdb_id: 1620, tmdb_metadata: { details: { overview: } })
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
     click_button I18n.t("ratings.onboarding.surprise")

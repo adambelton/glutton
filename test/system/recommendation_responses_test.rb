@@ -50,7 +50,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
   end
 
   test "the match and source links follow the title and wrap when needed" do
-    film = Registry::Film.create!(title: "A recommendation with a match score", tmdb_id: 19_807, wikipedia_context: { page_id: 123 },
+    film = Registry::Film.create!(title: "Last Light", tmdb_id: 19_807, wikipedia_context: { page_id: 123 },
       tmdb_metadata: { details: { backdrop_path: "/still.jpg", overview: "A visitor arrives in a town where nobody goes out after dark." } })
     visit recommendation_path
     click_button I18n.t("identity.entry.try_it_out")
