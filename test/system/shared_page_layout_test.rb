@@ -2,9 +2,7 @@ require "application_system_test_case"
 
 class SharedPageLayoutTest < ApplicationSystemTestCase
   test "main cards use the content inset and leave room for headings and back links" do
-    window = current_window
-    original_size = window.size
-    window.resize_to(1400, 1000)
+    set_viewport(1400, 1000)
 
     standalone_paths = [ new_password_reset_path, community_code_of_conduct_path, privacy_notice_path, terms_of_service_path ]
     standalone_paths.each do |path|
@@ -40,13 +38,13 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
       assert_in_delta headed_gap, card_gap(path), 1, path
     end
 
-    window.resize_to(768, 1000)
+    set_viewport(768, 1000)
     [ library_path, community_path, account_settings_path ].each do |path|
       assert_in_delta headed_gap, card_gap(path), 1, path
     end
     assert_in_delta 48, card_gap(community_code_of_conduct_path), 1
 
-    window.resize_to(390, 844)
+    set_viewport(390, 844)
     assert_in_delta 16, card_gap(account_settings_path), 1
     assert_in_delta 16, card_gap(privacy_notice_path), 1
     assert_back_card_gap community_curation_path(curation), inset: 16
@@ -59,7 +57,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
       assert_in_delta 16, main_card.rect.y - (row.y + row.height), 1, path
     end
   ensure
-    window.resize_to(*original_size)
+    reset_viewport
   end
 
   test "Account tabs share the rating card tab styles and follow the current page" do

@@ -14,4 +14,15 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     GuestSessionsController::RATE_LIMIT_STORE.clear
     SessionsController::RATE_LIMIT_STORE.clear
   end
+
+  private
+
+  def set_viewport(width, height)
+    @viewport_browser = page.driver.browser
+    @viewport_browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
+  end
+
+  def reset_viewport
+    @viewport_browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 end

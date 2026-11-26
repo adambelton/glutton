@@ -32,10 +32,9 @@ class TasteProfileTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
-    original_size = page.current_window.size
-    page.current_window.resize_to(768, 950)
+    set_viewport(768, 950)
     assert_selector ".ui-nav a", text: I18n.t("admin.title")
-    page.current_window.resize_to(390, 950)
+    set_viewport(390, 950)
     assert_no_selector ".ui-nav a", text: I18n.t("admin.title")
     navigation = find("select.ui-primary-navigation")
     assert_in_delta 0, navigation.evaluate_script("this.parentElement.clientWidth - this.getBoundingClientRect().width"), 1
@@ -49,7 +48,7 @@ class TasteProfileTest < ApplicationSystemTestCase
     within(".admin-navigation") { click_link I18n.t("registry.films") }
     assert_current_path admin_films_path
     assert_selector ".admin-navigation a[aria-current=location]", text: I18n.t("registry.films")
-    page.current_window.resize_to(768, 950)
+    set_viewport(768, 950)
     assert_selector "main h1.sr-only", text: I18n.t("registry.films")
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
     search = find_field(I18n.t("admin.search.films")).rect
@@ -70,7 +69,7 @@ class TasteProfileTest < ApplicationSystemTestCase
     assert_no_text "The quiet made it unsettling."
 
   ensure
-    page.current_window.resize_to(*original_size) if original_size
+    reset_viewport
   end
 
   test "both profiles use expandable quality rows with right-side chevrons" do

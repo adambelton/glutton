@@ -13,6 +13,8 @@ Open [localhost:3000](http://localhost:3000). `bin/dev` builds styles and starts
 
 Use `bin/ci` for style, security, autoloading, Rails tests and the headless Chrome suite. GitHub Actions runs the same checks on pull requests and pushes to main. Dependency audits use network access. The `/up` endpoint checks whether Rails boots.
 
+In responsive system tests, use the viewport helpers to set the page width and restore it after the check. Compare alignment, overflow, and shared control sizes directly. Use fixed dimensions when a specific size is part of the design contract.
+
 ## Git workflow in Zed
 
 Open the main Glutton checkout in Zed and keep the active task branch checked out there while working. Zed shows the files and Git status of that checkout. Use another worktree only at the owner’s explicit request.
