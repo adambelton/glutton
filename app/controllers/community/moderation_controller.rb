@@ -1,9 +1,15 @@
 module Community
   class ModerationController < ApplicationController
-    def show
-      return head :forbidden unless Moderation::Access.review?(user: current_user)
+    rescue_from Errors::ModerationAccessDenied, with: -> { head :forbidden }
 
-      render Views::Community::Moderation.new
+    def show
+      search = CollectionSearchParameters.parse(query: "", page: params.fetch(:page, "1"), max_digits: 6)
+      return head :bad_request unless search.present?
+
+      reports_page = Reporting::BrowseReports.page(viewer: current_user, number: search.page)
+      return redirect_to community_moderation_path unless search.page <= reports_page.total_pages
+
+      render Views::Community::Moderation.new(reports_page:)
     end
   end
 end

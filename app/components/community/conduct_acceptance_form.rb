@@ -21,13 +21,13 @@ module Community
     private
 
     def acceptance_form
-      form_with(url: community_code_of_conduct_acceptance_path) do
+      form_with(url: community_code_of_conduct_acceptance_path, data: form_validation) do
         input(type: :hidden, name: "code_version", value: @code.version)
         label(class: "community-conduct-consent") do
           input(type: :checkbox, name: "accepted", value: "1", required: true)
           span { t("community.conduct.agreement") }
         end
-        render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button") { t("community.conduct.accept") }
+        validated_submit(t("community.conduct.accept"), class_name: "ui-action-button")
       end
     end
   end

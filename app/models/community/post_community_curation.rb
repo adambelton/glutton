@@ -1,5 +1,8 @@
 module Community
   class PostCommunityCuration < Post
+    include Reportable
+    self.report_source_key = :curation_source_id
+
     TITLE_LIMIT = 120
     PROMPT_LIMIT = 2_000
     ENDORSERS_FOR_PROTECTION = 3
@@ -20,6 +23,26 @@ module Community
 
     # The deletion owner follows the account until the curation becomes protected.
     before_create { self.deletable_author_id = author_id }
+
+    def reportable_parts
+      { "title" => title, "description" => prompt, "additional_description" => additional_description }.compact_blank
+    end
+
+    def discussion_comment(id)
+      comment = super
+      film_id = Discussions::CurationDiscussion.film_id_for(comment)
+      raise Errors::NominationUnavailable unless visible_film_endorsements.exists?(film_id:)
+
+      comment
+    end
+
+    def spoiler_free?
+      true
+    end
+
+    def reported_member
+      author
+    end
 
     def publish(reference_film_ids:, reference_comments:)
       valid?

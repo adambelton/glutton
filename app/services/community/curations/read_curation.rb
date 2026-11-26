@@ -1,8 +1,8 @@
 module Community
   module Curations
     class ReadCuration
-      def self.call(id:, viewer:, selected_reply_id: nil, expand_selected_branch: false)
-        curation = PostCommunityCuration.preload(visible_film_endorsements: :film).find(id)
+      def self.call(curation:, viewer:, selected_reply_id: nil, expand_selected_branch: false)
+        ActiveRecord::Associations::Preloader.new(records: [ curation ], associations: { visible_film_endorsements: :film }).call
         nominated_films = curation.nominated_films
         library_films = Library::LibraryFilm.where(user: viewer, film_id: nominated_films.map { |film, _| film.id }).index_by(&:film_id)
         discussion = Discussions::CurationDiscussion.new(curation:, selected_reply_id:, expand_selected_branch:)

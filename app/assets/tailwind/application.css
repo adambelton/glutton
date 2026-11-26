@@ -939,6 +939,13 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .community-comment-composer .ui-actions-mobile-full > .ui-action-button { padding-inline: 4px; }
 }
 .community-curation-prompt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ui-field > .community-report-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 12px;
+}
+.community-report-option > .community-curation-prompt { grid-column: 2; }
 :is(.community-curation-author, .community-film-debrief-author) { display: flex; align-items: center; gap: 10px; margin-block-start: 14px; overflow-wrap: anywhere; }
 .community-curation-descriptions { margin-block: 14px; color: var(--glutton-muted-foreground); }
 .community-curation-additional-description { display: grid; gap: 4px; margin-block-start: 12px; }

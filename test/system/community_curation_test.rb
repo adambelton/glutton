@@ -23,7 +23,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    visit community_curation_path(curation)
+    visit community_post_path(curation)
     edit_post = I18n.t("community.curation_editing.edit_post")
     assert_selector ".community-post-tag + .community-post-tag", text: I18n.t("community.curation_protection.badge")
     within ".community-post-tags" do
@@ -51,7 +51,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     save = I18n.t("community.curation_editing.save")
     cancel = I18n.t("community.curations.cancel")
     click_link edit_post
-    assert_current_path edit_community_curation_path(curation)
+    assert_current_path edit_community_post_path(curation)
     within "main.community-curation-form" do
       assert_text I18n.t("community.curation_protection.editor_explanation")
       assert_selector "dl dt", text: "Protected title"
@@ -65,14 +65,14 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       fill_in additional_description, with: "An abandoned draft."
       click_link cancel
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert_no_text "An abandoned draft."
     click_link edit_post
     within "main.community-curation-form" do
       fill_in additional_description, with: "A new suggestion for readers."
       click_button save
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert_text "A new suggestion for readers."
     click_link edit_post
     within "main.community-curation-form" do
@@ -85,7 +85,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       fill_in additional_description, with: "A revised suggestion for readers."
       click_button save
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert_text "A revised suggestion for readers."
     assert_no_text "A new suggestion for readers."
     assert_text "Understated films."
@@ -190,7 +190,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_no_text "Folk Tales"
     fill_in search, with: "empty"
     find_field(search).send_keys(:enter)
-    assert_current_path new_community_curation_path
+    assert_current_path new_community_post_path
     assert_no_text "Folk Tales"
     click_button I18n.t("community.curations.add_film", title: "The Empty Field")
     assert_field search, with: ""
@@ -282,11 +282,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    visit community_curation_path(curation)
+    visit community_post_path(curation)
     within "section[aria-labelledby=curation-nominated-films]" do
       find_link(I18n.t("community.curation_endorsements.edit_endorsements"), class: "bg-primary").click
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     search = I18n.t("community.curations.search_watched")
     dialog = find("dialog[open]")
     assert_in_delta 640, dialog.rect.width, 1
@@ -401,7 +401,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       click_button I18n.t("community.curation_endorsements.save")
     end
     assert_no_selector "dialog[open]"
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert_text I18n.t("community.curation_endorsements.saved")
     within "#nomination-#{orchard.id}" do
       find("summary", text: I18n.t("community.curations.comments", count: 1)).click
@@ -430,7 +430,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    visit community_curation_path(curation)
+    visit community_post_path(curation)
     delete_label = I18n.t("community.curation_deletion.delete_post")
     heading = find("h1", text: title)
     action_group = find(".community-curation-author-actions")
@@ -459,14 +459,14 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       end
       edit.click
     end
-    assert_current_path edit_community_curation_path(curation)
+    assert_current_path edit_community_post_path(curation)
     card = find("main.community-curation-form")
     assert_curation_form_width card
     assert_no_selector ".ui-page-back-above"
     within(card) do
       assert_comment_action_group(cancel: I18n.t("community.curations.cancel"), submit: I18n.t("community.curation_editing.save"))
       assert_mobile_editor_actions
-      assert_link I18n.t("community.curations.cancel"), href: community_curation_path(curation)
+      assert_link I18n.t("community.curations.cancel"), href: community_post_path(curation)
     end
     assert_field I18n.t("community.curations.title"), with: curation.title
     assert_field I18n.t("community.curations.description"), with: curation.prompt
@@ -478,7 +478,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("community.curations.title"), with: "Woodland folk horror"
     fill_in I18n.t("community.curations.description"), with: "Folklore in remote woodland."
     click_button I18n.t("community.curation_editing.save")
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert_selector "h1", text: "Woodland folk horror"
     assert_text "Folklore in remote woodland."
 
@@ -497,7 +497,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       cancel.click
     end
     assert_no_selector "dialog[open]"
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert Community::Post.exists?(curation.id)
 
     click_button delete_label
@@ -528,7 +528,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    visit community_curation_path(curation)
+    visit community_post_path(curation)
     within "#nomination-#{film.id}" do
       assert_selector ".community-nomination-rank", text: "1."
       assert_selector "h3", text: "Folk Tales (2020)"
@@ -544,7 +544,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       watchlist_label = I18n.t("library.search.in_watchlist")
       assert_selector "button[data-in-collection=true][aria-disabled=true][aria-label='#{watchlist_label}'] svg"
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
     assert Library::LibraryFilm.watchlist.exists?(user: viewer, film:)
 
     within "#nomination-#{film.id}" do
@@ -670,7 +670,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert counts.evaluate_script("Array.from(this.children).every(item => item.scrollWidth <= item.clientWidth)")
       first(".community-curation-card-posters .film-poster").click
     end
-    assert_current_path community_curation_path(curation)
+    assert_current_path community_post_path(curation)
   ensure
     reset_viewport
   end
@@ -701,7 +701,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    path = community_curation_path(curation)
+    path = community_post_path(curation)
     visit path
     assert_no_text "The landscape shapes the story."
     find("#nomination-#{second.id} details.community-film-comments > summary").click
@@ -871,7 +871,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_in_delta editor.x + inset, input.x, 1
       assert_in_delta editor.x + editor.width - inset, input.x + input.width, 1
       cancel = find_link(I18n.t("community.curations.cancel")).rect
-      publish = find_button(I18n.t("community.curation_replies.publish")).rect
+      publish = find_button(I18n.t("community.curation_replies.publish"), disabled: true).rect
       assert_equal cancel.y, publish.y
       assert_in_delta cancel.width.fdiv(input.width), publish.width.fdiv(input.width), 0.03
       assert_in_delta input.x, cancel.x, 1
@@ -906,7 +906,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    path = community_curation_path(curation)
+    path = community_post_path(curation)
     visit path
     click_button I18n.t("community.curations.expand_all")
     edit_label = I18n.t("community.comment_editing.edit")
@@ -927,7 +927,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within(source) { click_link I18n.t("community.curations.reply") }
     reply_gap = within("#comment-composer-#{leaf.id}") do
       input = find_field(I18n.t("community.curation_replies.body")).rect
-      submit = find_button(I18n.t("community.curation_replies.publish")).rect
+      submit = find_button(I18n.t("community.curation_replies.publish"), disabled: true).rect
       click_link cancel_label
       submit.y - (input.y + input.height)
     end
@@ -968,9 +968,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       fill_in editor_label, with: "My follow-up."
       assert_button save_label, disabled: true
       fill_in editor_label, with: " "
-      click_button save_label
-      assert_selector ".ui-errors li"
-      assert_field editor_label
+      assert_button save_label, disabled: true
       fill_in editor_label, with: "My edited follow-up."
       click_button save_label
     end
@@ -1021,7 +1019,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    path = community_curation_path(curation)
+    path = community_post_path(curation)
     visit path
     edit = I18n.t("community.curation_endorsements.edit_endorsements")
     save = I18n.t("community.curation_endorsements.save")

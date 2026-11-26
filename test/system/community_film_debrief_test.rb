@@ -32,14 +32,15 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
       end
     end
 
-    assert_current_path community_film_debrief_path(film)
     assert_selector "h1", text: film.title
+    debrief = Community::PostFilmDebrief.find_by!(film:)
+    assert_current_path community_post_path(debrief)
     find(".community-post-tag", text: I18n.t("community.film_debriefs.badge")).hover
     assert_selector "[role=tooltip]", text: I18n.t("community.film_debriefs.badge_tooltip")
 
     click_link I18n.t("community.curations.back")
     assert_current_path community_path
-    assert_link film.title, href: community_film_debrief_path(film)
+    assert_link film.title, href: community_post_path(debrief)
     assert_selector "a.community-film-debrief-card .community-post-card-artwork > .film-poster", count: 1
     assert_no_selector "a.community-film-debrief-card time"
     within "a.community-film-debrief-card" do
@@ -50,11 +51,11 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_no_button create_label
     fill_in I18n.t("community.search.label"), with: "Quiet"
     assert_current_path community_path(q: "Quiet")
-    assert_link film.title, href: community_film_debrief_path(film)
+    assert_link film.title, href: community_post_path(debrief)
     click_link I18n.t("ui.search.clear")
     assert_current_path community_path
     click_link film.title
-    assert_current_path community_film_debrief_path(film)
+    assert_current_path community_post_path(debrief)
   end
 
   test "a debrief supports inline comments, replies, editing, and confirmed deletion" do
@@ -71,7 +72,7 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     fill_in I18n.t("identity.sessions.password"), with: password
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
-    visit community_film_debrief_path(film)
+    visit community_post_path(debrief)
     assert_selector "h1 .film-year", text: "(1987)"
     title = find("h1").rect
     poster = find(".community-debrief-poster .film-poster").rect
@@ -90,7 +91,7 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     publish_label = I18n.t("community.film_debriefs.publish_comment")
     within composer_id do
       assert_selector ".community-member-avatar"
-      assert_operator find_button(publish_label).rect.width, :<, find("textarea").rect.width
+      assert_operator find_button(publish_label, disabled: true).rect.width, :<, find("textarea").rect.width
     end
 
     browser = page.driver.browser
@@ -105,7 +106,7 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
 
     within composer_id do
       textarea = find("textarea[maxlength='4000']")
-      button = find_button(publish_label)
+      button = find_button(publish_label, disabled: true)
       editor = find(".community-comment").rect
       assert_operator button.rect.y, :>, editor.y + editor.height
       assert_operator button.rect.width, :>=, editor.width * 0.99
@@ -113,7 +114,10 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
       assert_no_selector ".community-member-avatar"
       assert_equal "nowrap", button.style("white-space").fetch("white-space")
       assert button.evaluate_script("this.scrollWidth <= this.clientWidth")
+      fill_in I18n.t("community.comment_editing.body"), with: "   "
+      assert_button publish_label, disabled: true
       fill_in I18n.t("community.comment_editing.body"), with: "How did everyone interpret the ending?"
+      assert_button publish_label, disabled: false
       click_button publish_label
     end
     assert_selector "article.community-comment", text: "How did everyone interpret the ending?"

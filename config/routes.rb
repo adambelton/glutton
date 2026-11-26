@@ -12,23 +12,25 @@ Rails.application.routes.draw do
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
     resource :moderation, only: :show, controller: :moderation
-    scope "film-debriefs/:film_id", as: :film_debrief do
-      get "", to: "film_debriefs#show"
-      post "", to: "film_debriefs#create"
-      get "discussion", to: "film_debriefs#discussion", as: :discussion
-      resources :comments, only: [ :new, :create, :edit, :update, :destroy ], controller: :film_debrief_comments
+    resources :moderation_reports, path: "moderation/reports", only: :show do
+      patch :escalate, on: :member
     end
-    get "curations/:id", to: redirect(path: "/community/community-curations/%{id}"), constraints: { id: /\d+/ }
-    resources :curations, path: "community-curations", only: [ :new, :create, :show, :edit, :update, :destroy ] do
-      resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
-      resources :comments, only: [ :edit, :update, :destroy ], controller: :curation_comments do
-        resource :reply, only: [ :new, :create ], controller: :curation_replies
+    resources :posts, only: [ :new, :create, :show, :edit, :update, :destroy ] do
+      resource :report, only: [ :new, :create ], controller: :reports
+      resources :comments, only: [ :create, :edit, :update, :destroy ], controller: :post_comments do
+        resource :report, only: [ :new, :create ], controller: :reports
+        get "reply/new", action: :new_reply, as: :new_reply, on: :member
+        post :reply, action: :create_reply, on: :member
       end
-      post :watchlist, on: :member
-      post :watched, on: :member
       get :discussion, on: :member
-      patch :additional_description, on: :member
-      patch :disassociate, on: :member
+    end
+
+    scope "posts/:post_id", as: :curation do
+      resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
+      patch "additional_description", to: "posts#additional_description"
+      patch "disassociate", to: "posts#disassociate"
+      post "films/:film_id/watchlist", to: "posts#watchlist", as: :film_watchlist
+      post "films/:film_id/watched", to: "posts#watched", as: :film_watched
     end
   end
 

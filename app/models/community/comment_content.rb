@@ -1,5 +1,8 @@
 module Community
   class CommentContent < ApplicationRecord
+    include Reportable
+    self.report_source_key = :comment_content_source_id
+
     BODY_LIMIT = 4_000
 
     belongs_to :comment, inverse_of: :content
@@ -12,6 +15,18 @@ module Community
 
     def self.body_too_long?(body)
       normalize_value_for(:body, body).to_s.length > BODY_LIMIT
+    end
+
+    def reportable_parts
+      { "body" => body }
+    end
+
+    def reported_member
+      author
+    end
+
+    def spoiler_free?
+      comment.post.spoiler_free?
     end
 
     def edit_body(body:)

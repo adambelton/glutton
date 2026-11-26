@@ -2,7 +2,7 @@ module Community
   class CurationComments < Shared::Base
     def initialize(curation:, film_id:, discussion:, can_reply:)
       @film_id, @discussion, @can_reply = film_id, discussion, can_reply
-      @routes = CurationDiscussionRoutes.new(curation:, film_id:)
+      @routes = DiscussionRoutes.new(post: curation, film_id:)
     end
 
     def view_template

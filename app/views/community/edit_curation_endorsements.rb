@@ -14,7 +14,7 @@ module Views
         if @dialog
           render Shared::EditorDialog.new(frame_id: FRAME_ID, title:) { editor_form }
         else
-          page(title:, narrow: true, back_to: community_curation_path(@curation), back_label: t("community.curations.back_to_curation")) do
+          page(title:, narrow: true, back_to: community_post_path(@curation), back_label: t("community.curations.back_to_curation")) do
             editor_form
           end
         end
@@ -38,11 +38,9 @@ module Views
               heading: t("community.curation_endorsements.films"), divide_selected_films: true, in_dialog: @dialog,
             field_prefix: "curation_endorsements", film_ids_name: "endorsements[film_ids]", comments_name: "endorsements[comments]")
           div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full justify-end") do
-            render RubyUI::Link.new(href: community_curation_path(@curation), variant: :ghost, class: "ui-action-button",
+            render RubyUI::Link.new(href: community_post_path(@curation), variant: :ghost, class: "ui-action-button",
               data: { action: ("editor-dialog#close:prevent" if @dialog) }) { t("community.curations.cancel") }
-            render Shared::PrimaryButton.new(type: :submit, class: "ui-action-button",
-              disabled: @film_ids.sort == @saved_film_ids.sort && @comments.values.none?(&:present?),
-              data: { unchanged_form_target: "save" }) { t("community.curation_endorsements.save") }
+            validated_submit(t("community.curation_endorsements.save"), class_name: "ui-action-button")
           end
         end
       end

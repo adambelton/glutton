@@ -1,15 +1,15 @@
 module Community
   module Discussions
     class ManageFilmDebriefDiscussion
-      def self.load_for_reply(film_id:, parent_id:, member:)
-        debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, film_id:)
+      def self.load_for_reply(post_id:, parent_id:, member:)
+        debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, post_id:)
         require_posting!(member)
         parent = authored_comment(debrief, parent_id)
         { debrief:, parent:, content: CommentContent.new }
       end
 
-      def self.publish(film_id:, parent_id:, member_id:, body:)
-        with_debrief(film_id:, member_id:) do |debrief, member|
+      def self.publish(post_id:, parent_id:, member_id:, body:)
+        with_debrief(post_id:, member_id:) do |debrief, member|
           require_posting!(member)
           if parent_id.present?
             parent = authored_comment(debrief, parent_id)
@@ -21,36 +21,36 @@ module Community
         end
       end
 
-      def self.load_for_edit(film_id:, comment_id:, member:)
-        debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, film_id:)
+      def self.load_for_edit(post_id:, comment_id:, member:)
+        debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, post_id:)
         comment = authored_comment(debrief, comment_id)
         raise Errors::CommentChangeUnavailable unless comment.can_edit_inline?(member:)
 
         { debrief:, comment:, content: comment.content }
       end
 
-      def self.edit(film_id:, comment_id:, member_id:, body:)
-        with_debrief(film_id:, member_id:) do |debrief, member|
+      def self.edit(post_id:, comment_id:, member_id:, body:)
+        with_debrief(post_id:, member_id:) do |debrief, member|
           comment = authored_comment(debrief, comment_id)
           content = comment.edit_body(member:, body:)
           { debrief:, comment:, content: }
         end
       end
 
-      def self.delete(film_id:, comment_id:, member_id:)
-        with_debrief(film_id:, member_id:) do |debrief, member|
+      def self.delete(post_id:, comment_id:, member_id:)
+        with_debrief(post_id:, member_id:) do |debrief, member|
           comment = authored_comment(debrief, comment_id)
           comment.delete_comment!(member:)
           { debrief:, selected_id: (comment.destroyed? ? comment.parent_id : comment.id) }
         end
       end
 
-      def self.with_debrief(film_id:, member_id:)
+      def self.with_debrief(post_id:, member_id:)
         PostFilmDebrief.transaction do
           member = Identity::UserRegistered.lock.find_by(id: member_id)
           raise Errors::MembershipRequired unless member.present?
 
-          debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, film_id:, lock: true)
+          debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: member, post_id:, lock: true)
           yield debrief, member
         end
       end

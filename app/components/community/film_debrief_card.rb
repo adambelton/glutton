@@ -9,7 +9,7 @@ module Community
       @title_id = "film-debrief-#{@film.id}-title"
       if @debrief.present?
         article do
-          a(class: "community-film-debrief-card", href: community_film_debrief_path(@film), aria: { labelledby: @title_id }) do
+          a(class: "community-film-debrief-card", href: community_post_path(@debrief), aria: { labelledby: @title_id }) do
             film_details
           end
         end
@@ -47,7 +47,9 @@ module Community
     end
 
     def create_action
-      form_with(url: community_film_debrief_path(@film), local: true, class: "community-film-debrief-create") do
+      form_with(url: community_posts_path, local: true, class: "community-film-debrief-create") do
+        input(type: :hidden, name: "post_type", value: "film_debrief")
+        input(type: :hidden, name: "film_id", value: @film.id)
         render RubyUI::Button.new(type: :submit, variant: :primary, size: :lg, class: "ui-action-button h-auto max-w-full whitespace-normal") do
           t("community.film_debriefs.create")
         end

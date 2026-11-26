@@ -2,7 +2,7 @@ module Community
   module CurationFilmSelectionParameters
     def self.parse(ids:, comments:)
       ids = [] if ids.nil?
-      unless ids.is_a?(Array) && ids.all? { |id| FilmId.valid?(id) }
+      unless ids.is_a?(Array) && ids.all? { |id| RecordId.valid?(id) }
         raise ActionController::BadRequest
       end
       submitted_ids = ids.to_set

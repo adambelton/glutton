@@ -5,7 +5,7 @@ module Community
     end
 
     def self.root_composer(debrief:, content:)
-      routes = DebriefDiscussionRoutes.new(debrief:)
+      routes = DiscussionRoutes.new(post: debrief)
       DiscussionCommentForm.new(content:, frame_id: "film-debrief-#{debrief.id}-composer", path: routes.root_form_path, mode: :root, inline: true)
     end
 
@@ -22,7 +22,7 @@ module Community
           render self.class.root_composer(debrief: @debrief, content: @draft || CommentContent.new)
         end
         div(class: "community-debrief-threads") do
-          render DiscussionCommentPage.new(routes: DebriefDiscussionRoutes.new(debrief: @debrief), parent_id: nil,
+          render DiscussionCommentPage.new(routes: DiscussionRoutes.new(post: @debrief), parent_id: nil,
             discussion: @discussion, can_reply: @can_reply)
         end
       end

@@ -12,6 +12,10 @@ module Community
         select_path(selected_reply_id, expand_selected_branch:) if selected_reply_id.present?
       end
 
+      def require_parent!(parent_id)
+        @post.comments.find(parent_id) if parent_id.present?
+      end
+
       def reply_counts(parent_ids)
         visible_comments.where(parent_id: parent_ids).group(:parent_id).count
       end

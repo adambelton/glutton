@@ -9,9 +9,9 @@ module Views
         page(title: t("identity.recovery.request_title"), narrow: true) do
           p { t("identity.recovery.request_explanation") }
           p(role: "alert", class: "ui-errors") { @delivery_error } if @delivery_error.present?
-          form_with(url: password_reset_path) do
+          form_with(url: password_reset_path, data: form_validation) do
             field(name: "email_address", id: "email_address", label: t("identity.sessions.email"), type: :email, required: true, autocomplete: "email")
-            submit(t("identity.recovery.request_submit"))
+            validated_submit(t("identity.recovery.request_submit"))
           end
           text_link(t("identity.sessions.sign_in"), new_session_path)
         end

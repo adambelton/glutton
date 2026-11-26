@@ -6,13 +6,59 @@ en:
     moderation:
       title: Moderation
       back: Back to Community
-      tools_pending: Report review tools are coming in a later update.
       role_heading: Community moderator role
       grant: Grant moderator role
       revoke: Revoke moderator role
       granted: Moderator role granted.
       revoked: Moderator role revoked.
       role_unavailable: The moderator role has already changed. Review its current status and try again.
+    reports:
+      identifier: "Report #%{id}"
+      form_title: Report content
+      action: Report
+      empty: There are no Community reports yet.
+      pagination: Report pages
+      back: Back to Moderation
+      back_to_discussion: Back to discussion
+      reported_version: Reported version
+      current_version: Current version
+      source_unavailable: The original content is no longer available.
+      explanation: Explanation
+      optional_explanation: Explanation (optional)
+      reason: Reason
+      choose_reason: Choose a reason
+      part: What are you reporting?
+      submit: Submit report
+      submitted: Report submitted.
+      already_open: You already have an open report for this content.
+      target_changed: The content changed while you were filling out this report. Review the current version before submitting.
+      high_priority: High priority
+      escalate: Escalate report
+      escalated: Report escalated.
+      already_escalated: This report has already been escalated.
+      states:
+        pending: Pending
+        escalated: Escalated
+      parts:
+        title: Title
+        description: Description
+        additional_description: Additional description
+        body: Comment
+      identities:
+        reporter: Reporter at submission
+        reported_member: Reported member at submission
+        id: Account ID
+        email: Email
+        username: Public username
+      reasons:
+        immediate_safety: Threats or immediate safety concerns
+        private_information: Sharing someone’s private information
+        sexual_abuse_or_child_safety: Sexual abuse or child safety
+        self_harm: Suicide or self-harm concerns
+        harassment_hate_or_impersonation: Harassment, hate or impersonation
+        spam_or_scams: Spam or scams
+        spoilers: Spoilers in a spoiler-free discussion
+        other: Other or unsure
     search:
       label: Search films and posts
       no_matches: No films or posts match your search.
@@ -165,6 +211,9 @@ en:
         email: hello@adambelton.com
   activerecord:
     attributes:
+      community/report:
+        reason: Reason
+        explanation: Explanation
       community/comment_content:
         base: Comment
         body: Comment
