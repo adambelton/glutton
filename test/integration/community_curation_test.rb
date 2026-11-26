@@ -28,8 +28,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "nav.community-board-pagination > span", text: I18n.t("community.pagination.page", number: 1)
     get new_community_post_path
     assert_response :success
-    assert_select ".ui-page-back-above + main.ui-card.community-curation-form"
-    assert_select ".ui-page-back-above a[href=?]", community_path, text: I18n.t("community.curations.back")
+    assert_select "main.ui-card.community-curation-form"
+    assert_select ".ui-page-back-above", count: 0
+    assert_select ".ui-actions a[href=?]", community_path, text: I18n.t("community.curations.cancel")
     assert_select "#curation_title[aria-describedby=curation_title_hint]"
     assert_select "#curation_title_hint", text: I18n.t("community.curations.title_hint")
     assert_select "label[for=curation_prompt]", text: I18n.t("community.curations.description")
@@ -559,8 +560,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       edit_community_curation_endorsements_path(curation), text: I18n.t("community.curation_endorsements.endorse_films")
     get edit_community_curation_endorsements_path(curation)
     assert_response :success
-    assert_select ".ui-page-back-above + main.ui-card.ui-narrow"
-    assert_select ".ui-page-back-above a[href=?]", community_post_path(curation), text: I18n.t("community.curations.back_to_curation")
+    assert_select "main.ui-card.ui-narrow"
+    assert_select ".ui-page-back-above", count: 0
+    assert_select ".ui-actions a[href=?]", community_post_path(curation), text: I18n.t("community.curations.cancel")
     assert_select ".film-search-results > li", count: 3
     assert_select ".film-search-results > li[data-film-id=?]", reference.id.to_s
     original_activity = curation.updated_at

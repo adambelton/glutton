@@ -8,7 +8,7 @@ module RubyUI
       lg: "px-3 py-1 text-sm"
     }
 
-    DESTRUCTIVE_COLORS = "text-destructive bg-destructive/10 ring-destructive/20".freeze
+    DESTRUCTIVE_COLORS = "text-foreground bg-destructive/10 ring-destructive/20".freeze
 
     COLORS = {
       primary: "text-primary bg-primary/5 ring-primary/20",

@@ -54,7 +54,7 @@ module Community
     def delete_action
       render Shared::ConfirmationDialog.new(id: "delete-comment-#{@comment.id}", action_label: t("community.comment_deletion.delete"),
         title: t("community.comment_deletion.confirm_title"), description: t("community.comment_deletion.confirm_description"),
-        cancel_label: t("community.curations.cancel"), url: @routes.comment_path(@comment), trigger_variant: :ghost)
+        cancel_label: t("community.curations.cancel"), url: @routes.comment_path(@comment), trigger_variant: :plain)
     end
   end
 end

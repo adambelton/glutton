@@ -14,7 +14,7 @@ module Shared
       doctype
       html(lang: I18n.locale) do
         head do
-          title { t("ui.page_title", title: @title, brand: t("ui.wordmark")) }
+          title { t("ui.page_title", title: @title, brand: t("app.name")) }
           meta(name: "viewport", content: "width=device-width,initial-scale=1")
           meta(name: "application-name", content: t("ui.wordmark"))
           meta(name: "turbo-cache-control", content: "no-cache")

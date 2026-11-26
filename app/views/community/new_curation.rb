@@ -9,8 +9,7 @@ module Views
       end
 
       def view_template
-        page(title: t("community.curations.create"), class: "community-curation-form",
-          back_to: community_path, back_label: t("community.curations.back")) do
+        page(title: t("community.curations.create"), class: "community-curation-form") do
           errors(@curation.errors.full_messages)
           form_with(url: community_posts_path, data: form_validation) do
             input(type: :hidden, name: "post_type", value: "community_curation")
@@ -19,7 +18,10 @@ module Views
               comments: @reference_comments, heading: t("community.curations.reference_films"),
               hint: t("community.curations.reference_hint"), field_prefix: "curation_reference",
               film_ids_name: "curation[reference_film_ids]", comments_name: "curation[reference_comments]")
-            validated_submit(t("community.curations.publish"))
+            render Shared::ActionRow.new(full_width: true) do
+              render RubyUI::Link.new(href: community_path, variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
+              validated_submit(t("community.curations.publish"), class_name: "ui-action-button")
+            end
           end
         end
       end

@@ -6,8 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t(@editing ? "community.comment_editing.title" : "community.curation_replies.title"), narrow: true,
-          back_to: @routes.post_path(@comment), back_label: t("community.film_debriefs.back_to_debrief")) do
+        page(title: t(@editing ? "community.comment_editing.title" : "community.curation_replies.title"), narrow: true) do
           unless @editing
             blockquote(class: "community-curation-prompt") { @comment.content.body }
           end

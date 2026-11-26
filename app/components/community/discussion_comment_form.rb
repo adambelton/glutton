@@ -72,15 +72,16 @@ module Community
     end
 
     def editor_actions(submit_label)
-      div(class: [ "ui-actions justify-end",
-        (@cancel_path.present? ? "ui-actions-fixed ui-actions-mobile-full" : "community-comment-publish-actions") ]) do
-        if @cancel_path.present?
+      if @cancel_path.present?
+        render Shared::ActionRow.new(full_width: !@inline, full_width_on_mobile: @inline) do
           render RubyUI::Link.new(href: @cancel_path, variant: :ghost, class: "ui-action-button",
-            data: { turbo_frame: "_top", action: "community-comment-composer#cancel" }) do
-            t("community.curations.cancel")
-          end
+            data: { turbo_frame: "_top", action: "community-comment-composer#cancel" }) { t("community.curations.cancel") }
+          validated_submit(submit_label, class_name: "ui-action-button")
         end
-        validated_submit(submit_label, class_name: "ui-action-button")
+      else
+        div(class: "ui-actions justify-end community-comment-publish-actions") do
+          validated_submit(submit_label, class_name: "ui-action-button")
+        end
       end
     end
 

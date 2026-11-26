@@ -8,8 +8,7 @@ module Views
       end
 
       def view_template
-        page(title: t("community.reports.form_title"), narrow: true, back_to: @return_path,
-          back_label: t("community.reports.back_to_discussion")) do
+        page(title: t("community.reports.form_title"), narrow: true) do
           errors(@report.errors.full_messages)
           form_with(url: @form_path, method: :post, data: form_validation) do
             part_field
@@ -27,7 +26,10 @@ module Views
               textarea(id: "report_explanation", name: "report[explanation]", class: "ui-input",
                 maxlength: ::Community::Report::EXPLANATION_LIMIT) { @report.explanation.to_s }
             end
-            validated_submit(t("community.reports.submit"))
+            render Shared::ActionRow.new(full_width: true) do
+              render RubyUI::Link.new(href: @return_path, variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
+              validated_submit(t("community.reports.submit"), class_name: "ui-action-button")
+            end
           end
         end
       end

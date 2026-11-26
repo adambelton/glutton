@@ -4,6 +4,7 @@
 
 - Do all Glutton work in the main worktree at `/Users/oldmanbelton/dev/glutton`. Check out the active task branch there so the owner can follow the edits in Zed. Use a separate worktree only when the owner explicitly requests one.
 - Check the worktree, branch, and local changes before editing or switching branches. Preserve unrelated staged and unstaged edits and untracked files.
+- Whenever you change dependencies, restart all running local Glutton services. Verify that the web server serves requests and the worker completes jobs before handing back.
 - After the task’s PR merges, fetch `origin/main`, switch the main worktree back to `main`, and fast-forward it. Verify that local `main` matches `origin/main` and that Git status shows only unrelated local work. See the [development guide](docs/development.md#git-workflow-in-zed).
 
 ## Task workflow

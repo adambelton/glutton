@@ -8,7 +8,7 @@ module Library
                         "close->library-action-confirmation#reset turbo:before-cache@document->library-action-confirmation#close" }) do
         h2(id: "library-action-confirmation-title", data: { library_action_confirmation_target: "title" })
         p(id: "library-action-confirmation-film", data: { library_action_confirmation_target: "film" })
-        div(class: "ui-actions ui-actions-fixed") do
+        render Shared::ActionRow.new do
           render Shared::GhostButton.new(class: "ui-action-button", autofocus: true,
             data: { action: "library-action-confirmation#close" }) { t("library.confirmation.cancel") }
           render Shared::PrimaryButton.new(class: "ui-action-button",

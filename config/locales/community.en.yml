@@ -19,7 +19,6 @@ en:
       empty: There are no Community reports yet.
       pagination: Report pages
       back: Back to Moderation
-      back_to_discussion: Back to discussion
       reported_version: Reported version
       current_version: Current version
       source_unavailable: The original content is no longer available.
@@ -92,7 +91,6 @@ en:
       cancel: Cancel
       published: Community Curation published.
       back: Back to Community
-      back_to_curation: Back to curation
       nominated_films: Nominated Films
       no_nominations: There are no nominated films yet.
       endorsement_order: Ordered by most endorsements.
@@ -120,7 +118,6 @@ en:
       discussion: Discussion
       publish_comment: Publish comment
       comment_published: Comment published.
-      back_to_debrief: Back to Film Debrief
     curation_protection:
       badge: Protected Post
       badge_tooltip: A post that belongs to the community and cannot be deleted

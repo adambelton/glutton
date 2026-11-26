@@ -6,9 +6,7 @@ module Views
       end
 
       def view_template
-        page(title: t("community.curation_replies.title"), narrow: true,
-          back_to: community_post_path(@curation, reply: @parent.id, anchor: "comment-#{@parent.id}"),
-          back_label: t("community.curations.back_to_curation")) do
+        page(title: t("community.curation_replies.title"), narrow: true) do
           blockquote(class: "community-curation-prompt") { @parent.content.body }
           render ::Community::DiscussionComposer.new(routes: ::Community::DiscussionRoutes.new(post: @curation), comment: @parent, content: @reply, inline: false)
         end

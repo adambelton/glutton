@@ -21,6 +21,18 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     visit community_post_path(curation)
 
     click_link I18n.t("community.reports.action")
+    actions = find("form .ui-actions")
+    assert_equal({ "display" => "grid", "grid-auto-columns" => "minmax(0px, 1fr)" },
+      actions.style("display", "grid-auto-columns"))
+    gap = actions.evaluate_script("this.getBoundingClientRect().top - this.previousElementSibling.getBoundingClientRect().bottom")
+    assert_in_delta 32, gap, 1
+    fill_in I18n.t("community.reports.optional_explanation"), with: "A draft explanation."
+    assert_no_difference "Community::Report.count" do
+      click_link I18n.t("community.curations.cancel")
+      assert_current_path community_post_path(curation)
+    end
+
+    click_link I18n.t("community.reports.action")
     submit_label = I18n.t("community.reports.submit")
     reason_label = I18n.t("community.reports.reason")
     safety_label = I18n.t("community.reports.reasons.immediate_safety")

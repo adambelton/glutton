@@ -49,7 +49,7 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
       assert_in_delta cancel.rect.width, send.rect.width, 1
       assert_in_delta cancel.rect.height, send.rect.height, 1
       assert_in_delta 8, send.rect.x - (cancel.rect.x + cancel.rect.width), 1
-      assert_equal "28px", find(".ui-actions-fixed").style("margin-block-start").fetch("margin-block-start")
+      assert_equal "32px", find(".ui-actions-fixed").style("margin-block-start").fetch("margin-block-start")
       fill_in I18n.t("identity.settings.new_email"), with: "new-address@example.test"
       assert_button label, disabled: true
       fill_in "email_current_password", with: password
