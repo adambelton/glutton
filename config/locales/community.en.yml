@@ -61,21 +61,33 @@ en:
       resolution:
         title: Resolve report
         decision: Moderation decision
-        outcome: Outcome
-        choose_outcome: Choose an outcome
+        outcome: Decision
+        choose_outcome: Choose a decision
+        action_taken: Action taken
+        choose_action: Choose an action
         summary: Redacted summary
         guidance: Summarize the evidence and the reason for your decision. Leave out names, account IDs, contact details and anything else that could identify the people involved.
         retention_notice: Resolving the report permanently removes the original evidence and personal details from this report.
         saved: Report resolved.
         already_resolved: Another decision has already resolved this report.
         review_changed: The report status changed. Review it again before resolving it.
+        source_changed: The reported content changed or was deleted. Review the current content before resolving the report.
+        deletion_unavailable: That deletion is unavailable for the current content.
         reviewed_at: Resolved at
         reviewed_by: Resolved by
         moderator_account: "Account #%{id}"
         moderator_unavailable: Account no longer available
         outcomes:
           no_violation: No violation
-          violation_confirmed: Confirmed violation without restriction
+          violation_confirmed: Violation confirmed
+        actions:
+          none: No action
+          deleted_record: Deleted reported content
+          deleted_attribute: "Removed %{attribute}"
+        delete_record:
+          community/post_community_curation: Delete post
+          community/comment_content: Delete comment
+        delete_attribute: "Remove %{attribute}"
       evidence_attributes:
         title: Title
         description: Description
@@ -249,7 +261,8 @@ en:
       community/report:
         reason: Reason
         explanation: Explanation
-        resolution_outcome: Outcome
+        resolution_outcome: Decision
+        resolution_action: Action taken
         resolution_summary: Redacted summary
       community/comment_content:
         base: Comment
@@ -261,6 +274,10 @@ en:
         additional_description: Additional description
     errors:
       models:
+        community/report:
+          attributes:
+            resolution_action:
+              requires_acceptance: requires a confirmed violation
         community/post_community_curation:
           attributes:
             base:

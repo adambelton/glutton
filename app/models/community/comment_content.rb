@@ -34,5 +34,16 @@ module Community
       save
       self
     end
+
+    def lock_for_report_deletion!
+      Post.lock.find(Comment.find(comment_id).post_id)
+      super
+    end
+
+    private
+
+    def delete_reportable_record!(moderator:)
+      comment.delete_reported_comment!(moderator:)
+    end
   end
 end

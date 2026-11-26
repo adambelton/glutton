@@ -293,6 +293,8 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", detail, count: 0
     get community_moderation_path(state: "resolved")
     assert_select "a[href=?]", detail
+    assert_select "td", text: I18n.t("community.reports.resolution.outcomes.no_violation")
+    assert_select "td", text: I18n.t("community.reports.resolution.actions.none"), count: 0
 
     sign_in(@reporter)
     get new_community_post_report_path(curation)
@@ -327,11 +329,15 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_select "table.community-report-table td a[href=?]", detail
 
     get detail
-    form = resolution_fields(path, outcome: "violation_confirmed", summary: "Confirmed a violation. No restriction was needed.")
+    form = resolution_fields(path, outcome: "violation_confirmed", action: "none", summary: "Confirmed a violation. No restriction was needed.")
     patch path, params: form
     assert_redirected_to detail
     assert_predicate report.reload, :resolved?
     assert_equal "violation_confirmed", report.resolution_outcome
+    assert_nil report.resolution_action
+    follow_redirect!
+    assert_select "dd", text: I18n.t("community.reports.resolution.outcomes.violation_confirmed")
+    assert_select "dd", text: I18n.t("community.reports.resolution.actions.none")
 
     replacement = form.deep_merge(resolution: { summary: "A second moderator decision." })
     patch path, params: replacement
@@ -340,36 +346,231 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_equal "Confirmed a violation. No restriction was needed.", report.reload.resolution_summary
   end
 
+  test "the decision and action must agree before resolving a report" do
+    curation, report = submit_curation_report
+    sign_in(@moderator)
+    detail = community_moderation_report_path(report)
+    path = resolve_community_moderation_report_path(report)
+    get detail
+    assert_select "select[name='resolution[action]'][disabled]"
+    assert_select "select[name='resolution[outcome]'] option[value=''][disabled][selected]"
+    assert_select "select[name='resolution[outcome]'] option:not([disabled])", count: 2 do |options|
+      assert_equal %w[violation_confirmed no_violation], options.map { |option| option["value"] }
+      assert_equal [ "Violation confirmed", "No violation" ], options.map(&:text)
+    end
+    assert_select "select[name='resolution[outcome]'] option[value=delete_record]", count: 0
+
+    patch path, params: resolution_fields(path, action: "delete_record", summary: "A rejected report.")
+    assert_response :unprocessable_content
+    assert_select "[role=alert] li", text: /requires a confirmed violation/
+    assert_predicate report.reload, :pending?
+    assert Community::Post.exists?(curation.id)
+
+    patch path, params: resolution_fields(path, outcome: "violation_confirmed", summary: "An accepted report.")
+    assert_response :unprocessable_content
+    assert_select "[role=alert] li", text: /Action taken can't be blank/
+    assert_select "select[name='resolution[action]'][required]:not([disabled])"
+    assert_predicate report.reload, :pending?
+    assert Community::Post.exists?(curation.id)
+  end
+
   test "a moderator who loses the role after opening a report cannot resolve it" do
-    _, report = submit_curation_report
+    curation, report = submit_curation_report
     sign_in(@moderator)
     get community_moderation_report_path(report)
     path = resolve_community_moderation_report_path(report)
-    form = resolution_fields(path, summary: "A draft decision.")
+    form = resolution_fields(path, outcome: "violation_confirmed", action: "delete_record", summary: "A draft decision.")
     role = Community::ModeratorRole.active.find_by!(member: @moderator)
     Community::Moderation::ManageModeratorRoles.revoke(actor_id: @operator.id, member_id: @moderator.id, role_id: role.id)
 
     patch path, params: form
     assert_response :forbidden
     assert_predicate report.reload, :pending?
+    assert Community::Post.exists?(curation.id)
     assert_equal({ "title" => "Slow-burn folk horror", "description" => "An original description." }, report.evidence)
+  end
+
+  test "moderators can remove only a declared attribute from a protected curation" do
+    curation, root = protected_curation
+    curation.edit_additional_description(member: @author, additional_description: "The reported addition.")
+    _, report = submit_curation_report(curation)
+    _, other_report = submit_curation_report(curation, reporter: @operator)
+    sign_in(@moderator)
+    detail = community_moderation_report_path(report)
+    path = resolve_community_moderation_report_path(report)
+    get detail
+    assert_select "select[name='resolution[action]'] option[value^='delete_']", count: 2 do |options|
+      assert_equal %w[delete_attribute:additional_description delete_record], options.map { |option| option["value"] }
+    end
+    assert_select "option[value='delete_attribute:title']", count: 0
+    assert_select "option[value=delete_record]"
+
+    forbidden = resolution_fields(path, outcome: "violation_confirmed", action: "delete_attribute:title", summary: "An invalid removal.")
+    stale = resolution_fields(path, outcome: "violation_confirmed", action: "delete_attribute:additional_description", summary: "A stale decision.")
+    patch path, params: forbidden
+    assert_redirected_to detail
+    assert_equal I18n.t("community.reports.resolution.deletion_unavailable"), flash[:alert]
+    assert_predicate report.reload, :pending?
+
+    curation.edit_additional_description(member: @author, additional_description: "A replacement addition.")
+    patch path, params: stale
+    assert_redirected_to detail
+    assert_equal I18n.t("community.reports.resolution.source_changed"), flash[:alert]
+    assert_predicate report.reload, :pending?
+    assert_equal "A replacement addition.", curation.reload.additional_description
+
+    get detail
+    patch path, params: resolution_fields(path, outcome: "violation_confirmed", action: "delete_attribute:additional_description", summary: "   ")
+    assert_response :unprocessable_content
+    assert_predicate report.reload, :pending?
+    assert_equal "A replacement addition.", curation.reload.additional_description
+    assert_select "option[value='delete_attribute:additional_description'][selected]"
+    patch path, params: resolution_fields(path, outcome: "violation_confirmed", action: "delete_attribute:additional_description",
+      summary: "The added text violated the rules.")
+    assert_redirected_to detail
+    assert_predicate report.reload, :resolved?
+    assert_equal "violation_confirmed", report.resolution_outcome
+    assert_equal "delete_attribute:additional_description", report.resolution_action
+    assert_nil report.reportable
+    assert_nil report.evidence
+    assert_nil report.identity_snapshot
+    assert_predicate curation.reload, :protected?
+    assert_nil curation.additional_description
+    assert_equal "An original description.", curation.description
+    assert_equal "Slow-burn folk horror", curation.title
+    assert root.reload.film_endorsement.active?
+    assert_equal 5, curation.comments.where(parent: root).count
+
+    get community_moderation_report_path(other_report)
+    assert_select "option[value='delete_attribute:additional_description']", count: 0
+    assert_select ".community-report-comparison > section:first-child dd", text: "The reported addition."
+    assert_select ".community-report-comparison > section:last-child dd", text: "An original description."
+    patch resolve_community_moderation_report_path(other_report), params: resolution_fields(resolve_community_moderation_report_path(other_report),
+      outcome: "violation_confirmed", action: "delete_attribute:additional_description", summary: "The attribute is already gone.")
+    assert_redirected_to community_moderation_report_path(other_report)
+    assert_equal I18n.t("community.reports.resolution.deletion_unavailable"), flash[:alert]
+    assert_predicate other_report.reload, :pending?
+    get community_moderation_path(state: "resolved")
+    assert_select "td", text: I18n.t("community.reports.resolution.outcomes.violation_confirmed")
+    assert_select "td", text: I18n.t("community.reports.resolution.actions.deleted_attribute",
+      attribute: I18n.t("community.reports.evidence_attributes.additional_description"))
+  end
+
+  test "moderators can delete an entire protected curation and its contributions" do
+    curation, root = protected_curation
+    endorsement = root.film_endorsement
+    _, report = submit_curation_report(curation)
+    _, other_report = submit_curation_report(curation, reporter: @operator)
+    sign_in(@moderator)
+    detail = community_moderation_report_path(report)
+    path = resolve_community_moderation_report_path(report)
+    get detail
+    assert_select "option[value^='delete_attribute:']", count: 0
+    assert_select "select[name='resolution[action]'] option[value=delete_record]", text: "Delete post"
+    patch path, params: resolution_fields(path, outcome: "violation_confirmed", action: "delete_record", summary: "The entire post violated the rules.")
+    assert_redirected_to detail
+    assert_equal "delete_record", report.reload.resolution_action
+    assert_nil report.evidence
+    assert_nil report.identity_snapshot
+    assert_not Community::Post.exists?(curation.id)
+    assert_not Community::Comment.exists?(root.id)
+    assert_not Community::FilmEndorsement.exists?(endorsement.id)
+    assert_predicate other_report.reload, :pending?
+    assert_nil other_report.reportable
+    assert_equal "An original description.", other_report.evidence.fetch("description")
+
+    get community_moderation_report_path(other_report)
+    assert_select "option[value=delete_record]", count: 0
+    assert_select ".community-report-comparison > section:last-child p", text: I18n.t("community.reports.source_deleted")
+    get community_post_path(curation)
+    assert_response :not_found
+    get community_path
+    assert_select "a[href=?]", community_post_path(curation), count: 0
+    get community_path(q: curation.title)
+    assert_select "a[href=?]", community_post_path(curation), count: 0
+  end
+
+  test "a source that disappears after review cannot be deleted by that resolution" do
+    curation, report = submit_curation_report
+    sign_in(@moderator)
+    detail = community_moderation_report_path(report)
+    path = resolve_community_moderation_report_path(report)
+    get detail
+    form = resolution_fields(path, outcome: "violation_confirmed", action: "delete_record", summary: "The post violated the rules.")
+    curation.delete_curation!(member: @author)
+
+    patch path, params: form
+    assert_redirected_to detail
+    assert_equal I18n.t("community.reports.resolution.source_changed"), flash[:alert]
+    assert_predicate report.reload, :pending?
+    assert_equal "An original description.", report.evidence.fetch("description")
+  end
+
+  test "moderators delete comment content and preserve surviving replies" do
+    film = Registry::Film.create!(title: "Discussion film")
+    Library::LibraryFilm.new(user: @reporter, film:).add_to_watched!
+    debrief = Community::PostFilmDebrief.open_for!(film:)
+    comment = debrief.publish_comment(author: @author, body: "Reported text.").comment
+    reply = comment.publish_reply(author: @author, body: "Surviving reply.").comment
+    leaf = debrief.publish_comment(author: @author, body: "An unanswered comment.").comment
+
+    [ comment, leaf ].each do |source|
+      sign_in(@reporter)
+      get new_community_post_comment_report_path(debrief, source)
+      report_path = community_post_comment_report_path(debrief, source)
+      post report_path, params: fields(report_path)
+      assert_response :see_other
+      report = source.content.reports.sole
+      sign_in(@moderator)
+      get community_moderation_report_path(report)
+      assert_select "option[value=delete_record]", text: I18n.t("community.reports.resolution.delete_record.community/comment_content")
+      assert_select "option[value^='delete_attribute:']", count: 0
+      path = resolve_community_moderation_report_path(report)
+      patch path, params: resolution_fields(path, outcome: "violation_confirmed", action: "delete_record", summary: "Removed the offending comment.")
+      assert_redirected_to community_moderation_report_path(report)
+      assert_equal "delete_record", report.reload.resolution_action
+    end
+
+    assert_nil comment.reload.content
+    assert_equal "Surviving reply.", reply.reload.content.body
+    assert_not Community::Comment.exists?(leaf.id)
+    sign_in(@reporter)
+    get community_post_path(debrief, reply: reply.id)
+    assert_response :success
+    assert_select "#comment-#{reply.id}", text: /Surviving reply/
+    assert_select "#comment-#{comment.id}", text: /Reported text/, count: 0
+    get new_community_post_comment_report_path(debrief, comment)
+    assert_response :not_found
   end
 
   private
 
-  def submit_curation_report
-    curation = publish_curation
-    sign_in(@reporter)
+  def protected_curation
+    film = Registry::Film.create!(title: "Reference film", tmdb_metadata: { details: { genres: [ { name: "Horror" } ] } })
+    Library::LibraryFilm.new(user: @author, film:).add_to_watched!
+    curation = publish_curation(reference_film_ids: [ film.id ], reference_comments: { film.id => "Opening comment." })
+    root = curation.comments.sole
+    [ @reporter, @operator, @reporter, @operator, @reporter ].each do |author|
+      root.publish_reply(author:, body: "A contribution from another member.")
+    end
+    curation.protect_from_contributions!
+    assert_predicate curation, :protected?
+    [ curation, root ]
+  end
+
+  def submit_curation_report(curation = publish_curation, reporter: @reporter)
+    sign_in(reporter)
     get new_community_post_report_path(curation)
     path = community_post_report_path(curation)
     post path, params: fields(path, explanation: "Private report explanation.")
     assert_redirected_to community_post_path(curation)
-    [ curation, curation.reports.sole ]
+    [ curation, curation.reports.where(reporter:).sole ]
   end
 
-  def resolution_fields(path, summary:, outcome: "no_violation")
+  def resolution_fields(path, summary:, outcome: "no_violation", action: nil)
     { authenticity_token: input_value(path, "authenticity_token"), resolution: {
-      expected_status: input_value(path, "resolution[expected_status]"), outcome:, summary:
+      expected_status: input_value(path, "resolution[expected_status]"),
+      revision: input_value(path, "resolution[revision]"), outcome:, action:, summary:
     } }
   end
 

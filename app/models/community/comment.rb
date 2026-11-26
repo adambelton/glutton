@@ -33,6 +33,17 @@ module Community
     def delete_comment!(member:)
       raise Errors::CommentChangeUnavailable unless can_delete?(member:)
 
+      remove_content!
+    end
+
+    def delete_reported_comment!(moderator:)
+      Report.require_review_access!(moderator:)
+      remove_content!
+    end
+
+    private
+
+    def remove_content!
       if post.comments.exists?(parent_id: id)
         content.destroy!
       else

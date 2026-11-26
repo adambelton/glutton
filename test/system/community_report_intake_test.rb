@@ -82,10 +82,22 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     end
 
     resolve_label = I18n.t("community.reports.resolution.title")
+    action_label = I18n.t("community.reports.resolution.action_taken")
     assert_button resolve_label, disabled: true
+    within "form .community-report-columns" do
+      assert_field I18n.t("community.reports.resolution.outcome")
+    end
+    disabled_action = find_field(action_label, disabled: true)
+    disabled_style = disabled_action.style("background-color", "color", "cursor")
+    assert_equal "not-allowed", disabled_style.fetch("cursor")
     select I18n.t("community.reports.resolution.outcomes.violation_confirmed"), from: I18n.t("community.reports.resolution.outcome")
-    assert_button resolve_label, disabled: true
+    enabled_style = find_field(action_label).style("background-color", "color", "cursor")
+    refute_equal disabled_style.fetch("background-color"), enabled_style.fetch("background-color")
+    refute_equal disabled_style.fetch("color"), enabled_style.fetch("color")
+    refute_equal disabled_style.fetch("cursor"), enabled_style.fetch("cursor")
     fill_in I18n.t("community.reports.resolution.summary"), with: "A confirmed safety violation. No restriction was needed."
+    assert_button resolve_label, disabled: true
+    select I18n.t("community.reports.resolution.actions.none"), from: action_label
     assert_button resolve_label, disabled: false
     click_button resolve_label
     assert_text I18n.t("community.reports.resolution.saved")
@@ -98,5 +110,48 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
   ensure
     reset_viewport
+  end
+
+  test "a moderator chooses a decision and a partial deletion separately" do
+    password = "a long test password"
+    author = Identity::UserRegistered.create!(email_address: "report-source@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current)
+    moderator = Identity::UserRegistered.create!(email_address: "report-deletion@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
+    Community::Moderation::ManageModeratorRoles.grant(actor_id: moderator.id, member_id: moderator.id)
+    curation = Community::PostCommunityCuration.create!(author:, title: "Isolated landscapes",
+      description: "Original description.", additional_description: "Reported addition.")
+    report = Community::Report.capture(reportable: curation, reporter: moderator, evidence: curation.reportable_attributes,
+      reason: "other", explanation: nil)
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: moderator.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    visit community_moderation_report_path(report)
+
+    attribute = I18n.t("community.reports.evidence_attributes.additional_description")
+    decision_label = I18n.t("community.reports.resolution.outcome")
+    action_label = I18n.t("community.reports.resolution.action_taken")
+    accepted = I18n.t("community.reports.resolution.outcomes.violation_confirmed")
+    selected_action = I18n.t("community.reports.resolution.delete_attribute", attribute:)
+    select accepted, from: decision_label
+    select selected_action, from: action_label
+    select I18n.t("community.reports.resolution.outcomes.no_violation"), from: decision_label
+    assert_field action_label, disabled: true
+    select accepted, from: decision_label
+    assert_field action_label, with: ""
+    select selected_action, from: action_label
+    fill_in I18n.t("community.reports.resolution.summary"), with: "The additional text violated the rules."
+    resolve_label = I18n.t("community.reports.resolution.title")
+    assert_predicate report.reload, :pending?
+    assert_equal "Reported addition.", curation.reload.additional_description
+
+    click_button resolve_label
+    assert_text I18n.t("community.reports.resolution.saved")
+    assert_text I18n.t("community.reports.resolution.actions.deleted_attribute", attribute:)
+    assert_nil curation.reload.additional_description
+    assert_equal "Original description.", curation.description
   end
 end

@@ -164,6 +164,7 @@
 .ui-field { display: grid; gap: 8px; margin-block: 18px; }
 .ui-field label { display: block; font-size: 12px; font-weight: 500; color: var(--glutton-muted-foreground); }
 .ui-input { min-height: 46px; border: 1px solid var(--glutton-border); background: var(--glutton-surface); color: var(--glutton-foreground); font: inherit; }
+select.ui-input:disabled { border-color: var(--glutton-subtle-border); background: var(--glutton-inset); color: var(--glutton-muted-foreground); cursor: not-allowed; }
 @media (min-width: 801px) {
   .ui-page-heading :is(.library-film-search-form, .library-collection-search) input { min-height: 0; height: calc(var(--page-heading-size) * var(--page-heading-line-height)); }
 }
