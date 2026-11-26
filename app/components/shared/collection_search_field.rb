@@ -26,12 +26,8 @@ module Shared
     private
 
     def clear_control
-      label = t(@clear_label)
-      element, attributes = @clear_path.present? ? [ :a, { href: @clear_path } ] : [ :button, { type: :button } ]
-      tag(element, **attributes, class: "collection-search-clear", hidden: @query.blank?, title: label,
-        aria: { label: }, data: @clear_data) do
-        span(aria: { hidden: "true" }) { "×" }
-      end
+      render CloseControl.new(label: t(@clear_label), class_name: "collection-search-clear", data: @clear_data,
+        href: @clear_path, hidden: @query.blank?)
     end
   end
 end

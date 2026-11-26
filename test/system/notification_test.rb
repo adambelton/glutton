@@ -21,7 +21,10 @@ class NotificationTest < ApplicationSystemTestCase
       assert_equal({ "position" => "fixed", "right" => "16px" }, overlay.style("position", "right"))
       assert_operator notification.rect.x, :>=, 16
       assert page.evaluate_script("arguments[0].getBoundingClientRect().right <= document.documentElement.clientWidth", notification)
-      click_button I18n.t("ui.dismiss_notification")
+      dismiss = find_button(I18n.t("ui.dismiss_notification"))
+      dismiss.hover
+      assert_equal "rgba(114, 222, 208, 1)", dismiss.style("color").fetch("color")
+      dismiss.click
       assert_no_selector ".ui-toast"
       assert_in_delta before, find(".rating-interface").rect.y, 1
       assert_selector "header.ui-header + .guest-banner"

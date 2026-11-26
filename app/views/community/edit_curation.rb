@@ -48,7 +48,7 @@ module Views
       end
 
       def actions
-        div(class: "ui-actions ui-actions-fixed ui-actions-mobile-full justify-end") do
+        render Shared::ActionRow.new(full_width: true) do
           render RubyUI::Link.new(href: community_post_path(@curation), variant: :ghost, class: "ui-action-button") { t("community.curations.cancel") }
           validated_submit(t("community.curation_editing.save"), class_name: "ui-action-button")
         end

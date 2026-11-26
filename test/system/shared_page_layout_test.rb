@@ -31,7 +31,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
       end
     end
     assert_back_card_gap community_post_path(curation), inset: 48
-    assert_back_card_gap new_community_post_path, inset: 48
+    assert_in_delta 48, card_gap(new_community_post_path), 1
     headed_gap = card_gap(library_path)
     assert_operator headed_gap, :>, 48
     [ community_path, account_settings_path, new_rating_path ].each do |path|

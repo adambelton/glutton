@@ -176,6 +176,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_in_delta action_row.rect.x + action_row.rect.width, create_action.rect.x + create_action.rect.width, 1
     create_action.click
     assert_curation_form_width find("main.community-curation-form")
+    assert_full_width_editor_actions
+    assert_no_difference "Community::Post.count" do
+      click_link I18n.t("community.curations.cancel")
+      assert_current_path community_path
+    end
+    click_link I18n.t("community.curations.create")
     fill_in I18n.t("community.curations.title"), with: "Slow-burn modern folk horror"
     fill_in I18n.t("community.curations.description"), with: "Stories that take their time."
 
@@ -291,6 +297,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     dialog = find("dialog[open]")
     assert_in_delta 640, dialog.rect.width, 1
     within dialog do
+      assert_full_width_editor_actions
       save = I18n.t("community.curation_endorsements.save")
       reference_comment = I18n.t("community.curations.comment_for_film", title: reference.title)
       assert_button save, disabled: true
@@ -492,7 +499,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_in_delta cancel.rect.width, confirm.rect.width, 1
       assert_in_delta cancel.rect.height, confirm.rect.height, 1
       assert_in_delta 8, confirm.rect.x - (cancel.rect.x + cancel.rect.width), 1
-      assert_in_delta 28, cancel.rect.y - (description.y + description.height), 1
+      assert_in_delta 32, cancel.rect.y - (description.y + description.height), 1
       assert_mobile_editor_actions
       cancel.click
     end
@@ -918,7 +925,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("ui.dark_mode")
     assert_selector 'html[data-theme="light"]'
     within "#comment-#{root.id}" do
-      assert_button(delete_label) { |button| button.style("color").fetch("color") == "rgba(143, 16, 27, 1)" }
+      assert_equal find_link(edit_label).style("color", "font-weight"), find_button(delete_label).style("color", "font-weight")
     end
     click_button I18n.t("ui.dark_mode")
     assert_selector "html:not([data-theme])"
@@ -934,11 +941,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     text_bounds = source.find("span.community-curation-prompt").rect
     within source do
-      assert_button(delete_label) { |button| button.style("color").fetch("color") == "rgba(195, 38, 48, 1)" }
       delete_action = find_button(delete_label)
       style = delete_action.style("background-color", "border-top-width", "color", "font-weight")
-      assert_equal({ "background-color" => "rgba(0, 0, 0, 0)", "border-top-width" => "0px",
-                     "color" => "rgba(195, 38, 48, 1)", "font-weight" => "700" }, style)
+      link_style = find_link(edit_label).style("color", "font-weight")
+      assert_equal link_style.merge("background-color" => "rgba(0, 0, 0, 0)", "border-top-width" => "0px"), style
       click_link edit_label
     end
     editor_frame = source.find(".community-comment-edit-frame")
@@ -1170,14 +1176,21 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   def assert_mobile_editor_actions
     browser = page.driver.browser
     browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
-    group = find(".ui-actions-fixed")
-    cancel, confirm = group.all(".ui-action-button", count: 2).map(&:rect)
-    assert_equal cancel.y, confirm.y
-    assert_in_delta cancel.width, confirm.width, 1
-    assert_in_delta group.rect.x, cancel.x, 1
-    assert_in_delta group.rect.x + group.rect.width, confirm.x + confirm.width, 1
+    assert_full_width_editor_actions
   ensure
     browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  def assert_full_width_editor_actions
+    group = find(".ui-actions-fixed")
+    cancel, confirm = group.all(".ui-action-button", count: 2)
+    row_rect, cancel_rect, confirm_rect = page.evaluate_script(<<~JS, group, cancel, confirm)
+      Array.from(arguments, (element) => element.getBoundingClientRect().toJSON())
+    JS
+    assert_in_delta cancel_rect.fetch("top"), confirm_rect.fetch("top"), 1
+    assert_in_delta cancel_rect.fetch("width"), confirm_rect.fetch("width"), 1
+    assert_in_delta row_rect.fetch("left"), cancel_rect.fetch("left"), 1
+    assert_in_delta row_rect.fetch("right"), confirm_rect.fetch("right"), 1
   end
 
   def assert_empty_editor_result(dialog, search, title, add_label)
