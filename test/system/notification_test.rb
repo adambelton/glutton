@@ -8,7 +8,7 @@ class NotificationTest < ApplicationSystemTestCase
     click_button I18n.t("ratings.onboarding.surprise")
 
     [ [ 1400, 1000 ], [ 390, 844 ] ].each do |width, height|
-      page.current_window.resize_to(width, height)
+      set_viewport(width, height)
       assert_selector ".rating-interface"
       before = find(".rating-interface").rect.y
       choose I18n.t("ratings.values.brilliant"), allow_label_click: true
@@ -27,7 +27,7 @@ class NotificationTest < ApplicationSystemTestCase
       assert_selector "header.ui-header + .guest-banner"
     end
   ensure
-    page.current_window.resize_to(1400, 1000)
+    reset_viewport
   end
 
   test "a notification stays open with keyboard focus and can be dismissed" do

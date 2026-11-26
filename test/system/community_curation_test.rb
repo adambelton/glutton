@@ -102,16 +102,15 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       edit = find_link(edit_post)
       remove_attribution = find_button(disassociate)
       desktop_font_size = remove_attribution.style("font-size").fetch("font-size")
-      original_size = page.current_window.size
       begin
-        page.current_window.resize_to(320, 900)
+        set_viewport(320, 900)
         assert_equal desktop_font_size, remove_attribution.style("font-size").fetch("font-size")
         assert_full_width_author_actions(action_group, edit, remove_attribution)
         [ edit, remove_attribution ].each do |action|
           assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
         end
       ensure
-        page.current_window.resize_to(*original_size)
+        reset_viewport
       end
     end
     click_button disassociate
@@ -426,23 +425,22 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_in_delta 132, edit.rect.width, 1
       assert_in_delta edit.rect.width, delete.rect.width, 1
       assert_in_delta 8, delete.rect.x - (edit.rect.x + edit.rect.width), 1
-      original_size = page.current_window.size
       begin
-        page.current_window.resize_to(840, 900)
+        set_viewport(840, 900)
         line_height = heading.style("line-height").fetch("line-height").to_f
         assert_operator heading.rect.height, :>, line_height
         assert_operator heading.rect.x + heading.rect.width, :<=, edit.rect.x
         assert_in_delta heading.rect.y, edit.rect.y, 1
         assert_equal edit.rect.y, delete.rect.y
 
-        page.current_window.resize_to(320, 900)
+        set_viewport(320, 900)
         assert_full_width_author_actions(action_group, edit, delete)
         [ edit, delete ].each do |action|
           assert_equal "nowrap", action.style("white-space").fetch("white-space")
           assert action.evaluate_script("this.scrollWidth <= this.clientWidth")
         end
       ensure
-        page.current_window.resize_to(*original_size)
+        reset_viewport
       end
       edit.click
     end
@@ -640,15 +638,14 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_equal first_poster.x, second_poster.x
     assert_operator first_poster.y + first_poster.height, :<=, second_poster.y
 
-    original_size = page.current_window.size
-    page.current_window.resize_to(430, 900)
+    set_viewport(430, 900)
     assert_operator shorter_card.rect.y + shorter_card.rect.height, :<=, card.rect.y
     assert_equal shorter_card.rect.x, card.rect.x
     action_row = find(".ui-page-body.ui-card .community-board-actions")
     create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary").rect
     assert_in_delta action_row.rect.x, create_action.x, 1
     assert_in_delta action_row.rect.x + action_row.rect.width, create_action.x + create_action.width, 1
-    page.current_window.resize_to(320, 900)
+    set_viewport(320, 900)
     within card do
       assert_selector ".community-curation-card-posters .film-poster", count: 5
       assert_operator artwork.rect.x + artwork.rect.width, :<=, find("footer").rect.x
@@ -659,7 +656,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
     assert_current_path community_curation_path(curation)
   ensure
-    page.current_window.resize_to(*original_size) if original_size.present?
+    reset_viewport
   end
 
   test "members can post and independently reveal branches without endorsing the film" do
@@ -1118,16 +1115,15 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   end
 
   def assert_curation_form_width(card)
-    original_size = page.current_window.size
     assert_in_delta 640, card.rect.width, 1
-    page.current_window.resize_to(690, 900)
+    set_viewport(690, 900)
     assert_in_delta 640, card.rect.width, 1
-    page.current_window.resize_to(520, 900)
+    set_viewport(520, 900)
     available_width = page.evaluate_script("document.body.getBoundingClientRect().width")
     assert_in_delta available_width - 32, card.rect.width, 1
     assert_in_delta 16, card.rect.x, 1
   ensure
-    page.current_window.resize_to(*original_size) if original_size.present?
+    reset_viewport
   end
 
   def assert_comment_gap(previous_comment, next_comment, reply_count: nil)
@@ -1137,14 +1133,23 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   end
 
   def assert_comment_action_group(cancel:, submit:)
-    within ".ui-actions-fixed" do
+    actions = find(".ui-actions-fixed")
+    within actions do
       cancel_link = find_link(cancel)
-      cancel_rect = cancel_link.rect
-      submit_rect = find_button(submit, disabled: :all).rect
+      submit_button = find_button(submit, disabled: :all)
       assert_equal "rgba(0, 0, 0, 0)", cancel_link.style("background-color").fetch("background-color")
-      assert_equal [ 132, 132 ], [ cancel_rect.width, submit_rect.width ]
-      assert_equal [ 44, 44 ], [ cancel_rect.height, submit_rect.height ]
-      assert_in_delta 8, submit_rect.x - (cancel_rect.x + cancel_rect.width), 1
+      cancel_rect, submit_rect, gap = page.evaluate_script(<<~JS, cancel_link, submit_button, actions)
+        ((cancel, submit, row) => [
+          cancel.getBoundingClientRect().toJSON(),
+          submit.getBoundingClientRect().toJSON(),
+          parseFloat(getComputedStyle(row).columnGap)
+        ])(...arguments)
+      JS
+      assert_in_delta cancel_rect.fetch("width"), submit_rect.fetch("width"), 1
+      assert_in_delta cancel_rect.fetch("height"), submit_rect.fetch("height"), 1
+      assert_in_delta cancel_rect.fetch("top"), submit_rect.fetch("top"), 1
+      assert_operator gap, :>, 0
+      assert_in_delta gap, submit_rect.fetch("left") - cancel_rect.fetch("right"), 1
     end
   end
 

@@ -38,8 +38,7 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     within("header .ui-nav") { assert_link I18n.t("account.title"), href: account_settings_path }
     assert_no_selector "header .ui-auth-links"
 
-    original_size = page.current_window.size
-    page.current_window.resize_to(390, 950)
+    set_viewport(390, 950)
     visit library_path
     find("select.ui-primary-navigation").find("option", text: I18n.t("community.title"), exact_text: true).select_option
     assert_current_path community_path
@@ -47,6 +46,6 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_no_link I18n.t("community.conduct.read")
     assert_no_button I18n.t("community.conduct.accept")
   ensure
-    page.current_window.resize_to(*original_size) if original_size.present?
+    reset_viewport
   end
 end

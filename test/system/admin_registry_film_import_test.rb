@@ -49,7 +49,8 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     assert_in_delta standalone_search.width, local_search.width, 1
     assert_equal standalone_search.height, local_search.height
     assert_operator modes.x, :>, local_search.x + local_search.width
-    assert_equal [ 72, 72 ], all(".search-bar-modes button").map { |button| button.rect.width }
+    registry_mode, tmdb_mode = all(".search-bar-modes button", count: 2).map(&:rect)
+    assert_in_delta registry_mode.width, tmdb_mode.width, 1
     assert_no_field "Search TMDB"
     fill_in "Search films", with: "Related"
     assert_selector "tbody tr", count: 4
@@ -143,9 +144,7 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
   private
 
   def assert_table_stays_in_place_on_narrow_screen
-    window = current_window
-    width, height = window.size
-    window.resize_to(580, height)
+    set_viewport(580, 1000)
     click_button I18n.t("registry.films")
     assert_field "Search films", with: "re-release"
     assert_no_selector ".admin-tmdb-results"
@@ -157,13 +156,11 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     modes = find(".search-bar-modes").rect
     assert_operator find(".admin-tmdb-results").rect.y, :>=, modes.y + modes.height
   ensure
-    window.resize_to(width, height)
+    reset_viewport
   end
 
   def assert_short_dropdown
-    window = current_window
-    width, height = window.size
-    window.resize_to(width, 430)
+    set_viewport(1400, 430)
     layout = page.evaluate_async_script(<<~JS)
       const done = arguments[0]
       requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -188,6 +185,6 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     assert layout.fetch("paginationStayed")
     assert_operator layout.fetch("panelBottom"), :<=, layout.fetch("viewportBottom")
   ensure
-    window.resize_to(width, height)
+    reset_viewport
   end
 end

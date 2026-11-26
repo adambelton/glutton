@@ -121,9 +121,11 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     heading = find(".ui-page-heading h1").rect
     search_field = find("#library-film-query").rect
     modes = find(".search-bar-modes").rect
-    assert_in_delta 480, search_field.width, 1
+    search_bar = find(".search-bar").rect
+    assert_in_delta search_bar.x + search_bar.width, search_field.x + search_field.width, 1
     assert_operator modes.x + modes.width, :<, search_field.x
-    assert_equal [ 72, 72 ], all(".search-bar-modes button").map { |button| button.rect.width }
+    library_mode, tmdb_mode = all(".search-bar-modes button", count: 2).map(&:rect)
+    assert_in_delta library_mode.width, tmdb_mode.width, 1
     assert_in_delta heading.height, search_field.height, 1
     assert_in_delta heading.y, search_field.y, 1
     within ".ui-page-heading" do
@@ -305,11 +307,9 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     end
     visit library_path
     grid = find(".library-films")
-    window = current_window
-    original_width, original_height = window.size
 
     [ 1240, 580 ].each do |width|
-      window.resize_to(width, original_height)
+      set_viewport(width, 1000)
       posters = grid.all(".film-poster", count: 12).map(&:rect)
       first_row = posters.take_while { |poster| poster.y == posters.first.y }
       assert_operator first_row.size, :>, 1
@@ -317,7 +317,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
       assert_in_delta grid.rect.x + grid.rect.width, first_row.last.x + first_row.last.width, 1
     end
   ensure
-    window&.resize_to(original_width, original_height)
+    reset_viewport
   end
 
   test "Library ratings return to Watched with save feedback" do

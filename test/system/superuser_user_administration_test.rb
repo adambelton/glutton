@@ -43,8 +43,10 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_selector "tbody tr", count: 10
     assert_collection_dimensions
     long_cell = find("tbody tr:first-child td:first-child .admin-table-cell", text: "Matched film 00")
-    assert_equal 36, long_cell.rect.height
     assert_equal "2", long_cell.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
+    assert long_cell.evaluate_script("this.scrollHeight > this.clientHeight")
+    line_height = long_cell.style("line-height").fetch("line-height").to_f
+    assert_in_delta 2 * line_height, long_cell.rect.height, 1
     click_link "Next page"
     assert_current_path admin_films_path(page: 2, q: "matched")
     assert_selector "tbody tr", count: 1
@@ -86,7 +88,7 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_text "No stored sessions."
     refute authentication.active?
 
-    current_window.resize_to(420, 900)
+    set_viewport(420, 900)
     visit library_path
     select "Admin", from: I18n.t("ui.navigation")
     assert_current_path admin_users_path
@@ -99,7 +101,7 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_current_path library_path
     assert_equal "dark", page.evaluate_script("getComputedStyle(document.documentElement).colorScheme")
   ensure
-    current_window.resize_to(1400, 1000)
+    reset_viewport
   end
 
   private
