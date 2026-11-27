@@ -36,6 +36,16 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     ElementRectangle.new(*element.rect.fetch_values("x", "y", "width", "height"))
   end
 
+  def document_rectangle(element)
+    coordinates = element.evaluate_script(<<~JS)
+      (() => {
+        const { x, y, width, height } = this.getBoundingClientRect()
+        return [x + window.scrollX, y + window.scrollY, width, height]
+      })()
+    JS
+    ElementRectangle.new(*coordinates)
+  end
+
   def chromium_command(command, **parameters)
     page.driver.with_playwright_page do |browser_page|
       if @cdp_page != browser_page

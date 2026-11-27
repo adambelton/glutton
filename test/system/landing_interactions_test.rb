@@ -262,14 +262,14 @@ class LandingInteractionsTest < ApplicationSystemTestCase
         toggle = element_rectangle(expand)
         assert_equal [ 32, 24 ], [ toggle.width, toggle.height ]
         synopsis = find(".film-synopsis-text")
-        collapsed = element_rectangle(synopsis)
+        collapsed = document_rectangle(synopsis)
         assert_in_delta 2 * synopsis.style("line-height").fetch("line-height").to_f, collapsed.height, 1
         expand.click
         assert_button I18n.t("ui.synopsis.collapse")
         assert_operator element_rectangle(synopsis).height, :>, collapsed.height
         synopsis.send_keys(:escape)
         assert_button I18n.t("ui.synopsis.expand")
-        assert_equal collapsed, element_rectangle(synopsis)
+        assert_equal collapsed, document_rectangle(synopsis)
       end
     end
 
