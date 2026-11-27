@@ -1,5 +1,7 @@
 module Community
   class CommunityUser < ApplicationRecord
+    include Reportable
+
     self.primary_key = :user_id
 
     RESERVED_USERNAMES = %w[admin administrator moderator glutton support].freeze
@@ -28,10 +30,23 @@ module Community
     end
 
     def ready_to_post?
-      user.can_view_account? && profile_editable? && community_username.present? && community_avatar_preset.present?
+      Membership::Access.participation_allowed?(user:) && profile_editable? && community_username.present? && community_avatar_preset.present?
+    end
+
+    def reportable_attributes
+      { "community_username" => community_username }.compact_blank
+    end
+
+    def public_identity?
+      community_username.present? || community_avatar_preset.present?
+    end
+
+    def reported_member
+      user
     end
 
     def change_community_username!(community_username:)
+      Membership::Access.require_participation!(user:)
       require_current_conduct!
       update!(community_username: community_username || "")
     rescue ActiveRecord::RecordNotUnique => error
@@ -43,11 +58,16 @@ module Community
     end
 
     def choose_community_avatar!(preset:)
+      Membership::Access.require_participation!(user:)
       require_current_conduct!
       update!(community_avatar_preset: preset || "")
     end
 
     private
+
+    def independently_deletable_attributes
+      %w[community_username]
+    end
 
     def require_current_conduct!
       raise Errors::CodeOfConductRequired unless profile_editable?

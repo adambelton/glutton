@@ -16,7 +16,7 @@ module Community
     def create
       fields = params.expect(report: [ :reason, :explanation, :revision ])
       reason, explanation, revision = fields.values_at(:reason, :explanation, :revision)
-      report = submission.submit(reporter_id: current_user.id, reason:, explanation:,
+      report = report_workflow.submit(reporter_id: current_user.id, reason:, explanation:,
         revision: revision.is_a?(String) ? revision : nil)
       if report.persisted?
         redirect_to return_path, notice: t("community.reports.submitted"), status: :see_other
@@ -40,27 +40,36 @@ module Community
       raise ActionController::BadRequest unless ids.all? { |id| RecordId.valid?(id) }
     end
 
-    def submission
-      @submission ||= Reporting::ReportSubmission.new(**target_identifiers)
+    def report_workflow
+      identifiers = target_identifiers.transform_values(&:to_i)
+      if identifiers.key?(:member_id)
+        Reporting::SubmitProfileReport.new(**identifiers)
+      else
+        Reporting::SubmitPostReport.new(**identifiers)
+      end
     end
 
     def target_identifiers
-      request.path_parameters.slice(:post_id, :comment_id)
+      request.path_parameters.slice(:post_id, :comment_id, :member_id)
     end
 
     def render_form(report, status: :ok)
-      reportable = submission.target(viewer: current_user)
-      evidence = reportable.reportable_attributes
-      render Views::Community::NewReport.new(report:, evidence:, revision: submission.revision(reportable:, evidence:),
-        reasons: submission.reasons(reportable:), form_path:, return_path:), status:
+      reportable = report_workflow.target(viewer: current_user)
+      evidence = Reporting::ReportSubmission.evidence_for(reportable:)
+      render Views::Community::NewReport.new(report:, evidence:, revision: Reporting::ReportSubmission.revision(reportable:, evidence:),
+        reasons: reportable.report_reasons, form_path:, return_path:), status:
     end
 
     def form_path
+      return community_member_report_path(target_identifiers[:member_id]) if target_identifiers[:member_id].present?
+
       post_id, comment_id = target_identifiers.values_at(:post_id, :comment_id)
       comment_id.present? ? community_post_comment_report_path(post_id, comment_id) : community_post_report_path(post_id)
     end
 
     def return_path
+      return community_member_path(target_identifiers[:member_id]) if target_identifiers[:member_id].present?
+
       post_id, comment_id = target_identifiers.values_at(:post_id, :comment_id)
       options = comment_id.present? ? { reply: comment_id, anchor: "comment-#{comment_id}" } : {}
       community_post_path(post_id, **options)

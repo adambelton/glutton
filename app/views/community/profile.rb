@@ -17,11 +17,13 @@ module Views
       def view_template
         page(title: t("account.title"), class: "account-page", heading_outside_card: true) do
           render ::Identity::AccountNavigation.new(section: :community)
+          @suspended = ::Community::Membership::Access.suspended?(user: current_user)
+          render ::Community::SuspensionNotice.new if @suspended
           code = ::Community::CodeOfConduct.current
           accepted = code.accepted_by?(user: current_user)
           if @community_user&.profile_editable?
-            @editing_username || @community_username.blank? ? username_form : saved_username
-            @editing_avatar ? avatar_form : saved_avatar
+            !@suspended && (@editing_username || @community_username.blank?) ? username_form : saved_username
+            !@suspended && @editing_avatar ? avatar_form : saved_avatar
           end
           render ::Community::ConductAcceptanceForm.new(accepted:, code:)
         end
@@ -35,8 +37,10 @@ module Views
             strong { t("community.profile.username.label") }
             p { @community_username }
           end
-          render Shared::ActionForm.new(url: account_community_path, method: :get, params: { edit: "username" }) do
-            render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("community.profile.username.change") }
+          unless @suspended
+            render Shared::ActionForm.new(url: account_community_path, method: :get, params: { edit: "username" }) do
+              render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("community.profile.username.change") }
+            end
           end
         end
       end
@@ -68,9 +72,11 @@ module Views
               avatar_art(@community_avatar_preset, alt: avatar_name(@community_avatar_preset))
             end
           end
-          action = @community_avatar_preset.present? ? :change : :choose
-          render Shared::ActionForm.new(url: account_community_path, method: :get, params: { edit: "avatar" }) do
-            render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("community.profile.avatar.#{action}") }
+          unless @suspended
+            action = @community_avatar_preset.present? ? :change : :choose
+            render Shared::ActionForm.new(url: account_community_path, method: :get, params: { edit: "avatar" }) do
+              render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("community.profile.avatar.#{action}") }
+            end
           end
         end
       end

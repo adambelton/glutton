@@ -68,7 +68,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".community-curation-prompt", "Stories that take their time."
     assert_select ".community-post-tag > span:first-child", text: I18n.t("community.curations.tag"), count: 1
     assert_select ".community-post-tag > [role=tooltip]", text: I18n.t("community.curations.tag_tooltip")
-    assert_select ".community-post-tags + .community-curation-author", text: @author.community_user&.community_username do
+    assert_select ".community-post-tags + .community-curation-author" do
+      assert_select "strong", text: @author.community_user&.community_username
       assert_select "img[src*=?][alt='']", "community-avatars/#{@author.community_user&.community_avatar_preset}"
     end
     assert_select ".community-curation-author + .community-curation-descriptions", count: 1
@@ -909,7 +910,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     end
     follow_redirect!
     assert_select "p.community-curation-prompt", text: "Set in small communities."
-    assert_select ".community-curation-author", text: @author.community_user&.community_username
+    assert_select ".community-curation-author strong", text: @author.community_user&.community_username
     assert_select "p.community-curation-prompt + section[aria-labelledby=curation-additional-description]", count: 1 do
       assert_select "h2", text: "EDIT:"
       assert_select "p", text: "Revised description."

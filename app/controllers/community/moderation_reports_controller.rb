@@ -19,6 +19,17 @@ module Community
       redirect_to community_moderation_report_path(params[:id]), alert: t("community.reports.resolution.deletion_unavailable"), status: :see_other
     end
 
+    def index
+      search = CollectionSearchParameters.parse(query: "", page: params.fetch(:page, "1"), max_digits: 6)
+      state = params.fetch(:state, "open")
+      return head :bad_request unless search.present? && Reporting::BrowseReports::STATES.key?(state)
+
+      queue_page = Reporting::BrowseReports.page(viewer: current_user, number: search.page, state:)
+      return redirect_to community_moderation_reports_path(state:) if search.page > queue_page.total_pages
+
+      render Views::Community::Moderation.new(queue_page:, state:)
+    end
+
     def show
       report = Reporting::BrowseReports.detail(viewer: current_user, report_id: params[:id])
       render Views::Community::ModerationReport.new(report:)

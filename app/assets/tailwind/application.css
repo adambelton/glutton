@@ -22,6 +22,7 @@
   --glutton-border: #344653;
   --glutton-subtle-border: #243441;
   --glutton-red: #c32630;
+  --glutton-amber: #f2b544;
   --glutton-color-scheme: dark;
   --glutton-action-gap: 8px;
   --glutton-dialog-action-spacing: 32px;
@@ -151,7 +152,8 @@
 .film-search-results .film-poster { align-self: start; box-sizing: border-box; flex: 0 0 48px; width: 48px; height: 72px; }
 .film-search-results .poster-wordmark { padding: 0; background: var(--glutton-inset); font: 400 34px/1 Tangerine, cursive; }
 .film-search-results h3 { overflow-wrap: anywhere; font-size: 16px; font-weight: 500; }
-:is(.film-search-title-link, .library-film-title-link) { text-decoration: underline; text-underline-offset: 2px; }
+.film-search-title-link,
+:is(.community-profile-link, .library-film-title-link):hover { text-decoration: underline; text-underline-offset: 2px; }
 .film-search-result-body { display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; gap: 8px; }
 .film-search-result-details { min-width: 0; }
 .film-search-overview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; color: var(--glutton-muted-foreground); font-size: 12px; line-height: 1.35; }
@@ -255,6 +257,7 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
 .ui-nav-lock [role="tooltip"] { bottom: calc(50% + 12px); }
 .ui-nav-lock:is(:hover, :focus) [role="tooltip"] { visibility: visible; }
 .ui-errors, .ui-alert, .ui-reminder { padding: 16px 20px; border: 1px solid var(--glutton-border); border-left: 3px solid var(--glutton-muted-foreground); border-radius: 4px; margin-block: 20px; background: var(--glutton-surface); }
+.community-suspension-notice { border-left-color: var(--glutton-amber); }
 .ui-errors li { list-style: disc; margin-left: 18px; }
 .ui-errors h3 { margin-bottom: 8px; }
 .library-collection-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; min-block-size: 46px; margin-bottom: 24px; border-bottom: 1px solid var(--glutton-border); }
@@ -352,9 +355,13 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
   .ui-header-inner { gap: 16px; }
   .ui-nav { gap: 16px; }
 }
-.guest-banner { border-bottom: 1px solid #d08a19; background: #f2b544; color: #271b09; font-size: 13px; padding-block: 10px; line-height: 1.5; }
-.guest-banner a { display: inline; color: #271b09; font-weight: 600; text-decoration: underline; }
-.guest-banner a:focus-visible { outline-color: currentColor; }
+.ui-header-banner { position: absolute; z-index: 4; inset-inline: 0; block-size: 32px; overflow-y: auto; align-content: safe center; text-align: center; border-bottom: 1px solid #d08a19; background: var(--glutton-amber); color: #271b09; font-size: 13px; line-height: 15px; pointer-events: none; }
+.ui-header-banner-content { margin-inline: 16px; }
+.ui-header-banner a { color: inherit; font-weight: 600; text-decoration: underline; pointer-events: auto; }
+.ui-header-banner a:focus-visible { outline-color: currentColor; }
+@media (max-width: 650px) {
+  .ui-header-banner { position: static; block-size: auto; min-block-size: 32px; overflow: visible; padding-block: 6px; pointer-events: auto; }
+}
 .ui-confirmation-dialog { width: min(440px, calc(100% - 32px)); margin: auto; white-space: normal; }
 .ui-confirmation-dialog::backdrop, .ui-editor-dialog::backdrop { background: rgb(0 0 0 / 55%); }
 .ui-confirmation-dialog h2 { margin: 0 0 12px; font-size: 20px; font-weight: 600; }
@@ -764,6 +771,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .ui-page .community-board-search { width: min(100%, 480px); margin-block: 0; margin-inline-start: auto; }
 @media (max-width: 650px) {
   .ui-page .community-board-search { width: 100%; }
+  .ui-page .community-moderation-link, .community-board-actions:has(> .community-moderation-link:only-child) { display: none; }
   .community-board-actions > .ui-action-button { width: 100%; }
 }
 :is(.community-curation-card, .community-film-debrief-card) { display: grid; grid-template-columns: clamp(60px, 22%, 88px) minmax(0, 1fr); align-items: center; min-block-size: 100%; gap: 12px; padding: 8px 12px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-inset); }
@@ -1268,6 +1276,7 @@ div:has(> .admin-table) + .admin-pagination { border-block-start: 0; }
   line-height: 18px;
 }
 .ui-collection-table td:has(:focus-visible) { outline: 2px solid var(--glutton-primary); outline-offset: -2px; }
+.ui-table-action-cell > .ui-action-form { display: inline-flex; margin-block: 0; vertical-align: middle; }
 .user-administration-table :is(th, td):first-child { width: 54%; }
 .user-record-link { display: block; color: var(--glutton-foreground); font-weight: 600; }
 .user-record-link, .user-record-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

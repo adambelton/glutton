@@ -14,8 +14,8 @@ module Community
       comments.find(id)
     end
 
-    def spoiler_free?
-      false
+    def report_reasons
+      Reportable::REASONS_WITHOUT_SPOILERS
     end
   end
 end

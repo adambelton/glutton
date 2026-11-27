@@ -36,13 +36,10 @@ module Shared
           end
         end
         if user&.can_register?
-          aside(class: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") }) do
-            div(class: "ui-width") do
-              span { t("identity.entry.guest_banner") }
-              plain " "
-              text_link(t("identity.entry.save_progress"), new_registration_path)
-            end
-          end
+          render HeaderBanner.new(message: t("identity.entry.guest_banner"), link_label: t("identity.entry.save_progress"),
+            link_path: new_registration_path, class_name: "guest-banner", aria: { label: t("identity.entry.guest_banner_label") })
+        elsif community_access && community_page? && Community::Membership::Access.suspended?(user:)
+          render Community::SuspensionNotice.new(in_header: true)
         end
         div(class: "ui-notifications") do
           render Toast.new(message: flash[:notice]) if flash[:notice].present?
@@ -58,6 +55,10 @@ module Shared
     end
 
     private
+
+    def community_page?
+      request.path == community_path || request.path.start_with?("#{community_path}/")
+    end
 
     def primary_navigation(user, recommendations_unlocked:, community_access:)
       nav(aria: { label: t("ui.navigation") }, class: "ui-nav ui-nav-wide") do

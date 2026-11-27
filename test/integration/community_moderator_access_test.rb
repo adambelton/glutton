@@ -17,7 +17,7 @@ class CommunityModeratorAccessTest < ActionDispatch::IntegrationTest
 
   test "superusers can grant and revoke moderation without gaining report access themselves" do
     set_session(self, @superuser)
-    get community_moderation_path
+    get community_moderation_reports_path
     assert_response :forbidden
     get admin_user_path(@member)
     assert_response :success
@@ -26,7 +26,7 @@ class CommunityModeratorAccessTest < ActionDispatch::IntegrationTest
 
     reviewer = open_session
     set_session(reviewer, @member)
-    reviewer.get community_moderation_path
+    reviewer.get community_moderation_reports_path
     assert_equal 403, reviewer.response.status
 
     assert_difference "Community::ModeratorRole.count", 1 do
@@ -37,12 +37,12 @@ class CommunityModeratorAccessTest < ActionDispatch::IntegrationTest
     assert_equal @superuser, role.granted_by
     assert_predicate role.granted_at, :present?
 
-    reviewer.get community_moderation_path
+    reviewer.get community_moderation_reports_path
     assert_equal 200, reviewer.response.status
     assert_nil Nokogiri::HTML(reviewer.response.body).at_css("form[action='#{role_path}']")
     reviewer.get community_path
     board = Nokogiri::HTML(reviewer.response.body)
-    assert board.at_css(".community-board-actions a.ui-link[href='#{community_moderation_path}']")
+    assert board.at_css(".community-board-actions a.ui-link[href='#{community_moderation_reports_path}']")
 
     get admin_user_path(@member)
     delete role_path, params: { authenticity_token: form_input(role_path, "authenticity_token"),
@@ -51,10 +51,10 @@ class CommunityModeratorAccessTest < ActionDispatch::IntegrationTest
     assert_equal @superuser, role.reload.revoked_by
     assert_predicate role.revoked_at, :present?
 
-    reviewer.get community_moderation_path
+    reviewer.get community_moderation_reports_path
     assert_equal 403, reviewer.response.status
     reviewer.get community_path
-    assert_nil Nokogiri::HTML(reviewer.response.body).at_css("a[href='#{community_moderation_path}']")
+    assert_nil Nokogiri::HTML(reviewer.response.body).at_css("a[href='#{community_moderation_reports_path}']")
   end
 
   test "ordinary members, moderators and guests cannot assign roles through direct requests" do

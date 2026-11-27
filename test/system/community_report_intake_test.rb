@@ -1,6 +1,112 @@
 require "application_system_test_case"
 
 class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
+  test "a moderator can report a username and suspend participation from its report page" do
+    password = "a long test password"
+    author = create_community_account(email_address: "username-report-author@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, community_username: "FilmWriter",
+      community_avatar_preset: "moth", community_code_of_conduct_version: Community::CodeOfConduct.current.version,
+      community_code_of_conduct_accepted_at: Time.current)
+    moderator = Identity::UserRegistered.create!(email_address: "username-report-reviewer@example.test", password:,
+      password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
+    Community::Moderation::ManageModeratorRoles.grant(actor_id: moderator.id, member_id: moderator.id)
+    film = Registry::Film.create!(title: "The Fog", tmdb_id: 790)
+    Library::CollectionManagement::AddToWatchlist.call(user_id: moderator.id, film_id: film.id)
+    curation = Community::Curations::PublishCuration.call(community_user: author.community_user, title: "Isolated landscapes",
+      description: "Original description.", reference_film_ids: [], reference_comments: {})
+
+    visit new_session_path
+    fill_in I18n.t("identity.sessions.email"), with: moderator.email_address
+    fill_in I18n.t("identity.sessions.password"), with: password
+    click_button I18n.t("identity.sessions.sign_in")
+    assert_current_path library_path
+    find("h1", text: I18n.t("library.browser.title")).hover
+    film_title = find_link("The Fog", href: "https://www.themoviedb.org/movie/790")
+    assert_equal "none", film_title.style("text-decoration-line").fetch("text-decoration-line")
+    film_title.hover
+    assert_equal "underline", film_title.style("text-decoration-line").fetch("text-decoration-line")
+    visit community_post_path(curation)
+    find("h1", text: curation.title).hover
+    report_typography = find_link(I18n.t("community.reports.action")).style("font-size", "font-weight")
+    profile_name = find(".community-curation-author a", text: "FilmWriter")
+    assert_equal "none", profile_name.style("text-decoration-line").fetch("text-decoration-line")
+    profile_name.hover
+    assert_equal "underline", profile_name.style("text-decoration-line").fetch("text-decoration-line")
+    profile_name.click
+    assert_current_path community_member_path(author.community_user)
+    report_action = find_link(I18n.t("community.reports.action"))
+    assert_equal report_typography, report_action.style("font-size", "font-weight")
+    report_action.click
+    assert_current_path new_community_member_report_path(author.community_user)
+    within(".community-report-evidence") { assert_text "FilmWriter" }
+    select I18n.t("community.reports.reasons.other"), from: I18n.t("community.reports.reason")
+    click_button I18n.t("community.reports.submit")
+    assert_current_path community_member_path(author.community_user)
+
+    report = author.community_user.reports.sole
+    visit community_moderation_report_path(report)
+    click_link I18n.t("community.suspensions.action")
+    click_button I18n.t("community.suspensions.action")
+    assert_current_path community_moderation_report_path(report)
+    assert_text I18n.t("community.suspensions.started")
+    assert_predicate report.reload, :pending?
+    assert_equal author.id, Community::Suspension.active.sole.member_id
+
+    using_session(:suspended_member) do
+      visit new_session_path
+      fill_in I18n.t("identity.sessions.email"), with: author.email_address
+      fill_in I18n.t("identity.sessions.password"), with: password
+      click_button I18n.t("identity.sessions.sign_in")
+      assert_current_path library_path
+
+      visit community_path
+      banner = find("header.ui-header + .ui-header-banner", text: I18n.t("community.suspensions.banner_notice"))
+      content = find(".ui-content")
+      assert_in_delta banner.rect.y, content.rect.y, 1
+      desktop_height = banner.rect.height
+      assert_equal 32, desktop_height
+      assert_link I18n.t("community.suspensions.contact"), exact: true
+      message = banner.find(".ui-header-banner-content")
+      set_viewport(650, 844)
+      mobile_message_height = message.rect.height
+      set_viewport(651, 844)
+      assert_operator message.rect.height, :<=, mobile_message_height
+      set_viewport(320, 844)
+      assert_operator banner.rect.height, :>, desktop_height
+      assert_in_delta banner.rect.y + banner.rect.height, content.rect.y, 1
+      assert_equal "center", banner.style("text-align").fetch("text-align")
+      assert_operator banner.evaluate_script("this.scrollHeight - this.clientHeight"), :<=, 1
+      assert_link I18n.t("community.suspensions.contact"), exact: true
+      amber = banner.style("background-color").fetch("background-color")
+
+      visit account_community_path
+      notice = find("main .community-suspension-notice", text: I18n.t("community.suspensions.notice"))
+      assert_equal amber, notice.style("border-left-color").fetch("border-left-color")
+    ensure
+      reset_viewport
+    end
+
+    visit community_moderation_reports_path
+    click_link I18n.t("community.suspensions.active")
+    assert_current_path community_suspensions_path
+    within("table tbody tr", text: "FilmWriter") do
+      within("td:last-child") do
+        form = find("form")
+        assert_equal({ "margin-top" => "0px", "margin-bottom" => "0px" }, form.style("margin-top", "margin-bottom"))
+        click_button I18n.t("community.suspensions.lift")
+      end
+    end
+    assert_current_path community_suspensions_path
+    assert_text I18n.t("community.suspensions.lifted")
+    assert_empty Community::Suspension.active
+    click_link I18n.t("community.suspensions.lifted_tab")
+    assert_current_path community_suspensions_path(state: "lifted")
+    within("table tbody tr", text: "FilmWriter") do
+      assert_selector "td:last-child time"
+      assert_no_button I18n.t("community.suspensions.lift")
+    end
+  end
+
   test "a member reports a curation and a moderator reviews the submitted version" do
     password = "a long test password"
     author = create_community_account(email_address: "report-browser-author@example.test", password:,
@@ -53,7 +159,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_text I18n.t("community.reports.submitted")
 
     curation.edit_text(community_user: author.community_user, title: curation.title, description: "Current description.")
-    visit community_moderation_path
+    visit community_moderation_reports_path
     assert_text I18n.t("community.reports.high_priority")
     click_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
     headings = all(".community-report-review > section > h2", count: 4).map(&:text)
@@ -76,7 +182,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("community.reports.escalate")
     assert_text I18n.t("community.reports.states.escalated")
     click_link I18n.t("community.reports.back")
-    assert_current_path community_moderation_path(state: "escalated")
+    assert_current_path community_moderation_reports_path(state: "escalated")
     within "table.community-report-table" do
       click_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
     end
@@ -106,7 +212,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_no_text "Current description."
     assert_no_text "Please review this."
     click_link I18n.t("community.reports.back")
-    assert_current_path community_moderation_path(state: "resolved")
+    assert_current_path community_moderation_reports_path(state: "resolved")
     assert_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
   ensure
     reset_viewport

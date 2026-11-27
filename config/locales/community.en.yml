@@ -43,6 +43,8 @@ en:
     board_empty: There are no Community posts yet.
     moderation:
       title: Moderation
+      queues: Moderation queues
+      pagination: Moderation pages
       back: Back to Community
       role_heading: Community moderator role
       grant: Grant moderator role
@@ -50,6 +52,26 @@ en:
       granted: Moderator role granted.
       revoked: Moderator role revoked.
       role_unavailable: The moderator role has already changed. Review its current status and try again.
+    suspensions:
+      title: Community suspensions
+      action: Suspend Community participation
+      confirm: "Suspend Community participation for %{name}? A moderator can lift the suspension."
+      notice: Your Community participation is suspended. You can still read posts.
+      contact: Contact Glutton about this decision
+      banner_notice: Community participation suspended. You can still read posts.
+      started: Community participation suspended.
+      lifted: Community suspension lifted.
+      changed: The member’s suspension status has already changed.
+      active: Active suspensions
+      lifted_tab: Lifted suspensions
+      none: There are no active Community suspensions.
+      none_lifted: There are no lifted Community suspensions.
+      lift: Lift suspension
+      table:
+        member: Member
+        suspended_at: Suspended at
+        lifted_at: Lifted at
+        action: Action
     reports:
       identifier: "Report #%{id}"
       form_title: Report content
@@ -67,7 +89,6 @@ en:
         open: Open reports
         escalated: Escalated reports
         resolved: Resolved reports
-      pagination: Report pages
       back: Back to Moderation
       members: Members
       reported_content: Reported content
@@ -131,6 +152,7 @@ en:
         description: Description
         additional_description: Additional description
         body: Comment
+        community_username: Username
       identities:
         reporter: Reporter at submission
         reported_member: Reported member at submission
