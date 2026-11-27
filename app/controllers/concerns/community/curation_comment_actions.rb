@@ -3,7 +3,7 @@ module Community
     private
 
     def edit_curation_comment
-      composer = Discussions::ManageCurationComment.load_for_edit(curation_id: post_id, comment_id:, member: current_user)
+      composer = Discussions::ManageCurationComment.load_for_edit(curation_id: post_id, comment_id:, community_user: current_user.community_user)
       render_curation_comment_editor(composer)
     end
 
@@ -11,7 +11,7 @@ module Community
       body = params[:body]
       raise ActionController::BadRequest unless body.nil? || body.is_a?(String)
 
-      composer = Discussions::ManageCurationComment.edit(curation_id: post_id, comment_id:, member_id: current_user.id, body:)
+      composer = Discussions::ManageCurationComment.edit(curation_id: post_id, comment_id:, community_user: current_user.community_user, body:)
       return render_curation_comment_editor(composer, status: :unprocessable_content) if composer.fetch(:content).errors.any?
 
       curation, comment = composer.values_at(:curation, :comment)
@@ -25,7 +25,7 @@ module Community
     end
 
     def destroy_curation_comment
-      removal = Discussions::ManageCurationComment.delete(curation_id: post_id, comment_id:, member_id: current_user.id)
+      removal = Discussions::ManageCurationComment.delete(curation_id: post_id, comment_id:, community_user: current_user.community_user)
       curation, film_id, selected_comment_id, nomination_visible = removal.values_at(:curation, :film_id, :selected_comment_id, :nomination_visible)
       if request.format.turbo_stream? && nomination_visible
         discussion = Discussions::CurationDiscussion.new(curation:, film_id:, selected_reply_id: selected_comment_id, expand_selected_branch: true)

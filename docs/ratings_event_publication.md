@@ -1,6 +1,6 @@
 # Ratings event publication — version 1
 
-Ratings publishes first rating submissions. Library consumes these facts through `library.completed_ratings`; Recommendations consumption remains separate.
+Ratings publishes first rating submissions. Library consumes these facts through `library.completed_ratings`; Recommendations consumes them through its own subscription. See the [consumer contracts](domain_events.md#rating-and-recommendation-events).
 
 ## Meaning and payload
 
@@ -51,4 +51,4 @@ Missing/inactive owners and missing/foreign candidates retain the submission fai
 
 Replacement publishes no event and does not advance the existing Ratings stream. Revision events are deferred until a demonstrated consumer need establishes their meaning and payload. Existing RatingSubmitted publication and its Library consumer remain unchanged; there is no new subscriber or synchronous cross-domain mutation.
 
-Claim and cleanup retain the existing owner-bound lifecycle for all history and expressions. No history purge is added. Restoring first-rating uniqueness fails at the database constraint when any candidate has multiple ratings; PostgreSQL rolls back the migration without discarding history. There is no custom rollback guard. Scoring and profile recomputation remain future work and must exclude superseded contributions.
+Claim and cleanup retain the existing owner-bound lifecycle for all history and expressions. No history purge is added. Restoring first-rating uniqueness fails at the database constraint when any candidate has multiple ratings; PostgreSQL rolls back the migration without discarding history. There is no custom rollback guard. Rating replacement queues Ratings-owned assessment of the new version. Profile synthesis and current-score queries use current rating evidence. See [Ratings scoring and profile design](ratings_scoring_design.md).

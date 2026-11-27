@@ -1,6 +1,6 @@
 # Library event publication
 
-Library publishes facts from supported Library operations. The source change and events commit together; a publication failure rolls back the operation. Library consumes completed Ratings facts; Ratings consumes watched and watchlist facts. Raw SQL, fixture creation and direct Active Record writes are not supported Library action APIs.
+Library publishes facts from supported Library operations. The source change and events commit together. A publication failure rolls back the operation. Library consumes completed Ratings and accepted Recommendations facts. Ratings and Recommendations consume the agreed Library events. Use named Library actions to produce source events.
 
 ## Version 1 contract
 
@@ -13,6 +13,7 @@ Each payload contains exactly `user_id` and `film_id`. Identifiers are internal 
 | FilmMarkedWatched | Establishes viewing evidence |
 | FilmAddedToWatchlist | Establishes intent, without asserting seen or unseen |
 | FilmRemovedFromWatchlist | Clears watchlist classification; retains prior viewing evidence |
+| FilmRemovedFromWatched | Clears watched classification and retains rating history |
 
 Event names are frozen string constants in `Library::Events`, shared by publishers and tests. Each operation supplies its event name; payloads identify the user and film without exposing Library classification.
 
@@ -26,4 +27,4 @@ Guest claim preserves stream ownership; physical owner cleanup cascades events w
 
 `library.completed_ratings` consumes RatingSubmitted v1 through normal durable delivery. A missing or Watchlist entry becomes watched; already watched is ignored without publication. Derived FilmMarkedWatched facts have the same v1 payload, retain the source correlation ID and identify the source event as causation. The transition, derived event and successful delivery receipt commit together. Public MoveWatchlistToWatched permissions and duplicate failures are unchanged. See [operations](domain_event_operations.md) for retained-event catch-up and failure recovery.
 
-Ratings consumes these facts to manage suppression on its own RatingFilm records. Ratings does not copy Library classification or query Library records; it consumes only event identity and user/film identifiers. Releasing suppression preserves indefinite dismissal and original queue position. See [operations](domain_event_operations.md).
+The Ratings event consumer uses the event identity and user/film identifiers to manage suppression on its own RatingFilm records. Releasing suppression preserves indefinite dismissal and original queue position. See [operations](domain_event_operations.md#ratings-library-event-consumer).

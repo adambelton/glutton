@@ -10,6 +10,10 @@ Library, Ratings and Recommendations own their data and publish domain facts thr
 
 Publish the source change and its outbox event in one database transaction. Each consumer later commits only its own domain updates and delivery receipt. The outbox is delivery infrastructure, not the authoritative domain history or an event-sourced replacement for models. Domain rules belong in their existing models/operations. Internal calls within a domain remain ordinary synchronous Ruby calls. This decision concerns asynchronous state-changing reactions, not a ban on synchronous shared-data reads, Identity resolution or external request/response APIs.
 
+A source can reuse an account lock for publication while the same transaction holds it through the write. Reuse improves the design when the caller already has the authoritative account and can pass it without introducing a competing owner. Recommendation acceptance does this at its publication call. The ID-based publisher acquires its own lock. Dispatch and delivery make fresh account checks in their own transactions because account closure can occur after publication.
+
+Library publishes for the owner recorded on `LibraryFilm`. Ratings publishes for the owner recorded on the rating's `RatingFilm`. Their model signatures keep those sources of ownership and use ID-based publication. See the [boundary index](domain_boundaries.md#transactions-locks-and-freshness).
+
 Library entries represent Watchlist or Watched. Viewers can move Watched entries back to Watchlist or remove them from Library while preserving Ratings history. Completed ratings supply viewing evidence. Add to Watchlist and Mark Watched are direct Library actions.
 
 ## Implemented publication and reactions

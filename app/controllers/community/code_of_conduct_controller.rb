@@ -8,7 +8,7 @@ module Community
     end
 
     def accept
-      Membership::AcceptCodeOfConduct.call(user_id: current_user.id, displayed_version: params[:code_version], accepted: params[:accepted] == "1")
+      Membership::SetUpProfile.call(user_id: current_user.id, displayed_version: params[:code_version], accepted: params[:accepted] == "1")
       redirect_to account_community_path, notice: t("community.conduct.accepted"), status: :see_other
     rescue Errors::MembershipRequired
       head :forbidden

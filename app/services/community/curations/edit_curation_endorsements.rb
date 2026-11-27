@@ -1,47 +1,48 @@
 module Community
   module Curations
     class EditCurationEndorsements
-      def self.load_for_edit(curation_id:, member:)
-        raise Errors::PostingUnavailable unless Membership::PostingAccess.allowed?(user: member)
+      def self.load_for_edit(curation_id:, community_user:)
+        raise Errors::PostingUnavailable unless community_user&.ready_to_post?
 
         PostCommunityCuration.transaction do
           curation = PostCommunityCuration.lock.find(curation_id)
-          endorsements = active_endorsements(curation:, member:)
+          endorsements = active_endorsements(curation:, community_user:)
           state = endorsement_state(endorsements)
-          snapshot = verifier.generate([ curation.id, member.id, state ])
-          editor(curation:, member:, endorsements:, film_ids: endorsements.keys, comments: {}, snapshot:, saved_film_ids: endorsements.keys)
+          snapshot = verifier.generate([ curation.id, community_user.user_id, state ])
+          editor(curation:, community_user:, endorsements:, film_ids: endorsements.keys, comments: {}, snapshot:, saved_film_ids: endorsements.keys)
         end
       end
 
-      def self.call(curation_id:, member_id:, film_ids:, comments:, snapshot:)
-        PostCommunityCuration.transaction do
-          member = Identity::UserRegistered.lock.find_by(id: member_id)
-          raise Errors::PostingUnavailable unless member.present? && Membership::PostingAccess.allowed?(user: member)
+      def self.call(curation_id:, community_user:, film_ids:, comments:, snapshot:)
+        Membership::WithProfileForUpdate.call(community_user:) do |community_user|
+          raise Errors::PostingUnavailable unless community_user&.ready_to_post?
 
           curation = PostCommunityCuration.lock.find(curation_id)
-          endorsements = active_endorsements(curation:, member:)
-          snapshot_post_id, snapshot_member_id, state = verifier.verified(snapshot)
-          same_editor = snapshot_post_id == curation.id && snapshot_member_id == member.id
+          endorsements = active_endorsements(curation:, community_user:)
+          snapshot_post_id, snapshot_user_id, state = verifier.verified(snapshot)
+          same_editor = snapshot_post_id == curation.id && snapshot_user_id == community_user.user_id
           saved_film_ids = same_editor ? state.map { |_, film_id, *| film_id } : endorsements.keys
           stale = !same_editor || state != endorsement_state(endorsements)
           if stale
             curation.errors.add(:base, :stale_endorsements)
           else
-            curation.edit_endorsements(member:, endorsements:, film_ids:, comments:) do |new_film_ids|
-              EligibleCurationFilms.new(member:).lock_for_submission(film_ids: new_film_ids)
+            curation.edit_endorsements(community_user:, endorsements:, film_ids:, comments:) do |new_film_ids|
+              BrowseEligibleCurationFilms.lock_for_submission(community_user:, film_ids: new_film_ids)
             end
           end
 
           if curation.errors.any?
-            editor(curation:, member:, endorsements:, film_ids:, comments:, snapshot:, saved_film_ids:, stale:)
+            editor(curation:, community_user:, endorsements:, film_ids:, comments:, snapshot:, saved_film_ids:, stale:) do |missing_film_ids|
+              Registry::CatalogueQueries::BrowseCatalogue.films_for_ids(film_ids: missing_film_ids)
+            end
           else
             { curation: }
           end
         end
       end
 
-      def self.active_endorsements(curation:, member:)
-        curation.film_endorsements.active.where(user: member).preload(:film, comments: :content).order(:id).index_by(&:film_id)
+      def self.active_endorsements(curation:, community_user:)
+        curation.film_endorsements.active.where(user_id: community_user.user_id).preload(:film, comments: :content).order(:id).index_by(&:film_id)
       end
 
       def self.endorsement_state(endorsements)
@@ -52,11 +53,11 @@ module Community
         end
       end
 
-      def self.editor(curation:, member:, endorsements:, film_ids:, comments:, snapshot:, saved_film_ids:, stale: false)
-        search_films = EligibleCurationFilms.new(member:).choices
+      def self.editor(curation:, community_user:, endorsements:, film_ids:, comments:, snapshot:, saved_film_ids:, stale: false)
+        search_films = BrowseEligibleCurationFilms.choices(community_user:)
         saved_films = endorsements.values.map(&:film)
         if stale
-          saved_films += ::Registry::Film.where(id: (film_ids & saved_film_ids) - endorsements.keys)
+          saved_films += yield((film_ids & saved_film_ids) - endorsements.keys)
         end
         published_comments = endorsements.transform_values(&:opening_comment).compact
         { curation:, search_films:, films: (saved_films + search_films).uniq, film_ids:, comments:, published_comments:,

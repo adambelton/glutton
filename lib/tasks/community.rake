@@ -6,6 +6,6 @@ namespace :community do
     require Rails.root.join("db/seeds/protected_curation")
 
     curation = Seeds::ProtectedCuration.call
-    puts Rails.application.routes.url_helpers.community_curation_path(curation)
+    puts Rails.application.routes.url_helpers.community_post_path(curation)
   end
 end

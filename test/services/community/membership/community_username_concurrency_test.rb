@@ -1,14 +1,14 @@
 require "test_helper"
 require "timeout"
 
-module Identity
+module Community
   class CommunityUsernameConcurrencyTest < ActiveSupport::TestCase
     self.use_transactional_tests = false
 
     setup do
       password = "a long test password"
       @accounts = %w[first second].map do |member|
-        UserRegistered.create!(email_address: "username-#{member}@example.test", password:,
+        create_community_account(email_address: "username-#{member}@example.test", password:,
           password_confirmation: password, email_confirmed_at: Time.current,
           community_code_of_conduct_version: Community::CodeOfConduct.current.version,
           community_code_of_conduct_accepted_at: Time.current)
@@ -23,14 +23,14 @@ module Identity
 
     test "concurrent case variants produce one claim and a recoverable conflict" do
       winner, contender = @accounts
-      first_settings = AccountAdministration::ManageRegisteredAccount.new(user_id: winner.id)
-      second_settings = AccountAdministration::ManageRegisteredAccount.new(user_id: contender.id)
+      first_settings = Membership::ManageProfile.new(community_user: winner.community_user)
+      second_settings = Membership::ManageProfile.new(community_user: contender.community_user)
       backend_pid = Queue.new
 
-      UserRegistered.transaction do
+      CommunityUser.transaction do
         first_settings.change_community_username(community_username: "Night_Owl")
         @contender = Thread.new do
-          UserRegistered.with_connection do |connection|
+          CommunityUser.with_connection do |connection|
             backend_pid << connection.select_value("SELECT pg_backend_pid()")
             second_settings.change_community_username(community_username: "night_owl")
           rescue ActiveRecord::RecordInvalid => error
@@ -38,7 +38,7 @@ module Identity
           end
         end
         pid = Timeout.timeout(5) { backend_pid.pop }
-        UserRegistered.with_connection do |connection|
+        CommunityUser.with_connection do |connection|
           Timeout.timeout(5) do
             until connection.uncached { connection.select_value("SELECT cardinality(pg_blocking_pids(#{Integer(pid)}))") }.positive?
               sleep 0.01
@@ -48,10 +48,10 @@ module Identity
       end
 
       assert_equal true, Timeout.timeout(5) { @contender.value }
-      assert_equal "Night_Owl", winner.reload.community_username
-      assert_nil contender.reload.community_username
+      assert_equal "Night_Owl", winner.reload.community_user&.community_username
+      assert_nil contender.reload.community_user&.community_username
       second_settings.change_community_username(community_username: "Other_Owl")
-      assert_equal "Other_Owl", contender.reload.community_username
+      assert_equal "Other_Owl", contender.reload.community_user&.community_username
     end
   end
 end

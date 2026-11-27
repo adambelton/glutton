@@ -10,7 +10,7 @@ module Community
         @film = Registry::Film.create!(title: "Concurrent debrief", tmdb_metadata: { details: {} })
         password = "a long test password"
         @members = %w[debrief_opener debrief_contender].map do |name|
-          Identity::UserRegistered.create!(email_address: "#{name}@example.test", password:, password_confirmation: password,
+          create_community_account(email_address: "#{name}@example.test", password:, password_confirmation: password,
             email_confirmed_at: Time.current, community_username: name, community_avatar_preset: "moth",
             community_code_of_conduct_version: CodeOfConduct.current.version, community_code_of_conduct_accepted_at: Time.current)
         end
@@ -28,11 +28,11 @@ module Community
       test "two members opening the same film resolve to one canonical debrief" do
         backend_pid = Queue.new
         original = PostFilmDebrief.transaction do
-          debrief = OpenFilmDebrief.call(member_id: @members.first.id, film_id: @film.id)
+          debrief = OpenFilmDebrief.call(community_user: @members.first.community_user, film_id: @film.id)
           @contender = Thread.new do
             PostFilmDebrief.with_connection do |connection|
               backend_pid << connection.select_value("SELECT pg_backend_pid()")
-              OpenFilmDebrief.call(member_id: @members.last.id, film_id: @film.id)
+              OpenFilmDebrief.call(community_user: @members.last.community_user, film_id: @film.id)
             end
           end
 

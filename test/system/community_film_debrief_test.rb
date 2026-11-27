@@ -3,7 +3,7 @@ require "application_system_test_case"
 class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
   test "search creates a debrief directly and the unfiltered board links to it" do
     password = "a long test password"
-    member = Identity::UserRegistered.create!(email_address: "debrief-browser@example.test", password:, password_confirmation: password,
+    member = create_community_account(email_address: "debrief-browser@example.test", password:, password_confirmation: password,
       email_confirmed_at: Time.current, community_username: "debrief_browser", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version, community_code_of_conduct_accepted_at: Time.current)
     film = Registry::Film.create!(title: "The Quiet House", tmdb_metadata: { details: {} })
@@ -60,12 +60,12 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
 
   test "a debrief supports inline comments, replies, editing, and confirmed deletion" do
     password = "a long test password"
-    member = Identity::UserRegistered.create!(email_address: "debrief-discussion-browser@example.test", password:, password_confirmation: password,
+    member = create_community_account(email_address: "debrief-discussion-browser@example.test", password:, password_confirmation: password,
       email_confirmed_at: Time.current, community_username: "debrief_discussion", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version, community_code_of_conduct_accepted_at: Time.current)
     film = Registry::Film.create!(title: "A Long Night in an Empty Hospital", release_date: Date.new(1987, 4, 1), tmdb_metadata: { details: {} })
     Library::LibraryFilm.new(user: member, film:).add_to_watched!
-    debrief = Community::FilmDebriefs::OpenFilmDebrief.call(member_id: member.id, film_id: film.id)
+    debrief = Community::FilmDebriefs::OpenFilmDebrief.call(community_user: member.community_user, film_id: film.id)
 
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: member.email_address
@@ -173,7 +173,7 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_selector "#replies-#{root.id}[open] #comment-#{reply.id}"
     within "#comment-#{root.id}" do
       assert_no_link I18n.t("community.curations.reply")
-      assert_no_text member.community_username
+      assert_no_text member.community_user&.community_username
     end
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   ensure

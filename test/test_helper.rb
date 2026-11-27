@@ -7,6 +7,13 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
-    # Add more helper methods to be used by all tests here...
+    def create_community_account(**attributes)
+      profile = attributes.extract!(:community_username, :community_avatar_preset)
+      Identity::UserRegistered.create!(**attributes).tap do |account|
+        if profile.values.any?(&:present?) || account.community_code_of_conduct_accepted_at.present?
+          Community::CommunityUser.create!(user: account, **profile)
+        end
+      end
+    end
   end
 end

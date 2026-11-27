@@ -52,8 +52,8 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     get "/community/film-debriefs/#{film.id}"
     assert_response :not_found
 
-    assert_nil debrief.author_id
-    assert_nil debrief.deletable_author_id
+    assert_nil debrief.community_user_id
+    assert_nil debrief.deletable_community_user_id
     assert_no_changes -> { debrief.reload.updated_at } do
       assert_no_difference "Community::PostFilmDebrief.count" do
         post path, params: publication
@@ -103,7 +103,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   test "published debriefs require a registered member who has marked the film Watched" do
     film = create_film("The Night")
     library_film = watch(@member, film)
-    debrief = Community::FilmDebriefs::OpenFilmDebrief.call(member_id: @member.id, film_id: film.id)
+    debrief = Community::FilmDebriefs::OpenFilmDebrief.call(community_user: @member.community_user, film_id: film.id)
     path = community_post_path(debrief)
     sign_in(@member)
     get path
@@ -181,7 +181,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     assert_nil root.film_endorsement_id
     assert_nil root.parent_id
     assert_nil root.root_id
-    assert_equal @member, root.content.author
+    assert_equal @member.community_user, root.content.community_user
     assert_operator debrief.reload.updated_at, :>, activity
     assert_redirected_to community_post_path(debrief, reply: root.id, anchor: "comment-#{root.id}")
 
@@ -264,7 +264,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     reader = member("debrief_reply_author")
     watch(reader, debrief.film)
     reply = Community::Discussions::ManageFilmDebriefDiscussion.publish(post_id: debrief.id, parent_id: root.id,
-      member_id: reader.id, body: "Surviving reply.").fetch(:content).comment
+      community_user: reader.community_user, body: "Surviving reply.").fetch(:content).comment
     activity = debrief.reload.updated_at
     path = community_post_comment_path(debrief, root)
 
@@ -315,7 +315,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     parent = roots.last
     replies = (limit + 1).times.map do |i|
       Community::Discussions::ManageFilmDebriefDiscussion.publish(post_id: debrief.id, parent_id: parent.id,
-        member_id: @member.id, body: "Reply #{i}.").fetch(:content).comment
+        community_user: @member.community_user, body: "Reply #{i}.").fetch(:content).comment
     end
     sign_in(@member)
 
@@ -342,7 +342,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     replay_root = publish_comment(debrief, "Another departing member's comment.", member: other_author)
     replies = [ root, replay_root ].map do |parent|
       Community::Discussions::ManageFilmDebriefDiscussion.publish(post_id: debrief.id, parent_id: parent.id,
-        member_id: viewer.id, body: "Surviving content.").fetch(:content).comment
+        community_user: viewer.community_user, body: "Surviving content.").fetch(:content).comment
     end
     client = Aws::S3::Client.new(region: "auto", stub_responses: true)
     log = Identity::AccountAdministration::DeletionLog.new(client:, bucket: "fixture", namespace: "debrief")
@@ -355,7 +355,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     assert Community::PostFilmDebrief.exists?(debrief.id)
     assert_nil root.reload.content
     assert_nil replay_root.reload.content
-    assert replies.all? { |reply| reply.reload.content.author == viewer }
+    assert replies.all? { |reply| reply.reload.content.community_user == viewer.community_user }
     sign_in(viewer)
     get community_post_path(debrief, reply: replies.first.id)
     assert_select "#comment-#{root.id}", text: I18n.t("community.curation_replies.removed")
@@ -372,16 +372,16 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   def open_discussion(title = "A watched film")
     film = create_film(title)
     watch(@member, film)
-    Community::FilmDebriefs::OpenFilmDebrief.call(member_id: @member.id, film_id: film.id)
+    Community::FilmDebriefs::OpenFilmDebrief.call(community_user: @member.community_user, film_id: film.id)
   end
 
   def publish_comment(debrief, body, member: @member)
-    Community::Discussions::ManageFilmDebriefDiscussion.publish(post_id: debrief.id, parent_id: nil, member_id: member.id, body:)
+    Community::Discussions::ManageFilmDebriefDiscussion.publish(post_id: debrief.id, parent_id: nil, community_user: member.community_user, body:)
       .fetch(:content).comment
   end
 
   def member(name, accepted: true)
-    Identity::UserRegistered.create!(email_address: "#{name}@example.test", password: PASSWORD,
+    create_community_account(email_address: "#{name}@example.test", password: PASSWORD,
       password_confirmation: PASSWORD, email_confirmed_at: Time.current,
       community_username: name, community_avatar_preset: "moth",
       community_code_of_conduct_version: (Community::CodeOfConduct.current.version if accepted),
@@ -406,7 +406,7 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
   def create_curation(title, updated_at:, film: nil)
     travel_to(updated_at) do
       watch(@member, film) if film.present?
-      Community::Curations::PublishCuration.call(author_id: @member.id, title:, description: "A specific subgenre.",
+      Community::Curations::PublishCuration.call(community_user: @member.community_user, title:, description: "A specific subgenre.",
         reference_film_ids: (film.present? ? [ film.id ] : []), reference_comments: {})
     end
   ensure

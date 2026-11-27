@@ -52,12 +52,12 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     curation = Community::PostCommunityCuration.find_by!(title: "Slow-burn modern folk horror")
     assert_redirected_to community_post_path(curation)
-    assert_equal @author, curation.author
+    assert_equal @author.community_user, curation.community_user
     assert_equal [ [ second.id, @author.id ], [ first.id, @author.id ] ].sort,
       curation.film_endorsements.pluck(:film_id, :user_id).sort
     comment = curation.film_endorsements.find_by!(film: first).comments.sole
     assert_equal curation, comment.post
-    assert_equal @author, comment.content.author
+    assert_equal @author.community_user, comment.content.community_user
     assert_equal "The sense of dread builds slowly.", comment.content.body
     assert_empty curation.film_endorsements.find_by!(film: second).comments
 
@@ -68,8 +68,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select ".community-curation-prompt", "Stories that take their time."
     assert_select ".community-post-tag > span:first-child", text: I18n.t("community.curations.tag"), count: 1
     assert_select ".community-post-tag > [role=tooltip]", text: I18n.t("community.curations.tag_tooltip")
-    assert_select ".community-post-tags + .community-curation-author", text: @author.community_username do
-      assert_select "img[src*=?][alt='']", "community-avatars/#{@author.community_avatar_preset}"
+    assert_select ".community-post-tags + .community-curation-author", text: @author.community_user&.community_username do
+      assert_select "img[src*=?][alt='']", "community-avatars/#{@author.community_user&.community_avatar_preset}"
     end
     assert_select ".community-curation-author + .community-curation-descriptions", count: 1
     assert_select "h2.sr-only", I18n.t("community.curations.nominated_films")
@@ -88,7 +88,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     end
     get discussion_community_post_path(curation, film_id: first.id)
     assert_select "article span.community-curation-prompt", text: "The sense of dread builds slowly."
-    assert_select "article strong", text: @author.community_username
+    assert_select "article strong", text: @author.community_user&.community_username
     assert_select "article a", text: I18n.t("community.curations.reply")
     assert_select "article button[disabled]", text: "Report", count: 0
 
@@ -97,8 +97,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "a.community-curation-card[href=?]", community_post_path(curation), count: 1 do |links|
       assert_select "h2[id=?]", links.first["aria-labelledby"], text: curation.title
       assert_select "p", text: curation.description, count: 0
-      assert_select "footer .community-curation-card-counts + .community-curation-card-author", text: @author.community_username do
-        assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_avatar_preset}", text: @author.community_username
+      assert_select "footer .community-curation-card-counts + .community-curation-card-author", text: @author.community_user&.community_username do
+        assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_user&.community_avatar_preset}", text: @author.community_user&.community_username
       end
       assert_select ".community-post-card-heading h2 + .community-post-tags .community-post-tag > span:first-child", text: I18n.t("community.curations.tag")
       assert_select ".community-post-card-heading [role=tooltip], .community-post-card-heading .community-post-tag[aria-describedby]", count: 0
@@ -164,12 +164,14 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     post watchlist_path, params: { authenticity_token: curation_action_token(watchlist_path) }
     assert_redirected_to community_post_path(curation)
     assert Library::LibraryFilm.watchlist.exists?(user: viewer, film: first)
+    assert_library_events(viewer, first, Library::Events::FILM_ADDED_TO_WATCHLIST)
 
     follow_redirect!
     assert_select "#nomination-#{first.id} button[aria-label=?][aria-disabled=true][data-in-collection=true]", I18n.t("library.search.in_watchlist")
     post watched_path, params: { authenticity_token: curation_action_token(watched_path) }
     assert_redirected_to community_post_path(curation)
     assert Library::LibraryFilm.watched.exists?(user: viewer, film: first)
+    assert_library_events(viewer, first, Library::Events::FILM_ADDED_TO_WATCHLIST, Library::Events::FILM_MARKED_WATCHED)
 
     follow_redirect!
     assert_select "#nomination-#{first.id} .community-nomination-media" do
@@ -181,6 +183,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     post watched_path, params: { authenticity_token: curation_action_token(watched_path) }
     assert_redirected_to community_post_path(curation)
     assert Library::LibraryFilm.watched.exists?(user: viewer, film: second)
+    assert_library_events(viewer, second, Library::Events::FILM_MARKED_WATCHED)
     assert_equal 2, curation.film_endorsements.count
     assert_equal activity_at, curation.reload.updated_at
   end
@@ -196,14 +199,26 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     token = curation_action_token(path)
     page_token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
 
-    assert_no_difference "Library::LibraryFilm.count" do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       post community_curation_film_watchlist_path(curation, unrelated), params: { authenticity_token: page_token }
     end
     assert_response :not_found
 
     Library::CollectionManagement::AddToWatchlist.call(user_id: viewer.id, film_id: nominated.id)
-    assert_no_difference "Library::LibraryFilm.count" do
+    assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
       post path, params: { authenticity_token: token }
+    end
+    assert_redirected_to community_post_path(curation)
+    assert_equal I18n.t("community.curations.library_action_unavailable"), flash[:alert]
+
+    follow_redirect!
+    watched_path = community_curation_film_watched_path(curation, nominated)
+    watched_token = curation_action_token(watched_path)
+    entry = Library::CollectionManagement::MarkWatched.call(user_id: viewer.id, film_id: nominated.id)
+    assert_no_changes -> { entry.reload.watched_at } do
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
+        post watched_path, params: { authenticity_token: watched_token }
+      end
     end
     assert_redirected_to community_post_path(curation)
     assert_equal I18n.t("community.curations.library_action_unavailable"), flash[:alert]
@@ -217,10 +232,29 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "both Library actions reject a nomination withdrawn after the form was opened" do
+    nominated = film("A Withdrawn Nomination")
+    curation = publish_with(nominated)
+    viewer = member("stale_nomination_reader")
+    sign_in(viewer)
+    get community_post_path(curation)
+    paths = [ community_curation_film_watchlist_path(curation, nominated), community_curation_film_watched_path(curation, nominated) ]
+    tokens = paths.index_with { |path| curation_action_token(path) }
+
+    save_endorsements(curation, member: @author, film_ids: [])
+
+    tokens.each do |path, token|
+      assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
+        post path, params: { authenticity_token: token }
+      end
+      assert_response :not_found
+    end
+  end
+
   test "the board lists ten posts at a time with a stable order for equal update timestamps" do
     freeze_time do
       12.times do |index|
-        Community::Curations::PublishCuration.call(author_id: @author.id, title: "Curation #{index + 1}",
+        Community::Curations::PublishCuration.call(community_user: @author.community_user, title: "Curation #{index + 1}",
           description: "Films for this theme.", reference_film_ids: [], reference_comments: {})
       end
     end
@@ -253,10 +287,10 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   test "the board filters post text and carries the query through pagination" do
     matching_title = "Folk% horror in the woods"
     11.times do |index|
-      Community::Curations::PublishCuration.call(author_id: @author.id, title: (index.zero? ? matching_title : "Curation #{index}"),
+      Community::Curations::PublishCuration.call(community_user: @author.community_user, title: (index.zero? ? matching_title : "Curation #{index}"),
         description: (index.zero? ? "Selected by title." : "More Folk% Horror films."), reference_film_ids: [], reference_comments: {})
     end
-    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk tale horror", description: "Unrelated wording.",
+    Community::Curations::PublishCuration.call(community_user: @author.community_user, title: "Folk tale horror", description: "Unrelated wording.",
       reference_film_ids: [], reference_comments: {})
     sign_in(@author)
 
@@ -280,9 +314,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   test "the board sorts curations by latest update" do
     created_at = Time.zone.local(2026, 11, 20, 9, 15)
     updated_at = Time.zone.local(2026, 11, 23, 14, 30)
-    earlier_post = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn horror", description: "Films for this theme.",
+    earlier_post = Community::PostCommunityCuration.create!(community_user: @author.community_user, title: "Slow-burn horror", description: "Films for this theme.",
       created_at:, updated_at:)
-    newer_post = Community::PostCommunityCuration.create!(author: @author, title: "Folk horror", description: "Films for this theme.",
+    newer_post = Community::PostCommunityCuration.create!(community_user: @author.community_user, title: "Folk horror", description: "Films for this theme.",
       created_at: Time.zone.local(2026, 11, 21, 9, 15), updated_at: Time.zone.local(2026, 11, 22, 14, 30))
     sign_in(@author)
 
@@ -390,8 +424,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
-  test "each missing onboarding prerequisite independently blocks publication" do
+  test "incomplete Community setup blocks publication" do
     [
+      member("no_profile", accepted: false, username: false, avatar: false),
       member("no_conduct", accepted: false),
       member("no_name", username: false),
       member("no_avatar", avatar: false)
@@ -413,7 +448,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     sign_in(@author)
     get new_community_post_path
     submit_curation
-    curation = Community::PostCommunityCuration.find_by!(author: @author)
+    curation = Community::PostCommunityCuration.find_by!(community_user: @author.community_user)
     sign_in(Identity::UserGuest.create!)
     get library_path
     assert_no_difference "Community::Post.count" do
@@ -428,7 +463,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
   test "account closure and deletion replay remove curations and initial endorsements" do
     [ @author, member("restored_author") ].each do |author|
-      reference = film("A Reference for #{author.community_username}")
+      reference = film("A Reference for #{author.community_user&.community_username}")
       watch(author, reference)
       sign_in(author)
       get new_community_post_path
@@ -451,7 +486,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_not Community::CommentContent.exists?(live_content.id)
     assert Community::Post.exists?(restored_post.id)
 
-    replay_id = restored_post.author.deletion_replay_id
+    replay_id = restored_post.community_user.user.deletion_replay_id
     key = "account-deletions/v1/recovery/#{replay_id}.json"
     client.stub_responses(:list_objects_v2, contents: [ { key: } ])
     client.stub_responses(:get_object, body: JSON.generate(account_id: replay_id, recorded_at: Time.current.iso8601))
@@ -469,9 +504,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       curation, root = curation_with_comment
       reference = root.film_endorsement.film
       reader = protect_with_endorsements(curation, reference).first
-      reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+      reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: reader.community_user,
         body: "A reply from another member.").fetch(:reply).comment
-      Community::Curations::ManageCurationAuthorship.update_description(curation_id: curation.id, member_id: @author.id,
+      Community::Curations::ManageCurationAuthorship.update_description(curation_id: curation.id, community_user: @author.community_user,
         additional_description: "An additional description that stays.")
       unprotected = publish_with
       client = Aws::S3::Client.new(region: "auto", stub_responses: true)
@@ -491,7 +526,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
       assert_not Community::Post.exists?(unprotected.id)
       assert curation.reload.protected?
-      assert_nil curation.author
+      assert_nil curation.community_user
       assert_nil root.reload.content
       assert_equal 3, curation.film_endorsements.active.count
       assert_equal "An additional description that stays.", curation.additional_description
@@ -513,7 +548,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
         comments: { nominated.id => "Opening text to remove.", no_replies.id => "An unanswered opening." })
       root = curation.film_endorsements.find_by!(film: nominated).comments.sole
       content_id = root.content.id
-      reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+      reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: reader.community_user,
         body: "A reply that stays.").fetch(:reply).comment
       client = Aws::S3::Client.new(region: "auto", stub_responses: true)
       log = Identity::AccountAdministration::DeletionLog.new(client:, bucket: "fixture", namespace: "recovery")
@@ -738,11 +773,11 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     travel 1.minute do
       assert_no_difference [ "Community::FilmEndorsement.count", "Community::Comment.count", "Community::CommentContent.count" ] do
         patch path, params: { authenticity_token: curation_action_token(path),
-          curation: { title: "  Forest horror  ", description: "Films with an uneasy woodland setting.", author_id: reader.id, reference_film_ids: [] } }
+          curation: { title: "  Forest horror  ", description: "Films with an uneasy woodland setting.", community_user_id: reader.id, reference_film_ids: [] } }
       end
     end
     assert_redirected_to path
-    assert_equal @author, curation.reload.author
+    assert_equal @author.community_user, curation.reload.community_user
     assert_equal activity, curation.updated_at
     follow_redirect!
     assert_select "h1", text: "Forest horror"
@@ -818,16 +853,16 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     curation, root = curation_with_comment
     first = member("first_commenter")
     second = member("second_commenter")
-    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: @author.id, body: "An author reply.")
+    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: @author.community_user, body: "An author reply.")
     4.times do |index|
-      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: first.id, body: "Reply #{index + 1}.")
+      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: first.community_user, body: "Reply #{index + 1}.")
     end
     assert_not curation.reload.protected?
-    removed = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: first.id,
+    removed = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: first.community_user,
       body: "Fifth reply from the same reader.").fetch(:reply).comment
     assert_not curation.reload.protected?
-    Community::Discussions::ManageCurationComment.delete(curation_id: curation.id, comment_id: removed.id, member_id: first.id)
-    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: second.id, body: "Fifth visible reply.")
+    Community::Discussions::ManageCurationComment.delete(curation_id: curation.id, comment_id: removed.id, community_user: first.community_user)
+    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: second.community_user, body: "Fifth visible reply.")
     assert curation.reload.protected?
   end
 
@@ -874,7 +909,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     end
     follow_redirect!
     assert_select "p.community-curation-prompt", text: "Set in small communities."
-    assert_select ".community-curation-author", text: @author.community_username
+    assert_select ".community-curation-author", text: @author.community_user&.community_username
     assert_select "p.community-curation-prompt + section[aria-labelledby=curation-additional-description]", count: 1 do
       assert_select "h2", text: "EDIT:"
       assert_select "p", text: "Revised description."
@@ -895,7 +930,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     follow_redirect!
     patch disassociate_path, params: { authenticity_token: curation_action_token(disassociate_path) }
     assert_redirected_to community_post_path(curation)
-    assert_nil curation.reload.author
+    assert_nil curation.reload.community_user
     assert curation.film_endorsements.active.exists?(user: @author, film: reference)
     assert_equal "A quiet setting.", root.reload.content.body
     follow_redirect!
@@ -920,9 +955,9 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     save_endorsements(curation, member: reader, film_ids: [ reference.id ],
       comments: { reference.id => "The oak anchors the story." })
     root = curation.comments.sole
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: @author.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: @author.community_user,
       body: "It anchors the setting too.").fetch(:reply).comment
-    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: reply.id, member_id: reader.id,
+    Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: reply.id, community_user: reader.community_user,
       body: "I agree about the setting.")
     path = community_post_path(curation)
     sign_in(@author)
@@ -959,7 +994,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
     reply = curation.comments.find_by!(parent_id: root.id)
     assert_equal root.id, reply.root_id
-    assert_equal member, reply.content.author
+    assert_equal member.community_user, reply.content.community_user
     assert_equal body, reply.content.body
     assert_operator curation.reload.updated_at, :>, activity
     assert_redirected_to community_post_path(curation, reply: reply.id, anchor: "comment-#{reply.id}")
@@ -975,7 +1010,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   test "discussion reads keep comment records and markup bounded as branches grow" do
     films = [ film("The quiet village"), film("An unrelated forest") ]
     films.each { |candidate| watch(@author, candidate) }
-    curation = Community::Curations::PublishCuration.call(author_id: @author.id, title: "Folk horror", description: "Quiet settings.",
+    curation = Community::Curations::PublishCuration.call(community_user: @author.community_user, title: "Folk horror", description: "Quiet settings.",
       reference_film_ids: films.map(&:id), reference_comments: { films.first.id => "The village.", films.last.id => "The forest." })
     root, unrelated_root = curation.comments.order(:id).to_a
     reader = member("discussion_reader")
@@ -985,8 +1020,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     initial_size = response.body.bytesize
 
     22.times do |index|
-      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id, body: "Village reply #{index + 1}.")
-      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: unrelated_root.id, member_id: reader.id, body: "Forest reply #{index + 1}.")
+      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: reader.community_user, body: "Village reply #{index + 1}.")
+      Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: unrelated_root.id, community_user: reader.community_user, body: "Forest reply #{index + 1}.")
     end
 
     assert_equal 0, loaded_discussion_records { get path }
@@ -1087,7 +1122,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     path = reply_community_post_comment_path(curation, root)
     token = curation_action_token(path)
 
-    Community::Curations::DeleteCuration.call(curation_id: curation.id, member_id: @author.id)
+    Community::Curations::DeleteCuration.call(curation_id: curation.id, community_user: @author.community_user)
     assert_no_difference [ "Community::Post.count", "Community::Comment.count", "Community::CommentContent.count" ] do
       post path, params: { authenticity_token: token, body: "A stale reply." }
     end
@@ -1153,7 +1188,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
   test "authors can edit an opening comment and reply without changing board activity" do
     curation, root = curation_with_comment
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: @author.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: @author.community_user,
       body: "My original reply.").fetch(:reply).comment
     activity = curation.reload.updated_at
     sign_in(@author)
@@ -1261,7 +1296,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     get community_post_path(curation, reply: root.id)
     path = community_post_comment_path(curation, root)
     token = curation_action_token(path)
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, member_id: reader.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: root.id, community_user: reader.community_user,
       body: "The mood also helps.").fetch(:reply).comment
     activity = curation.reload.updated_at
 
@@ -1353,7 +1388,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     curation, original = curation_with_comment
     endorsement = original.film_endorsement
     reader = member("surviving_replier")
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, member_id: reader.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, community_user: reader.community_user,
       body: "The original discussion.").fetch(:reply).comment
     sign_in(@author)
     get community_post_path(curation, reply: original.id)
@@ -1414,7 +1449,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     reader = member("old_root_reader")
     sign_in(@author)
     get edit_community_curation_endorsements_path(curation)
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, member_id: reader.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, community_user: reader.community_user,
       body: "A surviving reply.").fetch(:reply).comment
     activity = curation.reload.updated_at
     submit_endorsements(curation, film_ids: [])
@@ -1482,7 +1517,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     curation, original = curation_with_comment
     nominated_film = original.film_endorsement.film
     reader = member("surviving_reply_author")
-    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, member_id: reader.id,
+    reply = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: original.id, community_user: reader.community_user,
       body: "A surviving reply.").fetch(:reply).comment
     sign_in(@author)
     get edit_community_curation_endorsements_path(curation)
@@ -1503,6 +1538,12 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
   private
 
+  def assert_library_events(user, film, *names)
+    stream = DomainEvents::DomainEventStream.find_by!(user:, publisher: Library::Events::PUBLISHING_DOMAIN, stream_key: "film:#{film.id}")
+    expected = names.map { |name| [ name, { "user_id" => user.id, "film_id" => film.id } ] }
+    assert_equal expected, stream.domain_events.order(:sequence).pluck(:name, :payload)
+  end
+
   def loaded_discussion_records
     count = 0
     receiver = ->(*args) do
@@ -1516,13 +1557,13 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   def curation_with_comment
     reference = film("A film with a discussion")
     watch(@author, reference)
-    curation = Community::Curations::PublishCuration.call(author_id: @author.id, title: "Films with a quiet setting",
+    curation = Community::Curations::PublishCuration.call(community_user: @author.community_user, title: "Films with a quiet setting",
       description: "Set in small communities.", reference_film_ids: [ reference.id ], reference_comments: { reference.id => "A quiet setting." })
     [ curation, curation.comments.sole ]
   end
 
   def member(name, accepted: true, username: true, avatar: true)
-    Identity::UserRegistered.create!(email_address: "#{name}@example.test", password: PASSWORD,
+    create_community_account(email_address: "#{name}@example.test", password: PASSWORD,
       password_confirmation: PASSWORD, email_confirmed_at: Time.current,
       community_code_of_conduct_version: (Community::CodeOfConduct.current.version if accepted),
       community_code_of_conduct_accepted_at: (Time.current if accepted),
@@ -1546,7 +1587,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
 
   def publish_with(*films)
     films.each { |film| watch(@author, film) }
-    Community::Curations::PublishCuration.call(author_id: @author.id, title: "Slow-burn horror", description: "Films for this theme.",
+    Community::Curations::PublishCuration.call(community_user: @author.community_user, title: "Slow-burn horror", description: "Films for this theme.",
       reference_film_ids: films.map(&:id), reference_comments: {})
   end
 
@@ -1574,8 +1615,8 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
   end
 
   def save_endorsements(curation, member:, film_ids:, comments: {})
-    snapshot = Community::Curations::EditCurationEndorsements.load_for_edit(curation_id: curation.id, member:).fetch(:snapshot)
-    result = Community::Curations::EditCurationEndorsements.call(curation_id: curation.id, member_id: member.id, film_ids:, comments:, snapshot:)
+    snapshot = Community::Curations::EditCurationEndorsements.load_for_edit(curation_id: curation.id, community_user: member.community_user).fetch(:snapshot)
+    result = Community::Curations::EditCurationEndorsements.call(curation_id: curation.id, community_user: member.community_user, film_ids:, comments:, snapshot:)
     assert_empty result.fetch(:curation).errors
   end
 

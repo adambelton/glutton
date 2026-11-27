@@ -4,14 +4,10 @@ module Community
       PAGE_SIZE = 10
       DebriefEntry = Data.define(:film, :debrief, :comment_count)
 
-      def self.page(viewer:, number:, query:)
-        new(viewer:, query:).page(number:)
-      end
-
-      def initialize(viewer:, query:)
+      def initialize(watched_films:, matching_film_ids:, query:)
         @query = query
-        @watched_films = ::Registry::Film.where(id: FilmDebriefs::BrowseFilmDebriefs.watched_films(viewer:).select(:film_id))
-        @watched_films = @watched_films.matching_title(query) if query.present?
+        @watched_films = watched_films
+        @matching_film_ids = matching_film_ids
       end
 
       def page(number:)
@@ -20,7 +16,7 @@ module Community
         comment_counts = Comment.joins(:content).where(post_id: post_ids).group(:post_id).count
         curations = BrowseCurations.card_entries(post_ids:, comment_counts:)
         debriefs = PostFilmDebrief.where(id: post_ids).includes(:film).index_by(&:id)
-        placeholders = ::Registry::Film.where(id: page.entries.filter_map(&:placeholder_film_id)).index_by(&:id)
+        placeholders = yield page.entries.filter_map(&:placeholder_film_id)
 
         entries = page.entries.filter_map do |row|
           if (film = placeholders[row.placeholder_film_id]).present?
@@ -37,23 +33,24 @@ module Community
       private
 
       def board_rows
-        debriefs = PostFilmDebrief.where(film_id: @watched_films.select(:id))
-        curations = BrowseCurations.matching(query: @query)
+        watched = Post.from(@watched_films, :watched_films)
+        debriefs = PostFilmDebrief.where(film_id: watched.select("watched_films.film_id"))
+        curations = BrowseCurations.matching(query: @query) { @matching_film_ids }
         published = Post.where(id: curations.select(:id)).or(Post.where(id: debriefs.select(:id)))
         if @query.blank?
           return Post.with(board_results: published_rows(published)).from("board_results AS posts")
             .order(updated_at: :desc, post_id: :desc)
         end
 
-        Post.with(board_results: [ placeholder_rows, published_rows(published) ]).from("board_results AS posts")
+        Post.with(board_results: [ placeholder_rows(watched), published_rows(published) ]).from("board_results AS posts")
           .order(:result_group, updated_at: :desc, film_title: :asc, post_id: :desc, placeholder_film_id: :asc)
       end
 
-      def placeholder_rows
-        @watched_films.where.not(id: PostFilmDebrief.select(:film_id))
+      def placeholder_rows(watched)
+        watched.where.not(watched_films: { film_id: PostFilmDebrief.select(:film_id) })
           .select(<<~SQL.squish)
-            NULL::bigint AS post_id, films.id AS placeholder_film_id, 0 AS result_group,
-            NULL::timestamp AS updated_at, LOWER(films.title) AS film_title
+            NULL::bigint AS post_id, watched_films.film_id AS placeholder_film_id, 0 AS result_group,
+            NULL::timestamp AS updated_at, watched_films.film_title
           SQL
       end
 

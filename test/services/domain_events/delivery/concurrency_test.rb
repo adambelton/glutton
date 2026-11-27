@@ -53,6 +53,45 @@ class DomainEvents::ConcurrencyTest < ActiveSupport::TestCase
     assert_equal 1, DomainEvents::DomainEventStream.where(user: @user).count
   end
 
+  test "recommendation acceptance wakes the dispatcher after the outer commit" do
+    film = Registry::Film.create!(title: "Committed recommendation")
+    wake_jobs = -> { DispatchDomainEventsJob.queue_adapter.enqueued_jobs.count }
+    recommendation = nil
+
+    assert_difference wake_jobs, 1 do
+      Recommendations::RecommendationFilm.transaction do
+        assert_no_difference wake_jobs do
+          recommendation = Recommendations::RecordFilmResponse.call(user_id: @user.id, film_id: film.id, response: "accepted")
+          assert_equal "accepted", recommendation.reload.response
+          assert DomainEvents::DomainEvent.exists?(name: "RecommendationAccepted")
+        end
+      end
+    end
+    assert_equal "accepted", recommendation.reload.response
+  ensure
+    recommendation&.destroy!
+    film&.destroy!
+  end
+
+  test "rolling back recommendation acceptance also rolls back publication and its wake" do
+    film = Registry::Film.create!(title: "Rolled back recommendation")
+    recommendation = Recommendations::RecommendationFilm.create!(user: @user, film:, recommended_at: Time.current)
+    wake_jobs = -> { DispatchDomainEventsJob.queue_adapter.enqueued_jobs.count }
+
+    assert_no_difference [ wake_jobs, -> { DomainEvents::DomainEvent.count }, -> { DomainEvents::DomainEventStream.count } ] do
+      Recommendations::RecommendationFilm.transaction do
+        Recommendations::RecordFilmResponse.call(user_id: @user.id, film_id: film.id, response: "accepted")
+        assert_equal "accepted", recommendation.reload.response
+        assert DomainEvents::DomainEvent.exists?(name: "RecommendationAccepted")
+        raise ActiveRecord::Rollback
+      end
+    end
+    assert_nil recommendation.reload.response
+  ensure
+    recommendation&.destroy!
+    film&.destroy!
+  end
+
   test "committed publication and delivery logs share the event correlation ID without exposing its payload" do
     output = StringIO.new
     logger = ActiveSupport::Logger.new(output)

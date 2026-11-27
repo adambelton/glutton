@@ -8,7 +8,7 @@ module Community
     COMMENTS_FOR_PROTECTION = 5
     COMMENTERS_FOR_PROTECTION = 2
 
-    belongs_to :author, class_name: "Identity::UserRegistered", optional: true
+    belongs_to :community_user, class_name: "Community::CommunityUser", optional: true
     has_many :film_endorsements, foreign_key: :post_id, inverse_of: :post
     has_many :visible_film_endorsements, -> { visible_nominations }, class_name: "Community::FilmEndorsement", foreign_key: :post_id
 
@@ -18,10 +18,10 @@ module Community
     validates :title, presence: true, length: { maximum: TITLE_LIMIT }
     validates :description, presence: true, length: { maximum: DESCRIPTION_LIMIT }
     validates :additional_description, length: { maximum: DESCRIPTION_LIMIT }, allow_nil: true, if: :will_save_change_to_additional_description?
-    validates :author, presence: true, on: :create
+    validates :community_user, presence: true, on: :create
 
     # The deletion owner follows the account until the curation becomes protected.
-    before_create { self.deletable_author_id = author_id }
+    before_create { self.deletable_community_user_id = community_user_id }
 
     def reportable_attributes
       { "title" => title, "description" => description, "additional_description" => additional_description }.compact_blank
@@ -40,7 +40,7 @@ module Community
     end
 
     def reported_member
-      author
+      community_user&.user
     end
 
     def publish(reference_film_ids:, reference_comments:)
@@ -56,11 +56,11 @@ module Community
       end
 
       save!
-      add_endorsements(member: author, films: reference_films, comments: reference_comments)
+      add_endorsements(community_user:, films: reference_films, comments: reference_comments)
       self
     end
 
-    def edit_endorsements(member:, endorsements:, film_ids:, comments:)
+    def edit_endorsements(community_user:, endorsements:, film_ids:, comments:)
       errors.clear
       errors.add(:base, :endorsement_film_required) if endorsements.empty? && film_ids.empty?
 
@@ -74,17 +74,17 @@ module Community
       added_comment = false
       endorsements.each do |film_id, endorsement|
         unless selected_ids.include?(film_id)
-          endorsement.withdraw!(member:)
+          endorsement.withdraw!(community_user:)
           next
         end
 
         body = comments[film_id].to_s.strip.presence
         next unless body.present?
 
-        endorsement.add_opening_comment!(member:, body:)
+        endorsement.add_opening_comment!(community_user:, body:)
         added_comment = true
       end
-      add_endorsements(member:, films:, comments:)
+      add_endorsements(community_user:, films:, comments:)
       if films.any? || added_comment
         protect_from_contributions!
         touch
@@ -92,12 +92,12 @@ module Community
       self
     end
 
-    def can_edit?(member:)
-      !protected? && author_id == member.id && Membership::PostingAccess.allowed?(user: member)
+    def can_edit?(community_user:)
+      !protected? && owned_by?(community_user:) && community_user.ready_to_post?
     end
 
-    def edit_text(member:, title:, description:)
-      raise Errors::CurationEditUnavailable unless can_edit?(member:)
+    def edit_text(community_user:, title:, description:)
+      raise Errors::CurationEditUnavailable unless can_edit?(community_user:)
 
       self.title = title
       self.description = description
@@ -105,12 +105,12 @@ module Community
       self
     end
 
-    def can_delete?(member:)
-      !protected? && author_id == member.id && member.active? && Membership::Access.allowed?(user: member)
+    def can_delete?(community_user:)
+      !protected? && owned_by?(community_user:) && community_user.user.can_view_account?
     end
 
-    def delete_curation!(member:)
-      raise Errors::CurationDeletionUnavailable unless can_delete?(member:)
+    def delete_curation!(community_user:)
+      raise Errors::CurationDeletionUnavailable unless can_delete?(community_user:)
 
       destroy!
     end
@@ -122,32 +122,32 @@ module Community
     def protect_from_contributions!
       return if protected?
 
-      endorsers = film_endorsements.active.where.not(user_id: author_id).distinct.limit(ENDORSERS_FOR_PROTECTION).pluck(:user_id)
+      endorsers = film_endorsements.active.where.not(user_id: community_user.user_id).distinct.limit(ENDORSERS_FOR_PROTECTION).pluck(:user_id)
       if endorsers.size == ENDORSERS_FOR_PROTECTION || comment_protection_threshold_met?
-        update!(protected_at: Time.current, deletable_author_id: nil)
+        update!(protected_at: Time.current, deletable_community_user_id: nil)
       end
     end
 
-    def can_edit_additional_description?(member:)
-      protected? && author_id == member.id && Membership::PostingAccess.allowed?(user: member)
+    def can_edit_additional_description?(community_user:)
+      protected? && owned_by?(community_user:) && community_user.ready_to_post?
     end
 
-    def edit_additional_description(member:, additional_description:)
-      raise Errors::CurationEditUnavailable unless can_edit_additional_description?(member:)
+    def edit_additional_description(community_user:, additional_description:)
+      raise Errors::CurationEditUnavailable unless can_edit_additional_description?(community_user:)
 
       self.additional_description = additional_description
       save(touch: false)
       self
     end
 
-    def can_disassociate?(member:)
-      protected? && author_id == member.id && member.active? && Membership::Access.allowed?(user: member)
+    def can_disassociate?(community_user:)
+      protected? && owned_by?(community_user:) && community_user.user.can_view_account?
     end
 
-    def disassociate!(member:)
-      raise Errors::CurationEditUnavailable unless can_disassociate?(member:)
+    def disassociate!(community_user:)
+      raise Errors::CurationEditUnavailable unless can_disassociate?(community_user:)
 
-      self.author = nil
+      self.community_user = nil
       save!(touch: false)
     end
 
@@ -158,6 +158,10 @@ module Community
     end
 
     private
+
+    def owned_by?(community_user:)
+      community_user_id.present? && community_user_id == community_user&.id
+    end
 
     def independently_deletable_attributes
       %w[additional_description]
@@ -170,9 +174,9 @@ module Community
     end
 
     def comment_protection_threshold_met?
-      other_comments = CommentContent.joins(:comment).where(comments: { post_id: id }).where.not(author_id:)
+      other_comments = CommentContent.joins(:comment).where(comments: { post_id: id }).where.not(community_user_id:)
       other_comments.limit(COMMENTS_FOR_PROTECTION).count == COMMENTS_FOR_PROTECTION &&
-        other_comments.distinct.limit(COMMENTERS_FOR_PROTECTION).pluck(:author_id).size == COMMENTERS_FOR_PROTECTION
+        other_comments.distinct.limit(COMMENTERS_FOR_PROTECTION).pluck(:community_user_id).size == COMMENTERS_FOR_PROTECTION
     end
 
     def validate_endorsement_selection(endorsements:, film_ids:, additions:, films:, comments:)
@@ -192,11 +196,11 @@ module Community
       end
     end
 
-    def add_endorsements(member:, films:, comments:)
+    def add_endorsements(community_user:, films:, comments:)
       films.each do |film|
-        endorsement = film_endorsements.create!(film:, user: member)
+        endorsement = film_endorsements.create!(film:, user_id: community_user.user_id)
         body = comments[film.id].to_s.strip.presence
-        endorsement.add_opening_comment!(member:, body:) if body.present?
+        endorsement.add_opening_comment!(community_user:, body:) if body.present?
       end
     end
   end

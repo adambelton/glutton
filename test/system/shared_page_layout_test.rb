@@ -20,7 +20,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     assert_back_card_gap new_session_path, inset: 48
     assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
     member = sign_in_member
-    curation = Community::Curations::PublishCuration.call(author_id: member.id, title: "Isolated landscapes",
+    curation = Community::Curations::PublishCuration.call(community_user: member.community_user, title: "Isolated landscapes",
       description: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
 
     [ privacy_notice_path, terms_of_service_path ].each do |path|
@@ -116,8 +116,8 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
 
     within(".account-tabs") { click_link I18n.t("community.title") }
     assert_current_path account_community_path
-    %w[community_username community_avatar].each do |field|
-      assert_account_edit_button_below_field(I18n.t("identity.settings.#{field}.change"))
+    %w[username avatar].each do |field|
+      assert_account_edit_button_below_field(I18n.t("community.profile.#{field}.change"))
     end
   ensure
     reset_viewport
@@ -137,7 +137,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
 
   def sign_in_member
     password = "a long test password"
-    member = Identity::UserRegistered.create!(email_address: "page-layout@example.test", password:,
+    member = create_community_account(email_address: "page-layout@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true,
       community_username: "Curator", community_avatar_preset: "moth",
       community_code_of_conduct_version: Community::CodeOfConduct.current.version,

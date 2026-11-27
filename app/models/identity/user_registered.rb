@@ -2,16 +2,9 @@ require "digest"
 
 module Identity
   class UserRegistered < User
-    RESERVED_COMMUNITY_USERNAMES = %w[admin administrator moderator glutton support].freeze
-    COMMUNITY_AVATAR_PRESETS = %w[
-      bloody_reel cleaver cabin static_tv skull
-      tentacle heart vhs moth eye
-      candles raven gravestone haunted_house planchette
-      key lantern antlered_skull tree werewolf
-      abduction gas_mask spellbook spaceman_mask
-    ].freeze
-
     has_secure_password reset_token: { expires_in: 15.minutes }
+
+    has_one :community_user, class_name: "Community::CommunityUser", foreign_key: :user_id, inverse_of: :user
 
     normalizes :email_address, with: ->(email) { email.strip.downcase }
 
@@ -20,10 +13,6 @@ module Identity
     validates :password, presence: true, on: [ :create, :password_reset ]
     validates :password, length: { minimum: 15 }, allow_nil: true
     validates :password_confirmation, presence: true, if: -> { password.present? }
-    validates :community_username, format: { with: /\A[A-Za-z0-9_]{3,24}\z/ }, allow_nil: true
-    validates :community_avatar_preset, inclusion: { in: COMMUNITY_AVATAR_PRESETS }, allow_nil: true
-    validate :community_username_is_not_reserved
-
     def default_entry_path
       "/library"
     end
@@ -43,30 +32,6 @@ module Identity
         update!(community_code_of_conduct_version: version, community_code_of_conduct_accepted_at: Time.current)
       end
       self
-    end
-
-    def change_community_username!(community_username:)
-      authorize_community_profile_change!
-
-      update!(community_username: community_username || "")
-    rescue ActiveRecord::RecordNotUnique => error
-      constraint = error.cause&.result&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME)
-      raise unless constraint == "users_community_username_unique"
-
-      errors.add(:community_username, :taken)
-      raise ActiveRecord::RecordInvalid, self
-    end
-
-    def choose_community_avatar!(preset:)
-      authorize_community_profile_change!
-
-      transaction do
-        update!(community_avatar_preset: preset || "")
-        unless reload.community_avatar_preset == preset
-          errors.add(:community_avatar_preset, :not_saved)
-          raise ActiveRecord::RecordInvalid, self
-        end
-      end
     end
 
     def grant_superuser!(actor:)
@@ -151,17 +116,6 @@ module Identity
       return unless URI::MailTo::EMAIL_REGEXP.match?(canonical_email)
 
       find_by(email_address: canonical_email)
-    end
-
-    private
-
-    def authorize_community_profile_change!
-      raise Errors::Unavailable unless can_view_account?
-      raise Errors::CommunityCodeOfConductRequired unless Community::CodeOfConduct.current.accepted_by?(member: self)
-    end
-
-    def community_username_is_not_reserved
-      errors.add(:community_username, :reserved) if RESERVED_COMMUNITY_USERNAMES.include?(community_username&.downcase)
     end
   end
 end

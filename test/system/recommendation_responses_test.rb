@@ -313,7 +313,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     Registry::FilmQuality.create!(film: second, quality:)
     evidence = Registry::Film.create!(title: "Newly assessed film")
     assess_recommendation_film(user:, film: evidence, quality:)
-    assert_equal second, Recommendations::CandidateSelection::NextCandidate.call(user_id: user.id).film
+    assert_equal second, Recommendations::CandidateSelection::NextCandidate.call(user:).film
 
     visit recommendation_path
     assert_selector "h2", text: first.title

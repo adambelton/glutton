@@ -2,7 +2,7 @@ module Community
   class Post < ApplicationRecord
     has_many :comments, inverse_of: :post
 
-    def require_view_access!(viewer:, lock: false)
+    def require_view_access!(viewer:)
       Membership::Access.require!(user: viewer)
     end
 

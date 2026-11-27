@@ -40,7 +40,7 @@ module Community
     end
 
     def self.account_snapshot(account)
-      { id: account.id, email: account.email_address, username: account.community_username }
+      { id: account.id, email: account.email_address, username: account.community_user&.community_username }
     end
     private_class_method :account_snapshot
 

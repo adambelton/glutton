@@ -10,20 +10,6 @@ module Identity
         @user_id = user_id
       end
 
-      def change_community_username(community_username:)
-        with_account do |account|
-          yield account if block_given?
-          account.change_community_username!(community_username:)
-        end
-      end
-
-      def choose_community_avatar(preset:)
-        with_account do |account|
-          yield account if block_given?
-          account.choose_community_avatar!(preset:)
-        end
-      end
-
       def record_community_code_of_conduct_acceptance
         with_account { |account| account.record_community_code_of_conduct_acceptance!(version: yield(account)) }
       end

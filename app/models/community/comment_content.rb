@@ -5,7 +5,7 @@ module Community
     BODY_LIMIT = 4_000
 
     belongs_to :comment, inverse_of: :content
-    belongs_to :author, class_name: "Identity::UserRegistered"
+    belongs_to :community_user, class_name: "Community::CommunityUser"
 
     normalizes :body, with: ->(text) { text.strip }
 
@@ -21,7 +21,7 @@ module Community
     end
 
     def reported_member
-      author
+      community_user.user
     end
 
     def spoiler_free?

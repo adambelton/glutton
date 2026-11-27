@@ -132,6 +132,27 @@ class ActivityMonitoringTest < ActionDispatch::IntegrationTest
     refute delivery.attributes.key?(ActivityMonitoring::Attributes::OPERATION)
   end
 
+  test "standalone and composed Library actions emit one span per call under the same name" do
+    user = Identity::UserGuest.create!
+    standalone = Registry::Film.create!(title: "Standalone Library action")
+    composed = Registry::Film.create!(title: "Composed Library action")
+    actions = [ Library::CollectionManagement::AddToWatchlist, Library::CollectionManagement::MarkWatched ]
+
+    actions.each do |action|
+      action.call(user_id: user.id, film_id: standalone.id)
+      Library::LibraryFilm.transaction do
+        locked_user = Identity::User.lock.find(user.id)
+        action.call_with_locked_user(user: locked_user, film_id: composed.id)
+      end
+    end
+
+    @provider.force_flush
+    actions.each do |action|
+      spans = @exporter.finished_spans.select { |span| span.name.start_with?("#{action.name}.") }
+      assert_equal [ "#{action.name}.call", "#{action.name}.call" ], spans.map(&:name)
+    end
+  end
+
   test "a rating without notes keeps its submission and event trace but stores no rating context" do
     user = Identity::UserGuest.create!
     film = Registry::Film.create!(title: "Plain rating")

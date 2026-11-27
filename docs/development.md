@@ -41,6 +41,18 @@ Run `bin/rails community:seed_protected_curation` against the local development 
 
 The two local preview accounts are `curation-reader-one@example.test` and `curation-reader-two@example.test`. New fixture accounts use the development-only password `local-curation-preview`. The seed reuses the accounts and curation on later runs and preserves changes made to the curation.
 
+## CommunityUser staging cutover
+
+Use one cutover window with staging account and Community writes paused. Take a pre-cutover database backup, then run the export with the old schema. Run these commands from an application shell connected to the intended database. The export can be piped through Rails runner on the legacy release.
+
+```sh
+bin/rails runner - export /private/path/community-users.json < script/community_user_transfer.rb
+# Deploy the new application and run its schema migrations.
+bin/rails runner script/community_user_transfer.rb import /private/path/community-users.json
+```
+
+Bring the same private export into the post-deploy shell before importing. It contains public profile data and attribution IDs. Conduct acceptance stays on the registered account. Import checks the original IDs against the renamed CommunityUser references, restores profiles and validates the three foreign keys. It can be rerun with the same export. Check profile settings, posting eligibility and existing attribution before resuming writes. A fresh database starts with the new structure.
+
 ## Background processing
 
 See [domain event operations](domain_event_operations.md) for worker configuration and delivery diagnostics. GoodJob schedules taste-profile refresh every 15 minutes in production. Superusers can inspect and queue a refresh of their own profile from Account. Operators can process pending requests from the console with `Ratings::TasteProfiling::ProcessProfileRefreshes.call`. See [AI configuration](ai_configuration.md) for provider setup.

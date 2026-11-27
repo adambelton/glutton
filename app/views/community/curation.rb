@@ -17,7 +17,7 @@ module Views
           back_to: community_path, back_label: t("community.curations.back")) do
           render ::Library::ActionConfirmationDialog.new if @nominated_films.present?
           render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
-          author_identity(@curation.author) if @curation.author.present?
+          attribution(@curation.community_user) if @curation.community_user.present?
           div(class: "community-curation-descriptions") do
             p(class: "community-curation-prompt") { @curation.description }
             display_additional_description if @curation.additional_description.present?
@@ -52,10 +52,10 @@ module Views
 
       private
 
-      def author_identity(author)
+      def attribution(community_user)
         div(class: "community-curation-author") do
-          render ::Community::MemberAvatar.new(member: author)
-          strong { author.community_username.presence || t("community.curations.member") }
+          render ::Community::MemberAvatar.new(community_user:)
+          strong { community_user.community_username.presence || t("community.curations.member") }
         end
       end
 

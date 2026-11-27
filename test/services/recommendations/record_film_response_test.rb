@@ -17,6 +17,7 @@ class Recommendations::RecordFilmResponseTest < ActiveSupport::TestCase
     assert_equal response, recommendation_film.reload.response
     assert_nil other.reload.response
     event = DomainEvents::DomainEvent.find_by!(name: "RecommendationAccepted")
+    assert_equal @user.id, event.domain_event_stream.user_id
     assert_equal "recommendations", event.domain_event_stream.publisher
     assert_equal "film:#{film.id}", event.domain_event_stream.stream_key
     assert_equal 1, event.schema_version

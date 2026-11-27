@@ -39,13 +39,13 @@ module Community
     end
 
     def edit
-      curation = Curations::EditCuration.load_for_edit(curation_id: params[:id], member: current_user)
+      curation = Curations::EditCuration.load_for_edit(curation_id: params[:id], community_user: current_user.community_user)
       render Views::Community::EditCuration.new(curation:)
     end
 
     def update
       title, description = text_fields(curation_fields)
-      curation = Curations::EditCuration.call(curation_id: params[:id], member_id: current_user.id, title:, description:)
+      curation = Curations::EditCuration.call(curation_id: params[:id], community_user: current_user.community_user, title:, description:)
       if curation.errors.any?
         return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content
       end
@@ -54,7 +54,7 @@ module Community
     end
 
     def destroy
-      Curations::DeleteCuration.call(curation_id: params[:id], member_id: current_user.id)
+      Curations::DeleteCuration.call(curation_id: params[:id], community_user: current_user.community_user)
       redirect_to community_path, notice: t("community.curation_deletion.deleted"), status: :see_other
     end
 
@@ -62,7 +62,7 @@ module Community
       description = curation_fields[:additional_description]
       raise ActionController::BadRequest unless description.is_a?(String)
 
-      curation = Curations::ManageCurationAuthorship.update_description(curation_id:, member_id: current_user.id,
+      curation = Curations::ManageCurationAuthorship.update_description(curation_id:, community_user: current_user.community_user,
         additional_description: description)
       return render Views::Community::EditCuration.new(curation:), status: :unprocessable_content if curation.errors.any?
 
@@ -70,7 +70,7 @@ module Community
     end
 
     def disassociate
-      Curations::ManageCurationAuthorship.disassociate(curation_id:, member_id: current_user.id)
+      Curations::ManageCurationAuthorship.disassociate(curation_id:, community_user: current_user.community_user)
       redirect_to community_post_path(curation_id), notice: t("community.curation_protection.disassociated"), status: :see_other
     end
 
@@ -88,7 +88,8 @@ module Community
 
     def publish_curation
       title, description, reference_film_ids, reference_comments = publication_fields
-      curation = Curations::PublishCuration.call(author_id: current_user.id, title:, description:, reference_film_ids:, reference_comments:)
+      community_user = current_user.community_user
+      curation = Curations::PublishCuration.call(community_user:, title:, description:, reference_film_ids:, reference_comments:)
       if curation.errors.any?
         return render_form(curation, reference_film_ids:, reference_comments:, status: :unprocessable_content)
       end
@@ -98,7 +99,7 @@ module Community
 
     def open_film_debrief
       film_id = discussion_id(params[:film_id])
-      debrief = FilmDebriefs::OpenFilmDebrief.call(member_id: current_user.id, film_id:)
+      debrief = FilmDebriefs::OpenFilmDebrief.call(community_user: current_user.community_user, film_id:)
       redirect_to community_post_path(debrief), status: :see_other
     end
 
@@ -152,7 +153,7 @@ module Community
     end
 
     def render_form(curation, reference_film_ids: [], reference_comments: {}, status: :ok)
-      films = Curations::EligibleCurationFilms.new(member: current_user).choices
+      films = Curations::BrowseEligibleCurationFilms.choices(community_user: current_user.community_user)
       render Views::Community::NewCuration.new(curation:, films:, reference_film_ids:, reference_comments:), status:
     end
   end

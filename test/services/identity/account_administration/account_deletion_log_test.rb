@@ -4,7 +4,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   setup do
     @account = Identity::UserRegistered.create!(email_address: "delete-log@example.test",
       password: "a long test password", password_confirmation: "a long test password", email_confirmed_at: Time.current)
-    @account.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
+    Community::Membership::SetUpProfile.call(user_id: @account.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
     @session = Identity::Session.create!(user: @account)
     @client = Aws::S3::Client.new(region: "auto", stub_responses: true)
     @log = Identity::AccountAdministration::DeletionLog.new(client: @client, bucket: "fixture", namespace: "recovery")
@@ -12,7 +12,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   end
 
   test "writes only the deletion replay ID and timestamp before deleting account and session" do
-    @account.change_community_username!(community_username: "Former_Member")
+    Community::Membership::ManageProfile.new(community_user: @account.community_user).change_community_username(community_username: "Former_Member")
     @client.stub_responses(:put_object, ->(context) do
       assert Identity::UserRegistered.exists?(@account.id)
       assert Identity::Session.exists?(@session.id)
@@ -50,7 +50,7 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
   end
 
   test "validates the full log before replay and skips accounts already purged" do
-    @account.change_community_username!(community_username: "Former_Member")
+    Community::Membership::ManageProfile.new(community_user: @account.community_user).change_community_username(community_username: "Former_Member")
     key = "account-deletions/v1/recovery/#{@account.deletion_replay_id}.json"
     @client.stub_responses(:list_objects_v2, contents: [ { key: }, { key: "account-deletions/v1/recovery/invalid.json" } ])
     @client.stub_responses(:get_object, body: JSON.generate(account_id: @account.deletion_replay_id, recorded_at: Time.current.iso8601))
@@ -72,8 +72,8 @@ class AccountDeletionLogTest < ActiveSupport::TestCase
     password = "a long test password"
     replacement = Identity::UserRegistered.create!(email_address: "replacement@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current)
-    replacement.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
-    replacement.change_community_username!(community_username: "former_member")
-    assert_equal "former_member", replacement.reload.community_username
+    Community::Membership::SetUpProfile.call(user_id: replacement.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
+    Community::Membership::ManageProfile.new(community_user: replacement.community_user).change_community_username(community_username: "former_member")
+    assert_equal "former_member", replacement.reload.community_user&.community_username
   end
 end
