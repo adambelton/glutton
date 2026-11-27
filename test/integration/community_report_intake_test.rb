@@ -23,7 +23,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
   end
 
   test "an incomplete Community profile can submit a whole curation snapshot once per source" do
-    curation = Community::PostCommunityCuration.create!(author: @author, title: "Slow-burn folk horror",
+    curation = Community::PostCommunityCuration.create!(community_user: @author.community_user, title: "Slow-burn folk horror",
       description: "An original description.", additional_description: "An additional description.")
     sign_in(@reporter)
     get new_community_post_report_path(curation)
@@ -46,7 +46,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_equal @reporter.email_address, report.identity_snapshot.fetch("reporter").fetch("email")
     assert_predicate report, :high_priority?
 
-    curation.edit_text(member: @author, title: curation.title, description: "An edited description.")
+    curation.edit_text(community_user: @author.community_user, title: curation.title, description: "An edited description.")
     assert_equal "An edited description.", report.reload.current_evidence.fetch("description")
     assert_no_difference "Community::Report.count" do
       post path, params: form
@@ -62,7 +62,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     get new_community_post_report_path(curation)
     form = fields(path, reason: "private_information", explanation: "Please review this.")
 
-    curation.edit_text(member: @author, title: "A replacement title", description: curation.description)
+    curation.edit_text(community_user: @author.community_user, title: "A replacement title", description: curation.description)
 
     assert_no_difference "Community::Report.count" do
       post path, params: form
@@ -83,8 +83,8 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     library_film = Library::LibraryFilm.new(user: @reporter, film:)
     library_film.add_to_watched!
     debrief = Community::PostFilmDebrief.open_for!(film:)
-    comment = debrief.publish_comment(author: @author, body: "A discussion comment.").comment
-    reply = comment.publish_reply(author: @author, body: "A reply.").comment
+    comment = debrief.publish_comment(community_user: @author.community_user, body: "A discussion comment.").comment
+    reply = comment.publish_reply(community_user: @author.community_user, body: "A reply.").comment
     sign_in(@reporter)
     path = community_post_comment_report_path(debrief, reply)
 
@@ -115,8 +115,8 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     film = Registry::Film.create!(title: "Discussion film")
     Library::LibraryFilm.new(user: @reporter, film:).add_to_watched!
     debrief = Community::PostFilmDebrief.open_for!(film:)
-    comment = debrief.publish_comment(author: @author, body: "Original comment.").comment
-    reply = comment.publish_reply(author: @author, body: "A surviving reply.").comment
+    comment = debrief.publish_comment(community_user: @author.community_user, body: "Original comment.").comment
+    reply = comment.publish_reply(community_user: @author.community_user, body: "A surviving reply.").comment
     form_path = new_community_post_comment_report_path(debrief, comment)
     path = community_post_comment_report_path(debrief, comment)
     sign_in(@reporter)
@@ -126,9 +126,9 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     report = comment.content.reports.sole
 
-    comment.edit_body(member: @author, body: "Edited comment.")
+    comment.edit_body(community_user: @author.community_user, body: "Edited comment.")
     assert_equal({ "body" => "Edited comment." }, report.reload.current_evidence)
-    comment.delete_comment!(member: @author)
+    comment.delete_comment!(community_user: @author.community_user)
 
     assert_nil report.reload.reportable
     assert_nil report.reportable_type
@@ -392,7 +392,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
 
   test "moderators can remove only a declared attribute from a protected curation" do
     curation, root = protected_curation
-    curation.edit_additional_description(member: @author, additional_description: "The reported addition.")
+    curation.edit_additional_description(community_user: @author.community_user, additional_description: "The reported addition.")
     _, report = submit_curation_report(curation)
     _, other_report = submit_curation_report(curation, reporter: @operator)
     sign_in(@moderator)
@@ -412,7 +412,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("community.reports.resolution.deletion_unavailable"), flash[:alert]
     assert_predicate report.reload, :pending?
 
-    curation.edit_additional_description(member: @author, additional_description: "A replacement addition.")
+    curation.edit_additional_description(community_user: @author.community_user, additional_description: "A replacement addition.")
     patch path, params: stale
     assert_redirected_to detail
     assert_equal I18n.t("community.reports.resolution.source_changed"), flash[:alert]
@@ -497,7 +497,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     path = resolve_community_moderation_report_path(report)
     get detail
     form = resolution_fields(path, outcome: "violation_confirmed", action: "delete_record", summary: "The post violated the rules.")
-    curation.delete_curation!(member: @author)
+    curation.delete_curation!(community_user: @author.community_user)
 
     patch path, params: form
     assert_redirected_to detail
@@ -510,9 +510,9 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     film = Registry::Film.create!(title: "Discussion film")
     Library::LibraryFilm.new(user: @reporter, film:).add_to_watched!
     debrief = Community::PostFilmDebrief.open_for!(film:)
-    comment = debrief.publish_comment(author: @author, body: "Reported text.").comment
-    reply = comment.publish_reply(author: @author, body: "Surviving reply.").comment
-    leaf = debrief.publish_comment(author: @author, body: "An unanswered comment.").comment
+    comment = debrief.publish_comment(community_user: @author.community_user, body: "Reported text.").comment
+    reply = comment.publish_reply(community_user: @author.community_user, body: "Surviving reply.").comment
+    leaf = debrief.publish_comment(community_user: @author.community_user, body: "An unanswered comment.").comment
 
     [ comment, leaf ].each do |source|
       sign_in(@reporter)
@@ -551,7 +551,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     curation = publish_curation(reference_film_ids: [ film.id ], reference_comments: { film.id => "Opening comment." })
     root = curation.comments.sole
     [ @reporter, @operator, @reporter, @operator, @reporter ].each do |author|
-      root.publish_reply(author:, body: "A contribution from another member.")
+      root.publish_reply(community_user: author.community_user || author.create_community_user!, body: "A contribution from another member.")
     end
     curation.protect_from_contributions!
     assert_predicate curation, :protected?
@@ -575,12 +575,12 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
   end
 
   def member(name, **attributes)
-    Identity::UserRegistered.create!(email_address: "#{name}@example.test", password: PASSWORD,
+    create_community_account(email_address: "#{name}@example.test", password: PASSWORD,
       password_confirmation: PASSWORD, email_confirmed_at: Time.current, **attributes)
   end
 
   def publish_curation(title: "Slow-burn folk horror", reference_film_ids: [], reference_comments: {})
-    Community::Curations::PublishCuration.call(author_id: @author.id, title:,
+    Community::Curations::PublishCuration.call(community_user: @author.community_user, title:,
       description: "An original description.", reference_film_ids:, reference_comments:)
   end
 

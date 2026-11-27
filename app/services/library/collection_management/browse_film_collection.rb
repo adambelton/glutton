@@ -13,6 +13,10 @@ module Library
 
       Page = Data.define(:entries, :next_page)
 
+      def self.entries_by_film(user_id:, film_ids:)
+        LibraryFilm.where(user_id:, film_id: film_ids).index_by(&:film_id)
+      end
+
       def self.call(user_id:, view:, page:, ratings: [], title_query: "")
         user = Identity::User.find_by(id: user_id)
         raise Identity::Errors::Unavailable unless user&.active?

@@ -7,7 +7,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
   PASSWORD = "a long test password"
 
   setup do
-    controllers = [ Community::CodeOfConductController, AccountSettingsController ]
+    controllers = [ Community::CodeOfConductController, Community::ProfilesController ]
     @forgery_protection = controllers.index_with(&:allow_forgery_protection)
     controllers.each { |controller| controller.allow_forgery_protection = true }
     @member = confirmed_member("conduct@example.test")
@@ -36,13 +36,18 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_full_conduct_before_form("1")
     assert_select "input#community_username, .account-avatar-current", count: 0
+    assert_not Community::CommunityUser.exists?(@member.id)
 
     travel_to Time.zone.local(2026, 11, 21, 12) do
-      post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1", user_id: other.id)
+      assert_difference "Community::CommunityUser.count", 1 do
+        post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1", user_id: other.id)
+      end
       assert_redirected_to account_community_path
       assert_equal "1", @member.reload.community_code_of_conduct_version
       assert_equal Time.current, @member.community_code_of_conduct_accepted_at
       assert_nil other.reload.community_code_of_conduct_accepted_at
+      assert_nil @member.community_user.community_username
+      assert_nil @member.community_user.community_avatar_preset
     end
 
     follow_redirect!
@@ -75,8 +80,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     patch account_community_username_path, params: { authenticity_token: token, community_username: "New_Name" }
     assert_redirected_to account_community_path
     assert_equal I18n.t("community.conduct.profile_acceptance_required"), flash[:alert]
-    assert_nil @member.reload.community_avatar_preset
-    assert_nil @member.community_username
+    assert_not Community::CommunityUser.exists?(@member.id)
   end
 
   test "the Community settings form requires explicit consent and rejects a stale version" do
@@ -92,12 +96,14 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_community_path
     assert_equal I18n.t("community.conduct.acceptance_required"), flash[:alert]
     assert_nil @member.reload.community_code_of_conduct_accepted_at
+    assert_not Community::CommunityUser.exists?(@member.id)
 
     follow_redirect!
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1", code_version: "previous")
     assert_redirected_to account_community_path
     assert_equal I18n.t("community.conduct.version_changed"), flash[:alert]
     assert_nil @member.reload.community_code_of_conduct_accepted_at
+    assert_not Community::CommunityUser.exists?(@member.id)
 
     follow_redirect!
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1")
@@ -112,8 +118,8 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     post community_code_of_conduct_acceptance_path, params: conduct_fields.merge(accepted: "1")
     assert_redirected_to account_community_path
     original = @member.reload.community_code_of_conduct_accepted_at
-    @member.change_community_username!(community_username: "Scream_Queen")
-    @member.choose_community_avatar!(preset: "tentacle")
+    Community::Membership::ManageProfile.new(community_user: @member.community_user).change_community_username(community_username: "Scream_Queen")
+    Community::Membership::ManageProfile.new(community_user: @member.community_user).choose_community_avatar(preset: "tentacle")
 
     updated_text = I18n.t("community.code_of_conduct_v1").merge(intro: "The current Code of Conduct applies throughout Community.")
     I18n.backend.store_translations(:en, community: { code_of_conduct_v2: updated_text })
@@ -127,7 +133,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
           assert_redirected_to account_community_path
           follow_redirect!
           assert_select "section > p", I18n.t("community.conduct.accepted")
-          assert_select ".account-avatar-current img[alt=?]", I18n.t("identity.settings.community_avatar.presets.tentacle")
+          assert_select ".account-avatar-current img[alt=?]", I18n.t("community.profile.avatar.presets.tentacle")
           assert_select ".account-settings-field p", "Scream_Queen"
           assert_select "a[href=?]", community_code_of_conduct_path, text: I18n.t("community.conduct.read")
           get community_code_of_conduct_path(version: "1")
@@ -165,7 +171,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     token = Nokogiri::HTML(response.body).at_css('meta[name="csrf-token"]')["content"]
     post community_code_of_conduct_acceptance_path, params: { authenticity_token: token, code_version: "1", accepted: "1" }
     assert_response :forbidden
-    assert_nil guest.reload.community_code_of_conduct_accepted_at
+    assert_not Community::CommunityUser.exists?(guest.id)
   end
 
   test "acceptance requires CSRF protection" do
@@ -176,6 +182,7 @@ class CommunityCodeOfConductTest < ActionDispatch::IntegrationTest
     post community_code_of_conduct_acceptance_path, params: fields
     assert_response :unprocessable_entity
     assert_nil @member.reload.community_code_of_conduct_accepted_at
+    assert_not Community::CommunityUser.exists?(@member.id)
   end
 
   private

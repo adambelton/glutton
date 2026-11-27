@@ -1,6 +1,44 @@
 en:
   community:
     title: Community
+    profile:
+      username:
+        label: Public username
+        hint: Use 3–24 letters (A–Z), numbers or underscores.
+        change: Change username
+        save: Save username
+        saved: Your Community username was saved.
+      avatar:
+        label: Public avatar
+        choose: Choose avatar
+        change: Change avatar
+        save: Save avatar
+        saved: Your Community avatar was saved.
+        presets:
+          bloody_reel: Film Reel
+          cleaver: Bloody Cleaver
+          cabin: Snow Globe
+          static_tv: Haunted Television
+          skull: Skull
+          tentacle: Tentacle
+          heart: Anatomical Heart
+          vhs: VHS Tape
+          moth: Death-Head Moth
+          eye: Eyeball
+          candles: Ritual Candles
+          raven: Raven
+          gravestone: Gravestone
+          haunted_house: Haunted House
+          planchette: Ouija Planchette
+          key: Skeleton Key
+          lantern: Lantern
+          antlered_skull: Antlered Skull
+          tree: Dead Tree
+          werewolf: Werewolf
+          abduction: Abduction
+          gas_mask: Gas Mask
+          spellbook: Book of the Dead
+          spaceman_mask: Spaceman Mask
     comment_limit: "Use up to %{count} characters."
     board_empty: There are no Community posts yet.
     moderation:
@@ -258,6 +296,9 @@ en:
         email: hello@adambelton.com
   activerecord:
     attributes:
+      community/community_user:
+        community_username: Public username
+        community_avatar_preset: Public avatar
       community/report:
         reason: Reason
         explanation: Explanation
@@ -274,6 +315,14 @@ en:
         additional_description: Additional description
     errors:
       models:
+        community/community_user:
+          attributes:
+            community_username:
+              invalid: must use 3–24 letters (A–Z), numbers or underscores.
+              reserved: is reserved.
+              taken: is already taken.
+            community_avatar_preset:
+              inclusion: must be one of the available presets.
         community/report:
           attributes:
             resolution_action:

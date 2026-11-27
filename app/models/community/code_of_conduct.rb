@@ -13,8 +13,15 @@ module Community
       new(version: CURRENT_VERSION)
     end
 
-    def accepted_by?(member:)
-      member.accepted_community_code_of_conduct?(version:)
+    def accepted_by?(user:)
+      user.accepted_community_code_of_conduct?(version:)
+    end
+
+    def version_for_acceptance!(displayed_version:, accepted:)
+      raise Errors::CodeOfConductChanged unless displayed_version == version
+      raise Errors::ExplicitAcceptanceRequired unless accepted
+
+      version
     end
 
     def translation_scope

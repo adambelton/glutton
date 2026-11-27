@@ -82,7 +82,7 @@ module Views
             moderator = @report.resolved_by
             dd do
               if moderator.present?
-                plain(moderator.community_username.presence || t("community.reports.resolution.moderator_account", id: moderator.id))
+                plain(moderator.community_user&.community_username.presence || t("community.reports.resolution.moderator_account", id: moderator.id))
               else
                 plain t("community.reports.resolution.moderator_unavailable")
               end

@@ -11,7 +11,7 @@ module Community
       end
 
       def self.show(post:, viewer:, selected_reply_id:, expand_selected_branch:)
-        details = Curations::ReadCuration.call(curation: post, viewer:, selected_reply_id:, expand_selected_branch:)
+        details = Curations::BrowseCuration.call(curation: post, viewer:, selected_reply_id:, expand_selected_branch:)
         Views::Community::Curation.new(**details)
       end
 

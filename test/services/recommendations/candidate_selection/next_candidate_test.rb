@@ -9,7 +9,7 @@ class Recommendations::NextCandidateTest < ActiveSupport::TestCase
   end
 
   def next_candidate(**options)
-    Recommendations::CandidateSelection::NextCandidate.call(user_id: @user.id, **options)
+    Recommendations::CandidateSelection::NextCandidate.call(user: @user, **options)
   end
 
   def film(title, *qualities)

@@ -1,7 +1,7 @@
 module Monitoring
   module Instrumentation
-    def instrument_class_operations(*methods, expected_failure: nil)
-      instrument_operations_on(singleton_class, methods, ".", expected_failure:)
+    def instrument_class_operations(*methods, expected_failure: nil, operation_method: nil)
+      instrument_operations_on(singleton_class, methods, ".", expected_failure:, operation_method:)
     end
 
     def instrument_operations(*methods)
@@ -10,12 +10,12 @@ module Monitoring
 
     private
 
-    def instrument_operations_on(target, methods, separator, expected_failure: nil)
+    def instrument_operations_on(target, methods, separator, expected_failure: nil, operation_method: nil)
       owner = name
       domain = owner.split("::").first
       wrapper = Module.new
       methods.each do |method|
-        operation = "#{owner}#{separator}#{method}".freeze
+        operation = "#{owner}#{separator}#{operation_method || method}".freeze
         wrapper.define_method(method) do |*args, **kwargs, &block|
           ActiveSupport::Notifications.instrument(ActivityMonitoring::OPERATION_NOTIFICATION, operation:, domain:) do |payload|
             super(*args, **kwargs, &block)

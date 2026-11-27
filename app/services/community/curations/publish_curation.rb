@@ -1,13 +1,12 @@
 module Community
   module Curations
     class PublishCuration
-      def self.call(author_id:, title:, description:, reference_film_ids:, reference_comments:)
-        PostCommunityCuration.transaction do
-          author = Identity::UserRegistered.lock.find_by(id: author_id)
-          raise Errors::PostingUnavailable unless author.present? && Membership::PostingAccess.allowed?(user: author)
+      def self.call(community_user:, title:, description:, reference_film_ids:, reference_comments:)
+        Membership::WithProfileForUpdate.call(community_user:) do |community_user|
+          raise Errors::PostingUnavailable unless community_user&.ready_to_post?
 
-          PostCommunityCuration.new(author:, title:, description:).publish(reference_film_ids:, reference_comments:) do |film_ids|
-            EligibleCurationFilms.new(member: author).lock_for_submission(film_ids:)
+          PostCommunityCuration.new(community_user:, title:, description:).publish(reference_film_ids:, reference_comments:) do |film_ids|
+            BrowseEligibleCurationFilms.lock_for_submission(community_user:, film_ids:)
           end
         end
       end

@@ -3,14 +3,14 @@ require "application_system_test_case"
 class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
   test "a member reports a curation and a moderator reviews the submitted version" do
     password = "a long test password"
-    author = Identity::UserRegistered.create!(email_address: "report-browser-author@example.test", password:,
+    author = create_community_account(email_address: "report-browser-author@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, community_username: "FilmWriter",
       community_avatar_preset: "moth", community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)
     moderator = Identity::UserRegistered.create!(email_address: "report-browser-reviewer@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     Community::Moderation::ManageModeratorRoles.grant(actor_id: moderator.id, member_id: moderator.id)
-    curation = Community::Curations::PublishCuration.call(author_id: author.id, title: "Isolated landscapes",
+    curation = Community::Curations::PublishCuration.call(community_user: author.community_user, title: "Isolated landscapes",
       description: "Original description.", reference_film_ids: [], reference_comments: {})
 
     visit new_session_path
@@ -52,7 +52,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     assert_current_path community_post_path(curation)
     assert_text I18n.t("community.reports.submitted")
 
-    curation.edit_text(member: author, title: curation.title, description: "Current description.")
+    curation.edit_text(community_user: author.community_user, title: curation.title, description: "Current description.")
     visit community_moderation_path
     assert_text I18n.t("community.reports.high_priority")
     click_link I18n.t("community.reports.identifier", id: Community::Report.sole.id)
@@ -119,7 +119,7 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
     moderator = Identity::UserRegistered.create!(email_address: "report-deletion@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
     Community::Moderation::ManageModeratorRoles.grant(actor_id: moderator.id, member_id: moderator.id)
-    curation = Community::PostCommunityCuration.create!(author:, title: "Isolated landscapes",
+    curation = Community::PostCommunityCuration.create!(community_user: author.create_community_user!, title: "Isolated landscapes",
       description: "Original description.", additional_description: "Reported addition.")
     report = Community::Report.capture(reportable: curation, reporter: moderator, evidence: curation.reportable_attributes,
       reason: "other", explanation: nil)

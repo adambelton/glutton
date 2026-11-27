@@ -6,7 +6,7 @@ module Community
       search = CollectionSearchParameters.parse(query: params.fetch(:q, ""), page: params.fetch(:page, "1"), max_digits: 6)
       return redirect_to community_path unless search.present?
 
-      posts_page = Board::BrowseCommunityBoard.page(viewer: current_user, number: search.page, query: search.query)
+      posts_page = Board::BrowseBoard.call(viewer: current_user, number: search.page, query: search.query)
       if search.page > posts_page.total_pages
         return redirect_to community_path(q: search.query.presence, page: (posts_page.total_pages if posts_page.total_pages > 1))
       end

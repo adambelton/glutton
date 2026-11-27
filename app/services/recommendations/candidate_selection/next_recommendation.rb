@@ -22,7 +22,7 @@ module Recommendations
             next Result.new(recommendation_film:, assessed_film_count: nil, minimum_assessed_films: minimum, match_percentage:)
           end
 
-          ranking = NextCandidate.call(user_id: user.id, excluding_film_id:)
+          ranking = NextCandidate.call(user:, excluding_film_id:)
           if ranking.film.present?
             recommendation_film = RecommendationFilm.create!(user:, film: ranking.film, recommended_at: Time.current)
           end

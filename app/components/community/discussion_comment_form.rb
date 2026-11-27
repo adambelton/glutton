@@ -42,7 +42,7 @@ module Community
 
     def comment_box(&block)
       div(class: "community-comment community-comment-composer-card") do
-        render MemberAvatar.new(member: current_user)
+        render MemberAvatar.new(community_user: current_user.community_user)
         div(class: "community-comment-content", &block)
       end
     end

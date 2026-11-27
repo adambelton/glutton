@@ -6,20 +6,23 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
   setup do
     @forgery_protection = AccountSettingsController.allow_forgery_protection
+    @profile_forgery_protection = Community::ProfilesController.allow_forgery_protection
     @session_forgery_protection = SessionsController.allow_forgery_protection
     AccountSettingsController.allow_forgery_protection = true
+    Community::ProfilesController.allow_forgery_protection = true
     SessionsController.allow_forgery_protection = true
     AccountSettingsController::RATE_LIMIT_STORE.clear
     SessionsController::RATE_LIMIT_STORE.clear
     @previous_origin = ENV["APP_ORIGIN"]
     ENV["APP_ORIGIN"] = "https://glutton.example"
     @user = registered_user("settings@example.test")
-    @user.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
+    Community::Membership::SetUpProfile.call(user_id: @user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
   end
 
   teardown do
     ENV["APP_ORIGIN"] = @previous_origin
     AccountSettingsController.allow_forgery_protection = @forgery_protection
+    Community::ProfilesController.allow_forgery_protection = @profile_forgery_protection
     SessionsController.allow_forgery_protection = @session_forgery_protection
     AccountSettingsController::RATE_LIMIT_STORE.clear
     SessionsController::RATE_LIMIT_STORE.clear
@@ -53,12 +56,12 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
       community_username: "Scream_Queen", user_id: other.id }
     assert_redirected_to account_community_path
-    assert_equal "Scream_Queen", @user.reload.community_username
-    assert_nil other.reload.community_username
+    assert_equal "Scream_Queen", @user.reload.community_user&.community_username
+    assert_nil other.reload.community_user&.community_username
 
     follow_redirect!
     assert_select ".account-settings-field p", "Scream_Queen"
-    assert_select "button", text: I18n.t("identity.settings.community_username.change")
+    assert_select "button", text: I18n.t("community.profile.username.change")
     assert_select "input#community_username", count: 0
 
     get account_community_path(edit: "username")
@@ -68,7 +71,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
       community_username: "scream_queen" }
     assert_redirected_to account_community_path
-    assert_equal "scream_queen", @user.reload.community_username
+    assert_equal "scream_queen", @user.reload.community_user&.community_username
     follow_redirect!
     assert_select ".account-settings-field p", "scream_queen"
     assert_select "input#community_username", count: 0
@@ -90,16 +93,16 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     get new_session_path
     patch account_community_username_path, params: { authenticity_token: page_csrf_token, community_username: "Scream_Queen" }
     assert_response :forbidden
-    assert_nil guest.reload.community_username
+    assert_not Community::CommunityUser.exists?(guest.id)
 
     sign_in(@user)
     patch account_community_username_path, params: { community_username: "Scream_Queen" }
     assert_response :unprocessable_entity
-    assert_nil @user.reload.community_username
+    assert_nil @user.reload.community_user&.community_username
   end
 
   test "invalid avatar submissions preserve the saved avatar" do
-    @user.choose_community_avatar!(preset: "moth")
+    Community::Membership::ManageProfile.new(community_user: @user.community_user).choose_community_avatar(preset: "moth")
     sign_in(@user)
 
     [ nil, "unknown", [ "skull" ] ].each do |preset|
@@ -110,7 +113,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_select '[role="alert"]', text: "Public avatar must be one of the available presets."
       assert_select 'input[name="community_avatar_preset"][value="moth"][checked]'
-      assert_equal "moth", @user.reload.community_avatar_preset
+      assert_equal "moth", @user.reload.community_user&.community_avatar_preset
     end
   end
 
@@ -122,14 +125,14 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     patch account_community_avatar_path, params: { authenticity_token: page_csrf_token, community_avatar_preset: "raven" }
 
     assert_response :forbidden
-    assert_nil guest.reload.community_avatar_preset
+    assert_not Community::CommunityUser.exists?(guest.id)
   end
 
   test "username conflicts return a localized form error and preserve the saved name" do
     other = registered_user("someone-else@example.test")
-    other.record_community_code_of_conduct_acceptance!(version: Community::CodeOfConduct.current.version)
-    other.change_community_username!(community_username: "Scream_Queen")
-    @user.change_community_username!(community_username: "Old_Name")
+    Community::Membership::SetUpProfile.call(user_id: other.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
+    Community::Membership::ManageProfile.new(community_user: other.community_user).change_community_username(community_username: "Scream_Queen")
+    Community::Membership::ManageProfile.new(community_user: @user.community_user).change_community_username(community_username: "Old_Name")
     sign_in(@user)
     get account_community_path(edit: "username")
 
@@ -140,12 +143,12 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
     assert_select '[role="alert"] li', text: username_error(:taken)
     assert_select 'input#community_username[value="scream_queen"][aria-invalid="true"]'
     assert_select "button[form='cancel-community-username']", text: I18n.t("identity.settings.cancel")
-    assert_equal "Old_Name", @user.reload.community_username
-    assert_equal "Scream_Queen", other.reload.community_username
+    assert_equal "Old_Name", @user.reload.community_user&.community_username
+    assert_equal "Scream_Queen", other.reload.community_user&.community_username
   end
 
   test "invalid or reserved username submissions leave the saved name in place" do
-    @user.change_community_username!(community_username: "Old_Name")
+    Community::Membership::ManageProfile.new(community_user: @user.community_user).change_community_username(community_username: "Old_Name")
     sign_in(@user)
     get account_community_path(edit: "username")
 
@@ -156,7 +159,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
 
       assert_response :unprocessable_entity
       assert_select '[role="alert"] li', text: username_error(error)
-      assert_equal "Old_Name", @user.reload.community_username
+      assert_equal "Old_Name", @user.reload.community_user&.community_username
     end
 
     [ "a_1", "a" * 24 ].each do |name|
@@ -164,7 +167,7 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
       patch account_community_username_path, params: { authenticity_token: csrf_token(account_community_username_path),
         community_username: name }
       assert_redirected_to account_community_path
-      assert_equal name, @user.reload.community_username
+      assert_equal name, @user.reload.community_user&.community_username
     end
   end
 
@@ -292,8 +295,8 @@ class AccountSettingsTest < ActionDispatch::IntegrationTest
   end
 
   def username_error(type)
-    attribute = I18n.t("activerecord.attributes.identity/user_registered.community_username")
-    message = I18n.t("activerecord.errors.models.identity/user_registered.attributes.community_username.#{type}")
+    attribute = I18n.t("activerecord.attributes.community/community_user.community_username")
+    message = I18n.t("activerecord.errors.models.community/community_user.attributes.community_username.#{type}")
     "#{attribute} #{message}"
   end
 end

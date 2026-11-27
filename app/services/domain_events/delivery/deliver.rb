@@ -6,7 +6,7 @@ module DomainEvents
           .where(id: delivery_id, subscriber: subscription.name).pick("domain_event_streams.user_id")
         return :missing unless user_id.present?
 
-        Identity::User.transaction do
+        EventDelivery.transaction do
           user = Identity::User.lock.find_by(id: user_id)
           delivery = EventDelivery.lock.find_by(id: delivery_id, subscriber: subscription.name)
           return :missing unless delivery

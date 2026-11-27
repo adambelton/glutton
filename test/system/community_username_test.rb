@@ -5,7 +5,7 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     password = "a long test password"
     user = Identity::UserRegistered.create!(email_address: "username-browser@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current)
-    Community::Membership::AcceptCodeOfConduct.call(user_id: user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
+    Community::Membership::SetUpProfile.call(user_id: user.id, displayed_version: Community::CodeOfConduct.current.version, accepted: true)
     visit new_session_path
     fill_in I18n.t("identity.sessions.email"), with: user.email_address
     fill_in I18n.t("identity.sessions.password"), with: password
@@ -14,9 +14,9 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     within(".account-tabs") { click_link I18n.t("community.title") }
     assert_current_path account_community_path
 
-    label = I18n.t("identity.settings.community_username.label")
-    submit = I18n.t("identity.settings.community_username.save")
-    change = I18n.t("identity.settings.community_username.change")
+    label = I18n.t("community.profile.username.label")
+    submit = I18n.t("community.profile.username.save")
+    change = I18n.t("community.profile.username.change")
     cancel = I18n.t("identity.settings.cancel")
     assert_button submit, disabled: true
     assert_username_actions_align(label, submit)
@@ -26,7 +26,7 @@ class CommunityUsernameTest < ApplicationSystemTestCase
 
     assert_selector '[role="alert"]', text: "Public username is reserved."
     assert_field label, with: "Glutton"
-    assert_nil user.reload.community_username
+    assert_nil user.reload.community_user&.community_username
 
     fill_in label, with: "Ghoul_13"
     click_button submit
@@ -34,8 +34,8 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     assert_current_path account_community_path
     assert_no_field label
     assert_selector ".account-settings-field p", exact_text: "Ghoul_13"
-    assert_selector ".ui-toast", text: I18n.t("identity.settings.community_username.saved")
-    assert_equal "Ghoul_13", user.reload.community_username
+    assert_selector ".ui-toast", text: I18n.t("community.profile.username.saved")
+    assert_equal "Ghoul_13", user.reload.community_user&.community_username
 
     click_button change
     assert_field label, with: "Ghoul_13"
@@ -81,20 +81,20 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     assert_current_path account_community_path
     assert_no_field label
     assert_selector ".account-settings-field p", exact_text: "Ghoul_13"
-    assert_equal "Ghoul_13", user.reload.community_username
+    assert_equal "Ghoul_13", user.reload.community_user&.community_username
 
     click_button change
     fill_in label, with: "Support"
     click_button submit
     assert_selector '[role="alert"]', text: "Public username is reserved."
     assert_field label, with: "Support"
-    assert_equal "Ghoul_13", user.reload.community_username
+    assert_equal "Ghoul_13", user.reload.community_user&.community_username
 
     fill_in label, with: "New_Ghoul"
     click_button submit
     assert_no_field label
     assert_selector ".account-settings-field p", exact_text: "New_Ghoul"
-    assert_equal "New_Ghoul", user.reload.community_username
+    assert_equal "New_Ghoul", user.reload.community_user&.community_username
   end
 
   private

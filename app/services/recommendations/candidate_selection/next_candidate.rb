@@ -8,10 +8,7 @@ module Recommendations
         end
       end
 
-      def self.call(user_id:, excluding_film_id: nil)
-        user = Identity::User.find_by(id: user_id)
-        raise Identity::Errors::Unavailable unless user&.active?
-
+      def self.call(user:, excluding_film_id: nil)
         current_rating_qualities = ::Ratings::RatingQuality.current_rating_qualities_for_user(user_id: user.id)
         scores = current_rating_qualities.pluck(:rating_id, :quality_id, :score)
         assessed_film_count = scores.map(&:first).uniq.size

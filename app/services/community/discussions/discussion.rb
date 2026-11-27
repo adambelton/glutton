@@ -23,7 +23,7 @@ module Community
       def page(film_id: nil, parent_id: nil, after: nil)
         comments = parent_id.present? ? visible_comments.where(parent_id:) : roots(film_id)
         comments = comments.where("comments.id > ?", after) if after.present?
-        rows = comments.order(:id).limit(PAGE_SIZE + 1).preload(content: :author).to_a
+        rows = comments.order(:id).limit(PAGE_SIZE + 1).preload(content: :community_user).to_a
         more = rows.size > PAGE_SIZE
         rows.pop if more
         next_cursor = rows.last.id if more
@@ -64,7 +64,7 @@ module Community
       end
 
       def select_path(selected_reply_id, expand_selected_branch:)
-        selected = @post.comments.preload(content: :author).find_by(id: Integer(selected_reply_id, exception: false))
+        selected = @post.comments.preload(content: :community_user).find_by(id: Integer(selected_reply_id, exception: false))
         while selected.present? && !visible_comments.exists?(selected.id)
           selected = selected.parent
         end

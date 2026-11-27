@@ -8,10 +8,25 @@ module Registry
       QualityDetail = Data.define(:quality, :films)
 
       def self.films(page:, title_query:)
-        films = Film.order(:title, :id)
-        films = films.matching_title(title_query) if title_query.present?
-        CountedPage.load(films, number: page, page_size: COLLECTION_PAGE_SIZE)
+        CountedPage.load(matching_films(title_query:).order(:title, :id), number: page, page_size: COLLECTION_PAGE_SIZE)
       end
+
+      def self.film_ids(title_query:)
+        matching_films(title_query:).select(:id)
+      end
+
+      def self.film_titles(film_ids:, title_query:)
+        matching_films(title_query:).where(id: film_ids).select("films.id AS film_id, LOWER(films.title) AS film_title")
+      end
+
+      def self.films_for_ids(film_ids:)
+        Film.where(id: film_ids)
+      end
+
+      def self.matching_films(title_query:)
+        title_query.present? ? Film.matching_title(title_query) : Film.all
+      end
+      private_class_method :matching_films
 
       def self.categories(page:, query: "")
         records = QualityCategory.order(:name, :id)

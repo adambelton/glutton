@@ -26,13 +26,15 @@ Anonymous visitors can try a read-only preview or explicitly start a guest sessi
 
 Glutton is a Ruby on Rails application with PostgreSQL, server-rendered Phlex views, Tailwind and Hotwire. English application copy lives in Rails locale files.
 
-- **Identity** owns guests, accounts, registration and sessions.
+- **Identity** owns guests, accounts, registration, sessions, conduct receipts, account closure and replay.
 - **Registry** owns canonical films, source metadata and film qualities. Catalogue inspection is available to superusers.
 - **Ratings** owns its candidate queue, rating revisions, assessments and taste profiles.
 - **Recommendations** owns ranking, selected films and their responses.
 - **Library** owns each viewer’s Watchlist and Watched entries.
+- **Community** owns public usernames and avatars, posts, discussions, endorsements and moderation.
+- **Foundation** owns event transport, stream coordination, delivery receipts and recovery.
 
-Domains can read authoritative data across these boundaries. The owning domain handles writes. Durable events coordinate follow-up work, such as turning an accepted recommendation into a Watchlist entry. GoodJob runs event delivery and Ratings processing in the background. See the [event contracts](docs/domain_events.md) and [architecture brief](docs/architecture_brief.md).
+Domains can read authoritative data across these boundaries while preserving viewer access. Orchestration wires permitted reads, and the owning domain handles writes. Durable events coordinate follow-up work, such as turning an accepted recommendation into a Watchlist entry. See the [domain boundaries index](docs/domain_boundaries.md).
 
 ## Project guides
 

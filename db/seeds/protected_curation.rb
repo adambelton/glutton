@@ -1,6 +1,6 @@
 module Seeds
   class ProtectedCuration
-    AUTHOR_EMAIL = "hello@adambelton.com"
+    ACCOUNT_EMAIL = "hello@adambelton.com"
     TITLE = "[Local test] Atmospheric horror worth a second look"
     PASSWORD = "local-curation-preview"
     READERS = {
@@ -14,14 +14,14 @@ module Seeds
 
     def call
       Community::PostCommunityCuration.transaction do
-        author = Identity::UserRegistered.lock.find_by!(email_address: AUTHOR_EMAIL)
-        unless Community::Membership::PostingAccess.allowed?(user: author)
-          raise "Complete Community setup for #{AUTHOR_EMAIL} before running the seed."
+        user = Identity::UserRegistered.lock.find_by!(email_address: ACCOUNT_EMAIL)
+        unless Community::Membership::PostingAccess.allowed?(user:)
+          raise "Complete Community setup for #{ACCOUNT_EMAIL} before running the seed."
         end
 
         readers = READERS.map { |email, (username, avatar)| prepare_reader(email:, username:, avatar:) }
-        curation = Community::PostCommunityCuration.find_by(title: TITLE, author_id: [ author.id, nil ])
-        curation ||= publish_curation(author:, readers:)
+        curation = Community::PostCommunityCuration.find_by(title: TITLE, community_user: [ user.community_user, nil ])
+        curation ||= publish_curation(user:, readers:)
         raise "The local curation did not reach the protection threshold." unless curation.reload.protected?
 
         curation
@@ -37,20 +37,21 @@ module Seeds
         member.email_confirmed_at = Time.current
       end
       version = Community::CodeOfConduct.current.version
-      unless reader.accepted_community_code_of_conduct?(version:)
-        Community::Membership::AcceptCodeOfConduct.call(user_id: reader.id, displayed_version: version, accepted: true)
+      unless reader.accepted_community_code_of_conduct?(version:) && reader.community_user.present?
+        Community::Membership::SetUpProfile.call(user_id: reader.id, displayed_version: version, accepted: true)
       end
-      settings = Identity::AccountAdministration::ManageRegisteredAccount.new(user_id: reader.id)
-      settings.change_community_username(community_username: username) unless reader.community_username.present?
-      settings.choose_community_avatar(preset: avatar) unless reader.community_avatar_preset.present?
+      settings = Community::Membership::ManageProfile.new(community_user: reader.community_user)
+      profile = reader.reload.community_user
+      settings.change_community_username(community_username: username) unless profile.community_username.present?
+      settings.choose_community_avatar(preset: avatar) unless profile.community_avatar_preset.present?
       reader.reload
     end
 
-    def publish_curation(author:, readers:)
-      first_film, second_film = Community::Curations::EligibleCurationFilms.new(member: author).choices.first(2)
-      raise "Mark two horror films as Watched for #{AUTHOR_EMAIL} first." unless second_film.present?
+    def publish_curation(user:, readers:)
+      first_film, second_film = Community::Curations::BrowseEligibleCurationFilms.choices(community_user: user.community_user).first(2)
+      raise "Mark two horror films as Watched for #{ACCOUNT_EMAIL} first." unless second_film.present?
 
-      curation = Community::Curations::PublishCuration.call(author_id: author.id, title: TITLE,
+      curation = Community::Curations::PublishCuration.call(community_user: user.community_user, title: TITLE,
         description: "Which horror films build dread through atmosphere, setting, and patient pacing?",
         reference_film_ids: [ first_film.id, second_film.id ],
         reference_comments: {
@@ -63,7 +64,7 @@ module Seeds
       endorse(curation:, reader: first_reader, film: first_film, body: "The setting creates a lot of tension on its own.")
       endorse(curation:, reader: second_reader, film: second_film, body: "The slower moments give the tension room to build.")
 
-      root = curation.film_endorsements.find_by!(user: author, film: first_film).opening_comment
+      root = curation.film_endorsements.find_by!(user:, film: first_film).opening_comment
       first_reply = reply(curation:, parent: root, member: first_reader, body: "I noticed how much the sound design contributes.")
       reply(curation:, parent: first_reply, member: second_reader, body: "The quiet scenes stood out to me for the same reason.")
       reply(curation:, parent: root, member: second_reader, body: "The pacing is what makes it a good match for this list.")
@@ -74,15 +75,15 @@ module Seeds
       unless Library::LibraryFilm.watched.exists?(user: reader, film:)
         Library::CollectionManagement::MarkWatched.call(user_id: reader.id, film_id: film.id)
       end
-      draft = Community::Curations::EditCurationEndorsements.load_for_edit(curation_id: curation.id, member: reader)
-      result = Community::Curations::EditCurationEndorsements.call(curation_id: curation.id, member_id: reader.id,
+      draft = Community::Curations::EditCurationEndorsements.load_for_edit(curation_id: curation.id, community_user: reader.community_user)
+      result = Community::Curations::EditCurationEndorsements.call(curation_id: curation.id, community_user: reader.community_user,
         film_ids: [ film.id ], comments: { film.id => body }, snapshot: draft.fetch(:snapshot))
       saved = result.fetch(:curation)
       raise ActiveRecord::RecordInvalid, saved if saved.errors.any?
     end
 
     def reply(curation:, parent:, member:, body:)
-      content = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: parent.id, member_id: member.id, body:)
+      content = Community::Discussions::PublishCurationReply.call(curation_id: curation.id, comment_id: parent.id, community_user: member.community_user, body:)
         .fetch(:reply)
       raise ActiveRecord::RecordInvalid, content unless content.persisted?
 

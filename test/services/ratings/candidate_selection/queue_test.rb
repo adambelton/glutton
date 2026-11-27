@@ -176,6 +176,19 @@ class Ratings::QueueTest < ActiveSupport::TestCase
     assert_not film.reload.dismissed?
   end
 
+  test "initial selection rejects missing and expired accounts before admitting films" do
+    film_ids = Array.new(5) { |index| catalogue_film("Initial film #{index}").id }
+    travel Identity::UserGuest::EXPIRY_DURATION
+
+    assert_no_difference "Ratings::RatingFilm.count" do
+      [ @user.id, -1 ].each do |user_id|
+        assert_raises(Identity::Errors::Unavailable) do
+          Ratings::CandidateSelection::ChooseInitialRatingFilms.queue!(user_id:, film_ids:)
+        end
+      end
+    end
+  end
+
   test "outer rollback restores dismissal" do
     film = candidate
     Ratings::RatingFilm.transaction(requires_new: true) do

@@ -1,12 +1,11 @@
 module Community
   module FilmDebriefs
     class OpenFilmDebrief
-      def self.call(member_id:, film_id:)
-        PostFilmDebrief.transaction do
-          member = Identity::UserRegistered.lock.find_by(id: member_id)
-          raise Errors::PostingUnavailable unless member.present? && Membership::PostingAccess.allowed?(user: member)
+      def self.call(community_user:, film_id:)
+        Membership::WithProfileForUpdate.call(community_user:) do |community_user|
+          raise Errors::PostingUnavailable unless community_user&.ready_to_post?
 
-          library_film = BrowseFilmDebriefs.watched_films(viewer: member).lock.find_by(film_id:)
+          library_film = Library::CollectionManagement::BrowseWatchedFilms.entry(user_id: community_user.user_id, film_id:, lock: true)
           raise Errors::FilmDebriefUnavailable unless library_film.present?
 
           PostFilmDebrief.open_for!(film: library_film.film)

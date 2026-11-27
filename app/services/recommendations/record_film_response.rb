@@ -18,7 +18,7 @@ module Recommendations
         if response == RecommendationFilm::Responses::ACCEPTED
           payload = { user_id: user.id, film_id: film.id, recommendation_film_id: recommendation_film.id }
 
-          DomainEvents::Publication::Publish.call(user_id: user.id, publisher: Events::PUBLISHING_DOMAIN,
+          DomainEvents::Publication::Publish.call_with_locked_user(user:, publisher: Events::PUBLISHING_DOMAIN,
             stream_key: "film:#{film.id}", name: Events::RECOMMENDATION_ACCEPTED, payload:)
         end
         recommendation_film

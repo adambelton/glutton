@@ -20,8 +20,8 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_selector ".community-conduct-text", text: I18n.t("community.code_of_conduct_v1.intro")
     assert_selector ".community-conduct-text + form input[name=accepted]"
     assert_link I18n.t("community.code_of_conduct_v1.copyright.email")
-    assert_no_field I18n.t("identity.settings.community_username.label")
-    assert_no_button I18n.t("identity.settings.community_avatar.choose")
+    assert_no_field I18n.t("community.profile.username.label")
+    assert_no_button I18n.t("community.profile.avatar.choose")
 
     assert_button I18n.t("community.conduct.accept"), disabled: true
     check I18n.t("community.conduct.agreement")
@@ -29,9 +29,9 @@ class CommunityConductAcceptanceTest < ApplicationSystemTestCase
     assert_current_path account_community_path
     assert_selector "section > p", exact_text: I18n.t("community.conduct.accepted")
     assert_no_selector ".community-conduct-text"
-    assert_field I18n.t("identity.settings.community_username.label")
-    assert_button I18n.t("identity.settings.community_avatar.choose")
-    assert_nil member.reload.community_username
+    assert_field I18n.t("community.profile.username.label")
+    assert_button I18n.t("community.profile.avatar.choose")
+    assert_nil member.reload.community_user&.community_username
 
     click_link I18n.t("community.conduct.read")
     assert_current_path community_code_of_conduct_path

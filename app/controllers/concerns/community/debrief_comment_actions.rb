@@ -3,13 +3,13 @@ module Community
     private
 
     def new_debrief_reply
-      editor = Discussions::ManageFilmDebriefDiscussion.load_for_reply(post_id:, parent_id: comment_id, member: current_user)
+      editor = Discussions::ManageFilmDebriefDiscussion.load_for_reply(post_id:, parent_id: comment_id, community_user: current_user.community_user)
       render_debrief_composer(**editor)
     end
 
     def publish_debrief_comment
       parent_id = comment_id if request.path_parameters.key?(:id)
-      result = Discussions::ManageFilmDebriefDiscussion.publish(post_id:, parent_id:, member_id: current_user.id, body:)
+      result = Discussions::ManageFilmDebriefDiscussion.publish(post_id:, parent_id:, community_user: current_user.community_user, body:)
       debrief, parent, content = result.values_at(:debrief, :parent, :content)
       if content.errors.any?
         return render_debrief_composer(debrief:, parent:, content:, status: :unprocessable_content) if parent.present?
@@ -26,12 +26,12 @@ module Community
     end
 
     def edit_debrief_comment
-      editor = Discussions::ManageFilmDebriefDiscussion.load_for_edit(post_id:, comment_id: comment_id, member: current_user)
+      editor = Discussions::ManageFilmDebriefDiscussion.load_for_edit(post_id:, comment_id: comment_id, community_user: current_user.community_user)
       render_debrief_composer(**editor, editing: true)
     end
 
     def update_debrief_comment
-      editor = Discussions::ManageFilmDebriefDiscussion.edit(post_id:, comment_id: comment_id, member_id: current_user.id, body:)
+      editor = Discussions::ManageFilmDebriefDiscussion.edit(post_id:, comment_id: comment_id, community_user: current_user.community_user, body:)
       debrief, comment, content = editor.values_at(:debrief, :comment, :content)
       return render_debrief_composer(**editor, editing: true, status: :unprocessable_content) if content.errors.any?
 
@@ -44,7 +44,7 @@ module Community
     end
 
     def destroy_debrief_comment
-      result = Discussions::ManageFilmDebriefDiscussion.delete(post_id:, comment_id: comment_id, member_id: current_user.id)
+      result = Discussions::ManageFilmDebriefDiscussion.delete(post_id:, comment_id: comment_id, community_user: current_user.community_user)
       debrief, selected_id = result.values_at(:debrief, :selected_id)
       return render_discussion(debrief, selected_id:) if request.format.turbo_stream?
 

@@ -10,10 +10,6 @@ class AccountSettingsController < ApplicationController
     head :forbidden
   end
 
-  rescue_from Identity::Errors::CommunityCodeOfConductRequired do
-    redirect_to account_community_path, alert: t("community.conduct.profile_acceptance_required"), status: :see_other
-  end
-
   rescue_from Identity::Errors::DeletionLogUnavailable do
     redirect_to account_settings_path, alert: t("identity.settings.deletion_log_unavailable"), status: :see_other
   end
@@ -36,10 +32,6 @@ class AccountSettingsController < ApplicationController
 
   def show
     render_settings
-  end
-
-  def show_community
-    render_community_settings(editing_username: params[:edit] == "username", editing_avatar: params[:edit] == "avatar")
   end
 
   def request_email
@@ -66,28 +58,6 @@ class AccountSettingsController < ApplicationController
     finish_session(new_session_path, t("identity.settings.password_changed"))
   end
 
-  def change_community_username
-    community_username = params[:community_username]
-    settings.change_community_username(community_username: community_username.is_a?(String) ? community_username : nil)
-    redirect_to account_community_path, notice: t("identity.settings.community_username.saved"), status: :see_other
-  rescue ActiveRecord::RecordInvalid => error
-    raise if error.record.errors[:community_username].empty?
-
-    render_community_settings(editing_username: true, form_username: error.record.community_username,
-      username_errors: error.record.errors.full_messages_for(:community_username), status: :unprocessable_entity)
-  end
-
-  def choose_community_avatar
-    preset = params[:community_avatar_preset]
-    settings.choose_community_avatar(preset: preset.is_a?(String) ? preset : nil)
-    redirect_to account_community_path, notice: t("identity.settings.community_avatar.saved"), status: :see_other
-  rescue ActiveRecord::RecordInvalid => error
-    raise if error.record.errors[:community_avatar_preset].empty?
-
-    render_community_settings(editing_avatar: true, avatar_errors: error.record.errors.full_messages_for(:community_avatar_preset),
-      status: :unprocessable_entity)
-  end
-
   def destroy
     settings.close_account
     finish_session(root_path, t("identity.settings.deleted"))
@@ -112,13 +82,6 @@ class AccountSettingsController < ApplicationController
 
   def render_settings(errors: [], open_dialog: nil, status: :ok)
     render Views::Identity::AccountSettings.new(email_address: current_user.email_address, validation_errors: errors, open_dialog:), status:
-  end
-
-  def render_community_settings(editing_username: false, form_username: current_user.community_username, username_errors: [],
-    editing_avatar: false, avatar_errors: [], status: :ok)
-    render Views::Identity::AccountCommunity.new(community_username: current_user.community_username,
-      editing_username:, form_username:, username_errors:, community_avatar_preset: current_user.community_avatar_preset,
-      editing_avatar:, avatar_errors:), status:
   end
 
   def finish_session(destination, message)

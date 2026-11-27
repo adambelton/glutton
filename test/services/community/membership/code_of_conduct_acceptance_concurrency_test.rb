@@ -50,7 +50,7 @@ module Community
       private
 
       def accept_current_version
-        AcceptCodeOfConduct.call(user_id: @member.id, displayed_version: CodeOfConduct.current.version, accepted: true)
+        SetUpProfile.call(user_id: @member.id, displayed_version: CodeOfConduct.current.version, accepted: true)
       end
     end
   end

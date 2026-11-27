@@ -17,11 +17,11 @@ module Community
       withdrawn_at.nil? && user_id.present?
     end
 
-    def add_opening_comment!(member:, body:)
-      authorize_changes!(member:)
+    def add_opening_comment!(community_user:, body:)
+      authorize_changes!(community_user:)
       raise Errors::CommentChangeUnavailable if opening_comment.present?
 
-      content = build_opening_comment(body:)
+      content = build_opening_comment(community_user:, body:)
       content.comment.save!
       content
     end
@@ -30,9 +30,9 @@ module Community
       comments.find { |comment| comment.content.present? }
     end
 
-    def withdraw!(member:)
-      authorize_changes!(member:)
-      opening_comment&.delete_comment!(member:)
+    def withdraw!(community_user:)
+      authorize_changes!(community_user:)
+      opening_comment&.delete_comment!(community_user:)
       if comments.exists?
         update!(withdrawn_at: Time.current)
       else
@@ -42,12 +42,12 @@ module Community
 
     private
 
-    def authorize_changes!(member:)
-      raise Errors::PostingUnavailable unless active? && user_id == member.id && Membership::PostingAccess.allowed?(user: member)
+    def authorize_changes!(community_user:)
+      raise Errors::PostingUnavailable unless active? && community_user.present? && user_id == community_user.user_id && community_user.ready_to_post?
     end
 
-    def build_opening_comment(body:)
-      comments.build(post:).build_content(author: user, body:)
+    def build_opening_comment(community_user:, body:)
+      comments.build(post:).build_content(community_user:, body:)
     end
   end
 end

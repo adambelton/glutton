@@ -41,6 +41,18 @@ module Library
         assert_equal watched_at, library_film.reload.watched_at
       end
 
+      test "ID-based Watchlist and Watched actions recheck an expired guest" do
+        travel_to @user.created_at + Identity::UserGuest::EXPIRY_DURATION + 1.second
+
+        [ AddToWatchlist, MarkWatched ].each do |action|
+          assert_no_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ] do
+            assert_raises(Identity::Errors::Unavailable) do
+              action.call(user_id: @user.id, film_id: @film.id) { flunk "The standalone call must use its account ID" }
+            end
+          end
+        end
+      end
+
       private
 
       def watched_events

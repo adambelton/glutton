@@ -5,7 +5,7 @@ class CommunityModeratorWorkspaceTest < ApplicationSystemTestCase
     password = "a long test password"
     superuser = Identity::UserRegistered.create!(email_address: "moderation-operator@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, superuser: true)
-    member = Identity::UserRegistered.create!(email_address: "moderation-member@example.test", password:,
+    member = create_community_account(email_address: "moderation-member@example.test", password:,
       password_confirmation: password, email_confirmed_at: Time.current, community_username: "NightWatcher",
       community_avatar_preset: "moth", community_code_of_conduct_version: Community::CodeOfConduct.current.version,
       community_code_of_conduct_accepted_at: Time.current)

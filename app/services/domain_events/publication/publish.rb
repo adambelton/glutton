@@ -1,14 +1,23 @@
 module DomainEvents
   module Publication
     class Publish
-      def self.call(user_id:, publisher:, stream_key:, name:, payload:, schema_version: 1, correlation_id: nil, causation_id: nil)
+      def self.call(user_id:, **publication)
+        publish(**publication) { Identity::User.lock.find_by(id: user_id) }
+      end
+
+      # The source transaction must hold this account's row lock through publication.
+      def self.call_with_locked_user(user:, **publication)
+        publish(**publication) { user }
+      end
+
+      def self.publish(publisher:, stream_key:, name:, payload:, schema_version: 1, correlation_id: nil, causation_id: nil)
         raise ArgumentError, "Publication requires a source transaction" unless DomainEvent.connection.transaction_open?
         # Transport input must serialize as a JSON object, not an arbitrary Ruby object.
         raise ArgumentError, "Event payload must be a JSON object" unless payload.is_a?(Hash)
 
         json_payload = JSON.parse(JSON.generate(payload))
-        event = Identity::User.transaction(requires_new: true) do
-          user = Identity::User.lock.find_by(id: user_id)
+        event = DomainEvent.transaction(requires_new: true) do
+          user = yield
           raise Errors::OwnerUnavailable, "An active event owner is required" unless user&.active?
 
           stream = DomainEventStream.find_or_create_by!(user:, publisher:, stream_key:)
@@ -25,6 +34,7 @@ module DomainEvents
         end
         event
       end
+      private_class_method :publish
     end
   end
 end

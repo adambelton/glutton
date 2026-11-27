@@ -9,7 +9,7 @@ module Community
       password = "a long test password"
       author = Identity::UserRegistered.create!(email_address: "discussion-storage@example.test", password:,
         password_confirmation: password, email_confirmed_at: Time.current)
-      curation = PostCommunityCuration.create!(title: "A curation", description: "Curation text.", author:)
+      curation = PostCommunityCuration.create!(title: "A curation", description: "Curation text.", community_user: author.create_community_user!)
 
       assert_raises ActiveRecord::InvalidForeignKey do
         Comment.transaction(requires_new: true) do

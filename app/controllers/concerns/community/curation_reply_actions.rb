@@ -3,7 +3,7 @@ module Community
     private
 
     def new_curation_reply
-      composer = Discussions::PublishCurationReply.load_for_reply(curation_id: post_id, comment_id:, member: current_user)
+      composer = Discussions::PublishCurationReply.load_for_reply(curation_id: post_id, comment_id:, community_user: current_user.community_user)
       render_curation_reply_editor(composer)
     end
 
@@ -12,7 +12,7 @@ module Community
       raise ActionController::BadRequest unless body.nil? || body.is_a?(String)
 
       composer = Discussions::PublishCurationReply.call(curation_id: post_id, comment_id:,
-        member_id: current_user.id, body:)
+        community_user: current_user.community_user, body:)
       reply = composer.fetch(:reply)
       if reply.errors.any?
         return render_curation_reply_editor(composer, status: :unprocessable_content)

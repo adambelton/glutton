@@ -63,6 +63,23 @@ class LibraryCandidateShortcutsRequestTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the standalone Ratings shortcut adds a Watchlist entry and publishes its event" do
+    get new_rating_path
+    token = csrf_from_open_page
+
+    assert_difference [ "Library::LibraryFilm.count", "DomainEvents::DomainEvent.count" ], 1 do
+      post add_to_watchlist_from_ratings_path, params: { film_id: @film.id, authenticity_token: token }
+    end
+
+    assert_redirected_to new_rating_path
+    assert_equal @film.id, flash[:ratings_excluded_film_id]
+    assert Library::LibraryFilm.watchlist.exists?(user: @user, film: @film)
+    stream = DomainEvents::DomainEventStream.find_by!(user: @user, publisher: Library::Events::PUBLISHING_DOMAIN, stream_key: "film:#{@film.id}")
+    event = stream.domain_events.sole
+    assert_equal Library::Events::FILM_ADDED_TO_WATCHLIST, event.name
+    assert_equal({ "user_id" => @user.id, "film_id" => @film.id }, event.payload)
+  end
+
   test "a competing watched action makes a stale Watchlist submission fail without changing Library" do
     get new_rating_path
     token = csrf_from_open_page
