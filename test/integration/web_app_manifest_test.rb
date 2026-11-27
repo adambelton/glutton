@@ -21,6 +21,7 @@ class WebAppManifestTest < ActionDispatch::IntegrationTest
     maskable_icons = icons.select { |icon| icon["purpose"] == "maskable" }
     assert_equal %w[192x192 512x512], general_icons.map { |icon| icon.fetch("sizes") }.sort
     assert_equal [ "512x512" ], maskable_icons.map { |icon| icon.fetch("sizes") }
+    assert_equal [ "/glutton-app-icon-maskable-512.png?v=2" ], maskable_icons.map { |icon| icon.fetch("src") }
     icons.each do |icon|
       get icon.fetch("src")
       assert_response :success
