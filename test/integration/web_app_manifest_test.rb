@@ -16,8 +16,12 @@ class WebAppManifestTest < ActionDispatch::IntegrationTest
     assert_equal "/", manifest.fetch("id")
     assert_equal "/", manifest.fetch("scope")
     assert_equal "standalone", manifest.fetch("display")
-    assert_equal %w[192x192 512x512], manifest.fetch("icons").map { |icon| icon.fetch("sizes") }
-    manifest.fetch("icons").each do |icon|
+    icons = manifest.fetch("icons")
+    general_icons = icons.select { |icon| icon.fetch("purpose", "any") == "any" }
+    maskable_icons = icons.select { |icon| icon["purpose"] == "maskable" }
+    assert_equal %w[192x192 512x512], general_icons.map { |icon| icon.fetch("sizes") }.sort
+    assert_equal [ "512x512" ], maskable_icons.map { |icon| icon.fetch("sizes") }
+    icons.each do |icon|
       get icon.fetch("src")
       assert_response :success
       assert_equal "image/png", response.media_type
