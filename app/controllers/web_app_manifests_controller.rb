@@ -6,7 +6,8 @@ class WebAppManifestsController < ActionController::Base
       background_color: "#090e14", theme_color: "#090e14",
       icons: [
         { src: "/glutton-app-icon-192.png", sizes: "192x192", type: "image/png" },
-        { src: "/glutton-app-icon-512.png", sizes: "512x512", type: "image/png" }
+        { src: "/glutton-app-icon-512.png", sizes: "512x512", type: "image/png" },
+        { src: "/glutton-app-icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
       ]
     }, content_type: "application/manifest+json"
   end
