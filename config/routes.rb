@@ -21,6 +21,7 @@ Rails.application.routes.draw do
     end
     resources :members, only: :show, controller: :public_profiles do
       resource :report, only: [ :new, :create ], controller: :reports
+      resource :block, only: [ :create, :destroy ], controller: :member_blocks
     end
     resources :posts, only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :report, only: [ :new, :create ], controller: :reports
@@ -110,5 +111,6 @@ Rails.application.routes.draw do
   end
 
   # Defines the root path route ("/")
+  get "manifest.webmanifest", to: "web_app_manifests#show", as: :web_app_manifest, format: false
   root "landing#show"
 end

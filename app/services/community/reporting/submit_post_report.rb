@@ -12,6 +12,7 @@ module Community
 
         content = post.discussion_comment(@comment_id).content
         content&.lock! if lock
+        Membership::MemberVisibility.require_visible!(viewer_id: viewer.id, blockable: content)
         content
       end
 

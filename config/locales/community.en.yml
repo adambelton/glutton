@@ -1,5 +1,17 @@
 en:
   community:
+    member_blocks:
+      block: Block
+      unblock: Unblock
+      confirm_title: Block %{name}?
+      confirm_description: Blocking hides your profiles and comments from each other and prevents direct replies. Report the member first if needed. You can manage your block list in Account → Community.
+      heading: Blocked members
+      empty: You haven't blocked any members.
+      blocked: Member blocked.
+      blocked_at: Blocked %{time}
+      unblocked: Member unblocked.
+      unavailable: This block couldn't be changed.
+      comment_unavailable: Comment unavailable.
     title: Community
     profile:
       username:

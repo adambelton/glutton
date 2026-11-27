@@ -7,6 +7,7 @@ module Community
     has_one :content, class_name: "Community::CommentContent", inverse_of: :comment
 
     def publish_reply(community_user:, body:)
+      require_reply_visible_to!(community_user:)
       reply = post.comments.build(parent: self, root: root || self)
       reply_content = reply.build_content(community_user:, body:)
       return reply_content unless reply_content.valid?
@@ -14,6 +15,10 @@ module Community
       reply.save!
       post.touch
       reply_content
+    end
+
+    def require_reply_visible_to!(community_user:)
+      Membership::MemberVisibility.require_visible!(viewer_id: community_user.id, blockable: content)
     end
 
     def can_edit_inline?(community_user:)

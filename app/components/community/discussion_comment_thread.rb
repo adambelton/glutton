@@ -7,10 +7,13 @@ module Community
     end
 
     def view_template
+      content = @comment.content
+      hidden = Membership::MemberVisibility.hidden?(viewer: current_user, blockable: content)
+      can_reply = @can_reply && content.present? && !hidden
       div(class: "community-comment-thread", id: "comment-thread-#{@comment.id}") do
-        render DiscussionComment.new(routes: @routes, comment: @comment, can_reply: @can_reply,
+        render DiscussionComment.new(routes: @routes, comment: @comment, can_reply:, hidden:,
           newly_published: @newly_published || @discussion.focus?(@comment))
-        if @can_reply && @comment.content.present?
+        if can_reply
           tag(:"turbo-frame", id: DiscussionComposer.frame_id(@comment), class: "community-comment-editor-branch")
         end
         reply_branch

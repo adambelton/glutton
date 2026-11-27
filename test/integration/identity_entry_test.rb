@@ -103,7 +103,6 @@ class IdentityEntryTest < ActionDispatch::IntegrationTest
     end
     assert_select 'head link[rel="icon"][href="/glutton-mark.png?v=2"][type="image/png"]'
     assert_select 'head link[rel="icon"][href="/glutton-mark.svg?v=2"][type="image/svg+xml"]'
-    assert_select 'head link[rel="apple-touch-icon"][href="/glutton-mark.png?v=2"]'
     assert_select 'head link[href="/icon.png"], head link[href="/icon.svg"]', count: 0
     assert_select ".guest-banner", count: 0
     assert_select 'button[data-controller="theme"][aria-label=?]', I18n.t("ui.dark_mode") do

@@ -1,6 +1,7 @@
 module Community
   class CommunityUser < ApplicationRecord
     include Reportable
+    include Blockable
 
     self.primary_key = :user_id
 
@@ -14,6 +15,7 @@ module Community
     ].freeze
 
     belongs_to :user, class_name: "Identity::UserRegistered", inverse_of: :community_user
+    has_many :outgoing_blocks, class_name: "Community::MemberBlock", foreign_key: :blocker_id, inverse_of: :blocker
 
     validates :community_username, format: { with: /\A[A-Za-z0-9_]{3,24}\z/ }, allow_nil: true
     validates :community_avatar_preset, inclusion: { in: AVATAR_PRESETS }, allow_nil: true
@@ -41,6 +43,34 @@ module Community
       community_username.present? || community_avatar_preset.present?
     end
 
+    def member_id_for_blocking
+      id
+    end
+
+    def member_hidden?(member_id)
+      return false if member_id.nil? || member_id == id
+
+      (@hidden_member_ids ||= MemberBlock.hidden_ids_for(id)).include?(member_id)
+    end
+
+    def can_block_member?(member:)
+      ready_to_post? && block_available?(member:)
+    end
+
+    def block_member!(member:)
+      raise Errors::PostingUnavailable unless ready_to_post?
+      raise Errors::MemberBlockUnavailable unless block_available?(member:)
+
+      outgoing_blocks.create!(blocked: member)
+    end
+
+    def unblock_member!(member:)
+      block = outgoing_blocks.find_by(blocked: member)
+      raise Errors::MemberBlockUnavailable unless block.present?
+
+      block.destroy!
+    end
+
     def reported_member
       user
     end
@@ -64,6 +94,10 @@ module Community
     end
 
     private
+
+    def block_available?(member:)
+      member.id != id && member.public_identity? && !outgoing_blocks.exists?(blocked: member)
+    end
 
     def independently_deletable_attributes
       %w[community_username]

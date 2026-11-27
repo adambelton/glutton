@@ -22,7 +22,8 @@ module Shared
           csp_meta_tag
           link(rel: "icon", href: "/glutton-mark.png?v=2", type: "image/png")
           link(rel: "icon", href: "/glutton-mark.svg?v=2", type: "image/svg+xml")
-          link(rel: "apple-touch-icon", href: "/glutton-mark.png?v=2")
+          link(rel: "apple-touch-icon", href: "/glutton-app-icon-192.png")
+          link(rel: "manifest", href: "/manifest.webmanifest")
           javascript_tag(<<~JS, nonce: true)
             try {
               if (localStorage.getItem("glutton.theme") === "light") {

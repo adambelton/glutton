@@ -9,9 +9,17 @@ module Community
     scope :active, -> { where(lifted_at: nil) }
     scope :lifted, -> { where.not(lifted_at: nil) }
 
+    def self.can_start?(member:, moderator:)
+      Moderation::Access.review?(user: moderator) && available_for?(member:)
+    end
+
+    def self.available_for?(member:)
+      Membership::Access.allowed?(user: member) && !active.exists?(member:)
+    end
+
     def self.start!(member:, moderator:)
       raise Errors::ModerationAccessDenied unless Moderation::Access.review?(user: moderator)
-      raise Errors::SuspensionUnavailable unless Membership::Access.allowed?(user: member) && !active.exists?(member:)
+      raise Errors::SuspensionUnavailable unless available_for?(member:)
 
       create!(member:, suspended_by: moderator, suspended_at: Time.current)
     end

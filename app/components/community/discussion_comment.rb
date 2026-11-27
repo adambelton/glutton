@@ -1,13 +1,15 @@
 module Community
   class DiscussionComment < Shared::Base
-    def initialize(routes:, comment:, can_reply:, newly_published: false)
-      @routes, @comment, @can_reply, @newly_published = routes, comment, can_reply, newly_published
+    def initialize(routes:, comment:, can_reply:, newly_published: false, hidden: false)
+      @routes, @comment, @can_reply, @newly_published, @hidden = routes, comment, can_reply, newly_published, hidden
     end
 
     def view_template
       data = { community_film_comments_target: "newReply" } if @newly_published
       article(class: "community-comment", id: "comment-#{@comment.id}", tabindex: ("-1" if @newly_published), data:) do
-        if @comment.content.present?
+        if @hidden
+          p(class: "muted") { t("community.member_blocks.comment_unavailable") }
+        elsif @comment.content.present?
           comment_body
         else
           p(class: "muted") { t("community.curation_replies.removed") }

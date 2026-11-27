@@ -153,6 +153,12 @@ Views and components can orchestrate presentation and call domain services direc
 
 AI workflows follow the [AI model services design](ai_model_services_design.md), which defines the responsibilities of orchestration services, assessments, provider adapters, evaluations and result models.
 
+#### Preparing data and permissions for the UI
+
+- When a page needs several domain reads, let its read operation assemble the records, collections and permissions. Pass records already loaded for the request into the reads that use them. Put empty-collection handling, ordering and preloading in the query that owns the collection. Account → Community uses `ReadProfileSettings` to compose its data and `BrowseMemberBlocks` to return the viewer's own block list.
+- Ask the owning model whether an action can be offered, then enforce the rule again against current state when the action runs. Use the same model predicates for shared rules and preserve each action's specific failures. A public profile uses `CommunityUser#can_block_member?` for its Block control. The block write checks posting access and the target under the account locks.
+- Use a named interface when different models supply the same information to an operation. A concern can make that shared role visible on each model. Resolve optional records at the query or helper that consumes them. Document what a missing value means and fail explicitly when a model omits a required accessor. `Blockable#member_id_for_blocking` allows an unattributed curation to return nil and requires an explicit implementation from models with a different ownership accessor.
+
 #### Required locks, cross-domain reads and collaborators
 
 - **Required lock.** The transaction owner acquires the lock and holds it through the dependent work. Pass the freshly locked record to the operation with an explicit lock precondition. A `load_user:` callback can silently substitute an ordinary read and obscure who guarantees the lock. `ChooseInitialRatingFilms` and `NextCandidates` each lock the account in their own transaction and pass the active account to the Ratings queue operation.

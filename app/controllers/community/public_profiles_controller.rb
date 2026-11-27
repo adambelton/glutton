@@ -7,9 +7,8 @@ module Community
       id = params[:id]
       return head :bad_request unless RecordId.valid?(id)
 
-      community_user = Membership::ReadPublicProfile.call(id:, viewer: current_user)
-      can_suspend = Moderation::Access.review?(user: current_user) && Membership::Access.participation_allowed?(user: community_user.user)
-      render Views::Community::PublicProfile.new(community_user:, can_suspend:)
+      page = Membership::ReadPublicProfile.for_display(id:, viewer: current_user)
+      render Views::Community::PublicProfile.new(**page.to_h)
     end
   end
 end

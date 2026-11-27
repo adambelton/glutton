@@ -20,7 +20,7 @@ module Community
 
         member = Identity::UserRegistered.find(member_id)
         verify_report_target!(member:, report_id:, lock: false)
-        raise Errors::SuspensionUnavailable unless Membership::Access.participation_allowed?(user: member)
+        raise Errors::SuspensionUnavailable unless Suspension.available_for?(member:)
 
         member
       end

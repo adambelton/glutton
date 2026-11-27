@@ -52,10 +52,9 @@ module Community
       Membership::Access.require_participation!(user: current_user)
     end
 
-    def render_profile(editing_username: false, form_username: current_user.community_user&.community_username, username_errors: [],
-      editing_avatar: false, avatar_errors: [], status: :ok)
-      render Views::Community::Profile.new(community_user: current_user.community_user,
-        editing_username:, form_username:, username_errors:, editing_avatar:, avatar_errors:), status:
+    def render_profile(status: :ok, **form_state)
+      page = Membership::ReadProfileSettings.call(viewer: current_user)
+      render Views::Community::Profile.new(**page.to_h, **form_state), status:
     end
   end
 end
