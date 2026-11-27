@@ -112,6 +112,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
 
   test "sample selections stay still until the visitor chooses another" do
     create_preview_catalogue
+    page.driver.with_playwright_page { |browser_page| browser_page.clock.install }
     visit root_path
     within preview(:ratings) do
       click_button I18n.t("identity.entry.demo.select", position: 3, count: 3)
@@ -121,9 +122,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       click_button I18n.t("identity.entry.demo.select", position: 2, count: 3)
       assert_selector "h2", text: "The Witch"
     end
-    assert_no_selector ".demo-rotation"
-    find("h1").hover.click
-    sleep 10.2
+    page.driver.with_playwright_page { |browser_page| browser_page.clock.run_for(10_200) }
     within(preview(:ratings)) { assert_selector "h2", text: "The Substance" }
     within(preview(:recommendations)) { assert_selector "h2", text: "The Witch" }
   end

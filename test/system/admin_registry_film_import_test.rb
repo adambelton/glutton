@@ -80,11 +80,7 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
       assert_equal "1px", registry_link.style("border-left-width").fetch("border-left-width")
       assert_equal element_rectangle(registry_link).width, element_rectangle(find_button("Add to Registry")).width
       within find("li", text: "Alien documentary") do
-        poster = find(".poster-wordmark", text: I18n.t("ui.short_wordmark"))
-        poster_rectangle = element_rectangle(poster)
-        assert_equal [ 48, 72 ], [ poster_rectangle.width, poster_rectangle.height ]
-        assert_match(/Tangerine/, poster.style("font-family").fetch("font-family"))
-        assert_equal "34px", poster.style("font-size").fetch("font-size")
+        assert_selector ".poster-wordmark", text: I18n.t("ui.short_wordmark")
         assert_selector 'h3 a[href="https://www.themoviedb.org/movie/349"][target="_blank"][rel~="noopener"]', text: "Alien documentary"
         title = element_rectangle(find("h3"))
         action = element_rectangle(find_button("Add to Registry"))

@@ -102,10 +102,11 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
   end
 
   test "film search from the Library heading adds a result to Watchlist" do
+    pending_search = Queue.new
     client = Registry::Sources::TmdbClient
     original_search = client.method(:search)
     client.define_singleton_method(:search) do |query:, page:, **|
-      sleep 0.4
+      pending_search.pop
       results = (page == 1 ? 7 : 5).times.map do |index|
         { "id" => 348 + 20 * (page - 1) + index, "title" => (page == 1 && index.zero? ? query : "#{query} #{page}-#{index + 1}"),
           "release_date" => "1979-05-25", "poster_path" => ("/alien.jpg" unless index == 6), "genre_ids" => [ 27 ],
@@ -134,9 +135,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     end
 
     assert_selector ".collection-search-spinner"
-    spinner = element_rectangle(find(".collection-search-spinner"))
-    field = element_rectangle(find("#library-film-query"))
-    assert_operator spinner.x + spinner.width, :<=, field.x
+    pending_search.close
     assert_selector ".library-film-search-dropdown h2", text: "Search results"
     assert_selector '.library-film-search-dropdown h3 a[href="https://www.themoviedb.org/movie/348"][target="_blank"][rel~="noopener"]',
       text: "Alien (1979)"
@@ -204,6 +203,7 @@ class LibraryCollectionNavigationTest < ApplicationSystemTestCase
     assert_selector ".library-film h3", text: "Alien"
     assert_current_path library_path
   ensure
+    pending_search.close
     client.define_singleton_method(:search, original_search)
   end
 

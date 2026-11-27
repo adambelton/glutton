@@ -39,6 +39,7 @@ class NotificationTest < ApplicationSystemTestCase
 
   test "a notification stays open with keyboard focus and can be dismissed" do
     Registry::Film.create!(title: "Film with notification")
+    page.driver.with_playwright_page { |browser_page| browser_page.clock.install }
     visit new_rating_path
     click_button I18n.t("identity.entry.try_it_out")
     click_button I18n.t("ratings.onboarding.surprise")
@@ -48,7 +49,7 @@ class NotificationTest < ApplicationSystemTestCase
     dismiss = find_button(I18n.t("ui.dismiss_notification"))
     dismiss.send_keys(:shift)
     assert_equal I18n.t("ui.dismiss_notification"), find("button:focus")["aria-label"]
-    sleep 5.2
+    page.driver.with_playwright_page { |browser_page| browser_page.clock.run_for(5_200) }
     assert_selector '[role="status"]', text: I18n.t("ratings.browser.saved")
     dismiss.send_keys(:enter)
     assert_no_selector '[role="status"]', text: I18n.t("ratings.browser.saved")

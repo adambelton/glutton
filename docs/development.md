@@ -29,7 +29,9 @@ bin/rails test:system
 
 On Linux, use `npx playwright install --with-deps chromium` in `test/playwright` to install the system libraries too. When updating the Ruby Playwright client, keep the npm Playwright version aligned with the client's supported CLI version.
 
-Let Capybara wait for the expected state after navigation or a Turbo update. In responsive tests, use the viewport helpers to set the page size and restore it after the check. Compare alignment, overflow and shared control sizes directly. Use fixed dimensions when a specific size is part of the design contract.
+Let Capybara wait for the expected state after navigation or a Turbo update. Check what the user can do and see, such as whether a synopsis reveals its text and collapses with Escape. Use geometry when the behaviour under test is a layout requirement, such as controls fitting on a mobile row without overlap. Compare the elements involved directly and use fixed dimensions when a specific size is part of the design contract. Use the viewport helpers to set the page size and restore it after the check.
+
+Use Playwright's clock for browser timer behaviour. Hold a stubbed response until the test observes the pending state when checking a loading indicator.
 
 Run with `GLUTTON_PLAYWRIGHT_TRACE=1` to retain traces from failed tests in `tmp/playwright-traces/`. The [CI workflow](../.github/workflows/ci.yml) uploads traces and screenshots when a browser test fails.
 
