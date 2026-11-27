@@ -1076,6 +1076,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .profile-quality-name { min-width: 0; }
 .profile-quality-score { color: var(--glutton-muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .account-page ul { list-style: disc; padding-inline-start: 24px; }
+.account-page .account-blocked-members { list-style: none; padding-inline-start: 0; }
 
 /* Marketing copy surrounds the same components used by the product screens. */
 .marketing-feature { margin-block: 64px; }

@@ -1,6 +1,7 @@
 module Community
   class CommentContent < ApplicationRecord
     include Reportable
+    include Blockable
 
     BODY_LIMIT = 4_000
 

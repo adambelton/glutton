@@ -99,7 +99,7 @@ Authorisation happens before calculating or serializing match information. Other
 
 ## Moderation and deletion
 
-Build moderation in the existing Rails and PostgreSQL application. Community owns the report queue, moderator authorisation, public profile writes and Community content enforcement. Community owns member blocking and suspension of Community participation. Both are required for public launch. Member blocking remains pending. Identity owns accounts, sessions, account closure and restore replay.
+Build moderation in the existing Rails and PostgreSQL application. Community owns the report queue, moderator authorisation, public profile writes and Community content enforcement. Community owns member blocking and suspension of Community participation. Both are required for public launch. Identity owns accounts, sessions, account closure and restore replay.
 
 ### Moderator access
 
@@ -137,9 +137,9 @@ Destructive moderation actions require a moderator decision.
 
 ### Member blocking
 
-Public launch requires members to be able to block one another. Implementation is pending. The visibility and interaction rules remain open.
+Member blocking is implemented for public launch.
 
-The proposed behavior lets members block or unblock another member. The member who places the block controls its removal. While a block exists in either direction, neither member can reply directly to the other. Reject stale reply forms and enforce the block on direct and partial reads. In shared discussions, each sees a collapsed placeholder for the other's comment and can still reach other members' replies. Curations remain available with their titles, descriptions, films and aggregate endorsements. Show **Glutton** as the curation byline where the author is blocked for that viewer. Keep the underlying authorship and permissions. Removing the block restores ordinary visibility when neither member has an active block against the other. Keep submitted reports available to moderators after an unblock.
+Members eligible to post can block another member. The member confirms the block on the public profile and can remove it from the dated list in Account → Community. While a block exists in either direction, direct replies and profile access are unavailable to both members. Reject stale reply forms and enforce the block on direct and partial reads. In shared discussions, a neutral marker takes the place of the hidden comment and preserves access to other members' replies. The marker has no link to reveal the comment. Curations remain available with their titles, descriptions, films and aggregate endorsements. Show **Glutton** as the curation byline where the author is blocked for that viewer. Keep the underlying authorship and permissions. Removing the block restores ordinary visibility when neither member has an active block against the other. Members report the other person's profile or comments before blocking. Moderators can still review reports already submitted.
 
 ### Community suspension
 
@@ -195,7 +195,7 @@ Community Curation and its comments use the existing Rails and PostgreSQL applic
 4. **Recommendations — read-only match for specified films.** Verify the shared calculation and evidence gate without selecting, enqueueing, or suppressing a recommendation. **Community** separately integrates the requester-only presentation.
 5. **Community — discussions and endorsement integration.** Verify that each film in a response can have its own optional root comment, that comments are grouped by film, and that replies branch from their own comment. Verify reply ancestry and preservation after comment removal. Verify that a member can add their one root comment later or after deleting the previous comment while preserving its replies. Verify that other contributors can reply without endorsing and that an archive blocks edits and new replies while allowing comment removal. Verify that new contributions move a request up the list and edits and removals leave the order unchanged.
 6. **Community — moderator access.** Scope superuser grant and revoke of the Community moderator role from the Admin account detail page, and guard the Community moderation entry point. Verify a moderator without superuser access can enter the workspace, a superuser without the Community role has no moderation access, and a revoked moderator loses access even in an existing session. Verify that only site superusers can manage role assignments.
-7. **Community — reports and content review.** Verify reportable associations, preserved evidence, priority ordering, current-version review, durable resolutions and deletion outcomes. Member blocking remains separate work required for public launch. Check direct requests, concurrent changes, account closure and restore replay.
+7. **Community — reports and content review.** Verify reportable associations, preserved evidence, priority ordering, current-version review, durable resolutions and deletion outcomes. Member blocking is a separate workflow. Check direct requests, concurrent changes, account closure and restore replay.
 8. **Community — username moderation.** Verify review of both names, removal of a violating current name from the original report, and fresh review after a further rename.
 
 When implementing posting, apply Community’s current-version acceptance check to the stored Identity receipt and use the Community-owned profile. Verify that each missing prerequisite blocks posting through ordinary controls and direct submissions, and that members can post when all prerequisites are met.

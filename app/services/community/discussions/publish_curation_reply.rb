@@ -6,6 +6,7 @@ module Community
 
         curation = PostCommunityCuration.find(curation_id)
         parent = find_parent(curation:, comment_id:)
+        parent.require_reply_visible_to!(community_user:)
         { curation:, parent:, reply: CommentContent.new }
       end
 

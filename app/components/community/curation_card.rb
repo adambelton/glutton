@@ -32,19 +32,7 @@ module Community
           li { t("community.curations.endorsements", count: @entry.endorsement_count) }
           li { t("community.curations.comments", count: @entry.comment_count) }
         end
-        attribution
-      end
-    end
-
-    def attribution
-      community_user = @curation.community_user
-      div(class: "muted community-curation-card-author") do
-        if community_user.present?
-          render MemberAvatar.new(community_user:)
-          strong { community_user.community_username.presence || t("community.curations.member") }
-        else
-          plain t("community.curation_protection.unattributed")
-        end
+        render CurationAttribution.new(curation: @curation, class_name: "muted community-curation-card-author")
       end
     end
   end

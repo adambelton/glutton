@@ -1,6 +1,7 @@
 module Community
   class PostCommunityCuration < Post
     include Reportable
+    include Blockable
 
     TITLE_LIMIT = 120
     DESCRIPTION_LIMIT = 2_000

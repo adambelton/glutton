@@ -5,6 +5,7 @@ module Community
         require_posting!(community_user)
         debrief = FilmDebriefs::BrowseFilmDebriefs.detail(viewer: community_user.user, post_id:)
         parent = authored_comment(debrief, parent_id)
+        parent.require_reply_visible_to!(community_user:)
         { debrief:, parent:, content: CommentContent.new }
       end
 

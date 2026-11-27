@@ -3,8 +3,11 @@ module Views
     class Profile < ::Views::Base
       include Phlex::Rails::Helpers::ImagePath
 
-      def initialize(community_user:, editing_username:, form_username:, username_errors:, editing_avatar:, avatar_errors:)
+      def initialize(community_user:, blocks:, suspended:, code:, accepted:, editing_username: false,
+        form_username: community_user&.community_username, username_errors: [], editing_avatar: false, avatar_errors: [])
         @community_user = community_user
+        @blocks = blocks
+        @suspended, @code, @accepted = suspended, code, accepted
         @community_username = community_user&.community_username
         @editing_username = editing_username
         @form_username = form_username
@@ -17,19 +20,44 @@ module Views
       def view_template
         page(title: t("account.title"), class: "account-page", heading_outside_card: true) do
           render ::Identity::AccountNavigation.new(section: :community)
-          @suspended = ::Community::Membership::Access.suspended?(user: current_user)
           render ::Community::SuspensionNotice.new if @suspended
-          code = ::Community::CodeOfConduct.current
-          accepted = code.accepted_by?(user: current_user)
-          if @community_user&.profile_editable?
+          if @community_user.present? && @accepted
             !@suspended && (@editing_username || @community_username.blank?) ? username_form : saved_username
             !@suspended && @editing_avatar ? avatar_form : saved_avatar
           end
-          render ::Community::ConductAcceptanceForm.new(accepted:, code:)
+          render ::Community::ConductAcceptanceForm.new(accepted: @accepted, code: @code)
+          blocked_members if @community_user.present?
         end
       end
 
       private
+
+      def blocked_members
+        section(aria: { labelledby: "blocked-members" }) do
+          h2(id: "blocked-members") { t("community.member_blocks.heading") }
+          if @blocks.present?
+            ul(class: "account-blocked-members", role: "list") do
+              @blocks.each do |block|
+                li(class: "account-settings-row") do
+                  div(class: "account-settings-field") do
+                    strong { block.blocked.community_username.presence || t("community.curations.member") }
+                    p do
+                      time(datetime: block.created_at.iso8601) do
+                        t("community.member_blocks.blocked_at", time: I18n.l(block.created_at, format: :long))
+                      end
+                    end
+                  end
+                  render Shared::ActionForm.new(url: community_member_block_path(block.blocked_id), method: :delete) do
+                    render Shared::GhostButton.new(type: :submit, class: "ui-action-button") { t("community.member_blocks.unblock") }
+                  end
+                end
+              end
+            end
+          else
+            p(class: "muted") { t("community.member_blocks.empty") }
+          end
+        end
+      end
 
       def saved_username
         div(class: "account-settings-row") do
