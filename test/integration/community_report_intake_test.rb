@@ -193,6 +193,7 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     destination = new_community_suspension_path(member_id: @author.id, report_id: report.id)
     assert_select "a[href=?]", destination, text: I18n.t("community.suspensions.action")
     get destination
+    assert_select "a[href=?]", community_moderation_report_path(report), text: I18n.t("community.curations.cancel")
     path = community_suspensions_path
     authenticity_token = input_value(path, "authenticity_token")
     report_fields = report.attributes.slice("status", "evidence", "reported_member_id")
@@ -252,13 +253,17 @@ class CommunityReportIntakeTest < ActionDispatch::IntegrationTest
     username_token = input_value(username_path, "authenticity_token")
     moderator_browser = open_session
     moderator_browser.cookies[:session_id] = signed_session_cookie(@moderator)
-    moderator_browser.get community_member_path(@author.community_user)
+    profile_path = community_member_path(@author.community_user)
+    moderator_browser.get profile_path
     assert_equal 200, moderator_browser.response.status
     suspension_form = new_community_suspension_path(member_id: @author.id)
-    assert_includes moderator_browser.response.body, suspension_form
+    profile_page = Nokogiri::HTML(moderator_browser.response.body)
+    assert_equal "Suspend", profile_page.at_css("a[href='#{suspension_form}']").text.strip
     moderator_browser.get suspension_form
     path = community_suspensions_path
-    token = Nokogiri::HTML(moderator_browser.response.body).at_css("form[action='#{path}'] input[name='authenticity_token']")["value"]
+    form_page = Nokogiri::HTML(moderator_browser.response.body)
+    assert_equal I18n.t("community.curations.cancel"), form_page.at_css("form a[href='#{profile_path}']").text.strip
+    token = form_page.at_css("form[action='#{path}'] input[name='authenticity_token']")["value"]
     moderator_browser.post path, params: { authenticity_token: token, suspension: { member_id: @author.id } }
     assert_equal 303, moderator_browser.response.status
 

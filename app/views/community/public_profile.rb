@@ -15,7 +15,7 @@ module Views
             end
             if @can_suspend
               a(href: new_community_suspension_path(member_id: @community_user.user_id), class: "community-moderation-link") do
-                t("community.suspensions.action")
+                t("community.suspensions.profile_action")
               end
             end
           end

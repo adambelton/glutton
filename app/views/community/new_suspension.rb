@@ -26,7 +26,10 @@ module Views
       end
 
       def return_path
-        @report_id.present? ? community_moderation_report_path(@report_id) : community_suspensions_path
+        return community_moderation_report_path(@report_id) if @report_id.present?
+
+        profile = @member.community_user
+        profile&.public_identity? ? community_member_path(profile) : community_suspensions_path
       end
     end
   end

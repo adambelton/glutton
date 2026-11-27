@@ -55,6 +55,7 @@ en:
     suspensions:
       title: Community suspensions
       action: Suspend Community participation
+      profile_action: Suspend
       confirm: "Suspend Community participation for %{name}? A moderator can lift the suspension."
       notice: Your Community participation is suspended. You can still read posts.
       contact: Contact Glutton about this decision
