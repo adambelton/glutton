@@ -65,15 +65,14 @@ class CommunityUsernameTest < ApplicationSystemTestCase
     assert_operator hint_layout.fetch("gapAfterField"), :>, 0
     assert_operator hint_layout.fetch("gapAfterField"), :<, hint_layout.fetch("gapBeforeSubmit")
 
-    browser = page.driver.browser
     begin
-      browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 430, height: 780, deviceScaleFactor: 1, mobile: false)
-      content = find(".account-page > .ui-page-body").rect
-      assert_in_delta content.x, field.rect.x, 1
-      assert_in_delta content.width, field.rect.width, 1
+      set_viewport(430, 780)
+      content = element_rectangle(find(".account-page > .ui-page-body"))
+      assert_in_delta content.x, element_rectangle(field).x, 1
+      assert_in_delta content.width, element_rectangle(field).width, 1
       assert_username_actions_align(label, submit, cancel)
     ensure
-      browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+      reset_viewport
     end
 
     fill_in label, with: "Unsaved_name"
@@ -100,8 +99,8 @@ class CommunityUsernameTest < ApplicationSystemTestCase
   private
 
   def assert_username_actions_align(label, *actions)
-    field = find_field(label).rect
-    buttons = actions.map { |action| find_button(action, disabled: :all).rect }
+    field = element_rectangle(find_field(label))
+    buttons = actions.map { |action| element_rectangle(find_button(action, disabled: :all)) }
 
     assert_in_delta field.x, buttons.first.x, 1
     assert_in_delta field.x + field.width, buttons.last.x + buttons.last.width, 1

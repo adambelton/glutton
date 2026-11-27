@@ -56,7 +56,7 @@ end
 
 group :test do
   gem "capybara"
-  gem "selenium-webdriver"
+  gem "capybara-playwright-driver", "~> 0.5.14", require: false
 end
 
 

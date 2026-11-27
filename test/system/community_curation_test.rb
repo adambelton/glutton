@@ -136,19 +136,18 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_no_selector "[role=tooltip]", visible: :all
       assert_equal "pointer", protected_badge.style("cursor").fetch("cursor")
       desktop_badge_size = protected_badge.style("font-size").fetch("font-size").to_f
-      browser = page.driver.browser
       begin
-        browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+        set_viewport(320, 900)
         curation_badge = find(".community-post-tag", text: I18n.t("community.curations.tag"))
         assert_operator protected_badge.style("font-size").fetch("font-size").to_f, :<, desktop_badge_size
-        assert_equal curation_badge.rect.y, protected_badge.rect.y
-        details = find(".community-post-card-details").rect
-        assert_operator protected_badge.rect.x + protected_badge.rect.width, :<=, details.x + details.width + 1
+        assert_equal element_rectangle(curation_badge).y, element_rectangle(protected_badge).y
+        details = element_rectangle(find(".community-post-card-details"))
+        assert_operator element_rectangle(protected_badge).x + element_rectangle(protected_badge).width, :<=, details.x + details.width + 1
         [ curation_badge, protected_badge ].each do |badge|
           assert badge.evaluate_script("this.scrollWidth <= this.clientWidth")
         end
       ensure
-        browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+        reset_viewport
       end
     end
   end
@@ -173,7 +172,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     visit community_path
     action_row = find(".ui-page-body.ui-card .community-board-actions")
     create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary")
-    assert_in_delta action_row.rect.x + action_row.rect.width, create_action.rect.x + create_action.rect.width, 1
+    assert_in_delta element_rectangle(action_row).x + element_rectangle(action_row).width, element_rectangle(create_action).x + element_rectangle(create_action).width, 1
     create_action.click
     assert_curation_form_width find("main.community-curation-form")
     assert_full_width_editor_actions
@@ -187,9 +186,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     search = I18n.t("community.curations.search_watched")
     assert_field search, placeholder: search
-    heading = find(".community-reference-picker legend").rect
-    guidance = find("#curation_reference_hint").rect
-    search_field = find_field(search).rect
+    heading = element_rectangle(find(".community-reference-picker legend"))
+    guidance = element_rectangle(find("#curation_reference_hint"))
+    search_field = element_rectangle(find_field(search))
     assert_operator guidance.x, :>, heading.x
     assert_in_delta 8, search_field.y - (heading.y + heading.height), 1
     assert_no_text "The Empty Field"
@@ -204,7 +203,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within(".community-selected-films li", text: "The Empty Field") do
       assert_selector ".film-poster"
       fill_in I18n.t("community.curations.comment_for_film", title: "The Empty Field"), with: "A creeping sense of dread."
-      assert_in_delta find(".film-poster").rect.height, find("textarea").rect.height, 1
+      assert_in_delta element_rectangle(find(".film-poster")).height, element_rectangle(find("textarea")).height, 1
     end
     fill_in search, with: "missing"
     assert_text I18n.t("community.curations.no_matches")
@@ -235,8 +234,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_equal "none", expand.style("text-decoration-line").fetch("text-decoration-line")
       expand.hover
       assert_equal "underline", expand.style("text-decoration-line").fetch("text-decoration-line")
-      assert_operator collapse.rect.x, :<, expand.rect.x
-      assert_operator collapse.rect.x + collapse.rect.width, :<, order_note.rect.x
+      assert_operator element_rectangle(collapse).x, :<, element_rectangle(expand).x
+      assert_operator element_rectangle(collapse).x + element_rectangle(collapse).width, :<, element_rectangle(order_note).x
       expand.click
     end
     assert_text "A creeping sense of dread."
@@ -295,7 +294,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path community_post_path(curation)
     search = I18n.t("community.curations.search_watched")
     dialog = find("dialog[open]")
-    assert_in_delta 640, dialog.rect.width, 1
+    assert_in_delta 640, element_rectangle(dialog).width, 1
     within dialog do
       assert_full_width_editor_actions
       save = I18n.t("community.curation_endorsements.save")
@@ -312,10 +311,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
         assert_empty_editor_result(dialog, search, reference.title, add_reference)
         set_viewport(390, 844)
         assert_empty_editor_result(dialog, search, reference.title, add_reference)
-        dialog_bottom = dialog.rect.y + dialog.rect.height
+        dialog_bottom = element_rectangle(dialog).y + element_rectangle(dialog).height
         fill_in search, with: "The"
         popup = find(".film-search-dropdown:popover-open")
-        assert_operator popup.rect.y + popup.rect.height, :>, dialog_bottom
+        assert_operator element_rectangle(popup).y + element_rectangle(popup).height, :>, dialog_bottom
         find_field(search).send_keys(:escape)
         assert_no_selector ".film-search-dropdown"
         assert dialog[:open]
@@ -352,11 +351,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
         assert_no_button I18n.t("ui.search.pagination.next")
       end
       assert_selector ".film-search-results > li", count: 5
-      reference_top = reference_row.rect.y
+      reference_top = element_rectangle(reference_row).y
       fill_in search, with: orchard.title
       popup = find(".film-search-dropdown")
-      assert_in_delta reference_top, reference_row.rect.y, 1
-      assert_operator popup.rect.y + popup.rect.height, :>, reference_top
+      assert_in_delta reference_top, element_rectangle(reference_row).y, 1
+      assert_operator element_rectangle(popup).y + element_rectangle(popup).height, :>, reference_top
       within(popup) do
         assert_selector ".film-poster"
         assert_selector "h3 .film-year", text: "(1998)"
@@ -396,11 +395,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       end
       rows.each_cons(2) do |previous, row|
         assert_equal({ "border-top-width" => "1px", "border-top-style" => "solid" }, row.style("border-top-width", "border-top-style"))
-        editor = previous.find(".community-selected-film-editor").rect
-        header = row.find(".community-selected-film-header").rect
-        title = row.find(".community-selected-film-header > span").rect
-        assert_in_delta 16, row.rect.y - (editor.y + editor.height), 1
-        assert_in_delta 8, header.y - (row.rect.y + 1), 1
+        editor = element_rectangle(previous.find(".community-selected-film-editor"))
+        header = element_rectangle(row.find(".community-selected-film-header"))
+        title = element_rectangle(row.find(".community-selected-film-header > span"))
+        assert_in_delta 16, element_rectangle(row).y - (editor.y + editor.height), 1
+        assert_in_delta 8, header.y - (element_rectangle(row).y + 1), 1
         assert_in_delta header.y, title.y, 2
       end
       assert_comment_action_group(cancel: I18n.t("community.curations.cancel"), submit: I18n.t("community.curation_endorsements.save"))
@@ -444,16 +443,16 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within action_group do
       edit = find_link(I18n.t("community.curation_editing.edit_post"))
       delete = find_button(delete_label)
-      assert_in_delta 132, edit.rect.width, 1
-      assert_in_delta edit.rect.width, delete.rect.width, 1
-      assert_in_delta 8, delete.rect.x - (edit.rect.x + edit.rect.width), 1
+      assert_in_delta 132, element_rectangle(edit).width, 1
+      assert_in_delta element_rectangle(edit).width, element_rectangle(delete).width, 1
+      assert_in_delta 8, element_rectangle(delete).x - (element_rectangle(edit).x + element_rectangle(edit).width), 1
       begin
         set_viewport(840, 900)
         line_height = heading.style("line-height").fetch("line-height").to_f
-        assert_operator heading.rect.height, :>, line_height
-        assert_operator heading.rect.x + heading.rect.width, :<=, edit.rect.x
-        assert_in_delta heading.rect.y, edit.rect.y, 1
-        assert_equal edit.rect.y, delete.rect.y
+        assert_operator element_rectangle(heading).height, :>, line_height
+        assert_operator element_rectangle(heading).x + element_rectangle(heading).width, :<=, element_rectangle(edit).x
+        assert_in_delta element_rectangle(heading).y, element_rectangle(edit).y, 1
+        assert_equal element_rectangle(edit).y, element_rectangle(delete).y
 
         set_viewport(320, 900)
         assert_full_width_author_actions(action_group, edit, delete)
@@ -491,15 +490,15 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
 
     click_button delete_label
     within "dialog[open]" do
-      description = find("p", text: I18n.t("community.curation_deletion.confirm_description")).rect
+      description = element_rectangle(find("p", text: I18n.t("community.curation_deletion.confirm_description")))
       cancel = find_button(I18n.t("community.curations.cancel"))
       confirm = find_button(delete_label)
-      assert_in_delta description.x, cancel.rect.x, 1
-      assert_in_delta description.x + description.width, confirm.rect.x + confirm.rect.width, 1
-      assert_in_delta cancel.rect.width, confirm.rect.width, 1
-      assert_in_delta cancel.rect.height, confirm.rect.height, 1
-      assert_in_delta 8, confirm.rect.x - (cancel.rect.x + cancel.rect.width), 1
-      assert_in_delta 32, cancel.rect.y - (description.y + description.height), 1
+      assert_in_delta description.x, element_rectangle(cancel).x, 1
+      assert_in_delta description.x + description.width, element_rectangle(confirm).x + element_rectangle(confirm).width, 1
+      assert_in_delta element_rectangle(cancel).width, element_rectangle(confirm).width, 1
+      assert_in_delta element_rectangle(cancel).height, element_rectangle(confirm).height, 1
+      assert_in_delta 8, element_rectangle(confirm).x - (element_rectangle(cancel).x + element_rectangle(cancel).width), 1
+      assert_in_delta 32, element_rectangle(cancel).y - (description.y + description.height), 1
       assert_mobile_editor_actions
       cancel.click
     end
@@ -541,9 +540,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_selector "h3", text: "Folk Tales (2020)"
       assert_selector "h3 .film-year", text: "(2020)"
       assert_no_selector "h3 a"
-      poster = find(".film-poster").rect
-      assert_in_delta 4, find(".community-nomination-actions").rect.y - (poster.y + poster.height), 1
-      watchlist_button, watched_button = all(".library-card-actions .ui-action-button", count: 2).map(&:rect)
+      poster = element_rectangle(find(".film-poster"))
+      assert_in_delta 4, element_rectangle(find(".community-nomination-actions")).y - (poster.y + poster.height), 1
+      watchlist_button, watched_button = all(".library-card-actions .ui-action-button", count: 2).map { |element| element_rectangle(element) }
       assert_in_delta watchlist_button.width, watched_button.width, 1
       assert_in_delta poster.x, watchlist_button.x, 1
       assert_in_delta poster.x + poster.width, watched_button.x + watched_button.width, 1
@@ -609,13 +608,13 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path community_path
     assert_equal "", search.value
     assert_selector ".community-curation-card", count: 2
-    create_action = find_link(I18n.t("community.curations.create")).rect
-    posts = find(".community-post-grid").rect
+    create_action = element_rectangle(find_link(I18n.t("community.curations.create")))
+    posts = element_rectangle(find(".community-post-grid"))
     assert_in_delta 16, posts.y - (create_action.y + create_action.height), 1
     card = find(".community-curation-card", text: curation.title)
     shorter_card = find(".community-curation-card", text: shorter.title)
-    assert_operator shorter_card.rect.x + shorter_card.rect.width, :<=, card.rect.x
-    assert_equal shorter_card.rect.y, card.rect.y
+    assert_operator element_rectangle(shorter_card).x + element_rectangle(shorter_card).width, :<=, element_rectangle(card).x
+    assert_equal element_rectangle(shorter_card).y, element_rectangle(card).y
     within card do
       assert_no_text curation.description
       assert_no_selector "time"
@@ -630,12 +629,12 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       end
     end
     artwork = card.find(".community-curation-card-posters")
-    posters = artwork.all(".film-poster", count: 5).map(&:rect)
+    posters = artwork.all(".film-poster", count: 5).map { |element| element_rectangle(element) }
     assert_operator posters.map(&:y).uniq.size, :>, 1
-    assert_operator artwork.rect.x + artwork.rect.width, :<=, card.find("h2").rect.x
+    assert_operator element_rectangle(artwork).x + element_rectangle(artwork).width, :<=, element_rectangle(card.find("h2")).x
     posters.each do |poster|
-      assert_operator poster.x + poster.width, :<=, artwork.rect.x + artwork.rect.width + 1
-      assert_operator poster.y + poster.height, :<=, artwork.rect.y + artwork.rect.height + 1
+      assert_operator poster.x + poster.width, :<=, element_rectangle(artwork).x + element_rectangle(artwork).width + 1
+      assert_operator poster.y + poster.height, :<=, element_rectangle(artwork).y + element_rectangle(artwork).height + 1
     end
     title_margins = card.find("h2").evaluate_script("[getComputedStyle(this).marginBlockStart, getComputedStyle(this).marginBlockEnd]")
     assert_equal [ "0px", "0px" ], title_margins
@@ -643,37 +642,37 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_equal "ellipsis", title_heading.style("text-overflow").fetch("text-overflow")
     assert title_heading.evaluate_script("this.scrollWidth > this.clientWidth")
     assert_equal title, title_heading.text
-    title_bounds = title_heading.rect
-    tags = card.find(".community-post-tags").rect
-    assert_operator title_bounds.y, :<=, artwork.rect.y
+    title_bounds = element_rectangle(title_heading)
+    tags = element_rectangle(card.find(".community-post-tags"))
+    assert_operator title_bounds.y, :<=, element_rectangle(artwork).y
     assert_operator title_bounds.y + title_bounds.height, :<=, tags.y
-    counts = card.find("footer .community-curation-card-counts").rect
-    identity = card.find(".community-curation-card-author").rect
-    assert_operator artwork.rect.x + artwork.rect.width, :<=, counts.x
+    counts = element_rectangle(card.find("footer .community-curation-card-counts"))
+    identity = element_rectangle(card.find(".community-curation-card-author"))
+    assert_operator element_rectangle(artwork).x + element_rectangle(artwork).width, :<=, counts.x
     assert_operator counts.y + counts.height, :<=, identity.y
-    details = card.find(".community-post-card-details").rect
-    footer = card.find("footer").rect
+    details = element_rectangle(card.find(".community-post-card-details"))
+    footer = element_rectangle(card.find("footer"))
     assert_in_delta details.y + details.height, footer.y + footer.height, 1
     shorter_artwork = shorter_card.find(".community-curation-card-posters")
-    assert_equal artwork.rect.width, shorter_artwork.rect.width
-    first_poster, second_poster = shorter_artwork.all(".film-poster", count: 2).map(&:rect)
+    assert_equal element_rectangle(artwork).width, element_rectangle(shorter_artwork).width
+    first_poster, second_poster = shorter_artwork.all(".film-poster", count: 2).map { |element| element_rectangle(element) }
     assert_operator first_poster.width, :>, second_poster.width
     assert_equal first_poster.x, second_poster.x
     assert_operator first_poster.y + first_poster.height, :<=, second_poster.y
 
     set_viewport(430, 900)
-    assert_operator shorter_card.rect.y + shorter_card.rect.height, :<=, card.rect.y
-    assert_equal shorter_card.rect.x, card.rect.x
+    assert_operator element_rectangle(shorter_card).y + element_rectangle(shorter_card).height, :<=, element_rectangle(card).y
+    assert_equal element_rectangle(shorter_card).x, element_rectangle(card).x
     action_row = find(".ui-page-body.ui-card .community-board-actions")
-    create_action = action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary").rect
-    assert_in_delta action_row.rect.x, create_action.x, 1
-    assert_in_delta action_row.rect.x + action_row.rect.width, create_action.x + create_action.width, 1
+    create_action = element_rectangle(action_row.find_link(I18n.t("community.curations.create"), class: "bg-primary"))
+    assert_in_delta element_rectangle(action_row).x, create_action.x, 1
+    assert_in_delta element_rectangle(action_row).x + element_rectangle(action_row).width, create_action.x + create_action.width, 1
     set_viewport(320, 900)
     within card do
       assert_selector ".community-curation-card-posters .film-poster", count: 5
-      assert_operator artwork.rect.x + artwork.rect.width, :<=, find("footer").rect.x
+      assert_operator element_rectangle(artwork).x + element_rectangle(artwork).width, :<=, element_rectangle(find("footer")).x
       counts = find(".community-curation-card-counts")
-      assert_equal 1, counts.all("li", count: 3).map { |item| item.rect.y }.uniq.size
+      assert_equal 1, counts.all("li", count: 3).map { |item| element_rectangle(item).y }.uniq.size
       assert counts.evaluate_script("Array.from(this.children).every(item => item.scrollWidth <= item.clientWidth)")
       first(".community-curation-card-posters .film-poster").click
     end
@@ -723,11 +722,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       assert_selector "textarea:focus"
       assert_selector "#comment-#{root.id} + .community-comment-editor-branch .community-comment"
       assert_comment_gap find("#comment-#{root.id}"), find(".community-comment-editor-branch .community-comment")
-      editor_width = editor.rect.width
-      initial_height = editor.rect.height
+      editor_width = element_rectangle(editor).width
+      initial_height = element_rectangle(editor).height
       assert_operator initial_height, :<, 60
       editor.set("A first line.\nA second line.\nA third line.")
-      assert_operator editor.rect.height, :>, initial_height
+      assert_operator element_rectangle(editor).height, :>, initial_height
       editor.execute_script("this.removeAttribute('maxlength')")
       oversized_reply = "a" * (Community::CommentContent::BODY_LIMIT + 1)
       editor.set(oversized_reply)
@@ -745,7 +744,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_current_path path
     reply = curation.comments.find_by!(parent: root)
     assert_selector "#replies-#{root.id}[open] > .community-comment-thread > #comment-#{reply.id}", text: "The sound design also helps."
-    assert_in_delta find("#comment-#{reply.id} .community-curation-prompt").rect.width, editor_width, 1
+    assert_in_delta element_rectangle(find("#comment-#{reply.id} .community-curation-prompt")).width, editor_width, 1
     assert_text "Woodland folklore."
     assert_selector "#film-comment-count-#{first.id}", text: I18n.t("community.curations.comments", count: 2)
     assert_no_field I18n.t("community.curation_replies.body")
@@ -770,13 +769,13 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
         assert_equal [ "1px", "1px", "1px", "1px" ], comment.style(*border_widths).values
       end
       [ root, reply ].each do |parent|
-        comment = find("#comment-#{parent.id}").rect
+        comment = element_rectangle(find("#comment-#{parent.id}"))
         branch = find("#replies-#{parent.id}")
-        assert_in_delta comment.y + comment.height, branch.rect.y, 1
+        assert_in_delta comment.y + comment.height, element_rectangle(branch).y, 1
         threads = branch.all(":scope > .community-comment-thread")
         summary = branch.find(":scope > summary")
         assert_equal "4px", summary.style("padding-bottom").fetch("padding-bottom")
-        assert_in_delta summary.rect.y + summary.rect.height, threads.first.rect.y, 1
+        assert_in_delta element_rectangle(summary).y + element_rectangle(summary).height, element_rectangle(threads.first).y, 1
         assert_comment_gap find("#comment-#{parent.id}"), threads.first.find(":scope > .community-comment"), reply_count: summary
         threads.each do |thread|
           start_x, end_x, elbow_y, radius, continuing = thread.evaluate_script(<<~JS)
@@ -787,8 +786,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
                 style.borderEndStartRadius, getComputedStyle(this, "::after").content !== "none"]
             })()
           JS
-          assert_in_delta branch.rect.x, start_x, 1
-          assert_in_delta thread.rect.x, end_x, 1
+          assert_in_delta element_rectangle(branch).x, start_x, 1
+          assert_in_delta element_rectangle(thread).x, end_x, 1
           assert_in_delta 30, elbow_y, 1
           last_reply = thread == threads.last
           assert_equal "8px", radius
@@ -823,7 +822,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_text "The sound design also helps."
     assert_text "Especially the quiet scenes."
     deepest_thread = find("#comment-thread-#{at_indent_limit.id}")
-    assert_in_delta find("#comment-thread-#{deeper.id}").rect.x, deepest_thread.rect.x, 1
+    assert_in_delta element_rectangle(find("#comment-thread-#{deeper.id}")).x, element_rectangle(deepest_thread).x, 1
     assert_equal "8px", deepest_thread.evaluate_script('getComputedStyle(this, "::before").borderEndStartRadius')
     next_reply = find(".community-comment", text: "The setting feels remote.")
     assert_comment_gap find("#comment-#{at_indent_limit.id}"), next_reply
@@ -849,36 +848,35 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_text "The landscape shapes the story."
     assert_no_text "The sound design also helps."
 
-    browser = page.driver.browser
-    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    set_viewport(320, 900)
     post = find(".community-curation-page")
     action = find_link(I18n.t("community.curation_endorsements.endorse_films"))
-    assert_operator action.rect.width, :>, post.rect.width * 0.9
+    assert_operator element_rectangle(action).width, :>, element_rectangle(post).width * 0.9
     within "#nomination-#{first.id}" do
       controls = find(".community-nomination-actions")
       disclosure = find("#film-comment-count-#{first.id}")
-      assert_operator disclosure.rect.y, :>=, controls.rect.y + controls.rect.height
-      assert_operator find("#comment-#{root.id}").rect.x, :<, find("h3").rect.x
+      assert_operator element_rectangle(disclosure).y, :>=, element_rectangle(controls).y + element_rectangle(controls).height
+      assert_operator element_rectangle(find("#comment-#{root.id}")).x, :<, element_rectangle(find("h3")).x
     end
     click_button I18n.t("community.curations.expand_all")
-    assert_operator find("#comment-#{at_indent_limit.id}").rect.x, :>, find("#comment-#{root.id}").rect.x
+    assert_operator element_rectangle(find("#comment-#{at_indent_limit.id}")).x, :>, element_rectangle(find("#comment-#{root.id}")).x
     within "#comment-#{at_indent_limit.id}" do
-      avatar = find(".community-member-avatar").rect
-      assert_in_delta avatar.x, find(".community-curation-prompt").rect.x, 1
-      assert_in_delta avatar.x, find(".community-comment-actions").rect.x, 1
-      assert_operator find(".community-comment-author").rect.x, :>=, avatar.x + avatar.width
+      avatar = element_rectangle(find(".community-member-avatar"))
+      assert_in_delta avatar.x, element_rectangle(find(".community-curation-prompt")).x, 1
+      assert_in_delta avatar.x, element_rectangle(find(".community-comment-actions")).x, 1
+      assert_operator element_rectangle(find(".community-comment-author")).x, :>=, avatar.x + avatar.width
       click_link I18n.t("community.curations.reply")
     end
     within "#comment-composer-#{at_indent_limit.id}" do
-      input = find("textarea:focus").rect
+      input = element_rectangle(find("textarea:focus"))
       card = find(".community-comment")
-      editor = card.rect
+      editor = element_rectangle(card)
       inset = card.style("border-left-width", "padding-left").values.sum(&:to_f)
       assert_no_selector ".community-member-avatar"
       assert_in_delta editor.x + inset, input.x, 1
       assert_in_delta editor.x + editor.width - inset, input.x + input.width, 1
-      cancel = find_link(I18n.t("community.curations.cancel")).rect
-      publish = find_button(I18n.t("community.curation_replies.publish"), disabled: true).rect
+      cancel = element_rectangle(find_link(I18n.t("community.curations.cancel")))
+      publish = element_rectangle(find_button(I18n.t("community.curation_replies.publish"), disabled: true))
       assert_equal cancel.y, publish.y
       assert_in_delta cancel.width.fdiv(input.width), publish.width.fdiv(input.width), 0.03
       assert_in_delta input.x, cancel.x, 1
@@ -886,7 +884,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     end
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "authors edit inline and confirm deleting comments while replies survive" do
@@ -933,13 +931,13 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     source = find("#comment-#{leaf.id}")
     within(source) { click_link I18n.t("community.curations.reply") }
     reply_gap = within("#comment-composer-#{leaf.id}") do
-      input = find_field(I18n.t("community.curation_replies.body")).rect
-      submit = find_button(I18n.t("community.curation_replies.publish"), disabled: true).rect
+      input = element_rectangle(find_field(I18n.t("community.curation_replies.body")))
+      submit = element_rectangle(find_button(I18n.t("community.curation_replies.publish"), disabled: true))
       click_link cancel_label
       submit.y - (input.y + input.height)
     end
 
-    text_bounds = source.find("span.community-curation-prompt").rect
+    text_bounds = element_rectangle(source.find("span.community-curation-prompt"))
     within source do
       delete_action = find_button(delete_label)
       style = delete_action.style("background-color", "border-top-width", "color", "font-weight")
@@ -948,11 +946,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       click_link edit_label
     end
     editor_frame = source.find(".community-comment-edit-frame")
-    editor_bounds = editor_frame.find_field(editor_label).rect
+    editor_bounds = element_rectangle(editor_frame.find_field(editor_label))
     assert_in_delta text_bounds.x, editor_bounds.x, 1
     assert_in_delta text_bounds.y, editor_bounds.y, 1
     assert_in_delta text_bounds.width, editor_bounds.width, 1
-    save_y = editor_frame.find_button(save_label, disabled: true).rect.y
+    save_y = element_rectangle(editor_frame.find_button(save_label, disabled: true)).y
     assert_in_delta reply_gap, save_y - (editor_bounds.y + editor_bounds.height), 1
     within(editor_frame) do
       assert_comment_action_group(cancel: cancel_label, submit: save_label)
@@ -1042,8 +1040,8 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
       end
       view_comment = find_link(I18n.t("community.curation_endorsements.view_comment_for_film", title: film.title))
       remove = find_button(I18n.t("community.curations.remove_film", title: film.title))
-      assert_in_delta view_comment.rect.y, remove.rect.y, 1
-      assert_in_delta view_comment.rect.height, remove.rect.height, 1
+      assert_in_delta element_rectangle(view_comment).y, element_rectangle(remove).y, 1
+      assert_in_delta element_rectangle(view_comment).height, element_rectangle(remove).height, 1
       [ view_comment, remove ].each do |action|
         action.hover
         assert_equal "underline", action.style("text-decoration-line").fetch("text-decoration-line")
@@ -1115,9 +1113,9 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   private
 
   def assert_full_width_author_actions(group, first_action, second_action)
-    first = first_action.rect
-    second = second_action.rect
-    width = group.rect.width
+    first = element_rectangle(first_action)
+    second = element_rectangle(second_action)
+    width = element_rectangle(group).width
     assert group.evaluate_script("this.offsetWidth >= this.parentElement.clientWidth * 0.99")
     assert_equal first.y, second.y
     assert_operator first.x + first.width, :<, second.x
@@ -1129,27 +1127,27 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     avatar = find("img.community-member-avatar")
     name = find("strong", text: author.community_user&.community_username, exact_text: true)
     assert_equal "50%", avatar.style("border-radius").fetch("border-radius")
-    assert_operator avatar.rect.x + avatar.rect.width, :<=, name.rect.x
-    assert_operator avatar.rect.y + avatar.rect.height, :>, name.rect.y
-    assert_operator name.rect.y + name.rect.height, :>, avatar.rect.y
+    assert_operator element_rectangle(avatar).x + element_rectangle(avatar).width, :<=, element_rectangle(name).x
+    assert_operator element_rectangle(avatar).y + element_rectangle(avatar).height, :>, element_rectangle(name).y
+    assert_operator element_rectangle(name).y + element_rectangle(name).height, :>, element_rectangle(avatar).y
   end
 
   def assert_curation_form_width(card)
-    assert_in_delta 640, card.rect.width, 1
+    assert_in_delta 640, element_rectangle(card).width, 1
     set_viewport(690, 900)
-    assert_in_delta 640, card.rect.width, 1
+    assert_in_delta 640, element_rectangle(card).width, 1
     set_viewport(520, 900)
     available_width = page.evaluate_script("document.body.getBoundingClientRect().width")
-    assert_in_delta available_width - 32, card.rect.width, 1
-    assert_in_delta 16, card.rect.x, 1
+    assert_in_delta available_width - 32, element_rectangle(card).width, 1
+    assert_in_delta 16, element_rectangle(card).x, 1
   ensure
     reset_viewport
   end
 
   def assert_comment_gap(previous_comment, next_comment, reply_count: nil)
-    previous_bounds = previous_comment.rect
-    expected_gap = reply_count.present? ? reply_count.rect.height : 16
-    assert_in_delta expected_gap, next_comment.rect.y - (previous_bounds.y + previous_bounds.height), 1
+    previous_bounds = element_rectangle(previous_comment)
+    expected_gap = reply_count.present? ? element_rectangle(reply_count).height : 16
+    assert_in_delta expected_gap, element_rectangle(next_comment).y - (previous_bounds.y + previous_bounds.height), 1
   end
 
   def assert_comment_action_group(cancel:, submit:)
@@ -1174,11 +1172,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
   end
 
   def assert_mobile_editor_actions
-    browser = page.driver.browser
-    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
+    set_viewport(320, 900)
     assert_full_width_editor_actions
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   def assert_full_width_editor_actions
@@ -1197,10 +1194,10 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_no_selector ".community-selected-films"
     find_field(search).set("")
     assert_no_selector ".film-search-dropdown"
-    height = dialog.rect.height
+    height = element_rectangle(dialog).height
     fill_in search, with: title
     assert_selector ".film-search-dropdown:popover-open"
-    assert_equal height, dialog.rect.height
+    assert_equal height, element_rectangle(dialog).height
     button = find_button(add_label)
     assert button.evaluate_script(<<~JS), "The empty dialog clips the film's Add button"
       (() => {

@@ -1,8 +1,10 @@
 # Glutton — Implementation progress
 
-Updated: 26 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
+Updated: 27 November 2026. This document describes current progress, agreed order and next work. GitHub holds PR, commit, CI and delivery history; completed task records are not retained here.
 
 ## Current progress
+
+- The Rails system suite uses Capybara with Playwright Chromium. GitHub Actions runs it in the main CI job and retains traces and screenshots on failure. [Browser test setup](development.md#browser-tests)
 
 - Foundation: Rails/PostgreSQL/Hotwire, English locale conventions, hosted/local CI with refreshed security advisories, durable asynchronous domain-event delivery and explicit observability integration are implemented. Shared browser titles use “Glutton | [page name]”; browser/touch icons use the existing Tangerine “g.” mark. Ratings and Registry share a TypeSafe client with domain-specific limits and trace settings. Production provisioning remains pending. Run the hosted backup restore drill as part of that setup.
 - Identity: guest/registered identities, revocable sessions, browser sign-in/out, registration/confirmation, password recovery and bounded expiry cleanup are implemented. Minimal superuser permission and explicit grant/revoke operations restricted to existing superusers are implemented. Account closure purges the user and their activity. Expired guest sessions and old cookies for purged accounts use the ordinary signed-out flow. The user type constraint allows only guest and registered accounts.

@@ -2,7 +2,7 @@
 
 ## Setup and verification
 
-Use the Ruby version in [`.ruby-version`](../.ruby-version), the Bundler version in [`Gemfile.lock`](../Gemfile.lock), PostgreSQL 17 and Chrome for the browser suite. PostgreSQL must be running and the local role must be able to create databases. Rails honours the standard PostgreSQL connection environment variables.
+Use the Ruby version in [`.ruby-version`](../.ruby-version), the Bundler version in [`Gemfile.lock`](../Gemfile.lock), PostgreSQL 17 and Node 22 for the browser suite. PostgreSQL must be running and the local role must be able to create databases. Rails honours the standard PostgreSQL connection environment variables.
 
 ```sh
 bin/setup --skip-server
@@ -13,11 +13,27 @@ Open [localhost:3000](http://localhost:3000). `bin/dev` builds styles and starts
 
 Rails replays all migrations when `db:prepare` creates a database and applies pending migrations to an existing one. This installs PostgreSQL objects defined in migrations, including the Community report deletion triggers. Schema dumps are disabled. Use `RAILS_ENV=test bin/rails db:prepare` to set up or update the test database on its own. To discard that test database and rebuild it from migrations, use `RAILS_ENV=test bin/rails db:migrate:reset`.
 
-Use `bin/ci` for style, security, autoloading, Rails tests and the headless Chrome suite. GitHub Actions runs the same checks on pull requests and pushes to main. Dependency audits use network access. The `/up` endpoint checks whether Rails boots.
+Use `bin/ci` for style, security, autoloading, Rails tests and the Capybara system suite. GitHub Actions runs the same checks on pull requests and pushes to main. Dependency audits use network access. The `/up` endpoint checks whether Rails boots.
 
 GitHub Actions runs `bin/ci` in the test environment. Its setup step replays migrations on the empty PostgreSQL database, and both test suites run serially against that same database.
 
-In responsive system tests, use the viewport helpers to set the page width and restore it after the check. Compare alignment, overflow, and shared control sizes directly. Use fixed dimensions when a specific size is part of the design contract.
+### Browser tests
+
+Capybara uses Playwright Chromium for Rails system tests. Install the test dependencies and run the suite with the normal Rails command.
+
+```sh
+npm ci --prefix test/playwright
+(cd test/playwright && npx playwright install chromium)
+bin/rails test:system
+```
+
+On Linux, use `npx playwright install --with-deps chromium` in `test/playwright` to install the system libraries too. When updating the Ruby Playwright client, keep the npm Playwright version aligned with the client's supported CLI version.
+
+Let Capybara wait for the expected state after navigation or a Turbo update. Check what the user can do and see, such as whether a synopsis reveals its text and collapses with Escape. Use geometry when the behaviour under test is a layout requirement, such as controls fitting on a mobile row without overlap. Compare the elements involved directly and use fixed dimensions when a specific size is part of the design contract. Use the viewport helpers to set the page size and restore it after the check.
+
+Use Playwright's clock for browser timer behaviour. Hold a stubbed response until the test observes the pending state when checking a loading indicator.
+
+Run with `GLUTTON_PLAYWRIGHT_TRACE=1` to retain traces from failed tests in `tmp/playwright-traces/`. The [CI workflow](../.github/workflows/ci.yml) uploads traces and screenshots when a browser test fails.
 
 ## Git workflow in Zed
 

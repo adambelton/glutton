@@ -1,9 +1,7 @@
 require "application_system_test_case"
 
 class SharedScrollbarLayoutTest < ApplicationSystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ], options: { name: :selenium_classic_scrollbars } do |options|
-    options.add_argument("--disable-features=OverlayScrollbar")
-  end
+  driven_by :playwright, screen_size: [ 1400, 1000 ], options: CLASSIC_SCROLLBAR_OPTIONS.dup
 
   test "the shared layout stays aligned when a classic scrollbar appears" do
     visit new_session_path

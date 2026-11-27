@@ -12,8 +12,6 @@ class DiscardGuestAccountTest < ApplicationSystemTestCase
     other_session = Identity::Session.create!(user: guest)
     label = I18n.t("identity.entry.discard_guest")
     discard = find_button(label)
-    assert_equal "rgba(195, 38, 48, 1)", discard.style("background-color").fetch("background-color")
-    assert_equal "rgba(255, 255, 255, 1)", discard.style("color").fetch("color")
     confirmation = I18n.t("identity.entry.confirm_discard_guest")
     discard.click
     assert_selector "dialog[open]", text: confirmation

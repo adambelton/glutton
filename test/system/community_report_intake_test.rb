@@ -62,18 +62,18 @@ class CommunityReportIntakeBrowserTest < ApplicationSystemTestCase
       visit community_path
       banner = find("header.ui-header + .ui-header-banner", text: I18n.t("community.suspensions.banner_notice"))
       content = find(".ui-content")
-      assert_in_delta banner.rect.y, content.rect.y, 1
-      desktop_height = banner.rect.height
+      assert_in_delta element_rectangle(banner).y, element_rectangle(content).y, 1
+      desktop_height = element_rectangle(banner).height
       assert_equal 32, desktop_height
       assert_link I18n.t("community.suspensions.contact"), exact: true
       message = banner.find(".ui-header-banner-content")
       set_viewport(650, 844)
-      mobile_message_height = message.rect.height
+      mobile_message_height = element_rectangle(message).height
       set_viewport(651, 844)
-      assert_operator message.rect.height, :<=, mobile_message_height
+      assert_operator element_rectangle(message).height, :<=, mobile_message_height
       set_viewport(320, 844)
-      assert_operator banner.rect.height, :>, desktop_height
-      assert_in_delta banner.rect.y + banner.rect.height, content.rect.y, 1
+      assert_operator element_rectangle(banner).height, :>, desktop_height
+      assert_in_delta element_rectangle(banner).y + element_rectangle(banner).height, element_rectangle(content).y, 1
       assert_equal "center", banner.style("text-align").fetch("text-align")
       assert_operator banner.evaluate_script("this.scrollHeight - this.clientHeight"), :<=, 1
       assert_link I18n.t("community.suspensions.contact"), exact: true

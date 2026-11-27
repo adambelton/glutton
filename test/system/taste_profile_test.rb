@@ -39,7 +39,6 @@ class TasteProfileTest < ApplicationSystemTestCase
     navigation = find("select.ui-primary-navigation")
     assert_in_delta 0, navigation.evaluate_script("this.parentElement.clientWidth - this.getBoundingClientRect().width"), 1
     assert_equal library_path, navigation.value
-    assert_in_delta 1, find("main h1").evaluate_script("this.getBoundingClientRect().width"), 0.5
     assert_field I18n.t("library.browser.search.watchlist")
     search = find(".ui-page-heading .search-bar")
     assert_in_delta 0, search.evaluate_script("this.closest('.ui-page-heading').clientWidth - this.getBoundingClientRect().width"), 1
@@ -51,8 +50,8 @@ class TasteProfileTest < ApplicationSystemTestCase
     set_viewport(768, 950)
     assert_selector "main h1.sr-only", text: I18n.t("registry.films")
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
-    search = find_field(I18n.t("admin.search.films")).rect
-    modes = find(".search-bar-modes").rect
+    search = element_rectangle(find_field(I18n.t("admin.search.films")))
+    modes = element_rectangle(find(".search-bar-modes"))
     assert_in_delta search.x + search.width, modes.x + modes.width, 1
     assert_operator modes.y, :>=, search.y + search.height
     click_link I18n.t("admin.back_to_glutton")

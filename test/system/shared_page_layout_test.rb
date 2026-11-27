@@ -10,7 +10,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     end
     [ privacy_notice_path, terms_of_service_path ].each do |path|
       visit path
-      assert_in_delta 1120, main_card.rect.width, 1, path
+      assert_in_delta 1120, element_rectangle(main_card).width, 1, path
       within "header.ui-header" do
         assert_link I18n.t("ui.log_in"), href: new_session_path
         assert_link I18n.t("ui.register"), href: new_registration_path
@@ -18,7 +18,7 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     end
 
     assert_back_card_gap new_session_path, inset: 48
-    assert_in_delta main_card.rect.x, find(".ui-page-back-above a").rect.x, 1
+    assert_in_delta element_rectangle(main_card).x, element_rectangle(find(".ui-page-back-above a")).x, 1
     member = sign_in_member
     curation = Community::Curations::PublishCuration.call(community_user: member.community_user, title: "Isolated landscapes",
       description: "Films with a strong sense of place.", reference_film_ids: [], reference_comments: {})
@@ -53,8 +53,8 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
       assert_operator mobile_gap, :<, headed_gap if path == community_path
       heading = find(".ui-page-heading")
       assert_selector ".ui-page-heading input[type=search]"
-      row = heading.rect
-      assert_in_delta 16, main_card.rect.y - (row.y + row.height), 1, path
+      row = element_rectangle(heading)
+      assert_in_delta 16, element_rectangle(main_card).y - (row.y + row.height), 1, path
     end
   ensure
     reset_viewport
@@ -75,19 +75,18 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
     assert_current_path account_taste_profile_path
     assert_selector '.account-tabs a[aria-current="page"]', text: I18n.t("account.profile"), count: 1
 
-    browser = page.driver.browser
-    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
-    row = find(".account-tabs").rect
-    first, second, last = all(".account-tabs a", count: 3).map(&:rect)
+    set_viewport(320, 900)
+    row = element_rectangle(find(".account-tabs"))
+    first, second, last = all(".account-tabs a", count: 3).map { |element| element_rectangle(element) }
     assert_equal 1, [ first.y, second.y, last.y ].uniq.size
     assert_in_delta first.width.fdiv(row.width), last.width.fdiv(row.width), 0.03
     assert_in_delta first.width.fdiv(row.width), second.width.fdiv(row.width), 0.03
-    assert_in_delta find(".account-page").rect.width, last.x + last.width - first.x, 1
+    assert_in_delta element_rectangle(find(".account-page")).width, last.x + last.width - first.x, 1
     within(".account-tabs") { click_link I18n.t("community.title") }
     assert_current_path account_community_path
     assert_selector '.account-tabs a[aria-current="page"]', text: I18n.t("community.title"), count: 1
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "Small account dialog actions fill their rows at desktop and mobile widths" do
@@ -102,8 +101,8 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
         assert_account_edit_button_below_field(label) if width == 320 && action != "delete_title"
         click_button label
         within "dialog[open]" do
-          heading = find("h2").rect
-          cancel, submit = all(".ui-actions button", count: 2).map(&:rect)
+          heading = element_rectangle(find("h2"))
+          cancel, submit = all(".ui-actions button", count: 2).map { |element| element_rectangle(element) }
           assert_in_delta heading.x, cancel.x, 1
           assert_in_delta heading.x + heading.width, submit.x + submit.width, 1
           assert_equal cancel.y, submit.y
@@ -127,12 +126,12 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
 
   def assert_account_edit_button_below_field(label)
     row = find(".account-settings-row", text: label)
-    field = row.find(":scope > :is(.account-settings-field, .account-avatar-current)").rect
-    button = row.find_button(label).rect
+    field = element_rectangle(row.find(":scope > :is(.account-settings-field, .account-avatar-current)"))
+    button = element_rectangle(row.find_button(label))
 
     assert_operator button.y, :>, field.y + field.height
-    assert_in_delta row.rect.x, button.x, 1
-    assert_in_delta row.rect.width, button.width, 1
+    assert_in_delta element_rectangle(row).x, button.x, 1
+    assert_in_delta element_rectangle(row).width, button.width, 1
   end
 
   def sign_in_member
@@ -151,17 +150,17 @@ class SharedPageLayoutTest < ApplicationSystemTestCase
 
   def assert_back_card_gap(path, inset:)
     visit path
-    header = find("header.ui-header").rect
-    back_row = find(".ui-page-back-above").rect
+    header = element_rectangle(find("header.ui-header"))
+    back_row = element_rectangle(find(".ui-page-back-above"))
     assert_in_delta inset, back_row.y - (header.y + header.height), 1, path
-    assert_in_delta 8, main_card.rect.y - (back_row.y + back_row.height), 1, path
+    assert_in_delta 8, element_rectangle(main_card).y - (back_row.y + back_row.height), 1, path
   end
 
   def card_gap(path)
     visit path
     assert_current_path path
-    header = find("header.ui-header").rect
-    main_card.rect.y - (header.y + header.height)
+    header = element_rectangle(find("header.ui-header"))
+    element_rectangle(main_card).y - (header.y + header.height)
   end
 
   def main_card
