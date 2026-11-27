@@ -11,6 +11,10 @@ class NotificationTest < ApplicationSystemTestCase
       set_viewport(width, height)
       assert_selector ".rating-interface"
       before = find(".rating-interface").rect.y
+      banner = find("header.ui-header + .guest-banner")
+      expected_content_top = width <= 650 ? banner.rect.y + banner.rect.height : banner.rect.y
+      assert_in_delta expected_content_top, find(".ui-content").rect.y, 1
+      assert_equal "center", banner.style("text-align").fetch("text-align")
       choose I18n.t("ratings.values.brilliant"), allow_label_click: true
       click_button I18n.t("ratings.browser.save")
       assert_selector '.ui-notifications [role="status"]', text: I18n.t("ratings.browser.saved")

@@ -9,7 +9,6 @@ module Community
     RESOLUTION_OUTCOMES = [ ACCEPTED_OUTCOME, "no_violation" ].freeze
     NO_RESOLUTION_ACTION = "none"
     HIGH_PRIORITY_REASONS = %w[immediate_safety private_information sexual_abuse_or_child_safety self_harm].freeze
-    REASONS = (HIGH_PRIORITY_REASONS + %w[harassment_hate_or_impersonation spam_or_scams spoilers other]).freeze
 
     belongs_to :reportable, polymorphic: true, optional: true
     belongs_to :reporter, class_name: "Identity::UserRegistered", optional: true
@@ -24,7 +23,7 @@ module Community
     validates :resolution_outcome, inclusion: { in: RESOLUTION_OUTCOMES }, if: :resolved?
     validates :resolution_summary, presence: true, length: { maximum: RESOLUTION_SUMMARY_LIMIT }, if: :resolved?
     validate :validate_resolution_action, if: :will_save_change_to_resolution_outcome?
-    validates :reason, inclusion: { in: REASONS }
+    validates :reason, inclusion: { in: :allowed_reasons }
     validates :explanation, length: { maximum: EXPLANATION_LIMIT }
 
     normalizes :explanation, :resolution_summary, with: ->(text) { text.strip.presence }
@@ -104,6 +103,12 @@ module Community
     end
 
     private
+
+    def allowed_reasons
+      return reportable.report_reasons if new_record? && reportable.present?
+
+      Reportable::REASONS_WITH_SPOILERS
+    end
 
     def validate_resolution_action
       if accepted?

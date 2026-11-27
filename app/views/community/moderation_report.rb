@@ -7,13 +7,14 @@ module Views
 
       def view_template
         page(title: t("community.reports.identifier", id: @report.id), heading_outside_card: true,
-          back_to: community_moderation_path(state: (@report.status unless @report.pending?)), back_label: t("community.reports.back")) do
+          back_to: community_moderation_reports_path(state: (@report.status unless @report.pending?)), back_label: t("community.reports.back")) do
           div(class: "community-report-review") do
             if @report.resolved?
               resolution_details
               report_status
             else
               account_snapshots
+              suspension_action
               reportable_details
               report_status
               render ::Community::ReportResolutionForm.new(report: @report, draft: @resolution)
@@ -23,6 +24,17 @@ module Views
       end
 
       private
+
+      def suspension_action
+        member = @report.reported_member
+        return unless member.present?
+
+        if ::Community::Membership::Access.suspended?(user: member)
+          text_link(t("community.suspensions.title"), community_suspensions_path)
+        elsif ::Community::Membership::Access.allowed?(user: member)
+          text_link(t("community.suspensions.action"), new_community_suspension_path(member_id: member.id, report_id: @report.id))
+        end
+      end
 
       def reportable_details
         section(class: "community-report-section") do

@@ -24,8 +24,8 @@ module Community
       community_user.user
     end
 
-    def spoiler_free?
-      comment.post.spoiler_free?
+    def report_reasons
+      comment.post.report_reasons
     end
 
     def edit_body(body:)
@@ -41,6 +41,10 @@ module Community
     end
 
     private
+
+    def report_record_deletable?
+      true
+    end
 
     def delete_reportable_record!(moderator:)
       comment.delete_reported_comment!(moderator:)

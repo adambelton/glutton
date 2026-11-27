@@ -55,7 +55,7 @@ module Views
       def attribution(community_user)
         div(class: "community-curation-author") do
           render ::Community::MemberAvatar.new(community_user:)
-          strong { community_user.community_username.presence || t("community.curations.member") }
+          render ::Community::MemberBylineName.new(community_user:)
         end
       end
 

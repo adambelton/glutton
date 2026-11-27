@@ -12,10 +12,11 @@ module Views
 
       def view_template
         page(title: t("community.title"), class: "community-board-page", heading_outside_card: true, heading_action: search_form) do
+          suspended = ::Community::Membership::Access.suspended?(user: current_user)
           board_actions if @can_post || @can_access_moderation
           tag(:turbo_frame, id: RESULTS_FRAME, target: "_top", aria: { live: "polite" }) do
             post_list
-            text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post
+            text_link(t("community.curations.complete_setup"), account_community_path) unless @can_post || suspended
             pagination
           end
         end
@@ -25,7 +26,11 @@ module Views
 
       def board_actions
         div(class: "community-board-actions flex flex-wrap items-center gap-2 pb-2") do
-          text_link(t("community.moderation.title"), community_moderation_path) if @can_access_moderation
+          if @can_access_moderation
+            render RubyUI::Link.new(href: community_moderation_reports_path, class: "ui-link community-moderation-link") do
+              t("community.moderation.title")
+            end
+          end
           create_curation_action if @can_post
         end
       end

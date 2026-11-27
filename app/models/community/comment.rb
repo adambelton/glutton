@@ -21,7 +21,7 @@ module Community
     end
 
     def can_delete?(community_user:)
-      owned_by?(community_user:) && community_user.user.can_view_account?
+      owned_by?(community_user:) && Membership::Access.participation_allowed?(user: community_user.user)
     end
 
     def edit_body(community_user:, body:)

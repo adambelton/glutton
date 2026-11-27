@@ -1,11 +1,15 @@
 module Community
   class ProfilesController < ApplicationController
     before_action :require_member_access
+    before_action :require_participation, only: [ :change_username, :choose_avatar ]
 
     rescue_from Errors::CodeOfConductRequired do
       redirect_to account_community_path, alert: t("community.conduct.profile_acceptance_required"), status: :see_other
     end
     rescue_from Errors::MembershipRequired, with: -> { head :forbidden }
+    rescue_from Errors::ParticipationSuspended do
+      redirect_to account_community_path, status: :see_other
+    end
 
     def show
       render_profile(editing_username: params[:edit] == "username", editing_avatar: params[:edit] == "avatar")
@@ -42,6 +46,10 @@ module Community
       response.headers["Cache-Control"] = "no-store"
       response.headers["Referrer-Policy"] = "no-referrer"
       Membership::Access.require!(user: current_user)
+    end
+
+    def require_participation
+      Membership::Access.require_participation!(user: current_user)
     end
 
     def render_profile(editing_username: false, form_username: current_user.community_user&.community_username, username_errors: [],

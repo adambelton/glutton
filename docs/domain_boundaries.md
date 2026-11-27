@@ -19,7 +19,7 @@ Start with the action or durable state being changed. Its domain owns the mutati
 
 **Audit example.** Accepting the Code of Conduct writes Identity's receipt, then Community provisions the profile in the same transaction. Posts and comment content point to the Community profile. Identity drives closure and replay, and the agreed Community cascades preserve protected curations and surviving replies. Check who initiates deletion and which domain owns each retained or removed record. [Community onboarding](community_niche_requests_architecture.md#community-onboarding) · [Account deletion](community_niche_requests_architecture.md#author-and-account-deletion)
 
-**Public launch.** Reporting and content deletion are implemented. Member blocking and moderator suspension of Community access are required and await implementation. Suspension leaves the Identity account and session in place. Review the remaining Community enforcement decisions before implementing either feature. [Community launch scope](community_niche_requests_architecture.md#launch-scope) · [Implementation status](implementation_plan.md#current-work)
+**Public launch.** Reporting, content deletion and moderator suspension of Community participation are implemented. Suspension preserves Community reads and the Identity account and session. Member blocking remains a public-launch requirement. [Community launch scope](community_niche_requests_architecture.md#launch-scope) · [Implementation status](implementation_plan.md#current-work)
 
 ## Controller, service and model responsibilities
 
@@ -28,6 +28,8 @@ Controllers validate HTTP input and map outcomes to responses. Services load fre
 Presentation follows the same ownership. A domain presents its own facts and actions, while shared components provide generic controls. Rendering calls read operations, and application copy belongs in Rails locales. [Architecture presentation rules](architecture_brief.md#cross-domain-service-communication) · [User-facing content](../AGENTS.md#user-facing-content) · [Service naming](architecture_brief.md#service-organisation-and-naming)
 
 **Audit example.** The curation controller parses the post and film IDs and maps an unavailable nomination to `404`. The Community orchestrator checks membership and visibility. The Library command checks the entry while holding the account lock and delegates the transition to `LibraryFilm`, which enforces its rules and emits the source fact. A stale Mark Watched action reports failure and leaves the state and event stream unchanged. [Object roles](../AGENTS.md#object-roles-and-behaviour) · [Action outcomes](../AGENTS.md#action-outcomes-and-idempotency) · [Curation Library design](community_niche_requests_architecture.md#library-actions-on-nominated-films)
+
+Community moderation applies decisions to the current content reviewed in the original report, including fields changed since submission. The reportable model owns its allowed actions. The resolution workflow locks the source and checks its reviewed version before applying a destructive decision. A further change requires fresh review in the same report. [Community reports and decisions](community_niche_requests_architecture.md#reports-and-decisions)
 
 ## Domain, capability and service naming
 
@@ -91,8 +93,6 @@ For all domains, test public entry points and observable outcomes, including sta
 
 ## Open decisions
 
-- **Username moderation.** Community owns the username. Reporting, enforcement and protection of a replacement username need an agreed policy. A generic fallback label remains a proposal. [Community reports and decisions](community_niche_requests_architecture.md#reports-and-decisions)
 - **Member blocking enforcement.** Confirm how blocks affect direct replies, visibility in shared threads, attribution, and stale requests. [Member blocking](community_niche_requests_architecture.md#member-blocking)
-- **Community suspension enforcement.** Agree which Community reads and writes are gated, how existing sessions and stale forms pick up the decision, how prior contributions are treated, and how suspension ends. [Community suspension](community_niche_requests_architecture.md#community-suspension)
 - **Reversible hiding and restoration.** Decide whether to support these alongside the implemented deletion options. [Reports and decisions](community_niche_requests_architecture.md#reports-and-decisions)
 - **Future events and retention.** Accepted-quality reassessment, new publishers or subscriptions, and active-owner event compaction require their own contracts and decisions. [Future contracts](domain_events.md#future-contracts) · [Retention](domain_event_operations.md#retention-and-boundaries)

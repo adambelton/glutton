@@ -29,6 +29,12 @@ class CommunityModeratorWorkspaceTest < ApplicationSystemTestCase
       click_button I18n.t("identity.sessions.sign_in")
       assert_current_path library_path
       visit community_path
+      set_viewport(390, 844)
+      within ".community-board-actions" do
+        assert_link I18n.t("community.curations.create")
+        assert_no_link I18n.t("community.moderation.title")
+      end
+      reset_viewport
       within ".ui-page-heading" do
         assert_field I18n.t("community.search.label")
         assert_no_link I18n.t("community.moderation.title")
@@ -37,7 +43,9 @@ class CommunityModeratorWorkspaceTest < ApplicationSystemTestCase
         assert_link I18n.t("community.curations.create")
         click_link I18n.t("community.moderation.title")
       end
-      assert_current_path community_moderation_path
+      assert_current_path community_moderation_reports_path
+    ensure
+      reset_viewport
     end
 
     visit admin_user_path(member)

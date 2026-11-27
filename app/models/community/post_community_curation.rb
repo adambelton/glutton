@@ -35,8 +35,8 @@ module Community
       comment
     end
 
-    def spoiler_free?
-      true
+    def report_reasons
+      Reportable::REASONS_WITH_SPOILERS
     end
 
     def reported_member
@@ -106,7 +106,7 @@ module Community
     end
 
     def can_delete?(community_user:)
-      !protected? && owned_by?(community_user:) && community_user.user.can_view_account?
+      !protected? && owned_by?(community_user:) && Membership::Access.participation_allowed?(user: community_user.user)
     end
 
     def delete_curation!(community_user:)
@@ -141,7 +141,7 @@ module Community
     end
 
     def can_disassociate?(community_user:)
-      protected? && owned_by?(community_user:) && community_user.user.can_view_account?
+      protected? && owned_by?(community_user:) && Membership::Access.participation_allowed?(user: community_user.user)
     end
 
     def disassociate!(community_user:)
@@ -161,6 +161,10 @@ module Community
 
     def owned_by?(community_user:)
       community_user_id.present? && community_user_id == community_user&.id
+    end
+
+    def report_record_deletable?
+      true
     end
 
     def independently_deletable_attributes

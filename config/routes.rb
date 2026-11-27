@@ -11,10 +11,16 @@ Rails.application.routes.draw do
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
   scope :community, as: :community, module: :community do
-    resource :moderation, only: :show, controller: :moderation
-    resources :moderation_reports, path: "moderation/reports", only: :show do
+    get "moderation", to: redirect(path: "/community/moderation/reports", status: 302)
+    resources :suspensions, path: "moderation/suspensions", only: [ :index, :new, :create ] do
+      patch :lift, on: :member
+    end
+    resources :moderation_reports, path: "moderation/reports", only: [ :index, :show ] do
       patch :escalate, on: :member
       patch :resolve, on: :member
+    end
+    resources :members, only: :show, controller: :public_profiles do
+      resource :report, only: [ :new, :create ], controller: :reports
     end
     resources :posts, only: [ :new, :create, :show, :edit, :update, :destroy ] do
       resource :report, only: [ :new, :create ], controller: :reports
