@@ -1,9 +1,7 @@
 require "application_system_test_case"
 
 class RatingNotesTest < ApplicationSystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ], options: { name: :selenium_classic_scrollbars } do |options|
-    options.add_argument("--disable-features=OverlayScrollbar")
-  end
+  driven_by :playwright, screen_size: [ 1400, 1000 ], options: CLASSIC_SCROLLBAR_OPTIONS.dup
 
   test "an overflowing synopsis opens over the centred rating choices" do
     overview = ("A masked traveller follows an empty road through the woods. " * 42).strip
@@ -17,44 +15,44 @@ class RatingNotesTest < ApplicationSystemTestCase
     synopsis = find(".film-synopsis-text")
     choices = find(".rating-choices")
     panel_element = find("#rating-panel")
-    panel = panel_element.rect
+    panel = element_rectangle(panel_element)
     gap = panel_element.style("row-gap").fetch("row-gap").to_f
-    description = find(".film-synopsis").rect
-    collapsed = synopsis.rect
+    description = element_rectangle(find(".film-synopsis"))
+    collapsed = element_rectangle(synopsis)
     first_lines = synopsis_lines(synopsis)
-    choice_grid = choices.rect
+    choice_grid = element_rectangle(choices)
     assert_in_delta 2 * synopsis.style("line-height").fetch("line-height").to_f, collapsed.height, 1
     assert_in_delta collapsed.height, description.height, 1
-    assert_operator expand.rect.y, :>=, collapsed.y + collapsed.height
-    assert_in_delta description.x + description.width, expand.rect.x + expand.rect.width, 1
+    assert_operator element_rectangle(expand).y, :>=, collapsed.y + collapsed.height
+    assert_in_delta description.x + description.width, element_rectangle(expand).x + element_rectangle(expand).width, 1
     assert_in_delta panel.width, choice_grid.width, 1
     assert_in_delta (description.y + description.height + gap + panel.y + panel.height) / 2.0, choice_grid.y + choice_grid.height / 2.0, 1
     assert_selector ".rating-choice", count: 4
     choice = choices.find(".rating-choice", text: I18n.t("ratings.values.brilliant"))
-    assert_in_delta 56, choice.rect.height, 1
-    assert_operator find(".rating-actions").rect.y - (choice_grid.y + choice_grid.height), :>=, 36
+    assert_in_delta 56, element_rectangle(choice).height, 1
+    assert_operator element_rectangle(find(".rating-actions")).y - (choice_grid.y + choice_grid.height), :>=, 36
     label = choice.find("label")
-    icon = label.find("svg").rect
-    caption = label.find("span").rect
+    icon = element_rectangle(label.find("svg"))
+    caption = element_rectangle(label.find("span"))
     assert_operator icon.x + icon.width, :<, caption.x
     assert_in_delta icon.y + icon.height / 2.0, caption.y + caption.height / 2.0, 1
 
     click_button I18n.t("ui.synopsis.expand")
     collapse = find_button I18n.t("ui.synopsis.collapse")
     assert_equal "true", collapse["aria-expanded"]
-    expanded = synopsis.rect
+    expanded = element_rectangle(synopsis)
     assert page.evaluate_script("arguments[0].scrollHeight > arguments[0].clientHeight", synopsis)
     assert_equal first_lines, synopsis_lines(synopsis)
     assert_operator expanded.y + expanded.height, :>, choice_grid.y
-    assert_in_delta expanded.y + expanded.height, collapse.rect.y, 1
-    assert_in_delta expanded.x + expanded.width, collapse.rect.x + collapse.rect.width, 1
-    assert_equal choice_grid, choices.rect
+    assert_in_delta expanded.y + expanded.height, element_rectangle(collapse).y, 1
+    assert_in_delta expanded.x + expanded.width, element_rectangle(collapse).x + element_rectangle(collapse).width, 1
+    assert_equal choice_grid, element_rectangle(choices)
 
     synopsis.send_keys(:escape)
     expand = find_button I18n.t("ui.synopsis.expand")
     assert_equal expand, page.evaluate_script("document.activeElement")
-    assert_equal collapsed, synopsis.rect
-    assert_equal choice_grid, choices.rect
+    assert_equal collapsed, element_rectangle(synopsis)
+    assert_equal choice_grid, element_rectangle(choices)
 
     short_film = Registry::Film.create!(title: "Short synopsis", tmdb_metadata: { details: { overview: "A traveller gets lost." } })
     choose I18n.t("ratings.values.brilliant"), allow_label_click: true
@@ -84,13 +82,13 @@ class RatingNotesTest < ApplicationSystemTestCase
 
     rating_tab = find('[role="tab"]', text: I18n.t("ratings.browser.panels.rating"))
     assert_equal "true", rating_tab["aria-selected"]
-    header = find(".rating-film-header").rect
-    title = find(".rating-film-header h2").rect
-    assert_operator rating_tab.rect.x, :>=, title.x + title.width
-    assert_in_delta header.y + header.height, rating_tab.rect.y + rating_tab.rect.height, 1
+    header = element_rectangle(find(".rating-film-header"))
+    title = element_rectangle(find(".rating-film-header h2"))
+    assert_operator element_rectangle(rating_tab).x, :>=, title.x + title.width
+    assert_in_delta header.y + header.height, element_rectangle(rating_tab).y + element_rectangle(rating_tab).height, 1
     assert_no_field I18n.t("ratings.browser.notes")
     assert_no_selector "#journal-tab .rating-tab-notes"
-    rating_tab.send_keys(:arrow_right)
+    rating_tab.send_keys(:right)
     journal_tab = find('[role="tab"][aria-selected="true"]', text: I18n.t("ratings.browser.panels.journal"))
     assert_equal journal_tab, page.evaluate_script("document.activeElement")
     notes = find_field(I18n.t("ratings.browser.notes"))
@@ -102,7 +100,7 @@ class RatingNotesTest < ApplicationSystemTestCase
     notes.send_keys("First line", :enter, "Second line")
     assert_equal "First line\nSecond line", notes.value
     assert_button I18n.t("ratings.browser.save"), disabled: true
-    journal_tab.send_keys(:arrow_left)
+    journal_tab.send_keys(:left)
     assert_no_field I18n.t("ratings.browser.notes")
     assert_selector "#journal-tab .rating-tab-notes"
     assert_equal I18n.t("ratings.browser.panels.has_notes"), journal_tab["aria-description"]
@@ -136,22 +134,22 @@ class RatingNotesTest < ApplicationSystemTestCase
     assert_selector "#journal-tab .rating-tab-notes"
 
     [ 1080, 900, 651, 390, 320 ].each do |width|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
+      set_viewport(width, 1000)
       rating_tab.click
-      rating = find("#rating-panel").rect
-      actions = find(".rating-actions").rect
-      strip = find('[role="tablist"]').rect
+      rating = element_rectangle(find("#rating-panel"))
+      actions = element_rectangle(find(".rating-actions"))
+      strip = element_rectangle(find('[role="tablist"]'))
       assert_tab_labels_fit
 
       if width <= 650
-        first_tab, last_tab = [ rating_tab, journal_tab ].map(&:rect)
+        first_tab, last_tab = [ rating_tab, journal_tab ].map { |element| element_rectangle(element) }
         assert_equal first_tab.y, last_tab.y
         assert_in_delta first_tab.width, last_tab.width, 1
         assert_in_delta rating.x, first_tab.x, 1
         assert_in_delta rating.x + rating.width, last_tab.x + last_tab.width, 1
-        poster = find(".rating-film-artwork .film-poster").rect
-        title = find(".rating-film-heading h2").rect
-        links = find(".rating-film-links").rect
+        poster = element_rectangle(find(".rating-film-artwork .film-poster"))
+        title = element_rectangle(find(".rating-film-heading h2"))
+        links = element_rectangle(find(".rating-film-links"))
         synopsis = find(".rating-mobile-synopsis .film-synopsis-text")
         lines = synopsis_lines(synopsis, limit: nil)
         first_x, first_y, = lines.first
@@ -164,28 +162,28 @@ class RatingNotesTest < ApplicationSystemTestCase
         assert_operator last_y, :>, poster.y + poster.height
         assert_in_delta poster.x, last_x, 1
         assert_operator poster.y + poster.height, :<=, strip.y
-        assert_operator synopsis.rect.y + synopsis.rect.height, :<, strip.y
+        assert_operator element_rectangle(synopsis).y + element_rectangle(synopsis).height, :<, strip.y
         assert_operator strip.y + strip.height, :<=, rating.y
-        choices = find(".rating-choices").rect
+        choices = element_rectangle(find(".rating-choices"))
         assert_in_delta rating.y, choices.y, 1
         assert_in_delta rating.y + rating.height, choices.y + choices.height, 1
         assert_no_selector "#rating-panel .film-synopsis"
       end
 
       journal_tab.click
-      journal = find("#journal-panel").rect
+      journal = element_rectangle(find("#journal-panel"))
       notes = find_field(I18n.t("ratings.browser.notes"))
       assert_equal "none", notes.style("resize").fetch("resize")
-      assert_in_delta journal.y + journal.height, notes.rect.y + notes.rect.height, 1
+      assert_in_delta journal.y + journal.height, element_rectangle(notes).y + element_rectangle(notes).height, 1
       assert_equal rating, journal, "Panel dimensions at #{width}px"
-      assert_equal actions, find(".rating-actions").rect, "Footer position at #{width}px"
-      assert_equal strip, find('[role="tablist"]').rect, "Tab strip dimensions at #{width}px"
+      assert_equal actions, element_rectangle(find(".rating-actions")), "Footer position at #{width}px"
+      assert_equal strip, element_rectangle(find('[role="tablist"]')), "Tab strip dimensions at #{width}px"
       assert_no_selector "#rating-panel"
       assert_selector ".rating-mobile-synopsis .film-synopsis-text", text: overview if width <= 650
       assert_tab_labels_fit
     end
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   private

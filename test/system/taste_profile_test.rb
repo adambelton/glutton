@@ -51,8 +51,8 @@ class TasteProfileTest < ApplicationSystemTestCase
     set_viewport(768, 950)
     assert_selector "main h1.sr-only", text: I18n.t("registry.films")
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
-    search = find_field(I18n.t("admin.search.films")).rect
-    modes = find(".search-bar-modes").rect
+    search = element_rectangle(find_field(I18n.t("admin.search.films")))
+    modes = element_rectangle(find(".search-bar-modes"))
     assert_in_delta search.x + search.width, modes.x + modes.width, 1
     assert_operator modes.y, :>=, search.y + search.height
     click_link I18n.t("admin.back_to_glutton")

@@ -42,14 +42,14 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     visit account_settings_path
     within(".ui-nav") { click_link I18n.t("admin.title") }
     click_link I18n.t("registry.categories")
-    standalone_search = find_field(I18n.t("admin.search.quality_categories")).rect
+    standalone_search = element_rectangle(find_field(I18n.t("admin.search.quality_categories")))
     click_link I18n.t("registry.films")
-    local_search = find_field("Search films").rect
-    modes = find(".search-bar-modes").rect
+    local_search = element_rectangle(find_field("Search films"))
+    modes = element_rectangle(find(".search-bar-modes"))
     assert_in_delta standalone_search.width, local_search.width, 1
     assert_equal standalone_search.height, local_search.height
     assert_operator modes.x, :>, local_search.x + local_search.width
-    registry_mode, tmdb_mode = all(".search-bar-modes button", count: 2).map(&:rect)
+    registry_mode, tmdb_mode = all(".search-bar-modes button", count: 2).map { |button| element_rectangle(button) }
     assert_in_delta registry_mode.width, tmdb_mode.width, 1
     assert_no_field "Search TMDB"
     fill_in "Search films", with: "Related"
@@ -60,13 +60,13 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     fill_in "Search films", with: "Alien"
     assert_current_path admin_films_path(q: "Alien")
     assert_selector "tbody tr", count: 1
-    table_top = find(".admin-table").rect.y
+    table_top = element_rectangle(find(".admin-table")).y
     click_button I18n.t("ui.search.tmdb")
     assert_no_field "Search films"
-    tmdb_search = find_field("Search TMDB").rect
+    tmdb_search = element_rectangle(find_field("Search TMDB"))
     assert_in_delta standalone_search.width, tmdb_search.width, 1
     assert_equal standalone_search.height, tmdb_search.height
-    assert_equal table_top, find(".admin-table").rect.y
+    assert_equal table_top, element_rectangle(find(".admin-table")).y
     fill_in "Search TMDB", with: "Alien"
 
     within("#admin-tmdb-film-results") do
@@ -78,15 +78,16 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
       assert_button "Add to Registry", count: 1
       registry_link = find_link("Alien is in the Registry. View film")
       assert_equal "1px", registry_link.style("border-left-width").fetch("border-left-width")
-      assert_equal registry_link.rect.width, find_button("Add to Registry").rect.width
+      assert_equal element_rectangle(registry_link).width, element_rectangle(find_button("Add to Registry")).width
       within find("li", text: "Alien documentary") do
         poster = find(".poster-wordmark", text: I18n.t("ui.short_wordmark"))
-        assert_equal [ 48, 72 ], [ poster.rect.width, poster.rect.height ]
+        poster_rectangle = element_rectangle(poster)
+        assert_equal [ 48, 72 ], [ poster_rectangle.width, poster_rectangle.height ]
         assert_match(/Tangerine/, poster.style("font-family").fetch("font-family"))
         assert_equal "34px", poster.style("font-size").fetch("font-size")
         assert_selector 'h3 a[href="https://www.themoviedb.org/movie/349"][target="_blank"][rel~="noopener"]', text: "Alien documentary"
-        title = find("h3").rect
-        action = find_button("Add to Registry").rect
+        title = element_rectangle(find("h3"))
+        action = element_rectangle(find_button("Add to Registry"))
         assert_operator action.x, :>=, title.x + title.width
       end
       assert_short_dropdown
@@ -101,7 +102,7 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
       assert_selector "li", count: 2
       assert_text "Alien re-release"
     end
-    assert_equal table_top, find(".admin-table").rect.y
+    assert_equal table_top, element_rectangle(find(".admin-table")).y
     assert_current_path admin_films_path(q: "Alien")
     assert_selector "tbody tr", count: 1
     click_link "Clear TMDB search"
@@ -148,13 +149,13 @@ class AdminRegistryFilmImportBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("registry.films")
     assert_field "Search films", with: "re-release"
     assert_no_selector ".admin-tmdb-results"
-    table_top = find(".admin-table").rect.y
+    table_top = element_rectangle(find(".admin-table")).y
 
     click_button I18n.t("ui.search.tmdb")
     assert_selector ".admin-tmdb-results li", count: 2
-    assert_equal table_top, find(".admin-table").rect.y
-    modes = find(".search-bar-modes").rect
-    assert_operator find(".admin-tmdb-results").rect.y, :>=, modes.y + modes.height
+    assert_equal table_top, element_rectangle(find(".admin-table")).y
+    modes = element_rectangle(find(".search-bar-modes"))
+    assert_operator element_rectangle(find(".admin-tmdb-results")).y, :>=, modes.y + modes.height
   ensure
     reset_viewport
   end

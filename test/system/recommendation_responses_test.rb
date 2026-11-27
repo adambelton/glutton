@@ -88,10 +88,10 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_selector tooltip, exact_text: label
 
     [ 1400, 390, 320 ].each do |width|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
-      score_rect = score.rect
-      title = find(".recommendation-heading h2").rect
-      poster = find(".recommendation-artwork .film-poster").rect
+      set_viewport(width, 1000)
+      score_rect = element_rectangle(score)
+      title = element_rectangle(find(".recommendation-heading h2"))
+      poster = element_rectangle(find(".recommendation-artwork .film-poster"))
       if width == 1400
         assert_operator score_rect.x, :>, title.x + title.width
         assert_in_delta title.y + title.height / 2.0, score_rect.y + score_rect.height / 2.0, 1
@@ -102,7 +102,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
         assert_operator score_rect.y, :>, title.y + title.height
       end
       [ "tmdb", "wikipedia" ].each do |source|
-        link = find_link(I18n.t("registry.film_presentation.#{source}")).rect
+        link = element_rectangle(find_link(I18n.t("registry.film_presentation.#{source}")))
         if width == 1400
           assert_in_delta score_rect.y + score_rect.height / 2.0, link.y + link.height / 2.0, 1
           assert_operator link.x, :>, score_rect.x + score_rect.width
@@ -111,12 +111,12 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
           assert_operator link.y, :>=, score_rect.y
         end
       end
-      synopsis = find(".film-synopsis-text").rect
-      actions = find(".recommendation-actions").rect
-      heading = find(".recommendation-heading").rect
-      assert_in_delta 16.0 / 9, backdrop.rect.width.to_f / backdrop.rect.height, 0.02
+      synopsis = element_rectangle(find(".film-synopsis-text"))
+      actions = element_rectangle(find(".recommendation-actions"))
+      heading = element_rectangle(find(".recommendation-heading"))
+      assert_in_delta 16.0 / 9, element_rectangle(backdrop).width.to_f / element_rectangle(backdrop).height, 0.02
       if width == 1400
-        synopsis_area = find(".film-synopsis").rect
+        synopsis_area = element_rectangle(find(".film-synopsis"))
         assert_in_delta 12, actions.y - (heading.y + heading.height), 1
         assert_in_delta synopsis_area.y + synopsis_area.height, actions.y + actions.height, 1
         assert_in_delta synopsis_area.y, synopsis.y, 1
@@ -133,7 +133,7 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
       end
     end
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "expanding a trailer fills the card and keeps the same player" do
@@ -161,43 +161,43 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
 
     player = find('#recommendation-trailer-player[referrerpolicy="strict-origin-when-cross-origin"]')
     assert_no_selector ".recommendation-backdrop, .recommendation-placeholder"
-    original_width = player.rect.width
-    original_height = find(".recommendation-film").rect.height
+    original_width = element_rectangle(player).width
+    original_height = element_rectangle(find(".recommendation-film")).height
     expand = find_button(I18n.t("recommendations.expand_trailer"))
-    assert_in_delta player.rect.x + original_width + 12, expand.rect.x + expand.rect.width, 1
-    assert_in_delta player.rect.y + player.rect.height + 12, expand.rect.y + expand.rect.height, 1
+    assert_in_delta element_rectangle(player).x + original_width + 12, element_rectangle(expand).x + element_rectangle(expand).width, 1
+    assert_in_delta element_rectangle(player).y + element_rectangle(player).height + 12, element_rectangle(expand).y + element_rectangle(expand).height, 1
     expand.click
     assert_button I18n.t("recommendations.collapse_trailer")
     assert_no_button I18n.t("recommendations.accept")
-    frame = find(".recommendation-trailer-frame").rect
-    card = find(".recommendation-film").rect
-    expanded_player = player.rect
+    frame = element_rectangle(find(".recommendation-trailer-frame"))
+    card = element_rectangle(find(".recommendation-film"))
+    expanded_player = element_rectangle(player)
     assert_in_delta 16.0 / 9, expanded_player.width.to_f / expanded_player.height, 0.01
     assert_in_delta card.x + card.width / 2.0, expanded_player.x + expanded_player.width / 2.0, 1
     assert_in_delta card.y + card.height / 2.0, expanded_player.y + expanded_player.height / 2.0, 1
     assert_in_delta [ card.width, card.height * 16.0 / 9 ].min, expanded_player.width, 1
-    assert_in_delta original_height, find(".recommendation-film").rect.height, 1
+    assert_in_delta original_height, element_rectangle(find(".recommendation-film")).height, 1
     collapse = find_button(I18n.t("recommendations.collapse_trailer"))
-    assert_operator collapse.rect.x, :<, frame.x + frame.width
-    assert_operator collapse.rect.y, :<, frame.y + frame.height
-    assert_operator collapse.rect.x + collapse.rect.width, :>, frame.x + frame.width
-    assert_operator collapse.rect.y + collapse.rect.height, :>, frame.y + frame.height
-    assert_operator player.rect.width, :>, original_width
+    assert_operator element_rectangle(collapse).x, :<, frame.x + frame.width
+    assert_operator element_rectangle(collapse).y, :<, frame.y + frame.height
+    assert_operator element_rectangle(collapse).x + element_rectangle(collapse).width, :>, frame.x + frame.width
+    assert_operator element_rectangle(collapse).y + element_rectangle(collapse).height, :>, frame.y + frame.height
+    assert_operator element_rectangle(player).width, :>, original_width
 
     collapse.send_keys(:escape)
     assert_button I18n.t("recommendations.expand_trailer")
     assert_button I18n.t("recommendations.accept")
-    assert_in_delta original_width, player.rect.width, 1
+    assert_in_delta original_width, element_rectangle(player).width, 1
     assert page.evaluate_script("arguments[0] === document.querySelector('#recommendation-trailer-player')", player)
 
     click_button I18n.t("recommendations.expand_trailer")
-    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 900, height: 1000, deviceScaleFactor: 1, mobile: false)
+    set_viewport(900, 1000)
     assert_no_button I18n.t("recommendations.collapse_trailer")
-    poster = find(".recommendation-artwork .film-poster").rect
-    details = find(".recommendation-details").rect
-    synopsis = find(".film-synopsis").rect
-    tablet_player = player.rect
-    actions = find(".recommendation-actions").rect
+    poster = element_rectangle(find(".recommendation-artwork .film-poster"))
+    details = element_rectangle(find(".recommendation-details"))
+    synopsis = element_rectangle(find(".film-synopsis"))
+    tablet_player = element_rectangle(player)
+    actions = element_rectangle(find(".recommendation-actions"))
     assert_in_delta poster.y, tablet_player.y, 1
     assert_in_delta details.x, tablet_player.x, 1
     assert_operator tablet_player.x + tablet_player.width, :<, poster.x
@@ -207,33 +207,33 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_operator actions.x, :>, synopsis.x + synopsis.width
 
     text = find(".film-synopsis-text")
-    heading = find(".recommendation-heading").rect
+    heading = element_rectangle(find(".recommendation-heading"))
     assert_in_delta 12, actions.y - (heading.y + heading.height), 1
     assert_in_delta synopsis.y + synopsis.height, actions.y + actions.height, 1
     assert_in_delta 2 * text.style("line-height").fetch("line-height").to_f, synopsis.height, 1
     expand_synopsis = find_button I18n.t("ui.synopsis.expand")
-    assert_in_delta synopsis.y, expand_synopsis.rect.y + expand_synopsis.rect.height, 1
-    assert_in_delta synopsis.x + synopsis.width, expand_synopsis.rect.x + expand_synopsis.rect.width, 1
+    assert_in_delta synopsis.y, element_rectangle(expand_synopsis).y + element_rectangle(expand_synopsis).height, 1
+    assert_in_delta synopsis.x + synopsis.width, element_rectangle(expand_synopsis).x + element_rectangle(expand_synopsis).width, 1
     expand_synopsis.click
-    collapse_synopsis = find_button(I18n.t("ui.synopsis.collapse")).rect
-    assert_operator text.rect.y, :<, synopsis.y
-    assert_in_delta synopsis.y + synopsis.height, text.rect.y + text.rect.height, 1
-    assert_in_delta text.rect.y, collapse_synopsis.y + collapse_synopsis.height, 1
+    collapse_synopsis = element_rectangle(find_button(I18n.t("ui.synopsis.collapse")))
+    assert_operator element_rectangle(text).y, :<, synopsis.y
+    assert_in_delta synopsis.y + synopsis.height, element_rectangle(text).y + element_rectangle(text).height, 1
+    assert_in_delta element_rectangle(text).y, collapse_synopsis.y + collapse_synopsis.height, 1
     assert_in_delta synopsis.x + synopsis.width, collapse_synopsis.x + collapse_synopsis.width, 1
-    assert_equal actions, find(".recommendation-actions").rect
+    assert_equal actions, element_rectangle(find(".recommendation-actions"))
     text.send_keys(:escape)
     assert_equal find_button(I18n.t("ui.synopsis.expand")), page.evaluate_script("document.activeElement")
 
-    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 850, deviceScaleFactor: 1, mobile: true)
+    set_viewport(390, 850, mobile: true)
     assert_no_button I18n.t("recommendations.expand_trailer")
     assert_button I18n.t("recommendations.accept")
     watched = find_button I18n.t("library.detail.add_to_watched")
     assert_empty watched.text
     watched.assert_selector "svg"
     assert_selector "#recommendation-trailer-player[allowfullscreen]"
-    mobile_player = player.rect
-    poster = find(".recommendation-artwork .film-poster").rect
-    actions = find(".recommendation-actions").rect
+    mobile_player = element_rectangle(player)
+    poster = element_rectangle(find(".recommendation-artwork .film-poster"))
+    actions = element_rectangle(find(".recommendation-actions"))
     assert_in_delta 16.0 / 9, mobile_player.width.to_f / mobile_player.height, 0.02
     assert_operator poster.y, :>, mobile_player.y + mobile_player.height
     lines = synopsis_lines(text)
@@ -243,13 +243,13 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     assert_operator first_line.fetch("y"), :<, poster.y + poster.height
     assert_in_delta poster.x, last_line.fetch("x"), 1
     assert_operator last_line.fetch("y"), :>, poster.y + poster.height
-    synopsis = find(".film-synopsis").rect
+    synopsis = element_rectangle(find(".film-synopsis"))
     assert_operator actions.y, :>, synopsis.y + synopsis.height
     assert_no_button I18n.t("ui.synopsis.expand")
     assert_equal "none", text.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
     assert page.evaluate_script("arguments[0].clientHeight === arguments[0].scrollHeight", text)
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "cards keep proportional posters and right-aligned actions of the same size" do
@@ -260,13 +260,13 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
     unlock_recommendations_for(user: Identity::Session.last.user)
 
     [ 1400, 900, 390 ].each do |width|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height: 1000, deviceScaleFactor: 1, mobile: false)
+      set_viewport(width, 1000)
       visit recommendation_path
       recommendation = find(".recommendation-film", text: film.title)
       assert_no_selector ".recommendation-trailer"
       within(recommendation) do
-        placeholder = find(".recommendation-placeholder").rect
-        poster = find(".recommendation-artwork .film-poster").rect
+        placeholder = element_rectangle(find(".recommendation-placeholder"))
+        poster = element_rectangle(find(".recommendation-artwork .film-poster"))
         assert_in_delta 16.0 / 9, placeholder.width.to_f / placeholder.height, 0.02
         if width > 650
           assert_in_delta placeholder.y, poster.y, 1
@@ -277,20 +277,20 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
         assert_proportional_poster(".recommendation-artwork .film-poster")
         assert_actions_align_right(recommendation)
       end
-      accept = find_button(I18n.t("recommendations.accept")).rect
+      accept = element_rectangle(find_button(I18n.t("recommendations.accept")))
       visit new_rating_path
       rating = find(".rating-interface", text: film.title)
       within(rating) do
         assert_selector '[role="tab"][aria-selected="true"]', text: I18n.t("ratings.browser.panels.rating")
         assert_proportional_poster(".rating-film-artwork .film-poster")
         assert_actions_align_right(rating)
-        save = find_button(I18n.t("ratings.browser.save"), disabled: true).rect
+        save = element_rectangle(find_button(I18n.t("ratings.browser.save"), disabled: true))
         assert_in_delta accept.width, save.width, 1
         assert_in_delta accept.height, save.height, 1
       end
     end
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "new ratings leave a queued recommendation in place until a response" do
@@ -339,12 +339,12 @@ class RecommendationResponsesTest < ApplicationSystemTestCase
   private
 
   def assert_actions_align_right(card)
-    actions = find(".film-actions").rect
-    assert_in_delta card.rect.x + card.rect.width, actions.x + actions.width, 1
+    actions = element_rectangle(find(".film-actions"))
+    assert_in_delta element_rectangle(card).x + element_rectangle(card).width, actions.x + actions.width, 1
   end
 
   def assert_proportional_poster(selector)
-    poster = find(selector).rect
+    poster = element_rectangle(find(selector))
     assert_in_delta poster.width * 1.5, poster.height, 1
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   end

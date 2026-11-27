@@ -24,8 +24,8 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
       poster = find(".film-poster")
       title = find("h2", text: film.title)
       action = find_button(create_label)
-      assert_operator poster.rect.x + poster.rect.width, :<=, title.rect.x
-      assert_operator title.rect.y + title.rect.height, :<=, action.rect.y
+      assert_operator element_rectangle(poster).x + element_rectangle(poster).width, :<=, element_rectangle(title).x
+      assert_operator element_rectangle(title).y + element_rectangle(title).height, :<=, element_rectangle(action).y
       assert_no_selector ".community-post-tag"
       within "h2 + form.community-film-debrief-create" do
         click_button create_label
@@ -74,43 +74,42 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_current_path library_path
     visit community_post_path(debrief)
     assert_selector "h1 .film-year", text: "(1987)"
-    title = find("h1").rect
-    poster = find(".community-debrief-poster .film-poster").rect
+    title = element_rectangle(find("h1"))
+    poster = element_rectangle(find(".community-debrief-poster .film-poster"))
     assert_operator poster.x + poster.width, :<=, title.x
     assert_in_delta title.y, poster.y, 1
     within ".community-debrief-intro" do
-      badge = find(".community-post-tag", text: I18n.t("community.film_debriefs.badge")).rect
-      author = find(".community-film-debrief-author", text: I18n.t("ui.wordmark")).rect
+      badge = element_rectangle(find(".community-post-tag", text: I18n.t("community.film_debriefs.badge")))
+      author = element_rectangle(find(".community-film-debrief-author", text: I18n.t("ui.wordmark")))
       assert_operator title.y + title.height, :<=, badge.y
       assert_operator badge.y + badge.height, :<=, author.y
-      assert_operator author.y + author.height, :<=, find("p").rect.y
+      assert_operator author.y + author.height, :<=, element_rectangle(find("p")).y
     end
-    assert_operator poster.y + poster.height, :<=, find(".community-debrief-discussion").rect.y
+    assert_operator poster.y + poster.height, :<=, element_rectangle(find(".community-debrief-discussion")).y
 
     composer_id = "#film-debrief-#{debrief.id}-composer"
     publish_label = I18n.t("community.film_debriefs.publish_comment")
     within composer_id do
       assert_selector ".community-member-avatar"
-      assert_operator find_button(publish_label, disabled: true).rect.width, :<, find("textarea").rect.width
+      assert_operator element_rectangle(find_button(publish_label, disabled: true)).width, :<, element_rectangle(find("textarea")).width
     end
 
-    browser = page.driver.browser
-    browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 320, height: 900, deviceScaleFactor: 1, mobile: false)
-    mobile_poster = find(".community-debrief-poster .film-poster").rect
-    introduction = find(".community-debrief-intro p").rect
-    assert_operator find(".community-film-debrief-author").rect.x, :>, mobile_poster.x
+    set_viewport(320, 900)
+    mobile_poster = element_rectangle(find(".community-debrief-poster .film-poster"))
+    introduction = element_rectangle(find(".community-debrief-intro p"))
+    assert_operator element_rectangle(find(".community-film-debrief-author")).x, :>, mobile_poster.x
     assert_operator introduction.y, :>=, mobile_poster.y + mobile_poster.height
-    assert_operator introduction.x, :<, find("h1").rect.x
-    assert_operator find(".community-debrief-discussion").rect.y, :>=, introduction.y + introduction.height
+    assert_operator introduction.x, :<, element_rectangle(find("h1")).x
+    assert_operator element_rectangle(find(".community-debrief-discussion")).y, :>=, introduction.y + introduction.height
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
 
     within composer_id do
       textarea = find("textarea[maxlength='4000']")
       button = find_button(publish_label, disabled: true)
-      editor = find(".community-comment").rect
-      assert_operator button.rect.y, :>, editor.y + editor.height
-      assert_operator button.rect.width, :>=, editor.width * 0.99
-      assert_operator button.rect.x, :<, textarea.rect.x
+      editor = element_rectangle(find(".community-comment"))
+      assert_operator element_rectangle(button).y, :>, editor.y + editor.height
+      assert_operator element_rectangle(button).width, :>=, editor.width * 0.99
+      assert_operator element_rectangle(button).x, :<, element_rectangle(textarea).x
       assert_no_selector ".community-member-avatar"
       assert_equal "nowrap", button.style("white-space").fetch("white-space")
       assert button.evaluate_script("this.scrollWidth <= this.clientWidth")
@@ -124,14 +123,14 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     root = debrief.comments.sole
     discussion = find(".community-debrief-discussion")
     comment_gap = discussion.evaluate_script("parseFloat(getComputedStyle(this).getPropertyValue('--comment-gap'))")
-    composer = find(composer_id).rect
-    assert_in_delta comment_gap, find("#comment-#{root.id}").rect.y - (composer.y + composer.height), 1
+    composer = element_rectangle(find(composer_id))
+    assert_in_delta comment_gap, element_rectangle(find("#comment-#{root.id}")).y - (composer.y + composer.height), 1
     within composer_id do
       fill_in I18n.t("community.comment_editing.body"), with: "The score stood out too."
       click_button publish_label
     end
-    next_root = find("article.community-comment", text: "The score stood out too.").rect
-    previous_root = find("#comment-#{root.id}").rect
+    next_root = element_rectangle(find("article.community-comment", text: "The score stood out too."))
+    previous_root = element_rectangle(find("#comment-#{root.id}"))
     assert_in_delta comment_gap, next_root.y - (previous_root.y + previous_root.height), 1
     within "#comment-#{root.id}" do
       click_link I18n.t("community.curations.reply")
@@ -145,11 +144,11 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_selector "#replies-#{root.id}[open] article", text: "The final shot changes the meaning."
     reply = debrief.comments.find_by!(parent: root)
     within "#comment-#{reply.id}" do
-      content_start = find(".community-member-avatar").rect.x
+      content_start = element_rectangle(find(".community-member-avatar")).x
       click_link I18n.t("community.comment_editing.edit")
       assert_button I18n.t("community.comment_editing.save"), disabled: true
       assert_no_selector ".community-member-avatar"
-      assert_in_delta content_start, find("textarea").rect.x, 1
+      assert_in_delta content_start, element_rectangle(find("textarea")).x, 1
       fill_in I18n.t("community.comment_editing.body"), with: "The final shot changes the meaning of the first scene."
       click_button I18n.t("community.comment_editing.save")
       assert_text "The final shot changes the meaning of the first scene."
@@ -177,6 +176,6 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     end
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")
   ensure
-    browser&.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 end

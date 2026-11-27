@@ -46,7 +46,7 @@ class SuperuserUserAdministrationBrowserTest < ApplicationSystemTestCase
     assert_equal "2", long_cell.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
     assert long_cell.evaluate_script("this.scrollHeight > this.clientHeight")
     line_height = long_cell.style("line-height").fetch("line-height").to_f
-    assert_in_delta 2 * line_height, long_cell.rect.height, 1
+    assert_in_delta 2 * line_height, element_rectangle(long_cell).height, 1
     click_link "Next page"
     assert_current_path admin_films_path(page: 2, q: "matched")
     assert_selector "tbody tr", count: 1

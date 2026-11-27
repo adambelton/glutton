@@ -43,12 +43,12 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
       cancel = find_button(I18n.t("identity.settings.cancel"))
       label = I18n.t("identity.settings.send_email")
       send = find_button(label, disabled: true)
-      form = find("form").rect
-      assert_in_delta form.x, cancel.rect.x, 1
-      assert_in_delta form.x + form.width, send.rect.x + send.rect.width, 1
-      assert_in_delta cancel.rect.width, send.rect.width, 1
-      assert_in_delta cancel.rect.height, send.rect.height, 1
-      assert_in_delta 8, send.rect.x - (cancel.rect.x + cancel.rect.width), 1
+      form = element_rectangle(find("form"))
+      assert_in_delta form.x, element_rectangle(cancel).x, 1
+      assert_in_delta form.x + form.width, element_rectangle(send).x + element_rectangle(send).width, 1
+      assert_in_delta element_rectangle(cancel).width, element_rectangle(send).width, 1
+      assert_in_delta element_rectangle(cancel).height, element_rectangle(send).height, 1
+      assert_in_delta 8, element_rectangle(send).x - (element_rectangle(cancel).x + element_rectangle(cancel).width), 1
       assert_equal "32px", find(".ui-actions-fixed").style("margin-block-start").fetch("margin-block-start")
       fill_in I18n.t("identity.settings.new_email"), with: "new-address@example.test"
       assert_button label, disabled: true

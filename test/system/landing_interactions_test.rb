@@ -7,12 +7,12 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     visit root_path
     assert_selector "html:not([data-theme])"
     assert_equal "dark", find("html").style("color-scheme").fetch("color-scheme")
-    assert_equal "rgba(195, 38, 48, 1)", find(".hero-horror").style("color").fetch("color")
+    assert_equal "rgb(195, 38, 48)", find(".hero-horror").style("color").fetch("color")
     assert_selector 'button.theme-toggle[aria-pressed="true"]'
     click_button I18n.t("ui.dark_mode")
     assert_selector 'html[data-theme="light"]'
     assert_equal "light", find("html").style("color-scheme").fetch("color-scheme")
-    assert_equal "rgba(143, 16, 27, 1)", find(".hero-horror").style("color").fetch("color")
+    assert_equal "rgb(143, 16, 27)", find(".hero-horror").style("color").fetch("color")
     visit new_session_path
     assert_selector 'html[data-theme="light"]'
     refresh
@@ -28,7 +28,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
 
   test "entry actions move from the header to full-width rows on mobile" do
     [ [ 1366, 768 ], [ 390, 844 ] ].each do |width, height|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
+      set_viewport(width, height)
       visit root_path
       assert_selector "h1", text: I18n.t("identity.entry.title"), normalize_ws: true
       mobile = width <= 650
@@ -54,12 +54,12 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       hero = find(".demo-intro")
       guest = row.find_button(I18n.t("identity.entry.try_it_out"))
       login = row.find_link(I18n.t("ui.log_in"))
-      assert_in_delta hero.rect.x, guest.rect.x, 1
-      assert_in_delta hero.rect.width, guest.rect.width, 1
-      assert_operator login.rect.y, :>, guest.rect.y + guest.rect.height
+      assert_in_delta element_rectangle(hero).x, element_rectangle(guest).x, 1
+      assert_in_delta element_rectangle(hero).width, element_rectangle(guest).width, 1
+      assert_operator element_rectangle(login).y, :>, element_rectangle(guest).y + element_rectangle(guest).height
       assert_full_width_entry_actions(row, hero, selector: "a.ui-action-button", count: 2)
-      description = hero.all("p").last.rect
-      assert_operator row.rect.y - (description.y + description.height), :>, 28
+      description = element_rectangle(hero.all("p").last)
+      assert_operator element_rectangle(row).y - (description.y + description.height), :>, 28
       guest.send_keys(:tab)
       assert_equal login, page.evaluate_script("document.activeElement")
 
@@ -79,15 +79,15 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     within(".hero-entry-actions") { click_button I18n.t("identity.entry.try_it_out") }
     assert_current_path new_rating_path
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   def assert_full_width_entry_actions(group, container, count:, selector: ".ui-action-button")
-    actions = group.all(selector, count:).map(&:rect)
+    actions = group.all(selector, count:).map { |element| element_rectangle(element) }
     assert_equal 1, actions.map(&:y).uniq.size
     actions.drop(1).each { |action| assert_in_delta actions.first.width, action.width, 1 }
-    assert_in_delta container.rect.x, actions.first.x, 1
-    assert_in_delta container.rect.x + container.rect.width, actions.last.x + actions.last.width, 1
+    assert_in_delta element_rectangle(container).x, actions.first.x, 1
+    assert_in_delta element_rectangle(container).x + element_rectangle(container).width, actions.last.x + actions.last.width, 1
   end
 
   test "FAQ questions disclose answers with Enter and Space using native accessible semantics" do
@@ -129,7 +129,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
   end
 
   test "manual selection remains independent with reduced motion" do
-    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+    chromium_command("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
     create_preview_catalogue
     visit root_path
     within preview(:recommendations) do
@@ -153,7 +153,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     within(preview(:recommendations)) { assert_selector "h2", text: "Backrooms" }
     within(preview(:profile)) { assert_no_selector ".demo-controls" }
   ensure
-    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
+    chromium_command("Emulation.setEmulatedMedia", features: [])
   end
 
   test "the full profile stays visible without repeated notes or evidence" do
@@ -185,7 +185,11 @@ class LandingInteractionsTest < ApplicationSystemTestCase
         search = find('input[type="search"]')
         assert_equal I18n.t("library.browser.search.watchlist"), search["placeholder"]
         assert_equal "none", search.style("pointer-events").fetch("pointer-events")
-        page.driver.browser.action.move_to(search.native).click.perform
+        scroll_to(search, align: :center)
+        rectangle = element_rectangle(search)
+        page.driver.with_playwright_page do |browser_page|
+          browser_page.mouse.click(rectangle.x + rectangle.width / 2, rectangle.y + rectangle.height / 2)
+        end
         assert_not page.evaluate_script("document.activeElement === arguments[0]", search)
         assert_selector ".library-film", count: 2
         find("button", text: I18n.t("library.browser.views.watched"), exact_text: true).send_keys(:enter)
@@ -255,21 +259,21 @@ class LandingInteractionsTest < ApplicationSystemTestCase
           assert_selector "h2", text: "The Witch"
         end
         expand = find_button I18n.t("ui.synopsis.expand")
-        toggle = expand.rect
+        toggle = element_rectangle(expand)
         assert_equal [ 32, 24 ], [ toggle.width, toggle.height ]
         synopsis = find(".film-synopsis-text")
-        collapsed = synopsis.rect
+        collapsed = element_rectangle(synopsis)
         assert_in_delta 2 * synopsis.style("line-height").fetch("line-height").to_f, collapsed.height, 1
         expand.click
         assert_button I18n.t("ui.synopsis.collapse")
-        assert_operator synopsis.rect.height, :>, collapsed.height
+        assert_operator element_rectangle(synopsis).height, :>, collapsed.height
         synopsis.send_keys(:escape)
         assert_button I18n.t("ui.synopsis.expand")
-        assert_equal collapsed, synopsis.rect
+        assert_equal collapsed, element_rectangle(synopsis)
       end
     end
 
-    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
+    set_viewport(390, 844, mobile: true)
     %i[ratings recommendations].each do |feature|
       within preview(feature) do
         synopsis = find(".film-synopsis-text")
@@ -279,7 +283,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       end
     end
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 
   test "complete previews stay static and fit desktop tablet and narrow screens" do
@@ -322,7 +326,7 @@ class LandingInteractionsTest < ApplicationSystemTestCase
     assert_no_selector ".demo-frame button:enabled:not([role=tab], .film-synopsis-toggle), .account-page button:enabled"
 
     [ [ 1400, 1000 ], [ 800, 1000 ], [ 390, 844 ] ].each do |width, height|
-      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width:, height:, deviceScaleFactor: 1, mobile: false)
+      set_viewport(width, height)
       assert_equal width, page.evaluate_script("window.innerWidth")
       assert_selector ".marketing-feature", count: 4
       assert_equal preview(:recommendations).style("margin-top"), preview(:ratings).style("margin-top")
@@ -363,6 +367,6 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       end
     end
   ensure
-    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    reset_viewport
   end
 end
