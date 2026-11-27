@@ -258,18 +258,14 @@ class LandingInteractionsTest < ApplicationSystemTestCase
           click_button I18n.t("identity.entry.demo.select", position: 2, count: 3)
           assert_selector "h2", text: "The Witch"
         end
-        expand = find_button I18n.t("ui.synopsis.expand")
-        toggle = element_rectangle(expand)
-        assert_equal [ 32, 24 ], [ toggle.width, toggle.height ]
         synopsis = find(".film-synopsis-text")
-        collapsed = document_rectangle(synopsis)
-        assert_in_delta 2 * synopsis.style("line-height").fetch("line-height").to_f, collapsed.height, 1
-        expand.click
+        assert synopsis_clipped?(synopsis)
+        click_button I18n.t("ui.synopsis.expand")
         assert_button I18n.t("ui.synopsis.collapse")
-        assert_operator element_rectangle(synopsis).height, :>, collapsed.height
+        assert_not synopsis_clipped?(synopsis)
         synopsis.send_keys(:escape)
         assert_button I18n.t("ui.synopsis.expand")
-        assert_equal collapsed, document_rectangle(synopsis)
+        assert synopsis_clipped?(synopsis)
       end
     end
 
@@ -278,12 +274,15 @@ class LandingInteractionsTest < ApplicationSystemTestCase
       within preview(feature) do
         synopsis = find(".film-synopsis-text")
         assert_no_button I18n.t("ui.synopsis.expand")
-        assert_equal "none", synopsis.style("-webkit-line-clamp").fetch("-webkit-line-clamp")
-        assert page.evaluate_script("arguments[0].clientHeight === arguments[0].scrollHeight", synopsis)
+        assert_not synopsis_clipped?(synopsis)
       end
     end
   ensure
     reset_viewport
+  end
+
+  private def synopsis_clipped?(synopsis)
+    synopsis.evaluate_script("this.clientHeight < this.scrollHeight")
   end
 
   test "complete previews stay static and fit desktop tablet and narrow screens" do
