@@ -15,10 +15,9 @@ class DeleteRegisteredAccountTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     within(".ui-nav") { click_link I18n.t("account.title") }
     assert_current_path account_settings_path
-    assert_selector "section > h2", exact_text: I18n.t("identity.settings.login_details")
-
-    assert_selector ".account-settings-row", count: 2
-    row_positions = all(".account-settings-row").map do |row|
+    login_details = find('section[aria-labelledby="account-login-details"]')
+    assert_selector "#account-login-details", exact_text: I18n.t("identity.settings.login_details")
+    row_positions = login_details.all(".account-settings-row", count: 2).map do |row|
       row.evaluate_script(<<~JS)
         (() => {
           const row = this.getBoundingClientRect()

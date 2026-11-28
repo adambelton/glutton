@@ -318,8 +318,39 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
 .rating-choice:has(input:enabled:not(:checked)):hover { background: var(--color-accent); }
 .rating-choice:has(input:checked) { background: var(--glutton-inset); border-color: var(--glutton-primary); color: var(--glutton-primary); }
 .rating-choice input { accent-color: var(--glutton-primary); }
-.rating-choice label { flex: 1; display: flex; align-items: center; min-height: 54px; gap: 8px; padding: 8px 16px; font-size: 14px; }
-.rating-choice label svg { flex-shrink: 0; }
+.rating-choice-caption { flex: 1; display: flex; align-items: center; min-width: 0; block-size: 62px; gap: 8px; padding: 8px 16px; font-size: 14px; line-height: 1.4; }
+.rating-choice-caption svg { flex-shrink: 0; }
+.rating-choice-caption span { overflow-wrap: anywhere; }
+@media (max-width: 460px) {
+  .rating-choice-caption { gap: 6px; padding-inline: 8px; }
+}
+.rating-vocabulary-inline { display: contents; }
+.rating-vocabulary-fields { width: 100%; margin: auto; }
+.rating-vocabulary-heading { display: grid; place-items: center; min-height: 46px; margin-block-end: 8px; font-size: 13px; font-weight: 500; }
+.rating-vocabulary-prompt:not([hidden]) { display: flex; align-items: center; }
+.rating-vocabulary-inline-trigger { inline-size: 44px; block-size: 44px; }
+.rating-vocabulary-inline-trigger:not([hidden]) { display: inline-grid; place-items: center; }
+.rating-vocabulary-editor { width: min(100%, 240px); }
+.rating-vocabulary-editor .rating-vocabulary-form { margin: 0; }
+.rating-vocabulary-fields .rating-choices[aria-disabled="true"] .rating-choice { pointer-events: none; }
+.rating-vocabulary-symbol { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.5em; }
+.rating-vocabulary-liver-bird { display: block; object-fit: contain; }
+:root:not([data-theme="light"]) .rating-vocabulary-liver-bird { filter: invert(1); }
+.rating-vocabulary-options { position: relative; }
+.rating-vocabulary-options summary { display: flex; align-items: center; gap: 8px; padding-inline: 12px; border-radius: 6px; cursor: pointer; }
+.rating-vocabulary-options summary > span { display: inline-flex; align-items: center; gap: 8px; }
+.rating-vocabulary-options .rating-vocabulary-option-list {
+  position: absolute; inset: 100% 0 auto; z-index: 2; max-block-size: 14rem; overflow-y: auto;
+  background: var(--glutton-surface); border: 1px solid var(--glutton-border); border-radius: 6px;
+  list-style: none; margin: 0; padding: 0;
+}
+.rating-vocabulary-option-list button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; text-align: start; }
+.rating-vocabulary-option-list button:is(:hover, :focus-visible) { background: var(--color-accent); }
+.rating-vocabulary-form .rating-choices { margin-block-start: 8px; }
+.rating-vocabulary-inline .rating-vocabulary-actions { display: none; }
+.rating-vocabulary-inline:has(#rating-panel:not([inert]) .rating-vocabulary-editor:not([hidden])) .rating-actions { display: none; }
+.rating-vocabulary-inline:has(#rating-panel:not([inert]) .rating-vocabulary-editor:not([hidden])) .rating-vocabulary-actions { display: grid; }
+.rating-vocabulary-actions > .ui-submit { grid-column: 2; }
 .rating-choice:has(input:focus-visible) { outline: 2px solid var(--glutton-foreground); outline-offset: 3px; }
 @media (max-width: 650px) {
   .ui-page {
@@ -445,7 +476,6 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   grid-template-areas: "errors errors" "artwork details" "artwork actions";
 }
 .rating-interface > .ui-errors { grid-area: errors; }
-.rating-workspace { display: contents; }
 .rating-film-artwork { grid-area: artwork; align-self: start; }
 :is(.rating-film-artwork, .recommendation-artwork) > img.film-poster { display: block; }
 .rating-film-details { grid-area: details; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -575,6 +605,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .rating-film-details:has(.rating-tabs:not([hidden])) .rating-panel:has(.rating-notes) { position: absolute; inset: 0; }
   .rating-film-details:has(.rating-tabs:not([hidden])) :is(.rating-notes, .rating-notes textarea.ui-input) { min-block-size: 0; }
   .rating-actions { margin-inline-start: auto; }
+  .rating-vocabulary-actions { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rating-vocabulary-actions > .ui-submit { grid-column: auto; }
 }
 
 /* Recommendations uses the same media slot for trailers and fallback images. */
@@ -1072,7 +1104,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   padding: 14px 12px;
   cursor: pointer;
 }
-.profile-quality-item summary::after {
+:is(.profile-quality-item, .rating-vocabulary-options) summary::after {
   content: "";
   width: 7px;
   height: 7px;
@@ -1082,8 +1114,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   border-width: 0 1px 1px 0;
   transform: rotate(45deg);
 }
-.profile-quality-item summary:focus-visible { outline: 2px solid var(--glutton-primary); outline-offset: 3px; border-radius: 4px; }
-.profile-quality-item[open] summary::after { transform: rotate(225deg); }
+:is(.profile-quality-item, .rating-vocabulary-options) summary:focus-visible { outline: 2px solid var(--glutton-primary); outline-offset: 3px; border-radius: 4px; }
+:is(.profile-quality-item, .rating-vocabulary-options)[open] summary::after { transform: rotate(225deg); }
 .profile-quality-item p { padding: 0 12px 14px; font-size: 14px; line-height: 1.6; }
 .profile-quality-name { min-width: 0; }
 .profile-quality-score { color: var(--glutton-muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }

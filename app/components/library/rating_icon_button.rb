@@ -21,7 +21,7 @@ module Library
       title = @library_film.film.title
       label = t(value.present? ? "library.browser.edit_film_rating" : "library.browser.rate_film", title:)
       tooltip = if value.present?
-        t("library.browser.edit_rating", value: t("ratings.values.#{value}"))
+        t("library.browser.edit_rating", value: rating_vocabulary.label(value))
       else
         t("library.browser.rate", value: t("library.browser.unrated"))
       end

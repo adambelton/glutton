@@ -1,0 +1,76 @@
+en:
+  activerecord:
+    attributes:
+      "identity/user_registered":
+        rating_vocabulary: Rating vocabulary
+  rating_vocabulary:
+    title: Rating vocabulary
+    change: Change rating vocabulary
+    preview: Example rating buttons
+    hint: Choose the words Glutton uses for your ratings.
+    save: Save
+    saved: Rating vocabulary saved.
+    invalid: Choose one of the available rating vocabularies.
+    names:
+      international: International
+      england: England
+      scotland: Scotland
+      wales: Wales
+      ireland: Ireland
+      united_states: United States
+      canada: Canada
+      australia: Australia
+      new_zealand: New Zealand
+      south_africa: South Africa
+      scouse: Scouse
+    labels:
+      england:
+        brilliant: Brilliant
+        pretty_good: Quite Good
+        not_for_me: Not My Cup of Tea
+        garbage: Rubbish
+      scotland:
+        brilliant: Class
+        pretty_good: No Bad
+        not_for_me: No Ma Thing
+        garbage: Pish
+      wales:
+        brilliant: Tidy
+        pretty_good: Not Bad
+        not_for_me: Not For Me
+        garbage: Rubbish
+      ireland:
+        brilliant: Class
+        pretty_good: Grand
+        not_for_me: Not My Thing
+        garbage: Shite
+      united_states:
+        brilliant: Awesome
+        pretty_good: Pretty Good
+        not_for_me: Not My Thing
+        garbage: Trash
+      canada:
+        brilliant: Wicked
+        pretty_good: Pretty Decent
+        not_for_me: Not For Me
+        garbage: Garbage
+      australia:
+        brilliant: Ripper
+        pretty_good: Not Bad
+        not_for_me: Not My Thing
+        garbage: Shithouse
+      new_zealand:
+        brilliant: Choice
+        pretty_good: Sweet As
+        not_for_me: Nah
+        garbage: Rubbish
+      south_africa:
+        brilliant: Lekker
+        pretty_good: Not Too Bad
+        not_for_me: Not My Thing
+        garbage: Kak
+      scouse:
+        brilliant: Boss
+        pretty_good: Sound
+        not_for_me: Not Arsed
+        garbage: Shite

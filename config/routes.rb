@@ -66,6 +66,7 @@ Rails.application.routes.draw do
 
   get "account", to: redirect("/account/settings", status: 302), as: :account
   get "account/settings", to: "account_settings#show", as: :account_settings
+  patch "account/rating-vocabulary", to: "account_settings#change_rating_vocabulary", as: :account_rating_vocabulary
   get "account/community", to: "community/profiles#show", as: :account_community
   patch "account/community/username", to: "community/profiles#change_username", as: :account_community_username
   patch "account/community/avatar", to: "community/profiles#choose_avatar", as: :account_community_avatar

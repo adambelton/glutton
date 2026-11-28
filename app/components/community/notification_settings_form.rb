@@ -20,8 +20,7 @@ module Community
               label do
                 input(type: "checkbox", name: "rating_values[]", value:, checked: @selected_ratings.include?(value),
                   data: { debrief_preference_target: "rating" })
-                label_key = value == FilmDebriefNotificationPreference::UNRATED ? "community.notifications.unrated" : "ratings.values.#{value}"
-                plain t(label_key)
+                plain(value == FilmDebriefNotificationPreference::UNRATED ? t("community.notifications.unrated") : rating_vocabulary.label(value))
               end
             end
             div(class: "community-notification-selection") do

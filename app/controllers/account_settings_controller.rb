@@ -34,6 +34,29 @@ class AccountSettingsController < ApplicationController
     render_settings
   end
 
+  def change_rating_vocabulary
+    account = settings.change_rating_vocabulary(vocabulary: params.permit(:vocabulary)[:vocabulary])
+    if request.format.turbo_stream?
+      vocabulary = Shared::RatingVocabulary.new(account.rating_vocabulary)
+      updates = vocabulary.labels.map do |value, label|
+        turbo_stream.update_all("[data-rating-value-label='#{value}']", ERB::Util.html_escape(label))
+      end
+      render turbo_stream: updates + [
+        turbo_stream.update("account-rating-vocabulary", ERB::Util.html_escape(vocabulary.name)),
+        turbo_stream.update("rating-vocabulary-status", ERB::Util.html_escape(t("rating_vocabulary.saved")))
+      ]
+    else
+      redirect_to account_settings_path, notice: t("rating_vocabulary.saved"), status: :see_other
+    end
+  rescue ActiveRecord::RecordInvalid
+    message = t("rating_vocabulary.invalid")
+    if request.format.turbo_stream?
+      render turbo_stream: turbo_stream.update("rating-vocabulary-error", ERB::Util.html_escape(message)), status: :unprocessable_entity
+    else
+      render_settings(errors: [ message ], status: :unprocessable_entity)
+    end
+  end
+
   def request_email
     credentials = params.permit(:current_password, :email_address)
     settings.request_email_change(current_password: credentials[:current_password], email_address: credentials[:email_address])

@@ -17,23 +17,29 @@ module Ratings
       end
       render Shared::FilmCard.new(layout: "rating-interface", data:) do
         errors_section
-        if @readonly
-          div(class: "rating-workspace") { workspace }
-        else
-          form_with(url: rating_path, method: @method, id: "rating-form", class: "rating-workspace") do
+        unless @readonly
+          form_with(url: rating_path, method: @method, id: "rating-form", html: { hidden: true }) do
             input(type: "hidden", name: "rating_film_id", value: @rating_film_id)
             input(type: "hidden", name: "film_id", value: @requested_film_id) if @requested_film_id.present?
             input(type: "hidden", name: "previous_rating_id", value: @previous_rating_id) if @method == :patch
-            workspace
           end
         end
-        actions
+        if !@readonly && current_user.can_view_account?
+          render ::Identity::RatingVocabularyPicker.new(inline: true) do |picker|
+            workspace(picker:)
+            actions
+            picker.inline_actions
+          end
+        else
+          workspace
+          actions
+        end
       end
     end
 
     private
 
-    def workspace
+    def workspace(picker: nil)
       overview = @film.tmdb_details.overview
       div(class: "rating-film-artwork") { render Registry::FilmPoster.new(film: @film) }
       div(class: "rating-film-details") do
@@ -52,7 +58,20 @@ module Ratings
         div(class: "rating-panels") do
           panel("rating") do
             render Shared::FilmSynopsis.new(text: overview, id: "#{@prefix}rating-synopsis")
-            rating_fields
+            if picker.present?
+              div(class: "rating-vocabulary-fields") do
+                div(class: "rating-vocabulary-heading") do
+                  div(class: "rating-vocabulary-prompt", data: { rating_vocabulary_picker_target: "prompt" }) do
+                    span(id: "rating-choice-prompt") { t("ratings.browser.choice") }
+                    picker.inline_trigger
+                  end
+                  picker.inline_editor
+                end
+                rating_fields(picker:)
+              end
+            else
+              rating_fields
+            end
           end
           panel("journal") { notes_field }
         end
@@ -93,19 +112,17 @@ module Ratings
       end
     end
 
-    def rating_fields
-      fieldset(disabled: @readonly, aria: { describedby: ("rating-errors" if @errors.present?) }, class: "rating-choices",
-        data: ({ action: "change->rating-selection#update" } unless @readonly)) do
-        legend { t("ratings.browser.choice") }
+    def rating_fields(picker: nil)
+      fieldset(disabled: @readonly, aria: { describedby: ("rating-errors" if @errors.present?),
+        labelledby: ("rating-choice-prompt" if picker.present?), live: ("polite" if picker.present?) }, class: "rating-choices",
+        data: ({ action: "change->rating-selection#update", rating_vocabulary_picker_target: ("choices" if picker.present?) } unless @readonly)) do
+        legend { t("ratings.browser.choice") } unless picker.present?
         Ratings::Rating::Values::ALL.each do |value|
-          div(class: "rating-choice") do
-            id = "#{@prefix}rating-#{value}"
-            input(type: "radio", class: "sr-only", name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly,
-              data: ({ rating_selection_target: "choice" } unless @readonly))
-            label(for: id) do
-              render RatingValueIcon.new(value:)
-              span { t("ratings.values.#{value}") }
-            end
+          id = "#{@prefix}rating-#{value}"
+          render Choice.new(value:, label: rating_vocabulary.label(value), input_id: id) do
+            input(type: "radio", form: ("rating-form" unless @readonly), class: "sr-only",
+              name: (@readonly ? "#{@prefix}value" : "value"), value:, id:, checked: @value == value, required: !@readonly,
+              data: ({ rating_selection_target: "choice", rating_vocabulary_picker_target: ("rating" if picker.present?) } unless @readonly))
           end
         end
       end
