@@ -68,6 +68,8 @@ The unfiltered board shows published curations and Film Debriefs together, order
 
 Published posts share a compact heading with the title, badges and attribution above the description. A Film Debrief places its Follow or Following action beside its badge and uses the primary accent to distinguish the action. Its description spans the full width below the poster on mobile.
 
+Post headings, board-card headings and nominated-film headings use their own row gap as the additional space above the tag or Follow row.
+
 The Community board uses a paginated two-column grid of cards that stack on narrow screens. Published cards link to their posts. Both card types have a poster-shaped artwork slot on the left. Film Debriefs, debrief placeholders and single-film Curations fill the slot with one poster. Curations with multiple films arrange up to five posters on a 9×9 grid within the same slot. On the right, published cards group a single-line title, badges and attribution on successive rows. Long titles truncate with an ellipsis. The footer holds film, endorsement and comment counts for Curations and a comment count for Film Debriefs. Film Debriefs use a Glutton identity marker with no member account. Eligible viewers see a creation button below the title in a Film Debrief placeholder.
 
 A request post stores its author, title and description. Store comment structure in `comments` and the body and author in `comment_contents`. Removing content can preserve a comment’s structure and replies. Each reply references its post, immediate parent and root comment. The root comment anchors one conversation within the post. The shared discussion capability handles ancestry, bounded reads, comment removal and moderation.
