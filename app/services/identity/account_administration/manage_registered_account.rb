@@ -14,6 +14,10 @@ module Identity
         with_account { |account| account.record_community_code_of_conduct_acceptance!(version: yield(account)) }
       end
 
+      def change_rating_vocabulary(vocabulary:)
+        with_account { |account| account.change_rating_vocabulary!(vocabulary:) }
+      end
+
       def change_password(current_password:, password:, password_confirmation:)
         with_account do |account|
           account.authorize_credential_change!(current_password:)

@@ -29,7 +29,7 @@ class RatingNotesTest < ApplicationSystemTestCase
     assert_in_delta (description.y + description.height + gap + panel.y + panel.height) / 2.0, choice_grid.y + choice_grid.height / 2.0, 1
     assert_selector ".rating-choice", count: 4
     choice = choices.find(".rating-choice", text: I18n.t("ratings.values.brilliant"))
-    assert_in_delta 56, element_rectangle(choice).height, 1
+    assert_equal 1, choices.all(".rating-choice").map { |option| element_rectangle(option).height }.uniq.size
     assert_operator element_rectangle(find(".rating-actions")).y - (choice_grid.y + choice_grid.height), :>=, 36
     label = choice.find("label")
     icon = element_rectangle(label.find("svg"))

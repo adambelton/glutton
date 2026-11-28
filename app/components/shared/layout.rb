@@ -85,6 +85,7 @@ module Shared
       when "library" then t("library.browser.title")
       when "community" then t("community.title")
       when "account" then t("account.title")
+      when "notifications" then t("community.notifications.title")
       end
     end
 
@@ -92,7 +93,7 @@ module Shared
       current_section = request.path.split("/")[1]
       select(class: "ui-primary-navigation ui-input", aria: { label: t("ui.navigation") },
         data: { controller: "mobile-navigation", action: "change->mobile-navigation#navigate" }) do
-        option(value: "", disabled: true, selected: !%w[ rating recommendation library community account ].include?(current_section)) { t("ui.navigation") }
+        option(value: "", disabled: true, selected: !%w[ rating recommendation library community account notifications ].include?(current_section)) { t("ui.navigation") }
         navigation_option("rating", new_rating_path, t("ratings.browser.title"), current_section:)
         recommendation_label = t("recommendations.title")
         unless recommendations_unlocked
@@ -106,6 +107,7 @@ module Shared
         navigation_option("community", community_path, t("community.title"), current_section:) if community_access
         navigation_option("account", account_settings_path, t("account.title"), current_section:) if user.can_view_account?
         navigation_option("admin", admin_path, t("admin.title"), current_section:) if user.superuser?
+        navigation_option("notifications", notifications_path, t("community.notifications.title"), current_section:) if user.can_view_account?
       end
     end
 

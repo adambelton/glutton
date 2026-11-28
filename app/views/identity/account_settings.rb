@@ -11,8 +11,8 @@ module Views
         page(title: t("account.title"), class: "account-page", heading_outside_card: true) do
           render ::Identity::AccountNavigation.new(section: :settings)
           errors(@validation_errors) if @open_dialog.nil?
-          section do
-            h2 { t("identity.settings.login_details") }
+          section(aria: { labelledby: "account-login-details" }) do
+            h2(id: "account-login-details") { t("identity.settings.login_details") }
             div(class: "account-settings-row") do
               div(class: "account-settings-field") do
                 strong { t("identity.settings.email") }
@@ -42,6 +42,15 @@ module Views
                   credential_actions(t("identity.settings.change_password"))
                 end
               end
+            end
+          end
+          section do
+            div(class: "account-settings-row") do
+              div(class: "account-settings-field") do
+                strong { t("rating_vocabulary.title") }
+                p(id: "account-rating-vocabulary") { rating_vocabulary.name }
+              end
+              render ::Identity::RatingVocabularyPicker.new
             end
           end
           section(class: "account-logout") do

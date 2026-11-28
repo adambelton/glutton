@@ -21,8 +21,11 @@ class CommunityNotificationsBrowserTest < ApplicationSystemTestCase
     click_button I18n.t("identity.sessions.sign_in")
     assert_current_path library_path
     set_viewport(390, 850)
-    click_link "Notifications"
+    navigation = find("select.ui-primary-navigation")
+    assert_equal I18n.t("community.notifications.title"), navigation.all("option").last.text
+    navigation.select(I18n.t("community.notifications.title"))
     assert_current_path notifications_path
+    assert_select I18n.t("ui.navigation"), selected: I18n.t("community.notifications.title")
     click_link "Notification settings"
     assert_selector "#notification-settings"
     settings_form = find(".community-notification-settings")
@@ -38,10 +41,10 @@ class CommunityNotificationsBrowserTest < ApplicationSystemTestCase
       assert_no_selector "input[name='rating_values[]']:checked"
       assert_button "Save", disabled: true
       assert_checked_field "Direct replies to my comments"
-      check "Unrated"
+      check "Not Rated"
       click_button "Save"
     end
-    assert_checked_field "Unrated"
+    assert_checked_field "Not Rated"
     assert_text I18n.t("community.notifications.saved")
     click_button I18n.t("ui.dismiss_notification")
 

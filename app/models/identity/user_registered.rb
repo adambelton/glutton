@@ -13,12 +13,25 @@ module Identity
     validates :password, presence: true, on: [ :create, :password_reset ]
     validates :password, length: { minimum: 15 }, allow_nil: true
     validates :password_confirmation, presence: true, if: -> { password.present? }
+    validates :rating_vocabulary, inclusion: { in: RatingVocabularies::ALL }, allow_nil: true
+
     def default_entry_path
       "/library"
     end
 
     def can_view_account?
       active?
+    end
+
+    def change_rating_vocabulary!(vocabulary:)
+      raise Errors::Unavailable unless can_view_account?
+      unless RatingVocabularies::ALL.include?(vocabulary)
+        errors.add(:rating_vocabulary, :inclusion)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
+      update!(rating_vocabulary: vocabulary == RatingVocabularies::INTERNATIONAL ? nil : vocabulary)
+      self
     end
 
     def accepted_community_code_of_conduct?(version:)

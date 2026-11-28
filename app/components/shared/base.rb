@@ -15,6 +15,11 @@ module Shared
       I18n.t(key, **options, raise: true)
     end
 
+    def rating_vocabulary
+      key = current_user.rating_vocabulary if current_user&.can_view_account?
+      @rating_vocabulary ||= RatingVocabulary.new(key)
+    end
+
     def text_link(text, href, **attrs)
       render RubyUI::Link.new(href:, class: "ui-link", **attrs) { text }
     end

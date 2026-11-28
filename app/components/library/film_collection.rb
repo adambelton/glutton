@@ -54,7 +54,7 @@ module Library
           selected = @ratings.include?(rating)
           next_ratings = selected ? @ratings - [ rating ] : @ratings + [ rating ]
           unrated = rating == ::Library::CollectionManagement::BrowseFilmCollection::UNRATED
-          label = unrated ? t("library.browser.unrated") : t("ratings.values.#{rating}")
+          label = unrated ? t("library.browser.unrated") : rating_vocabulary.label(rating)
           if @preview
             button(type: "button", value: rating, data: { selected: ("true" if selected), action: "library-preview#filter", library_preview_target: "rating" },
               aria: { label:, pressed: selected.to_s }) do
