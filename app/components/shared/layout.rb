@@ -26,7 +26,14 @@ module Shared
               primary_navigation(user, recommendations_unlocked:, community_access:)
               mobile_navigation(user, recommendations_unlocked:, community_access:)
             end
-            render ThemeToggle.new
+            if user.present? && user.can_view_account?
+              div(class: "ui-header-tools") do
+                render Community::NotificationBell.new(viewer: user)
+                render ThemeToggle.new
+              end
+            else
+              render ThemeToggle.new
+            end
             if user.nil? || user.can_register?
               div(class: [ "ui-auth-links", ("ui-auth-links-desktop" unless @header_entry_on_mobile) ]) do
                 render Identity::AccountEntryControls.new(guest_entry: user.nil?)

@@ -741,8 +741,17 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-conduct-consent { display: flex; align-items: baseline; gap: 8px; margin-block: 8px 16px; }
 .community-conduct-consent input { flex: none; }
 .community-conduct-text { display: grid; gap: 12px; margin-block: 12px; }
-.community-curation-page > .ui-page-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
-.community-curation-page > .ui-page-heading > h1 { overflow-wrap: anywhere; }
+.community-post-heading { display: grid; gap: 6px; min-inline-size: 0; overflow-wrap: anywhere; }
+.community-post-heading .community-post-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.community-post-heading > h1 + .community-post-tags { margin-block-start: 8px; }
+.community-curation-page > .ui-page-body { margin-block-start: 0; }
+@media (min-width: 651px) {
+  .community-curation-page { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 24px; }
+  .community-curation-page > .community-post-heading { grid-area: 1 / 1; }
+  .community-curation-page > .ui-page-body { display: contents; }
+  .community-curation-page > .ui-page-body > * { grid-column: 1 / -1; }
+  .community-curation-page > .ui-page-body > .community-curation-author-actions { grid-area: 1 / 2; }
+}
 .community-curation-author-actions { flex-wrap: nowrap; }
 .community-curation-author-actions > :is(.ui-action-button, [data-controller~="confirmation-dialog"]) { min-inline-size: 0; }
 .community-curation-author-actions > .ui-action-button,
@@ -750,7 +759,6 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-curation-protected-actions > [data-controller~="confirmation-dialog"] { flex-shrink: 0; }
 .community-curation-protected-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { inline-size: max-content; min-inline-size: 132px; }
 @media (max-width: 650px) {
-  .community-curation-page > .ui-page-heading { grid-template-columns: minmax(0, 1fr); }
   .community-curation-author-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   .community-curation-author-actions > .ui-action-button,
   .community-curation-author-actions > [data-controller~="confirmation-dialog"] > .ui-action-button { inline-size: 100%; min-inline-size: 0; }
@@ -833,9 +841,14 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .ui-page .community-debrief-discussion > h2 { margin-block: 0; }
 .community-debrief-threads:empty { display: none; }
 .community-film-debrief-page { display: grid; grid-template-columns: min(150px, 32%) minmax(0, 1fr); grid-template-rows: auto 1fr auto; align-items: start; column-gap: 20px; }
-.community-film-debrief-page > h1 { grid-area: 1 / 2; overflow-wrap: anywhere; }
+.community-film-debrief-page > .community-post-heading { grid-area: 1 / 2; }
 .community-film-debrief-page > .ui-page-body { display: contents; }
-.community-debrief-intro { grid-area: 2 / 2; margin-block-start: var(--page-card-gap); }
+.community-debrief-description { grid-area: 2 / 2; }
+.ui-page .community-debrief-follow-form { margin-block: 0; }
+.community-debrief-follow { position: relative; cursor: pointer; color: var(--glutton-primary); border-color: currentColor; background: color-mix(in srgb, var(--glutton-primary) 10%, transparent); }
+.community-debrief-follow::before { content: ""; position: absolute; inset-inline: 0; inset-block-start: 50%; translate: 0 -50%; block-size: 44px; }
+.community-debrief-follow[data-following="true"] { color: var(--glutton-on-primary); background: var(--glutton-primary); border-color: var(--glutton-primary); }
+.community-debrief-follow:hover { box-shadow: 0 0 0 1px var(--glutton-primary); }
 .community-debrief-poster { grid-area: 1 / 1 / 3; }
 .community-film-debrief-page .community-debrief-discussion { grid-area: 3 / 1 / auto / -1; margin-block-start: var(--comment-gap); }
 :is(.community-film-comments, .community-debrief-discussion) summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
@@ -952,13 +965,11 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .community-film-debrief-page {
     grid-template-columns: var(--mobile-film-poster-width) minmax(0, 1fr);
     column-gap: var(--mobile-film-heading-gap);
-    grid-template-rows: auto 1fr auto auto;
+    grid-template-rows: auto auto auto;
   }
   :is(.rating-film-artwork, .recommendation-artwork) > .poster-placeholder { padding: 8px; overflow-wrap: anywhere; }
-  .community-debrief-intro { display: contents; }
-  .community-debrief-meta { grid-area: 2 / 2; margin-block-start: var(--page-card-gap); }
-  .community-debrief-intro > .community-curation-descriptions { grid-area: 3 / 1 / auto / -1; margin-block: 12px 0; }
-  .community-film-debrief-page .community-debrief-discussion { grid-row: 4; }
+  .community-debrief-poster { grid-row: 1; }
+  .community-debrief-description { grid-area: 2 / 1 / auto / -1; }
   .community-debrief-composer .community-comment-publish-actions > .ui-action-button { inline-size: 100%; }
 
   :is(.community-comment-replies, .community-comment-editor-branch) {
@@ -1003,8 +1014,9 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-report-resolution > h2 { margin-block-start: 0; }
 .community-report-form .community-report-guidance { color: var(--glutton-muted-foreground); }
 .ui-page .community-report-resolution textarea.ui-input { min-block-size: 132px; }
-:is(.community-curation-author, .community-film-debrief-author) { display: flex; align-items: center; gap: 10px; margin-block-start: 14px; overflow-wrap: anywhere; }
-.community-curation-descriptions { margin-block: 14px; color: var(--glutton-muted-foreground); }
+:is(.community-curation-author, .community-film-debrief-author) { display: flex; align-items: center; gap: 10px; overflow-wrap: anywhere; }
+.community-post-description { margin-block-start: 16px; color: var(--glutton-muted-foreground); }
+.community-curation-descriptions { margin-block-end: 14px; }
 .community-curation-additional-description { display: grid; gap: 4px; margin-block-start: 12px; }
 .community-curation-additional-description::before {
   content: "";
@@ -1302,4 +1314,26 @@ div:has(> .admin-table) + .admin-pagination { border-block-start: 0; }
   .user-created-column { display: none; }
   .user-created-inline { display: inline; }
   .user-record-id + .user-created-inline { margin-inline-start: 6px; }
+}
+
+/* Community inbox and private notification preferences. */
+.ui-header-tools { display: flex; align-items: center; margin-inline-start: auto; }
+.community-notification-bell { position: relative; display: grid; place-items: center; inline-size: 44px; block-size: 44px; }
+.community-notification-bell:hover { color: var(--glutton-primary); }
+.community-notification-dot, .community-inbox-indicator { inline-size: 8px; block-size: 8px; border-radius: 50%; background: var(--glutton-primary); flex: none; }
+.community-notification-dot { position: absolute; inset-block-start: 8px; inset-inline-end: 9px; }
+.community-inbox-settings { margin-block-end: 16px; }
+.community-inbox > li + li { border-block-start: 1px solid var(--glutton-border); }
+.community-inbox-entry { display: flex; align-items: center; gap: 12px; inline-size: 100%; min-block-size: 44px; padding: 12px; text-align: start; cursor: pointer; }
+.community-inbox-entry:hover { background: var(--glutton-inset); }
+.community-inbox-entry time { margin-inline-start: auto; color: var(--glutton-muted-foreground); font-size: .875rem; }
+.community-notification-settings { display: grid; justify-items: start; gap: 12px; }
+.community-notification-ratings { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.community-notification-selection { display: flex; gap: 8px; flex-basis: 100%; }
+.community-notification-selection [hidden] { display: none; }
+:is(.community-notification-ratings label, .community-notification-replies) { display: inline-flex; align-items: center; gap: 6px; }
+
+@media (max-width: 650px) {
+  .community-inbox-entry { flex-wrap: wrap; }
+  .community-inbox-entry time { margin-inline-start: 0; }
 }

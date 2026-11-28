@@ -1,0 +1,31 @@
+en:
+  activerecord:
+    attributes:
+      community/film_debrief_notification_preference:
+        base: Film Debrief notification preference
+    errors:
+      models:
+        community/film_debrief_notification_preference:
+          attributes:
+            base:
+              invalid_rating_selection: Choose from the available Film Debrief rating options.
+  community:
+    notifications:
+      title: Notifications
+      settings: Notification settings
+      unread_label: Notifications (unread)
+      unread: Unread
+      saved: Your notification settings were saved.
+      debrief_label: New Film Debrief comments
+      debrief_hint: You can also follow or mute individual Film Debriefs from their post pages.
+      direct_replies: Direct replies to my comments
+      all: All
+      none: None
+      unrated: Unrated
+      save: Save
+      follow: Follow
+      following: Following
+      debrief_comment: "New comment on %{title}"
+      direct_reply: "New reply to your comment on %{title}"
+      empty: You have no notifications.
+      older: Older notifications

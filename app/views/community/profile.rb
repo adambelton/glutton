@@ -3,8 +3,9 @@ module Views
     class Profile < ::Views::Base
       include Phlex::Rails::Helpers::ImagePath
 
-      def initialize(community_user:, blocks:, suspended:, code:, accepted:, editing_username: false,
-        form_username: community_user&.community_username, username_errors: [], editing_avatar: false, avatar_errors: [])
+      def initialize(community_user:, blocks:, suspended:, code:, accepted:, notification_preferences:, editing_username: false,
+        form_username: community_user&.community_username, username_errors: [], editing_avatar: false, avatar_errors: [],
+        notification_errors: [])
         @community_user = community_user
         @blocks = blocks
         @suspended, @code, @accepted = suspended, code, accepted
@@ -15,6 +16,8 @@ module Views
         @community_avatar_preset = community_user&.community_avatar_preset
         @editing_avatar = editing_avatar
         @avatar_errors = avatar_errors
+        @notification_preferences = notification_preferences
+        @notification_errors = notification_errors
       end
 
       def view_template
@@ -26,6 +29,7 @@ module Views
             !@suspended && @editing_avatar ? avatar_form : saved_avatar
           end
           render ::Community::ConductAcceptanceForm.new(accepted: @accepted, code: @code)
+          render ::Community::NotificationSettingsForm.new(preferences: @notification_preferences, messages: @notification_errors)
           blocked_members if @community_user.present?
         end
       end

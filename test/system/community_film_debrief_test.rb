@@ -78,13 +78,13 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     poster = element_rectangle(find(".community-debrief-poster .film-poster"))
     assert_operator poster.x + poster.width, :<=, title.x
     assert_in_delta title.y, poster.y, 1
-    within ".community-debrief-intro" do
-      badge = element_rectangle(find(".community-post-tag", text: I18n.t("community.film_debriefs.badge")))
-      author = element_rectangle(find(".community-film-debrief-author", text: I18n.t("ui.wordmark")))
-      assert_operator title.y + title.height, :<=, badge.y
-      assert_operator badge.y + badge.height, :<=, author.y
-      assert_operator author.y + author.height, :<=, element_rectangle(find("p")).y
-    end
+    badge = element_rectangle(find(".community-post-tag", text: I18n.t("community.film_debriefs.badge")))
+    author = element_rectangle(find(".community-film-debrief-author", text: I18n.t("ui.wordmark")))
+    assert_operator title.y + title.height, :<=, badge.y
+    assert_operator badge.y + badge.height, :<=, author.y
+    description = element_rectangle(find(".community-debrief-description p"))
+    assert_operator author.y + author.height, :<=, description.y
+    assert_operator poster.x + poster.width, :<=, description.x
     assert_operator poster.y + poster.height, :<=, element_rectangle(find(".community-debrief-discussion")).y
 
     composer_id = "#film-debrief-#{debrief.id}-composer"
@@ -96,9 +96,11 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
 
     set_viewport(320, 900)
     mobile_poster = element_rectangle(find(".community-debrief-poster .film-poster"))
-    introduction = element_rectangle(find(".community-debrief-intro p"))
-    assert_operator element_rectangle(find(".community-film-debrief-author")).x, :>, mobile_poster.x
+    introduction = element_rectangle(find(".community-debrief-description p"))
+    mobile_author = element_rectangle(find(".community-film-debrief-author"))
+    assert_operator mobile_author.x, :>, mobile_poster.x
     assert_operator introduction.y, :>=, mobile_poster.y + mobile_poster.height
+    assert_operator introduction.y, :>=, mobile_author.y + mobile_author.height
     assert_operator introduction.x, :<, element_rectangle(find("h1")).x
     assert_operator element_rectangle(find(".community-debrief-discussion")).y, :>=, introduction.y + introduction.height
     assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")

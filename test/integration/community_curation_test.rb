@@ -72,7 +72,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
       assert_select "strong", text: @author.community_user&.community_username
       assert_select "img[src*=?][alt='']", "community-avatars/#{@author.community_user&.community_avatar_preset}"
     end
-    assert_select ".community-curation-author + .community-curation-descriptions", count: 1
+    assert_select ".community-post-heading + .ui-page-body .community-curation-descriptions", count: 1
     assert_select "h2.sr-only", I18n.t("community.curations.nominated_films")
     assert_select "ol.community-nominations > li" do |rows|
       assert_equal [ second.title, first.title ], rows.map { |row| row.at_css("h3").text }

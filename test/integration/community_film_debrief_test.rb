@@ -44,10 +44,9 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
       assert_select ".film-year", text: "(1987)"
     end
     assert_select ".community-post-tag[tabindex='0'] [role=tooltip]", text: I18n.t("community.film_debriefs.badge_tooltip")
-    assert_select ".community-debrief-intro" do
-      assert_select ".community-post-tags + .community-film-debrief-author .community-glutton-avatar + strong", text: I18n.t("ui.wordmark")
-      assert_select "p", text: I18n.t("community.film_debriefs.introduction", title: film.title)
-    end
+    assert_select ".community-post-heading h1 + .community-post-tags + .community-film-debrief-author .community-glutton-avatar + strong",
+      text: I18n.t("ui.wordmark")
+    assert_select ".community-debrief-description p", text: I18n.t("community.film_debriefs.introduction", title: film.title)
     assert_select ".community-debrief-poster img.film-poster[src=?]", "https://image.tmdb.org/t/p/w500/quiet-house.jpg"
     get "/community/film-debriefs/#{film.id}"
     assert_response :not_found
