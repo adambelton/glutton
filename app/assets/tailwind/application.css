@@ -825,7 +825,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.0625rem; line-height: 1.25; font-weight: 600; }
 .community-post-card-heading > :is(.community-post-tags, .community-post-tag) { margin-block-start: 3px; }
 .community-post-card-heading .community-post-tags { max-inline-size: 100%; flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
-.community-post-card-heading .community-post-tag { min-inline-size: 0; max-inline-size: 100%; padding: 1px clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.6875rem, 4cqi, 0.875rem); line-height: 1.25; white-space: nowrap; }
+.community-post-card-heading .community-post-tags:has(> .community-post-tag + .community-post-tag) { --post-card-tag-min-size: 0.625rem; }
+.community-post-card-heading .community-post-tag { min-inline-size: 0; max-inline-size: 100%; padding: 1px clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(var(--post-card-tag-min-size, 0.6875rem), 4cqi, 0.875rem); line-height: 1.25; white-space: nowrap; }
 .community-curation-card-counts { display: flex; align-items: center; gap: clamp(3px, 2cqi, 8px); white-space: nowrap; }
 .community-curation-card-counts > li { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-page .community-film-debrief-create { max-width: 100%; margin: 0; }
