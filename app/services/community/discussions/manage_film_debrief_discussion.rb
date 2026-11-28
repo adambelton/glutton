@@ -18,6 +18,7 @@ module Community
           else
             content = debrief.publish_comment(community_user:, body:)
           end
+          DeliverCommentNotificationJob.enqueue!(content.id) if content.persisted?
           { debrief:, parent:, content: }
         end
       end

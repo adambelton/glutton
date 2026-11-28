@@ -66,6 +66,8 @@ The board supports Community Curation and Film Debrief. Eligible members create 
 
 The unfiltered board shows published curations and Film Debriefs together, ordered by latest update. Film Debriefs are visible on the board and at their direct URLs only for films marked Watched in the viewer’s Library. Apply each post’s access and participation rules to board reads and direct routes.
 
+Published posts share a compact heading with the title, badges and attribution above the description. A Film Debrief places its Follow or Following action beside its badge and uses the primary accent to distinguish the action. Its description spans the full width below the poster on mobile.
+
 The Community board uses a paginated two-column grid of cards that stack on narrow screens. Published cards link to their posts. Both card types have a poster-shaped artwork slot on the left. The right column starts with a single-line title that truncates with an ellipsis. Published cards show badges on the next line. Eligible viewers see a creation button on that line in a debrief placeholder. Debriefs and their placeholders show a single poster. Curations arrange up to five film posters on a 9×9 grid within the same slot. Curation cards show film, endorsement and comment counts above the author. Published Film Debriefs show a comment count above a Glutton identity marker. Glutton has no member account for that marker.
 
 A request post stores its author, title and description. Store comment structure in `comments` and the body and author in `comment_contents`. Removing content can preserve a comment’s structure and replies. Each reply references its post, immediate parent and root comment. The root comment anchors one conversation within the post. The shared discussion capability handles ancestry, bounded reads, comment removal and moderation.
@@ -88,6 +90,18 @@ Community Curation uses Film Endorsements to enforce participation rules and sup
 The board filter matches a visible curation's title, description or any canonical film title in its Nominated Films list. Curation matches include films outside the viewer's Library. One curation appears once even if several of its films match.
 
 During active search, show matching Watched films without a thread first, ordered by film title. Each placeholder offers eligible members a **Create Film Debrief** action. Matching published debriefs follow, then matching curations. Each group of published posts sorts by latest update. Paginate the combined list at ten results per page.
+
+## In-app notifications
+
+The global header shows the inbox bell to viewers who can access Account. Community access applies when the inbox checks which Community items are visible, including for the unread indicator. Account → Community holds private notification settings for confirmed members, including readers without a public profile and members whose participation is suspended.
+
+- Film Debrief preferences cover new top-level comments. Members can independently select Brilliant, Pretty Good, Not for Me, Garbage and Unrated. All five start unchecked. All and None select or clear the five choices together. Each debrief shows Follow or Following according to the member’s effective preference. Switching to a state that differs from the account default saves a Follow or Mute preference for that post. Returning to the account default removes the post preference. Watched access still applies.
+- Discussion preferences cover participation in ongoing comment threads. Direct replies in both post types notify the author of the immediate parent comment by default. Members can turn off direct-reply notifications in their account settings. A Debrief mute applies to new top-level comments. Replies in other branches and a member’s own activity produce no alert.
+- Community enqueues a durable job with comment publication. Delivery uses current Watched status, preferences and rating. Saving settings only affects future delivery attempts.
+- The inbox links to the authored comment content and uses the comment’s position in the thread to select the message. Its list, unread indicator and open action enforce current visibility, including Watched access and blocks in either direction. Opening an item marks it read and goes to the comment. Account closure and restore replay remove private notification state. Removing content also removes its inbox items, even when the comment remains as a removal marker with replies.
+- Delivery is in-app. Comment-thread subscriptions, chat, Curation endorsement updates, and report outcome notifications are separate work.
+
+For a future Curation slice, consider opt-in updates for new top-level comments on films a member endorses in that curation. Authors could receive updates for all new endorsements and endorsement comments on their post. A new endorsement with a comment could appear as one inbox item. These remain proposals for the follow-up.
 
 ## Personal match and privacy
 

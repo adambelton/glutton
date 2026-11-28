@@ -17,7 +17,10 @@ module Community
           curation = PostCommunityCuration.lock.find(curation_id)
           parent = find_parent(curation:, comment_id:)
           reply = parent.publish_reply(community_user:, body:)
-          curation.protect_from_contributions! if reply.persisted?
+          if reply.persisted?
+            curation.protect_from_contributions!
+            DeliverCommentNotificationJob.enqueue!(reply.id)
+          end
           { curation:, parent:, reply: }
         end
       end

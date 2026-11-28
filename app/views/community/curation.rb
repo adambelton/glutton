@@ -12,18 +12,14 @@ module Views
       end
 
       def view_template
-        heading_action = method(:author_actions) if @can_edit || @can_delete || @can_disassociate
-        page(title: @curation.title, class: "community-curation-page", heading_action:,
+        page(title: @curation.title, class: "community-curation-page", heading: post_heading,
           back_to: community_path, back_label: t("community.curations.back")) do
           render ::Library::ActionConfirmationDialog.new if @nominated_films.present?
-          render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
-          if @curation.community_user.present?
-            render ::Community::CurationAttribution.new(curation: @curation, class_name: "community-curation-author", linked: true)
-          end
-          div(class: "community-curation-descriptions") do
+          div(class: "community-post-description community-curation-descriptions") do
             p(class: "community-curation-prompt") { @curation.description }
             display_additional_description if @curation.additional_description.present?
           end
+          author_actions if @can_edit || @can_delete || @can_disassociate
           div(class: "community-comment-actions") do
             a(href: new_community_post_report_path(@curation)) { t("community.reports.action") }
           end
@@ -53,6 +49,14 @@ module Views
       end
 
       private
+
+      def post_heading
+        badges = ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
+        if @curation.community_user.present?
+          attribution = ::Community::CurationAttribution.new(curation: @curation, class_name: "community-curation-author", linked: true)
+        end
+        ::Community::PostHeading.new(title: @curation.title, badges:, attribution:)
+      end
 
       def author_actions
         div(class: [ "ui-actions ui-actions-fixed community-curation-author-actions justify-end",

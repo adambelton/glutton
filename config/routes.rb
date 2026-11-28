@@ -10,6 +10,9 @@ Rails.application.routes.draw do
   get "community/code-of-conduct", to: "community/code_of_conduct#show", as: :community_code_of_conduct
   get "community", to: "community/board#show", as: :community
   post "community/code-of-conduct/acceptance", to: "community/code_of_conduct#accept", as: :community_code_of_conduct_acceptance
+  resources :notifications, only: :index, controller: "community/notifications" do
+    post :open, on: :member
+  end
   scope :community, as: :community, module: :community do
     get "moderation", to: redirect(path: "/community/moderation/reports", status: 302)
     resources :suspensions, path: "moderation/suspensions", only: [ :index, :new, :create ] do
@@ -32,6 +35,8 @@ Rails.application.routes.draw do
       end
       get :discussion, on: :member
     end
+
+    patch "film-debriefs/:post_id/notification", to: "notification_settings#debrief", as: :debrief_notification
 
     scope "posts/:post_id", as: :curation do
       resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
@@ -64,6 +69,7 @@ Rails.application.routes.draw do
   get "account/community", to: "community/profiles#show", as: :account_community
   patch "account/community/username", to: "community/profiles#change_username", as: :account_community_username
   patch "account/community/avatar", to: "community/profiles#choose_avatar", as: :account_community_avatar
+  patch "account/community/notifications", to: "community/notification_settings#update", as: :account_community_notifications
   get "account/taste-profile", to: "account#show", as: :account_taste_profile
   post "account/refresh_taste_profile", to: "account#refresh_taste_profile", as: :refresh_taste_profile_account
   post "account/email", to: "account_settings#request_email", as: :account_email

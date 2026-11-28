@@ -23,6 +23,7 @@ class RegistrationFlowTest < ActionDispatch::IntegrationTest
     ActionMailer::Base.deliveries.clear
     Rails.application.routes.draw do
       get "community", to: "community/board#show", as: :community
+      resources :notifications, only: :index, controller: "community/notifications"
       get "privacy", to: "privacy_notices#show", as: :privacy_notice
       get "terms", to: "terms_of_service#show", as: :terms_of_service
       root "landing#show"
