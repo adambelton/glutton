@@ -256,8 +256,9 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
 /* The link has a 44px hit area. Position the tooltip above its visible label. */
 .ui-nav-lock [role="tooltip"] { bottom: calc(50% + 12px); }
 .ui-nav-lock:is(:hover, :focus) [role="tooltip"] { visibility: visible; }
-.ui-errors, .ui-alert, .ui-reminder { padding: 16px 20px; border: 1px solid var(--glutton-border); border-left: 3px solid var(--glutton-muted-foreground); border-radius: 4px; margin-block: 20px; background: var(--glutton-surface); }
-.community-suspension-notice { border-left-color: var(--glutton-amber); }
+:is(.ui-errors, .ui-alert, .ui-reminder, .ui-toast) { border: 1px solid var(--glutton-border); border-left: 3px solid var(--notice-accent, var(--glutton-muted-foreground)); }
+.ui-errors, .ui-alert, .ui-reminder { padding: 16px 20px; border-radius: 4px; margin-block: 20px; background: var(--glutton-surface); }
+.community-suspension-notice { --notice-accent: var(--glutton-amber); }
 .ui-errors li { list-style: disc; margin-left: 18px; }
 .ui-errors h3 { margin-bottom: 8px; }
 .library-collection-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; min-block-size: 46px; margin-bottom: 24px; border-bottom: 1px solid var(--glutton-border); }
@@ -712,7 +713,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 
 .ui-notifications { position: fixed; z-index: 100; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); width: min(400px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right))); max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; scrollbar-gutter: stable; display: grid; gap: 12px; pointer-events: none; }
 .ui-notifications > * { margin: 0; pointer-events: auto; }
-.ui-toast { display: flex; align-items: start; gap: 16px; padding: 16px 18px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-surface); color: var(--glutton-foreground); box-shadow: 0 8px 30px #0003; font-size: 14px; }
+.ui-toast { --notice-accent: var(--glutton-primary); display: flex; align-items: start; gap: 16px; padding: 16px 18px; border-radius: 6px; background: var(--glutton-surface); color: var(--glutton-foreground); box-shadow: 0 8px 30px #0003; font-size: 14px; }
 .ui-toast > p { flex: 1; margin: 0; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: no-preference) {
   .ui-toast { animation: toast-enter 180ms ease-out; }
@@ -773,9 +774,10 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-conduct-consent { display: flex; align-items: baseline; gap: 8px; margin-block: 8px 16px; }
 .community-conduct-consent input { flex: none; }
 .community-conduct-text { display: grid; gap: 12px; margin-block: 12px; }
-.community-post-heading { display: grid; gap: 6px; min-inline-size: 0; overflow-wrap: anywhere; }
-.community-post-heading .community-post-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.community-post-heading > h1 + .community-post-tags { margin-block-start: 8px; }
+:is(.community-post-heading, .community-nomination-header) { display: grid; min-inline-size: 0; overflow-wrap: anywhere; }
+.community-post-heading { gap: 6px; }
+.community-post-heading > .community-post-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.community-post-heading > .community-post-tags { margin-block-start: 8px; }
 .community-curation-page > .ui-page-body { margin-block-start: 0; }
 @media (min-width: 651px) {
   .community-curation-page { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 24px; }
@@ -814,31 +816,34 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
   .ui-page .community-moderation-link, .community-board-actions:has(> .community-moderation-link:only-child) { display: none; }
   .community-board-actions > .ui-action-button { width: 100%; }
 }
-:is(.community-curation-card, .community-film-debrief-card) { display: grid; grid-template-columns: clamp(60px, 22%, 88px) minmax(0, 1fr); align-items: center; min-block-size: 100%; gap: 12px; padding: 8px 12px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-inset); }
+:is(.community-curation-card, .community-film-debrief-card) { display: grid; grid-template-columns: clamp(60px, 22%, 88px) minmax(0, 1fr); align-items: center; min-block-size: 100%; gap: 12px; padding: 6px 12px; border: 1px solid var(--glutton-border); border-radius: 6px; background: var(--glutton-inset); }
 .community-post-card-artwork { aspect-ratio: 2 / 3; }
 .community-post-card-artwork > .film-poster { box-shadow: none; }
-.community-post-card-details { container-type: inline-size; display: grid; align-content: space-between; align-self: stretch; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.community-post-card-details { container-type: inline-size; display: grid; align-content: space-between; align-self: stretch; gap: 6px; min-width: 0; padding-block-end: 4px; overflow-wrap: anywhere; }
 :is(.community-curation-card, a.community-film-debrief-card):hover { border-color: var(--glutton-primary); }
-.community-post-card-heading { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 4px; }
-.ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.125rem; font-weight: 600; }
+.community-post-card-heading { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 3px; }
+.ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.0625rem; line-height: 1.25; font-weight: 600; }
+.community-post-card-heading > :is(.community-post-tags, .community-post-tag) { margin-block-start: 3px; }
 .community-post-card-heading .community-post-tags { max-inline-size: 100%; flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
-.community-post-card-heading .community-post-tag { min-inline-size: 0; padding-inline: clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.625rem, 4cqi, 0.875rem); white-space: nowrap; }
-.community-curation-card-counts { display: flex; align-items: center; gap: clamp(3px, 2cqi, 8px); font-size: clamp(0.625rem, 4cqi, 0.75rem); white-space: nowrap; }
+.community-post-card-heading .community-post-tags:has(> .community-post-tag + .community-post-tag) { --post-card-tag-min-size: 0.625rem; }
+.community-post-card-heading .community-post-tag { min-inline-size: 0; max-inline-size: 100%; padding: 1px clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(var(--post-card-tag-min-size, 0.6875rem), 4cqi, 0.875rem); line-height: 1.25; white-space: nowrap; }
+.community-curation-card-counts { display: flex; align-items: center; gap: clamp(3px, 2cqi, 8px); white-space: nowrap; }
 .community-curation-card-counts > li { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-page .community-film-debrief-create { max-width: 100%; margin: 0; }
-:is(.community-curation-card-author, .community-film-debrief-card-author) { display: flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
-.community-post-card-footer .community-member-avatar { width: 20px; height: 20px; }
-.community-glutton-avatar { background: currentColor; mask: url("/glutton-mark.svg") center / cover no-repeat; }
+.community-post-card-attribution { display: flex; align-items: center; gap: 5px; max-inline-size: 100%; font-size: 0.8125rem; line-height: 1.25; }
+.community-post-card-attribution strong { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.community-post-card-attribution .community-member-avatar { width: 16px; height: 16px; }
+.community-glutton-avatar { background: var(--glutton-primary); mask: url("/glutton-mark.svg") center / cover no-repeat; }
 .community-curation-card-posters { display: grid; grid-template: repeat(9, minmax(0, 1fr)) / repeat(9, minmax(0, 1fr)); gap: 1px; }
 .community-curation-card-posters > .film-poster { grid-area: span 3 / span 3; width: 100%; height: 100%; aspect-ratio: auto; }
 .community-curation-card-posters > .poster-placeholder { min-width: 0; padding: 0; font-size: 1rem; }
-.community-curation-card-posters[data-poster-count="1"] > .film-poster { grid-area: 2 / 2 / span 7 / span 7; }
+.community-curation-card-posters[data-poster-count="1"] > .film-poster { grid-area: 1 / 1 / -1 / -1; }
 .community-curation-card-posters:is([data-poster-count="2"], [data-poster-count="3"]) > :first-child { grid-area: 1 / 2 / span 6 / span 6; }
 .community-curation-card-posters:is([data-poster-count="2"], [data-poster-count="3"]) > :nth-child(2) { grid-area: 7 / 2 / span 3 / span 3; }
 .community-curation-card-posters[data-poster-count="3"] > :nth-child(3) { grid-area: 7 / 5 / span 3 / span 3; }
 .community-curation-card-posters[data-poster-count="4"] > .film-poster { grid-area: span 4 / span 4; }
 .community-curation-card-posters[data-poster-count="5"] > :first-child { grid-area: 1 / 1 / span 6 / span 6; }
-.community-post-card-footer { display: grid; gap: 4px; }
+.community-post-card-footer { font-size: clamp(0.625rem, 4cqi, 0.75rem); line-height: 1.25; }
 @media (max-width: 800px) {
   .community-post-grid { grid-template-columns: 1fr; }
 }
@@ -859,14 +864,15 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-comment-controls:not([hidden]) { display: flex; flex-wrap: wrap; gap: 12px; }
 .community-comment-controls button { min-height: 44px; }
 .community-comment-controls button:disabled { opacity: 0.55; }
-.community-nomination { display: grid; grid-template-columns: var(--library-poster-width) minmax(0, 1fr); align-items: start; gap: 20px; padding-block: 16px; border-block-start: 1px solid var(--glutton-border); }
+.community-nomination { --nomination-row-gap: 4px; display: grid; grid-template-columns: var(--library-poster-width) minmax(0, 1fr); align-items: start; gap: 20px; padding-block: 16px; border-block-start: 1px solid var(--glutton-border); }
 :is(.community-nomination-media, .community-debrief-poster) > .poster-placeholder { padding: 8px; overflow-wrap: anywhere; }
-.community-nomination-content { display: grid; gap: 10px; min-width: 0; }
-.community-nominated-film-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.community-nominated-film-heading { justify-content: space-between; }
+.community-nomination-content { display: grid; gap: var(--nomination-row-gap); min-width: 0; }
+.community-nomination-header { gap: var(--nomination-row-gap); }
+.community-nomination-follow { margin-block-start: 4px; }
+.community-nominated-film-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .community-nomination-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .community-nomination-rank { flex: none; color: var(--glutton-muted-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
-.community-nominated-film-heading h3 { font-size: 1.125rem; font-weight: 600; overflow-wrap: anywhere; }
+.community-nominated-film-heading h3 { font-size: 1.125rem; font-weight: 600; }
 .community-endorsement-badge { padding: 3px 10px; border: 1px solid var(--glutton-border); border-radius: 999px; background: var(--glutton-inset); color: var(--glutton-primary); font-size: 0.875rem; font-weight: 600; }
 :is(.community-film-comments, .community-debrief-discussion) { --comment-gap: 16px; --comment-trailing-gap: 0px; }
 .community-debrief-discussion { display: grid; gap: var(--comment-gap); }
@@ -876,11 +882,11 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-film-debrief-page > .community-post-heading { grid-area: 1 / 2; }
 .community-film-debrief-page > .ui-page-body { display: contents; }
 .community-debrief-description { grid-area: 2 / 2; }
-.ui-page .community-debrief-follow-form { margin-block: 0; }
-.community-debrief-follow { position: relative; cursor: pointer; color: var(--glutton-primary); border-color: currentColor; background: color-mix(in srgb, var(--glutton-primary) 10%, transparent); }
-.community-debrief-follow::before { content: ""; position: absolute; inset-inline: 0; inset-block-start: 50%; translate: 0 -50%; block-size: 44px; }
-.community-debrief-follow[data-following="true"] { color: var(--glutton-on-primary); background: var(--glutton-primary); border-color: var(--glutton-primary); }
-.community-debrief-follow:hover { box-shadow: 0 0 0 1px var(--glutton-primary); }
+.ui-page .community-post-follow-form { margin-block: 0; }
+.community-post-follow { position: relative; cursor: pointer; color: var(--glutton-primary); border-color: currentColor; background: color-mix(in srgb, var(--glutton-primary) 10%, transparent); }
+.community-post-follow::before { content: ""; position: absolute; inset-inline: 0; inset-block-start: 50%; translate: 0 -50%; block-size: 44px; }
+.community-post-follow[data-following="true"] { color: var(--glutton-on-primary); background: var(--glutton-primary); border-color: var(--glutton-primary); }
+.community-post-follow:hover { box-shadow: 0 0 0 1px var(--glutton-primary); }
 .community-debrief-poster { grid-area: 1 / 1 / 3; }
 .community-film-debrief-page .community-debrief-discussion { grid-area: 3 / 1 / auto / -1; margin-block-start: var(--comment-gap); }
 :is(.community-film-comments, .community-debrief-discussion) summary { width: fit-content; padding-block: 4px 8px; cursor: pointer; color: var(--glutton-primary); }
@@ -989,7 +995,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
     background: transparent;
   }
   .community-curation-page .community-endorsements-action { width: 100%; }
-  .community-nomination { gap: 4px 12px; }
+  .community-nomination { gap: var(--nomination-row-gap) 12px; }
   .community-nomination-content { display: contents; }
   .community-nomination-discussion { grid-column: 1 / -1; }
   .community-film-comments > summary { min-block-size: 44px; padding-block: 10px; }
@@ -1361,7 +1367,8 @@ div:has(> .admin-table) + .admin-pagination { border-block-start: 0; }
 .community-inbox-entry time { margin-inline-start: auto; color: var(--glutton-muted-foreground); font-size: .875rem; }
 .community-notification-settings { display: grid; justify-items: start; gap: 12px; }
 .community-notification-ratings { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.community-notification-selection { display: flex; gap: 8px; flex-basis: 100%; }
+.community-notification-curations { display: grid; gap: 8px; }
+.community-notification-selection { flex-basis: 100%; }
 .community-notification-selection [hidden] { display: none; }
 :is(.community-notification-ratings label, .community-notification-replies) { display: inline-flex; align-items: center; gap: 6px; }
 

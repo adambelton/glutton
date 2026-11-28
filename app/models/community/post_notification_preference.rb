@@ -6,6 +6,7 @@ module Community
 
     belongs_to :user, class_name: "Identity::UserRegistered"
     belongs_to :post, class_name: "Community::Post"
+    belongs_to :film, class_name: "Registry::Film", optional: true
 
     validates :mode, inclusion: { in: MODES }
 

@@ -79,13 +79,13 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     end
     assert_select "p", text: I18n.t("community.curations.endorsement_order")
     assert_select ".community-endorsement-badge", text: I18n.t("community.curations.endorsements", count: 1), count: 2
-    assert_select "#nomination-#{first.id} details:not([open])" do
+    assert_select "#nomination-#{first.id} details.community-film-comments:not([open])" do
       assert_select "summary", text: I18n.t("community.curations.comments", count: 1)
       assert_select "article", count: 0
     end
     assert_select "#nomination-#{second.id}" do
       assert_select "p.community-comment-count", text: I18n.t("community.curations.comments", count: 0)
-      assert_select "details", count: 0
+      assert_select "details.community-film-comments", count: 0
     end
     get discussion_community_post_path(curation, film_id: first.id)
     assert_select "article span.community-curation-prompt", text: "The sense of dread builds slowly."
@@ -98,7 +98,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     assert_select "a.community-curation-card[href=?]", community_post_path(curation), count: 1 do |links|
       assert_select "h2[id=?]", links.first["aria-labelledby"], text: curation.title
       assert_select "p", text: curation.description, count: 0
-      assert_select "footer .community-curation-card-counts + .community-curation-card-author", text: @author.community_user&.community_username do
+      assert_select "header .community-post-tags + .community-curation-card-author", text: @author.community_user&.community_username do
         assert_select "img[src*=?] + strong", "community-avatars/#{@author.community_user&.community_avatar_preset}", text: @author.community_user&.community_username
       end
       assert_select ".community-post-card-heading h2 + .community-post-tags .community-post-tag > span:first-child", text: I18n.t("community.curations.tag")
@@ -941,7 +941,7 @@ class CommunityCurationTest < ActionDispatch::IntegrationTest
     patch update_path, params: { authenticity_token: update_token, curation: { additional_description: "Stale description." } }
     assert_response :forbidden
     get community_path
-    assert_select "footer .community-curation-card-author", text: I18n.t("community.curation_protection.unattributed") do
+    assert_select "header .community-curation-card-author", text: I18n.t("community.curation_protection.unattributed") do
       assert_select "img", count: 0
     end
     assert_select ".community-post-tag + .community-post-tag", text: I18n.t("community.curation_protection.badge")

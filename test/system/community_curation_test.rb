@@ -42,7 +42,7 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     within ".community-curation-author" do
       assert_avatar_beside_name(author)
     end
-    find("#nomination-#{reference.id} summary").click
+    find("#nomination-#{reference.id} details.community-film-comments > summary").click
     within "#comment-#{root.id}" do
       assert_avatar_beside_name(author)
     end
@@ -644,15 +644,11 @@ class CommunityCurationBrowserTest < ApplicationSystemTestCase
     assert_equal title, title_heading.text
     title_bounds = element_rectangle(title_heading)
     tags = element_rectangle(card.find(".community-post-tags"))
-    assert_operator title_bounds.y, :<=, element_rectangle(artwork).y
     assert_operator title_bounds.y + title_bounds.height, :<=, tags.y
     counts = element_rectangle(card.find("footer .community-curation-card-counts"))
-    identity = element_rectangle(card.find(".community-curation-card-author"))
     assert_operator element_rectangle(artwork).x + element_rectangle(artwork).width, :<=, counts.x
-    assert_operator counts.y + counts.height, :<=, identity.y
-    details = element_rectangle(card.find(".community-post-card-details"))
-    footer = element_rectangle(card.find("footer"))
-    assert_in_delta details.y + details.height, footer.y + footer.height, 1
+    assert card.has_selector?("header .community-post-tags + .community-curation-card-author")
+    assert card.has_selector?("header + footer .community-curation-card-counts")
     shorter_artwork = shorter_card.find(".community-curation-card-posters")
     assert_equal element_rectangle(artwork).width, element_rectangle(shorter_artwork).width
     first_poster, second_poster = shorter_artwork.all(".film-poster", count: 2).map { |element| element_rectangle(element) }

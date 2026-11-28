@@ -12,27 +12,20 @@ module Community
           div(class: "community-post-card-artwork community-curation-card-posters", data: { poster_count: @entry.poster_films.size }) do
             @entry.poster_films.each { |film| render ::Registry::FilmPoster.new(film:, placeholder: :wordmark) }
           end
-          div(class: "community-post-card-details") do
-            div(class: "community-post-card-heading") do
-              h2(id: title_id) { @curation.title }
-              render CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?)
-            end
-            post_metadata
-          end
+          tags = CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?)
+          attribution = CurationAttribution.new(curation: @curation, class_name: "muted community-post-card-attribution community-curation-card-author")
+          render PostCardDetails.new(title_id:, below_title: tags, attribution:, status: method(:post_status)) { @curation.title }
         end
       end
     end
 
     private
 
-    def post_metadata
-      footer(class: "community-post-card-footer") do
-        ul(class: "muted community-curation-card-counts") do
-          li { t("community.curations.films", count: @entry.film_count) }
-          li { t("community.curations.endorsements", count: @entry.endorsement_count) }
-          li { t("community.curations.comments", count: @entry.comment_count) }
-        end
-        render CurationAttribution.new(curation: @curation, class_name: "muted community-curation-card-author")
+    def post_status
+      ul(class: "community-curation-card-counts") do
+        li { t("community.curations.films", count: @entry.film_count) }
+        li { t("community.curations.endorsements", count: @entry.endorsement_count) }
+        li { t("community.curations.comments", count: @entry.comment_count) }
       end
     end
   end
