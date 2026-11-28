@@ -335,6 +335,7 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
 .rating-vocabulary-editor .rating-vocabulary-form { margin: 0; }
 .rating-vocabulary-fields .rating-choices[aria-disabled="true"] .rating-choice { pointer-events: none; }
 .rating-vocabulary-symbol { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.5em; }
+.rating-vocabulary-emoji { font-size: 1.2em; line-height: 1; }
 .rating-vocabulary-liver-bird { display: block; object-fit: contain; }
 :root:not([data-theme="light"]) .rating-vocabulary-liver-bird { filter: invert(1); }
 .rating-vocabulary-options { position: relative; }
@@ -775,9 +776,8 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-conduct-consent input { flex: none; }
 .community-conduct-text { display: grid; gap: 12px; margin-block: 12px; }
 :is(.community-post-heading, .community-nomination-header) { display: grid; min-inline-size: 0; overflow-wrap: anywhere; }
-.community-post-heading { gap: 6px; }
-.community-post-heading > .community-post-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.community-post-heading > .community-post-tags { margin-block-start: 8px; }
+.community-post-heading { --post-heading-row-gap: 6px; gap: var(--post-heading-row-gap); }
+.community-post-heading > .community-post-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-block-start: var(--post-heading-row-gap); }
 .community-curation-page > .ui-page-body { margin-block-start: 0; }
 @media (min-width: 651px) {
   .community-curation-page { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 24px; }
@@ -821,9 +821,9 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 .community-post-card-artwork > .film-poster { box-shadow: none; }
 .community-post-card-details { container-type: inline-size; display: grid; align-content: space-between; align-self: stretch; gap: 6px; min-width: 0; padding-block-end: 4px; overflow-wrap: anywhere; }
 :is(.community-curation-card, a.community-film-debrief-card):hover { border-color: var(--glutton-primary); }
-.community-post-card-heading { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 3px; }
+.community-post-card-heading { --post-card-heading-row-gap: 3px; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: var(--post-card-heading-row-gap); }
 .ui-page .community-post-card-heading h2 { max-inline-size: 100%; margin-block: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.0625rem; line-height: 1.25; font-weight: 600; }
-.community-post-card-heading > :is(.community-post-tags, .community-post-tag) { margin-block-start: 3px; }
+.community-post-card-heading > :is(.community-post-tags, .community-post-tag) { margin-block-start: var(--post-card-heading-row-gap); }
 .community-post-card-heading .community-post-tags { max-inline-size: 100%; flex-wrap: nowrap; gap: clamp(3px, 2cqi, 8px); }
 .community-post-card-heading .community-post-tags:has(> .community-post-tag + .community-post-tag) { --post-card-tag-min-size: 0.625rem; }
 .community-post-card-heading .community-post-tag { min-inline-size: 0; max-inline-size: 100%; padding: 1px clamp(3px, 1.5cqi, 8px); overflow: hidden; text-overflow: ellipsis; font-size: clamp(var(--post-card-tag-min-size, 0.6875rem), 4cqi, 0.875rem); line-height: 1.25; white-space: nowrap; }
@@ -868,7 +868,7 @@ a.rating-film-link { text-decoration: underline; text-underline-offset: 4px; }
 :is(.community-nomination-media, .community-debrief-poster) > .poster-placeholder { padding: 8px; overflow-wrap: anywhere; }
 .community-nomination-content { display: grid; gap: var(--nomination-row-gap); min-width: 0; }
 .community-nomination-header { gap: var(--nomination-row-gap); }
-.community-nomination-follow { margin-block-start: 4px; }
+.community-nomination-follow { margin-block-start: var(--nomination-row-gap); }
 .community-nominated-film-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .community-nomination-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .community-nomination-rank { flex: none; color: var(--glutton-muted-foreground); font-weight: 600; font-variant-numeric: tabular-nums; }
