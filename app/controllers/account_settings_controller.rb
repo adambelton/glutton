@@ -39,7 +39,7 @@ class AccountSettingsController < ApplicationController
     if request.format.turbo_stream?
       vocabulary = Shared::RatingVocabulary.new(account.rating_vocabulary)
       updates = vocabulary.labels.map do |value, label|
-        turbo_stream.update_all("[data-rating-value-label='#{value}']", ERB::Util.html_escape(label))
+        turbo_stream.update("rating-#{value}-label", ERB::Util.html_escape(label))
       end
       render turbo_stream: updates + [
         turbo_stream.update("account-rating-vocabulary", ERB::Util.html_escape(vocabulary.name)),
