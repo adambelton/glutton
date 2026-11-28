@@ -70,9 +70,9 @@ module Community
       films = yield additions
       validate_endorsement_selection(endorsements:, film_ids:, additions:, films:, comments:)
       validate_opening_comment_lengths(comments)
-      return self if errors.any?
+      return if errors.any?
 
-      added_comment = false
+      opening_comments = []
       endorsements.each do |film_id, endorsement|
         unless selected_ids.include?(film_id)
           endorsement.withdraw!(community_user:)
@@ -82,15 +82,14 @@ module Community
         body = comments[film_id].to_s.strip.presence
         next unless body.present?
 
-        endorsement.add_opening_comment!(community_user:, body:)
-        added_comment = true
+        opening_comments << endorsement.add_opening_comment!(community_user:, body:)
       end
-      add_endorsements(community_user:, films:, comments:)
-      if films.any? || added_comment
+      opening_comments.concat(add_endorsements(community_user:, films:, comments:))
+      if films.any? || opening_comments.any?
         protect_from_contributions!
         touch
       end
-      self
+      opening_comments
     end
 
     def can_edit?(community_user:)
@@ -202,7 +201,7 @@ module Community
     end
 
     def add_endorsements(community_user:, films:, comments:)
-      films.each do |film|
+      films.filter_map do |film|
         endorsement = film_endorsements.create!(film:, user_id: community_user.user_id)
         body = comments[film.id].to_s.strip.presence
         endorsement.add_opening_comment!(community_user:, body:) if body.present?

@@ -26,24 +26,18 @@ module Community
       div(class: "community-post-card-artwork") do
         render ::Registry::FilmPoster.new(film: @film, placeholder: :wordmark)
       end
-      div(class: "community-post-card-details") do
-        div(class: "community-post-card-heading") do
-          h2(id: @title_id) { render ::Registry::FilmTitle.new(film: @film) }
-          if @debrief.present?
-            render PostBadge.new(label: t("community.film_debriefs.badge"))
-          elsif @can_post
-            create_action
-          end
-        end
-        post_metadata if @debrief.present?
+      if @debrief.present?
+        below_title = PostBadge.new(label: t("community.film_debriefs.badge"))
+        attribution = GluttonIdentity.new(class_name: "muted community-post-card-attribution")
+        status = method(:post_status)
+      elsif @can_post
+        below_title = method(:create_action)
       end
+      render PostCardDetails.new(title_id: @title_id, below_title:, attribution:, status:) { render ::Registry::FilmTitle.new(film: @film) }
     end
 
-    def post_metadata
-      footer(class: "muted community-post-card-footer") do
-        p { t("community.curations.comments", count: @comment_count) }
-        render GluttonIdentity.new(class_name: "community-film-debrief-card-author")
-      end
+    def post_status
+      p { t("community.curations.comments", count: @comment_count) }
     end
 
     def create_action

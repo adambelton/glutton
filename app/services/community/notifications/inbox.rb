@@ -17,7 +17,7 @@ module Community
       def page(before: nil)
         scope = before.present? ? visible.where(id: ...before) : visible
         items = scope.order(id: :desc).limit(PAGE_SIZE + 1)
-          .preload(comment_content: { comment: :post }).to_a
+          .preload(comment_content: { comment: [ :post, { film_endorsement: :film } ] }).to_a
         more = items.size > PAGE_SIZE
         items.pop if more
         Page.new(items:, next_cursor: more ? items.last.id : nil)

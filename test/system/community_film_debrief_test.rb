@@ -45,8 +45,8 @@ class CommunityFilmDebriefBrowserTest < ApplicationSystemTestCase
     assert_no_selector "a.community-film-debrief-card time"
     within "a.community-film-debrief-card" do
       assert_selector "h2 + .community-post-tag", text: I18n.t("community.film_debriefs.badge")
-      assert_selector "footer > p", text: I18n.t("community.curations.comments", count: 0)
-      assert_selector "footer .community-glutton-avatar + strong", text: I18n.t("ui.wordmark")
+      assert_selector "header .community-post-tag + .community-post-card-attribution .community-glutton-avatar + strong", text: I18n.t("ui.wordmark")
+      assert_selector "header + footer > p", text: I18n.t("community.curations.comments", count: 0)
     end
     assert_no_button create_label
     fill_in I18n.t("community.search.label"), with: "Quiet"

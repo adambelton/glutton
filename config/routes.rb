@@ -42,6 +42,8 @@ Rails.application.routes.draw do
       resource :endorsements, only: [ :edit, :update ], controller: :curation_endorsements
       patch "additional_description", to: "posts#additional_description"
       patch "disassociate", to: "posts#disassociate"
+      patch "notification", to: "notification_settings#curation"
+      patch "films/:film_id/notification", to: "notification_settings#curation", as: :film_notification
       post "films/:film_id/watchlist", to: "posts#watchlist", as: :film_watchlist
       post "films/:film_id/watched", to: "posts#watched", as: :film_watched
     end

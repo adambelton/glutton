@@ -4,12 +4,13 @@ module Community
       @post_id, @protected_post, @show_tooltips = post_id, protected_post, show_tooltips
     end
 
-    def view_template
+    def view_template(&)
       div(class: "community-post-tags flex flex-wrap gap-2") do
         badge(:curation, label: t("community.curations.tag"), tooltip: t("community.curations.tag_tooltip"))
         if @protected_post
           badge(:protected, label: t("community.curation_protection.badge"), tooltip: t("community.curation_protection.badge_tooltip"))
         end
+        yield if block_given?
       end
     end
 

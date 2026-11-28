@@ -1,10 +1,11 @@
 module Views
   module Community
     class Curation < ::Views::Base
-      def initialize(curation:, nominated_films:, library_films:, discussion:, has_endorsements:, can_contribute:, can_edit:, can_delete:, can_disassociate:)
+      def initialize(curation:, nominated_films:, library_films:, discussion:, has_endorsements:, following:, can_contribute:, can_edit:, can_delete:, can_disassociate:)
         @curation, @nominated_films, @library_films = curation, nominated_films, library_films
         @discussion = discussion
         @has_endorsements = has_endorsements
+        @following = following
         @can_contribute = can_contribute
         @can_edit = can_edit
         @can_delete = can_delete
@@ -51,11 +52,17 @@ module Views
       private
 
       def post_heading
-        badges = ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true)
         if @curation.community_user.present?
           attribution = ::Community::CurationAttribution.new(curation: @curation, class_name: "community-curation-author", linked: true)
         end
-        ::Community::PostHeading.new(title: @curation.title, badges:, attribution:)
+        ::Community::PostHeading.new(title: @curation.title, badges: method(:badges), attribution:)
+      end
+
+      def badges
+        render ::Community::CurationTag.new(post_id: @curation.id, protected_post: @curation.protected?, show_tooltips: true) do
+          render ::Community::PostFollowButton.new(id: "curation-notifications", url: community_curation_notification_path(@curation),
+            label: t("community.notifications.curation_follow_label"), following: @following.following?)
+        end
       end
 
       def author_actions
@@ -107,16 +114,9 @@ module Views
             render ::Registry::FilmPoster.new(film:)
             library_actions(film)
           end
-          div(class: "community-nomination-content") do
-            div(class: "community-nominated-film-heading") do
-              div(class: "community-nomination-title") do
-                span(class: "community-nomination-rank") { t("community.curations.position", position:) }
-                h3 { render ::Registry::FilmTitle.new(film:) }
-              end
-              span(class: "community-endorsement-badge") { t("community.curations.endorsements", count: endorsements.size) }
-            end
-            render ::Community::CurationComments.new(curation: @curation, film_id: film.id, discussion: @discussion, can_reply: @can_contribute)
-          end
+          discussion = ::Community::CurationComments.new(curation: @curation, film_id: film.id, discussion: @discussion, can_reply: @can_contribute)
+          render ::Community::CurationFilmBody.new(curation: @curation, film:, position:, endorsement_count: endorsements.size,
+            following: @following.following?(film_id: film.id), discussion:)
         end
       end
 

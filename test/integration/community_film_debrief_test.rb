@@ -201,7 +201,10 @@ class CommunityFilmDebriefTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "#replies-#{root.id}[open] #comment-#{reply.id}", text: /A thoughtful reply/
     get community_path
-    assert_select ".community-film-debrief-card footer p", text: I18n.t("community.curations.comments", count: 3)
+    assert_select ".community-film-debrief-card" do
+      assert_select "header .community-post-tag + .community-post-card-attribution", text: I18n.t("ui.wordmark")
+      assert_select "header + footer p", text: I18n.t("community.curations.comments", count: 3)
+    end
   end
 
   test "all debrief reads and mutations recheck Watched and scope the comment to the post" do

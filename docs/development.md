@@ -75,6 +75,8 @@ See [domain event operations](domain_event_operations.md) for worker configurati
 
 Public film imports with ready Wikipedia source context enqueue initial quality assignment on `registry_assignment`. The `bin/dev` worker includes that queue. Workers configured with an explicit queue list need to include it to process public imports.
 
+Community notifications use the `default` queue, which `bin/dev` also consumes.
+
 ## Quality vocabulary seed
 
 After applying migrations, load the 235 provisional quality definitions and nine category defaults:

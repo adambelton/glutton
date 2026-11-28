@@ -16,16 +16,25 @@ en:
       unread_label: Notifications (unread)
       unread: Unread
       saved: Your notification settings were saved.
-      debrief_label: New Film Debrief comments
+      debrief_label: Film Debrief Posts
+      debrief_opening_comments: New opening comments on films I've watched
       debrief_hint: You can also follow or mute individual Film Debriefs from their post pages.
       direct_replies: Direct replies to my comments
+      discussion_label: All Posts
+      curation_label: Community Curation Posts
+      authored_curations: New opening comments on my curations
+      endorsed_film_comments: New opening comments on films I endorse
       all: All
       none: None
       unrated: Not Rated
       save: Save
       follow: Follow
       following: Following
+      curation_follow_label: Opening comments on this curation
+      film_follow_label: "Opening comments about %{film}"
+      follow_control: "%{label} · %{status}"
       debrief_comment: "New comment on %{title}"
       direct_reply: "New reply to your comment on %{title}"
+      curation_comment: "New comment about %{film} on %{title}"
       empty: You have no notifications.
       older: Older notifications

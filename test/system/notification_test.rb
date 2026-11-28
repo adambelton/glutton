@@ -28,6 +28,9 @@ class NotificationTest < ApplicationSystemTestCase
       dismiss = find_button(I18n.t("ui.dismiss_notification"))
       dismiss.hover
       assert_equal "rgb(114, 222, 208)", dismiss.style("color").fetch("color")
+      accent = notification.style("border-left-color", "border-left-width", "border-right-width")
+      assert_equal dismiss.style("color").fetch("color"), accent.fetch("border-left-color")
+      assert_operator accent.fetch("border-left-width").to_f, :>, accent.fetch("border-right-width").to_f
       dismiss.click
       assert_no_selector ".ui-toast"
       assert_in_delta before, element_rectangle(find(".rating-interface")).y, 1

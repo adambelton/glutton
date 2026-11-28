@@ -26,7 +26,7 @@ module Community
           if stale
             curation.errors.add(:base, :stale_endorsements)
           else
-            curation.edit_endorsements(community_user:, endorsements:, film_ids:, comments:) do |new_film_ids|
+            opening_comments = curation.edit_endorsements(community_user:, endorsements:, film_ids:, comments:) do |new_film_ids|
               BrowseEligibleCurationFilms.lock_for_submission(community_user:, film_ids: new_film_ids)
             end
           end
@@ -36,6 +36,7 @@ module Community
               Registry::CatalogueQueries::BrowseCatalogue.films_for_ids(film_ids: missing_film_ids)
             end
           else
+            opening_comments.each { |content| DeliverCommentNotificationJob.enqueue!(content.id) }
             { curation: }
           end
         end
