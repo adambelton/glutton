@@ -335,6 +335,7 @@ body:has(#library-action-confirmation[open]) .film-search-tooltip[data-library-a
 .rating-vocabulary-editor .rating-vocabulary-form { margin: 0; }
 .rating-vocabulary-fields .rating-choices[aria-disabled="true"] .rating-choice { pointer-events: none; }
 .rating-vocabulary-symbol { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 1.5em; }
+.rating-vocabulary-emoji { font-size: 1.2em; line-height: 1; }
 .rating-vocabulary-liver-bird { display: block; object-fit: contain; }
 :root:not([data-theme="light"]) .rating-vocabulary-liver-bird { filter: invert(1); }
 .rating-vocabulary-options { position: relative; }

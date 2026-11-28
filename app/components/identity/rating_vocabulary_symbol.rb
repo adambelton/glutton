@@ -23,10 +23,10 @@ module Identity
     def view_template
       span(class: "rating-vocabulary-symbol", aria: { hidden: true }, **@attrs) do
         if @vocabulary.key == RatingVocabularies::SCOUSE
-          img(src: image_path("rating-vocabulary-lfc-liver-bird.svg"), alt: "", width: 20, height: 22,
+          img(src: image_path("rating-vocabulary-scouse-liver-bird.svg"), alt: "", width: 20, height: 22,
             class: "rating-vocabulary-liver-bird", data: { symbol: "liver-bird" })
         else
-          plain EMOJI.fetch(@vocabulary.key)
+          span(class: "rating-vocabulary-emoji") { EMOJI.fetch(@vocabulary.key) }
         end
       end
     end
